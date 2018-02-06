@@ -1,0 +1,12 @@
+*.orig
+*.rej
+
+*.swp
+
+*.pyc
+
+.coverage
+
+/.eggs
+/*.egg-info
+/.tox
