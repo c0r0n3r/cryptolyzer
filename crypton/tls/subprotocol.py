@@ -117,3 +117,36 @@ class TlsAlertMessage(TlsSubprotocolMessageBase):
 
     def __eq__(self, other):
         return self.level == other.level and self.description == other.description
+
+
+class TlsChangeCipherSpecType(enum.IntEnum):
+    CHANGE_CIPHER_SPEC = 0x01
+
+
+class TlsChangeCipherSpecMessage(TlsSubprotocolMessageBase):
+    def __init__(self, change_cipher_spec_type=TlsChangeCipherSpecType.CHANGE_CIPHER_SPEC):
+        super(TlsChangeCipherSpecMessage, self).__init__()
+
+        self._change_cipher_spec_type = change_cipher_spec_type
+
+    @classmethod
+    def get_content_type(cls):
+        return TlsContentType.CHANGE_CIPHER_SPEC
+
+    @classmethod
+    def _parse(cls, parsable_bytes):
+        parser = Parser(parsable_bytes)
+
+        parser.parse_numeric('change_cipher_spec_type', 1, TlsChangeCipherSpecType)
+
+        return TlsChangeCipherSpecMessage(parser['change_cipher_spec_type']), parser.parsed_byte_num
+
+    def compose(self):
+        composer = Composer()
+
+        composer.compose_numeric(self._change_cipher_spec_type, 1)
+
+        return composer.composed_bytes
+
+    def __eq__(self, other):
+        return self._change_cipher_spec_type == other._change_cipher_spec_type
