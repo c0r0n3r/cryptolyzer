@@ -7,6 +7,7 @@ import struct
 import six
 
 from crypton.common.exception import NotEnoughData, TooMuchData, InvalidValue
+import crypton.common.utils as utils
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -65,6 +66,10 @@ class Parser(object):
     def unparsed_byte_num(self):
         return len(self._parsable_bytes) - self._parsed_byte_num
 
+    @property
+    def unparsed_bytes(self):
+        return self._parsable_bytes[self._parsed_byte_num:]
+
     def _parse_numeric_array(self, name, item_num, item_size, item_numeric_class):
         if self._parsed_byte_num + (item_num * item_size) > len(self._parsable_bytes):
             raise NotEnoughData(bytes_needed=(item_num * item_size) - self.unparsed_byte_num)
@@ -111,6 +116,53 @@ class Parser(object):
         self._parsed_byte_num += len(self._parsable_bytes) - self._parsed_byte_num - len(unparsed_bytes)
         self._parsed_values[name] = parsed_object
 
+    def _parse_parsable_array(self, name, items_size, item_classes, fallback_class=None):
+        if items_size > self.unparsed_byte_num:
+            raise NotEnoughData(bytes_needed=self._parsed_byte_num + items_size)
+
+        items = []
+        remaining_items_size = items_size
+
+        while remaining_items_size > 0:
+            for item_class in item_classes:
+                try:
+                    remaining_bytes_offset = self._parsed_byte_num + items_size - remaining_items_size
+                    item, parsed_byte_num = item_class._parse(self._parsable_bytes[remaining_bytes_offset:])
+                    break
+                except InvalidValue:
+                    pass
+            else:
+                if fallback_class is not None:
+                    remaining_bytes_offset = self._parsed_byte_num + items_size - remaining_items_size
+                    item, parsed_byte_num = fallback_class._parse(self._parsable_bytes[remaining_bytes_offset:])
+                else:
+                    raise ValueError(self._parsable_bytes[remaining_bytes_offset:])
+
+            items.append(item)
+            remaining_items_size -= parsed_byte_num
+
+        self._parsed_values[name] = items
+        self._parsed_byte_num += items_size
+
+    def parse_parsable_array(self, name, items_size, item_class):
+        if self.unparsed_byte_num < items_size:
+            raise NotEnoughData(items_size)
+
+        try:
+            return self._parse_parsable_array(name, items_size, [item_class, ])
+        except ValueError as e:
+            raise InvalidValue(e.args[0], item_class)
+
+
+    def parse_parsable_derived_array(self, name, items_size, item_base_class, fallback_class=None):
+        item_classes = utils.get_leaf_classes(item_base_class)
+        try:
+            return self._parse_parsable_array(name, items_size, item_classes, fallback_class)
+        except NotEnoughData as e:
+            raise e
+        except ValueError as e:
+            raise InvalidValue(e.args[0], item_base_class)
+
 
 class Composer(object):
     __INT_FORMATER_BY_SIZE = {
@@ -149,6 +201,14 @@ class Composer(object):
 
     def compose_parsable(self, value):
         self._composed_bytes += value.compose()
+
+    def compose_parsable_array(self, values):
+        composed_bytes = bytearray()
+
+        for item in values:
+            composed_bytes += item.compose()
+
+        self._composed_bytes += composed_bytes
 
     def compose_bytes(self, value):
         self._composed_bytes += value

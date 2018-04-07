@@ -73,6 +73,10 @@ class TlsRecord(ParsableBase):
         self._protocol_version = value
 
     @property
+    def content_type(self):
+        return self._messages[0].get_content_type()
+
+    @property
     def messages(self):
         return self._messages
 
