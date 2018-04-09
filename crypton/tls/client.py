@@ -311,3 +311,149 @@ class TlsClientHandshake(object):
                 receivable_byte_num = e.bytes_needed
 
             parsable_bytes += self._client.receive(receivable_byte_num)
+
+
+import enum
+import random
+
+from crypton.common.base import ParsableBase, Composer, Vector, VectorParamNumeric
+
+class SslVersion(enum.IntEnum):
+    SSL2 = 0x0002
+
+
+class SslHandshakeType(enum.IntEnum):
+    ERROR = 0x00
+    CLIENT_HELLO = 0x01
+    CLIENT_MASTER_KEY = 0x02
+    CLIENT_FINISHED = 0x03
+    SERVER_HELLO = 0x04
+    SERVER_VERIFY = 0x05
+    SERVER_FINISHED = 0x06
+    REQUEST_CERTIFICATE = 0x07
+    CLIENT_CERTIFICATE = 0x08
+
+
+class SslCipherKind(enum.IntEnum):
+    RC4_128_WITH_MD5 = 0x010080
+    RC4_128_EXPORT40_WITH_MD5 = 0x020080
+    RC2_128_CBC_WITH_MD5 = 0x030080
+    RC2_128_CBC_EXPORT40_WITH_MD5 = 0x040080
+    IDEA_128_CBC_WITH_MD5 = 0x050080
+    DES_64_CBC_WITH_MD5 = 0x060040
+    DES_192_EDE3_CBC_WITH_MD5 = 0x0700C0
+
+
+class SslCertificateType(enum.IntEnum):
+    X509_CERTIFICATE = 0x01
+
+
+class SslAuthenticationType(enum.IntEnum):
+    MD5_WITH_RSA_ENCRYPTION = 0x01
+
+
+class SslErrorType(enum.IntEnum):
+    NO_CIPHER_ERROR = 0x0001
+    NO_CERTIFICATE_ERROR = 0x0002
+    BAD_CERTIFICATE_ERROR = 0x0003
+    UNSUPPORTED_CERTIFICATE_TYPE_ERROR  = 0x0004
+
+
+class SslError(ValueError):
+    def __init__(self, error):
+        super(SslError, self).__init__()
+
+        self.error = error
+
+
+class SslHandshake(ParsableBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_handshake_type(cls):
+        return NotImplementedError()
+
+
+class SslSessionIdVector(Vector):
+    @classmethod
+    def get_param(cls):
+        return VectorParamNumeric(item_size=1, min_byte_num=0, max_byte_num=16)
+
+
+class SslHandshakeClientHello(SslHandshake):
+    def __init__(
+        self,
+        cipher_kinds,
+        session_id=SslSessionIdVector([]),
+        challenge=bytearray.fromhex('{:16x}'.format(random.getrandbits(128)).zfill(32)),
+    ):
+        self.cipher_kinds = cipher_kinds
+        self.session_id = session_id
+        self.challenge = challenge
+
+    @classmethod
+    def get_handshake_type(cls):
+        return SslHandshakeType.CLIENT_HELLO
+
+    def compose(self):
+        body_composer = Composer()
+
+        body_composer.compose_numeric(self.get_handshake_type(), 1)
+        body_composer.compose_numeric(SslVersion.SSL2, 2)
+
+        body_composer.compose_numeric(len(self.cipher_kinds) * 3, 2)
+        body_composer.compose_numeric(0, 2)
+        body_composer.compose_numeric(len(self.challenge), 2)
+
+        body_composer.compose_numeric_array(self.cipher_kinds, 3)
+        body_composer.compose_bytes(self.challenge)
+
+        header_composer = Composer()
+        if body_composer.composed_bytes >= 2 ** 16:
+            header_composer.compose_numeric(body_composer.composed_byte_num | (2 ** 15), 2)
+        else:
+            header_composer.compose_numeric(body_composer.composed_byte_num | (2 ** 23), 2)
+
+        return header_composer.composed_bytes + body_composer.composed_bytes
+
+
+class SslHandshakeClientHelloAnyAlgorithm(SslHandshakeClientHello):
+    def __init__(self):
+        super(SslHandshakeClientHelloAnyAlgorithm, self).__init__(cipher_kinds=list(SslCipherKind))
+
+
+class SslClientHandshake(object):
+    def __init__(self, host, port, client_class=Client):
+        self._client = client_class(host, port)
+        self._host = host
+
+    def do(self, hello_message=None, last_handshake_message_type=SslHandshakeType.SERVER_HELLO):
+        if hello_message is None:
+            hello_message = SslHandshakeClientHelloAnyAlgorithm(self._host)
+
+        self._client.connect()
+
+        self._client.send(hello_message.compose())
+
+        server_messages = {}
+        parsable_bytes = bytearray()
+        while True:
+            try:
+                record = TlsRecord.parse_mutable_bytes(parsable_bytes)
+                if record.content_type == TlsContentType.ALERT:
+                    raise TlsAlert(record.messages[0].description)
+                elif record.content_type != TlsContentType.HANDSHAKE:
+                    raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
+
+                for handshake_message in record.messages:
+                    if handshake_message.get_handshake_type() in server_messages:
+                        raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
+
+                    server_messages[handshake_message.get_handshake_type()] = handshake_message
+                    if handshake_message.get_handshake_type() == last_handshake_message_type:
+                        return server_messages
+
+                receivable_byte_num = 0
+            except NotEnoughData as e:
+                receivable_byte_num = e.bytes_needed
+
+            parsable_bytes += self._client.receive(receivable_byte_num)

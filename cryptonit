@@ -1,0 +1,287 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import abc
+import argparse
+import cryptography
+import uri
+import sys
+
+import socket
+
+from crypton.common.algorithm import Authentication, MAC
+from crypton.common.exception import NotEnoughData
+
+from crypton.tls.ciphersuite import TlsCipherSuite
+from crypton.tls.extension import TlsExtensionType, TlsExtensionServerName, TlsExtensionEllipticCurves, TlsNamedCurve, TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms, TlsECPointFormat, TlsExtensionECPointFormats, TlsExtensionEllipticCurves
+from crypton.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription
+from crypton.tls.version import TlsVersion, TlsProtocolVersionFinal
+
+from crypton.tls.client import Client, TlsClientHandshake, TlsHandshakeClientHello, TlsHandshakeClientHelloAnyAlgorithm, TlsAlert
+from crypton.tls.client import SslClientHandshake, SslHandshakeClientHello, SslHandshakeClientHelloAnyAlgorithm, SslError
+from client import TlsHandshakeClientHelloBasic, TlsHandshakeClientHelloAuthenticationDSS, TlsHandshakeClientHelloAuthenticationRSA, TlsHandshakeClientHelloAuthenticationECDSA, TlsHandshakeClientHelloKeyExchangeECDHx
+
+SUPPORTED_SCHEMES = {
+    'tls': {
+        'port': 443
+    },
+    'https': {
+        'port': 443
+    },
+    'imap': {
+        'port': 143
+    },
+    'pop': {
+        'port': 110
+    },
+    'smtp': {
+        'port': 587
+    },
+}
+
+
+class ArgParseActionURI(argparse.Action):
+    def _to_uri(self, value):
+        if u'//' not in value:
+            value = u'tls://' + value
+
+        return uri.URI(value)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        uris = map(self._to_uri, values)
+
+        for uri in uris:
+            try:
+                Client.from_scheme(uri.scheme.name)
+            except ValueError:
+                raise argparse.ArgumentError(self, '{} protocol is not supported'.format(str(uri.scheme.name)))
+
+        setattr(namespace, self.dest, uris)
+
+
+def get_argument_parser():
+    parser = argparse.ArgumentParser(prog='cryptonit')
+
+    subparsers = parser.add_subparsers(dest='command')
+
+    parser_versions = subparsers.add_parser('versions', help='Check which protocol versions supported by the server(s)')
+    parser_versions.add_argument('uris', metavar='URI', nargs='+', action=ArgParseActionURI)
+
+    parser_ciphers = subparsers.add_parser('ciphers', help='Check which cipher suites supported by the server(s)')
+    parser_ciphers.add_argument('uris', metavar='URI', nargs='+', action=ArgParseActionURI)
+
+    parser_curves = subparsers.add_parser('curves', help='Check which curve suites supported by the server(s)')
+    parser_curves.add_argument('uris', metavar='URI', nargs='+', action=ArgParseActionURI)
+
+    parser_curves = subparsers.add_parser('certificates', help='Check which certificate used by the server(s)')
+    parser_curves.add_argument('uris', metavar='URI', nargs='+', action=ArgParseActionURI)
+
+    parser_curves = subparsers.add_parser('sigalgos', help='Check which signature and hash algorithm combinations supported by the server(s)')
+    parser_curves.add_argument('uris', metavar='URI', nargs='+', action=ArgParseActionURI)
+
+    return parser
+
+
+class PluginBase(object):
+    def __init__(self, host, port, client_class=Client):
+        self._host = host
+        self._port = port
+        self._client_class = client_class
+
+    def connect(self):
+        client = SslClientHandshake(self._host, self._port, self._client_class)
+        return client
+
+    @abc.abstractmethod
+    def do(self):
+        raise NotImplementedError()
+
+
+class SupportedCipherSuites(PluginBase):
+    def do(self):
+        accepted_cipher_suites = []
+        remaining_cipher_suites = list(TlsCipherSuite)
+        while True:
+            try:
+                client = self.connect()
+           
+                client_hello = TlsHandshakeClientHelloAnyAlgorithm(self._host)
+                client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
+                client_hello.protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+           
+                server_messages = client.do(client_hello)
+           
+                server_cipher_suite = server_messages[TlsHandshakeType.SERVER_HELLO].cipher_suite
+                for index, cipher_suite in enumerate(remaining_cipher_suites):
+                    if cipher_suite == server_cipher_suite:
+                        del remaining_cipher_suites[index]
+                        accepted_cipher_suites.append(cipher_suite)
+                        break
+            except TlsAlert as e:
+                if e.description == TlsAlertDescription.HANDSHAKE_FAILURE:
+                    return accepted_cipher_suites
+                else:
+                    raise e
+
+
+class SupportedVersions(PluginBase):
+    def do(self):
+        """
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(self._host)
+
+        supported_protocols = []
+        for tls_version in TlsVersion:
+            try:
+                protocol_version = TlsProtocolVersionFinal(tls_version)
+
+                client = self.connect()
+                client_hello.protocol_version = protocol_version
+           
+                server_messages = client.do(client_hello, protocol_version)
+            except TlsAlert as e:
+                if e.description != TlsAlertDescription.PROTOCOL_VERSION:
+                    raise e
+            else:
+                if server_messages[TlsHandshakeType.SERVER_HELLO].protocol_version == protocol_version:
+                    supported_protocols.append(protocol_version)
+        """
+        try:
+            client = self.connect()
+            client_hello = SslHandshakeClientHelloAnyAlgorithm()
+            server_messages = client.do(client_hello)
+        except SslError as e:
+            if e.error != SslErrorType.NO_CIPHER_ERROR:
+                raise e
+        else:
+            if server_messages[TlsHandshakeType.SERVER_HELLO].protocol_version == protocol_version:
+                supported_protocols.append(protocol_version)
+
+        return supported_protocols
+
+
+class SupportedCurves(PluginBase):
+    def do(self):
+        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(self._host)
+        for index, extension in enumerate(client_hello.extensions):
+            if extension.get_extension_type() == TlsExtensionType.SUPPORTED_GROUPS:
+                del client_hello.extensions[index]
+                break
+
+        supported_curves = []
+        for curve in TlsNamedCurve:
+            try:
+                client = self.connect()
+                client_hello.extensions.append(TlsExtensionEllipticCurves([curve, ]))
+                server_messages = client.do(client_hello)
+            except TlsAlert as e:
+                if e.description != TlsAlertDescription.HANDSHAKE_FAILURE:
+                    raise e
+            else:
+                supported_curves.append(curve)
+            finally:
+                del client_hello.extensions[-1]
+
+        return supported_curves
+
+
+class SupportedSignatureAndHashAlgorithms(PluginBase):
+    def do(self):
+        supported_algorithms = []
+        for authentication in [Authentication.DSS, Authentication.RSA, Authentication.ECDSA]:
+            cipher_suites = TlsCipherSuiteVector([
+                cipher_suite
+                for cipher_suite in TlsCipherSuite
+                if (cipher_suite.value.key_exchange and cipher_suite.value.key_exchange.value.pfs and
+                    cipher_suite.value.authentication and cipher_suite.value.authentication == authentication)
+            ])
+
+            for algorithm in TlsSignatureAndHashAlgorithm:
+                if algorithm.value.signature_algorithm != authentication:
+                    continue
+
+                client_hello = TlsHandshakeClientHello(
+                    cipher_suites=cipher_suites,
+                    extensions=[
+                        TlsExtensionServerName(self._host),
+                        TlsExtensionECPointFormats(list(TlsECPointFormat)),
+                        TlsExtensionEllipticCurves(list(TlsNamedCurve)),
+                        TlsExtensionSignatureAlgorithms([algorithm, ]),
+                    ]
+                )
+
+                try:
+                    client = self.connect()
+                    server_messages = client.do(client_hello)
+                except TlsAlert as e:
+                    if (e.description != TlsAlertDescription.HANDSHAKE_FAILURE and
+                        e.description != TlsAlertDescription.ILLEGAL_PARAMETER):
+                        raise e
+                except NotEnoughData:
+                    pass
+                else:
+                    supported_algorithms.append(algorithm)
+                finally:
+                    del client_hello.extensions[-1]
+
+        return supported_algorithms
+
+
+class UsedCertificates(PluginBase):
+    def do(self):
+        certificates = set()
+        client_hello_messages = [
+            TlsHandshakeClientHelloBasic(),
+            TlsHandshakeClientHelloAuthenticationDSS(self._host),
+            TlsHandshakeClientHelloAuthenticationRSA(self._host),
+            TlsHandshakeClientHelloAuthenticationECDSA(self._host),
+        ]
+
+        for client_hello in client_hello_messages:
+            try:
+                client = self.connect()
+                server_messages = client.do(client_hello)
+            except TlsAlert as e:
+                if e.description != TlsAlertDescription.HANDSHAKE_FAILURE:
+                    raise e
+            else:
+                certificates.add(server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain[0])
+
+        return certificates
+
+
+
+if __name__ == '__main__':
+    socket.setdefaulttimeout(5.0)
+
+    argument_parser = get_argument_parser()
+    arguments = argument_parser.parse_args()
+
+    for uri in arguments.uris:
+        client_class = Client.from_scheme(uri.scheme.name)
+
+        if arguments.command == 'ciphers':
+            supported_cipher_suites = SupportedCipherSuites(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            print(50 * '-')
+            print('\n'.join([cipher_suite.name for cipher_suite in supported_cipher_suites]))
+
+        if arguments.command == 'versions':
+            supported_protocol_version = SupportedVersions(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            print(50 * '-')
+            print('\n'.join([str(version.minor) for version in supported_protocol_version]))
+
+        if arguments.command == 'curves':
+            supported_curves = SupportedCurves(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            print(50 * '-')
+            print('\n'.join([str(curve) for curve in supported_curves]))
+
+        if arguments.command == 'sigalgos':
+            supported_sigalgos = SupportedSignatureAndHashAlgorithms(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            print(50 * '-')
+            print('\n'.join([str(curve) for curve in supported_sigalgos]))
+
+        if arguments.command == 'certificates':
+            certificates = UsedCertificates(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            print(50 * '-')
+            print('\n'.join([str(certificate._certificate.subject.get_attributes_for_oid(cryptography.x509.oid.NameOID.COMMON_NAME)) for certificate in certificates]))
+            print('\n'.join([str(certificate._certificate.issuer.get_attributes_for_oid(cryptography.x509.oid.NameOID.COMMON_NAME)) for certificate in certificates]))
+            print('\n'.join([str(certificate._certificate.public_key()) for certificate in certificates]))
