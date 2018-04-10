@@ -10,14 +10,15 @@ import sys
 import socket
 
 from crypton.common.algorithm import Authentication, MAC
-from crypton.common.exception import NotEnoughData
+from crypton.common.exception import NetworkError, NetworkErrorType
 
 from crypton.tls.ciphersuite import TlsCipherSuite
 from crypton.tls.extension import TlsExtensionType, TlsExtensionServerName, TlsExtensionEllipticCurves, TlsNamedCurve, TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms, TlsECPointFormat, TlsExtensionECPointFormats, TlsExtensionEllipticCurves
 from crypton.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription
-from crypton.tls.version import TlsVersion, TlsProtocolVersionFinal
+from crypton.tls.subprotocol import SslMessageType
+from crypton.tls.version import SslVersion, TlsVersion, TlsProtocolVersionFinal
 
-from crypton.tls.client import Client, TlsClientHandshake, TlsHandshakeClientHello, TlsHandshakeClientHelloAnyAlgorithm, TlsAlert
+from crypton.tls.client import L7Client, TlsClientHandshake, TlsHandshakeClientHello, TlsHandshakeClientHelloAnyAlgorithm, TlsAlert
 from crypton.tls.client import SslClientHandshake, SslHandshakeClientHello, SslHandshakeClientHelloAnyAlgorithm, SslError
 from client import TlsHandshakeClientHelloBasic, TlsHandshakeClientHelloAuthenticationDSS, TlsHandshakeClientHelloAuthenticationRSA, TlsHandshakeClientHelloAuthenticationECDSA, TlsHandshakeClientHelloKeyExchangeECDHx
 
@@ -49,12 +50,9 @@ class ArgParseActionURI(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         uris = map(self._to_uri, values)
-
-        for uri in uris:
-            try:
-                Client.from_scheme(uri.scheme.name)
-            except ValueError:
-                raise argparse.ArgumentError(self, '{} protocol is not supported'.format(str(uri.scheme.name)))
+        supported_schemes = L7Client.get_supported_schemes()
+        if any([uri.scheme.name not in supported_schemes for uri in uris]):
+            raise argparse.ArgumentError(self, '{} protocol is not supported'.format(str(uri.scheme.name)))
 
         setattr(namespace, self.dest, uris)
 
@@ -83,14 +81,8 @@ def get_argument_parser():
 
 
 class PluginBase(object):
-    def __init__(self, host, port, client_class=Client):
-        self._host = host
-        self._port = port
-        self._client_class = client_class
-
-    def connect(self):
-        client = SslClientHandshake(self._host, self._port, self._client_class)
-        return client
+    def __init__(self, l7_client):
+        self._l7_client = l7_client
 
     @abc.abstractmethod
     def do(self):
@@ -102,16 +94,16 @@ class SupportedCipherSuites(PluginBase):
         accepted_cipher_suites = []
         remaining_cipher_suites = list(TlsCipherSuite)
         while True:
+            print([accepted_cipher_suite.name for accepted_cipher_suite in accepted_cipher_suites])
             try:
-                client = self.connect()
-           
-                client_hello = TlsHandshakeClientHelloAnyAlgorithm(self._host)
+                client_hello = TlsHandshakeClientHelloAnyAlgorithm(self._l7_client.host)
                 client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
                 client_hello.protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
            
-                server_messages = client.do(client_hello)
+                server_messages = self._l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
            
                 server_cipher_suite = server_messages[TlsHandshakeType.SERVER_HELLO].cipher_suite
+                print(server_cipher_suite.name)
                 for index, cipher_suite in enumerate(remaining_cipher_suites):
                     if cipher_suite == server_cipher_suite:
                         del remaining_cipher_suites[index]
@@ -122,46 +114,49 @@ class SupportedCipherSuites(PluginBase):
                     return accepted_cipher_suites
                 else:
                     raise e
+            except NetworkError as e:
+                if e.error == NetworkErrorType.NO_RESPONSE:
+                    return accepted_cipher_suites
 
 
 class SupportedVersions(PluginBase):
     def do(self):
-        """
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm(self._host)
-
         supported_protocols = []
+
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(self._l7_client.host)
         for tls_version in TlsVersion:
             try:
                 protocol_version = TlsProtocolVersionFinal(tls_version)
-
-                client = self.connect()
                 client_hello.protocol_version = protocol_version
-           
-                server_messages = client.do(client_hello, protocol_version)
+                server_messages = self._l7_client.do_tls_handshake(client_hello, protocol_version)
             except TlsAlert as e:
-                if e.description != TlsAlertDescription.PROTOCOL_VERSION:
+                if e.description not in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.HANDSHAKE_FAILURE]:
+                    raise e
+            except NetworkError as e:
+                if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
             else:
                 if server_messages[TlsHandshakeType.SERVER_HELLO].protocol_version == protocol_version:
                     supported_protocols.append(protocol_version)
-        """
+
+        client_hello = SslHandshakeClientHelloAnyAlgorithm()
         try:
-            client = self.connect()
-            client_hello = SslHandshakeClientHelloAnyAlgorithm()
-            server_messages = client.do(client_hello)
+            server_messages = self._l7_client.do_ssl_handshake(client_hello)
         except SslError as e:
             if e.error != SslErrorType.NO_CIPHER_ERROR:
                 raise e
+        except NetworkError as e:
+            if e.error != NetworkErrorType.NO_RESPONSE:
+                raise e
         else:
-            if server_messages[TlsHandshakeType.SERVER_HELLO].protocol_version == protocol_version:
-                supported_protocols.append(protocol_version)
+            supported_protocols.append(SslVersion.SSL2)
 
         return supported_protocols
 
 
 class SupportedCurves(PluginBase):
     def do(self):
-        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(self._host)
+        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(self._l7_client.host)
         for index, extension in enumerate(client_hello.extensions):
             if extension.get_extension_type() == TlsExtensionType.SUPPORTED_GROUPS:
                 del client_hello.extensions[index]
@@ -170,11 +165,13 @@ class SupportedCurves(PluginBase):
         supported_curves = []
         for curve in TlsNamedCurve:
             try:
-                client = self.connect()
                 client_hello.extensions.append(TlsExtensionEllipticCurves([curve, ]))
-                server_messages = client.do(client_hello)
+                server_messages = self._l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
             except TlsAlert as e:
                 if e.description != TlsAlertDescription.HANDSHAKE_FAILURE:
+                    raise e
+            except NetworkError as e:
+                if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
             else:
                 supported_curves.append(curve)
@@ -202,7 +199,7 @@ class SupportedSignatureAndHashAlgorithms(PluginBase):
                 client_hello = TlsHandshakeClientHello(
                     cipher_suites=cipher_suites,
                     extensions=[
-                        TlsExtensionServerName(self._host),
+                        TlsExtensionServerName(self._l7_client.host),
                         TlsExtensionECPointFormats(list(TlsECPointFormat)),
                         TlsExtensionEllipticCurves(list(TlsNamedCurve)),
                         TlsExtensionSignatureAlgorithms([algorithm, ]),
@@ -210,13 +207,12 @@ class SupportedSignatureAndHashAlgorithms(PluginBase):
                 )
 
                 try:
-                    client = self.connect()
-                    server_messages = client.do(client_hello)
+                    server_messages = self._l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
                 except TlsAlert as e:
                     if (e.description != TlsAlertDescription.HANDSHAKE_FAILURE and
                         e.description != TlsAlertDescription.ILLEGAL_PARAMETER):
                         raise e
-                except NotEnoughData:
+                except NetworkError as e:
                     pass
                 else:
                     supported_algorithms.append(algorithm)
@@ -231,17 +227,19 @@ class UsedCertificates(PluginBase):
         certificates = set()
         client_hello_messages = [
             TlsHandshakeClientHelloBasic(),
-            TlsHandshakeClientHelloAuthenticationDSS(self._host),
-            TlsHandshakeClientHelloAuthenticationRSA(self._host),
-            TlsHandshakeClientHelloAuthenticationECDSA(self._host),
+            TlsHandshakeClientHelloAuthenticationDSS(self._l7_client.host),
+            TlsHandshakeClientHelloAuthenticationRSA(self._l7_client.host),
+            TlsHandshakeClientHelloAuthenticationECDSA(self._l7_client.host),
         ]
 
         for client_hello in client_hello_messages:
             try:
-                client = self.connect()
-                server_messages = client.do(client_hello)
+                server_messages = self._l7_client.do_tls_handshake(client_hello, client_hello.protocol_version, TlsHandshakeType.CERTIFICATE)
             except TlsAlert as e:
                 if e.description != TlsAlertDescription.HANDSHAKE_FAILURE:
+                    raise e
+            except NetworkError as e:
+                if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
             else:
                 certificates.add(server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain[0])
@@ -257,30 +255,34 @@ if __name__ == '__main__':
     arguments = argument_parser.parse_args()
 
     for uri in arguments.uris:
-        client_class = Client.from_scheme(uri.scheme.name)
+        l7_client = L7Client.from_scheme(
+            uri.scheme.name,
+            uri.host,
+            int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'],
+        )
 
         if arguments.command == 'ciphers':
-            supported_cipher_suites = SupportedCipherSuites(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            supported_cipher_suites = SupportedCipherSuites(l7_client).do()
             print(50 * '-')
             print('\n'.join([cipher_suite.name for cipher_suite in supported_cipher_suites]))
 
         if arguments.command == 'versions':
-            supported_protocol_version = SupportedVersions(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            supported_protocol_version = SupportedVersions(l7_client).do()
             print(50 * '-')
-            print('\n'.join([str(version.minor) for version in supported_protocol_version]))
+            print('\n'.join([str(version) for version in supported_protocol_version]))
 
         if arguments.command == 'curves':
-            supported_curves = SupportedCurves(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            supported_curves = SupportedCurves(l7_client).do()
             print(50 * '-')
             print('\n'.join([str(curve) for curve in supported_curves]))
 
         if arguments.command == 'sigalgos':
-            supported_sigalgos = SupportedSignatureAndHashAlgorithms(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            supported_sigalgos = SupportedSignatureAndHashAlgorithms(l7_client).do()
             print(50 * '-')
             print('\n'.join([str(curve) for curve in supported_sigalgos]))
 
         if arguments.command == 'certificates':
-            certificates = UsedCertificates(uri.host, int(uri.port) if uri.port else SUPPORTED_SCHEMES[uri.scheme.name]['port'], client_class).do()
+            certificates = UsedCertificates(l7_client).do()
             print(50 * '-')
             print('\n'.join([str(certificate._certificate.subject.get_attributes_for_oid(cryptography.x509.oid.NameOID.COMMON_NAME)) for certificate in certificates]))
             print('\n'.join([str(certificate._certificate.issuer.get_attributes_for_oid(cryptography.x509.oid.NameOID.COMMON_NAME)) for certificate in certificates]))

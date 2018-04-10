@@ -4,17 +4,18 @@
 import abc
 
 from crypton.common.algorithm import Authentication, KeyExchange
-from crypton.common.exception import NotEnoughData
+from crypton.common.exception import NotEnoughData, NetworkError, NetworkErrorType
 from crypton.common.utils import get_leaf_classes
 
 from crypton.tls.ciphersuite import TlsCipherSuite
 from crypton.tls.subprotocol import TlsHandshakeClientHello, TlsCipherSuiteVector, TlsContentType, TlsHandshakeType
+from crypton.tls.subprotocol import SslMessageBase, SslMessageType, SslHandshakeClientHello, SslCipherKind
 from crypton.tls.extension import TlsExtensionSupportedVersions, TlsExtensionServerName, TlsExtensionECPointFormats, TlsECPointFormat, TlsExtensionEllipticCurves, TlsNamedCurve, TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithm
 
-from crypton.tls.record import TlsRecord
-from crypton.tls.version import TlsVersion, TlsProtocolVersionFinal
+from crypton.tls.record import TlsRecord, SslRecord
+from crypton.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
 
-import socket as socket_module
+import socket
 
 
 class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
@@ -114,19 +115,31 @@ class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
         )
 
 
-class Client(object):
+class L7Client(object):
     def __init__(self, host, port):
         self._host = host
         self._port = port
         self._socket = None
 
-    def connect(self):
-        self._socket = socket_module.socket(socket_module.AF_INET, socket_module.SOCK_STREAM)
-        self._socket.connect((self._host, self._port))
+    def do_ssl_handshake(self, hello_message, last_handshake_message_type=SslMessageType.SERVER_HELLO):
+        self._socket = self._connect()
+        tls_client = SslClientHandshake(self)
+        server_messages = tls_client.do_handshake(hello_message, SslVersion.SSL2, last_handshake_message_type)
+        self._close()
 
-    def close(self):
-        if self._socket:
-            self._socket.close()
+        return server_messages
+
+    def do_tls_handshake(self, hello_message, protocol_version, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO):
+        self._socket = self._connect()
+        tls_client = TlsClientHandshake(self)
+        server_messages = tls_client.do_handshake(hello_message, protocol_version, last_handshake_message_type)
+        self._close()
+
+        return server_messages
+
+    def _close(self):
+        self._socket.close()
+        self._socket = None
 
     def send(self, sendable_bytes):
         total_sent_byte_num = 0
@@ -142,7 +155,7 @@ class Client(object):
         while len(total_received_bytes) < receivable_byte_num:
             try:
                 actual_received_bytes = self._socket.recv(min(receivable_byte_num - len(total_received_bytes), 1024))
-            except socket_module.error:
+            except socket.error as e:
                 actual_received_bytes = None
 
             if not actual_received_bytes:
@@ -152,13 +165,29 @@ class Client(object):
 
         return total_received_bytes
 
+    @property
+    def host(self):
+        return self._host
+
+    @property
+    def port(self):
+        return self._port
+
     @classmethod
-    def from_scheme(cls, scheme):
-        for client_class in get_leaf_classes(Client):
+    def from_scheme(cls, scheme, host, port):
+        for client_class in get_leaf_classes(L7Client):
             if client_class.get_scheme() == scheme:
-                return client_class
+                return client_class(host, port)
         else:
             raise ValueError()
+
+    @classmethod
+    def get_supported_schemes(cls):
+        return set([leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(cls)])
+
+    @abc.abstractmethod
+    def _connect(self):
+        raise NotImplementedError()
 
     @classmethod
     @abc.abstractmethod
@@ -166,39 +195,50 @@ class Client(object):
         return NotImplementedError()
 
 
-class ClientTls(Client):
+class L7ClientTls(L7Client):
     @classmethod
     def get_scheme(cls):
         return 'tls'
 
+    def _connect(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((self._host, self._port))
+        return sock
 
-class ClientHTTPS(Client):
+
+class L7ClientHTTPS(L7Client):
     @classmethod
     def get_scheme(cls):
         return 'https'
+
+    def _connect(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((self._host, self._port))
+        return sock
 
 
 import poplib
 
 
-class ClientPOP3(Client):
+class L7ClientPOP3(L7Client):
     def __init__(self, host, port):
         #self.client = poplib.POP3(host, port)
 
-        super(ClientPOP3, self).__init__(host, port)
+        super(L7ClientPOP3, self).__init__(host, port)
 
     @classmethod
     def get_scheme(cls):
         return 'pop'
 
-    def connect(self):
+    def _connect(self):
+        #FIXME: self
         self.client = poplib.POP3(self._host, self._port)
         if 'STLS' not in self.capa():
             raise ValueError
         response = self.stls()
         if response != b'+OK':
             raise ValueError
-        self._socket = self.client.sock
+        return self.client.sock
 
     def close(self):
         if self._socket:
@@ -208,17 +248,18 @@ class ClientPOP3(Client):
 import smtplib
 
 
-class ClientSMTP(Client):
+class L7ClientSMTP(L7Client):
     def __init__(self, host, port):
         #self.client = smtplib.SMTP(host, port)
 
-        super(ClientSMTP, self).__init__(host, port)
+        super(L7ClientSMTP, self).__init__(host, port)
 
     @classmethod
     def get_scheme(cls):
         return 'smtp'
 
-    def connect(self):
+    def _connect(self):
+        #FIXME: self
         self.client = smtplib.SMTP()
         self.client.connect(self._host, self._port)
         self.client.ehlo()
@@ -227,7 +268,7 @@ class ClientSMTP(Client):
         response, message = self.client.docmd('STARTTLS')
         if response != 220:
             raise ValueError
-        self._socket = self.client.sock
+        return self.client.sock
 
     def close(self):
         if self._socket:
@@ -236,24 +277,25 @@ class ClientSMTP(Client):
 import imaplib
 
 
-class ClientIMAP(Client):
+class L7ClientIMAP(L7Client):
     def __init__(self, host, port):
         #self.client = imaplib.IMAP(host, port)
 
-        super(ClientIMAP, self).__init__(host, port)
+        super(L7ClientIMAP, self).__init__(host, port)
 
     @classmethod
     def get_scheme(cls):
         return 'imap'
 
-    def connect(self):
+    def _connect(self):
+        #FIXME: self
         self.client = imaplib.IMAP4(self._host, self._port)
         if 'STARTTLS' not in self.client.capabilities:
             raise ValueError
         response, message = self.client.xatom('STARTTLS')
         if response != 'OK':
             raise ValueError
-        self._socket = self.client.socket()
+        return self.client.socket()
 
     def close(self):
         if self._socket:
@@ -274,25 +316,28 @@ class TlsAlert(ValueError):
         self.description = description
 
 
-class TlsClientHandshake(object):
-    def __init__(self, host, port, client_class=Client):
-        self._client = client_class(host, port)
-        self._host = host
+class TlsClient(object):
+    def __init__(self, l4_client):
+        self._l4_client = l4_client
 
-    def do(self, hello_message=None, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE):
+    @abc.abstractmethod
+    def do_handshake(self, hello_message, protocol_version, last_handshake_message_type):
+        raise NotImplementedError()
+
+
+class TlsClientHandshake(TlsClient):
+    def do_handshake(self, hello_message=None, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE):
         if hello_message is None:
             hello_message = TlsHandshakeClientHelloAnyAlgorithm(self._host)
 
-        self._client.connect()
-
         tls_record = TlsRecord([hello_message, ], protocol_version)
-        self._client.send(tls_record.compose())
+        self._l4_client.send(tls_record.compose())
 
         server_messages = {}
-        parsable_bytes = bytearray()
+        received_bytes = bytearray()
         while True:
             try:
-                record = TlsRecord.parse_mutable_bytes(parsable_bytes)
+                record = TlsRecord.parse_mutable_bytes(received_bytes)
                 if record.content_type == TlsContentType.ALERT:
                     raise TlsAlert(record.messages[0].description)
                 elif record.content_type != TlsContentType.HANDSHAKE:
@@ -310,53 +355,14 @@ class TlsClientHandshake(object):
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
 
-            parsable_bytes += self._client.receive(receivable_byte_num)
-
-
-import enum
-import random
-
-from crypton.common.base import ParsableBase, Composer, Vector, VectorParamNumeric
-
-class SslVersion(enum.IntEnum):
-    SSL2 = 0x0002
-
-
-class SslHandshakeType(enum.IntEnum):
-    ERROR = 0x00
-    CLIENT_HELLO = 0x01
-    CLIENT_MASTER_KEY = 0x02
-    CLIENT_FINISHED = 0x03
-    SERVER_HELLO = 0x04
-    SERVER_VERIFY = 0x05
-    SERVER_FINISHED = 0x06
-    REQUEST_CERTIFICATE = 0x07
-    CLIENT_CERTIFICATE = 0x08
-
-
-class SslCipherKind(enum.IntEnum):
-    RC4_128_WITH_MD5 = 0x010080
-    RC4_128_EXPORT40_WITH_MD5 = 0x020080
-    RC2_128_CBC_WITH_MD5 = 0x030080
-    RC2_128_CBC_EXPORT40_WITH_MD5 = 0x040080
-    IDEA_128_CBC_WITH_MD5 = 0x050080
-    DES_64_CBC_WITH_MD5 = 0x060040
-    DES_192_EDE3_CBC_WITH_MD5 = 0x0700C0
-
-
-class SslCertificateType(enum.IntEnum):
-    X509_CERTIFICATE = 0x01
-
-
-class SslAuthenticationType(enum.IntEnum):
-    MD5_WITH_RSA_ENCRYPTION = 0x01
-
-
-class SslErrorType(enum.IntEnum):
-    NO_CIPHER_ERROR = 0x0001
-    NO_CERTIFICATE_ERROR = 0x0002
-    BAD_CERTIFICATE_ERROR = 0x0003
-    UNSUPPORTED_CERTIFICATE_TYPE_ERROR  = 0x0004
+            try:
+                actual_received_bytes = self._l4_client.receive(receivable_byte_num)
+            except NotEnoughData:
+                if received_bytes:
+                    raise NetworkError(NetworkErrorType.NO_CONNECTION)
+                else:
+                    raise NetworkError(NetworkErrorType.NO_RESPONSE)
+            received_bytes += actual_received_bytes
 
 
 class SslError(ValueError):
@@ -366,94 +372,42 @@ class SslError(ValueError):
         self.error = error
 
 
-class SslHandshake(ParsableBase):
-    @classmethod
-    @abc.abstractmethod
-    def get_handshake_type(cls):
-        return NotImplementedError()
-
-
-class SslSessionIdVector(Vector):
-    @classmethod
-    def get_param(cls):
-        return VectorParamNumeric(item_size=1, min_byte_num=0, max_byte_num=16)
-
-
-class SslHandshakeClientHello(SslHandshake):
-    def __init__(
-        self,
-        cipher_kinds,
-        session_id=SslSessionIdVector([]),
-        challenge=bytearray.fromhex('{:16x}'.format(random.getrandbits(128)).zfill(32)),
-    ):
-        self.cipher_kinds = cipher_kinds
-        self.session_id = session_id
-        self.challenge = challenge
-
-    @classmethod
-    def get_handshake_type(cls):
-        return SslHandshakeType.CLIENT_HELLO
-
-    def compose(self):
-        body_composer = Composer()
-
-        body_composer.compose_numeric(self.get_handshake_type(), 1)
-        body_composer.compose_numeric(SslVersion.SSL2, 2)
-
-        body_composer.compose_numeric(len(self.cipher_kinds) * 3, 2)
-        body_composer.compose_numeric(0, 2)
-        body_composer.compose_numeric(len(self.challenge), 2)
-
-        body_composer.compose_numeric_array(self.cipher_kinds, 3)
-        body_composer.compose_bytes(self.challenge)
-
-        header_composer = Composer()
-        if body_composer.composed_bytes >= 2 ** 16:
-            header_composer.compose_numeric(body_composer.composed_byte_num | (2 ** 15), 2)
-        else:
-            header_composer.compose_numeric(body_composer.composed_byte_num | (2 ** 23), 2)
-
-        return header_composer.composed_bytes + body_composer.composed_bytes
-
-
 class SslHandshakeClientHelloAnyAlgorithm(SslHandshakeClientHello):
     def __init__(self):
         super(SslHandshakeClientHelloAnyAlgorithm, self).__init__(cipher_kinds=list(SslCipherKind))
 
 
-class SslClientHandshake(object):
-    def __init__(self, host, port, client_class=Client):
-        self._client = client_class(host, port)
-        self._host = host
-
-    def do(self, hello_message=None, last_handshake_message_type=SslHandshakeType.SERVER_HELLO):
+class SslClientHandshake(TlsClient):
+    def do_handshake(self, hello_message=None, protocol_version=SslVersion.SSL2, last_handshake_message_type=SslMessageType.SERVER_HELLO):
         if hello_message is None:
             hello_message = SslHandshakeClientHelloAnyAlgorithm(self._host)
 
-        self._client.connect()
-
-        self._client.send(hello_message.compose())
+        ssl_record = SslRecord(hello_message)
+        self._l4_client.send(ssl_record.compose())
 
         server_messages = {}
-        parsable_bytes = bytearray()
+        received_bytes = bytearray()
         while True:
             try:
-                record = TlsRecord.parse_mutable_bytes(parsable_bytes)
-                if record.content_type == TlsContentType.ALERT:
-                    raise TlsAlert(record.messages[0].description)
-                elif record.content_type != TlsContentType.HANDSHAKE:
-                    raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
+                record = SslRecord.parse_mutable_bytes(received_bytes)
+                message = record.messages[0]
+                #FIXME: error message is not parsed
+                if message.get_message_type() == SslMessageType.ERROR:
+                    raise SslError(message.get_message_type())
 
-                for handshake_message in record.messages:
-                    if handshake_message.get_handshake_type() in server_messages:
-                        raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
-
-                    server_messages[handshake_message.get_handshake_type()] = handshake_message
-                    if handshake_message.get_handshake_type() == last_handshake_message_type:
-                        return server_messages
+                server_messages[message.get_message_type()] = message
+                if message.get_message_type() == last_handshake_message_type:
+                    return server_messages
 
                 receivable_byte_num = 0
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
 
-            parsable_bytes += self._client.receive(receivable_byte_num)
+            try:
+                actual_received_bytes = self._l4_client.receive(receivable_byte_num)
+            except NotEnoughData:
+                if received_bytes:
+                    raise NetworkError(NetworkErrorType.NO_CONNECTION)
+                else:
+                    raise NetworkError(NetworkErrorType.NO_RESPONSE)
+            received_bytes += actual_received_bytes

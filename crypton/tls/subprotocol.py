@@ -16,7 +16,7 @@ from crypton.common.exception import NotEnoughData, InvalidValue
 from crypton.common.parse import ParsableBase, Parser, Composer
 
 from crypton.tls.extension import TlsExtensions, TlsNamedCurve
-from crypton.tls.version import TlsVersion, TlsProtocolVersionBase, TlsProtocolVersionFinal
+from crypton.tls.version import TlsVersion, TlsProtocolVersionBase, TlsProtocolVersionFinal, SslVersion
 from crypton.tls.ciphersuite import TlsCipherSuiteFactory
 
 
@@ -660,3 +660,137 @@ class TlsHandshakeServerKeyExchange(TlsHandshakeMessage):
 
         if parser['curve_type'] == TlsECCurveType.NAMED_CURVE:
             parser.parse_numeric('curve_type', 2, TlsNamedCurve)
+
+
+class SslMessageBase(ParsableBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_message_type(cls):
+        return NotImplementedError()
+
+
+class SslMessageType(enum.IntEnum):
+    ERROR = 0x00
+    CLIENT_HELLO = 0x01
+    CLIENT_MASTER_KEY = 0x02
+    CLIENT_FINISHED = 0x03
+    SERVER_HELLO = 0x04
+    SERVER_VERIFY = 0x05
+    SERVER_FINISHED = 0x06
+    REQUEST_CERTIFICATE = 0x07
+    CLIENT_CERTIFICATE = 0x08
+
+
+class SslCipherKind(enum.IntEnum):
+    RC4_128_WITH_MD5 = 0x010080
+    RC4_128_EXPORT40_WITH_MD5 = 0x020080
+    RC2_128_CBC_WITH_MD5 = 0x030080
+    RC2_128_CBC_EXPORT40_WITH_MD5 = 0x040080
+    IDEA_128_CBC_WITH_MD5 = 0x050080
+    DES_64_CBC_WITH_MD5 = 0x060040
+    DES_192_EDE3_CBC_WITH_MD5 = 0x0700C0
+
+
+class SslCertificateType(enum.IntEnum):
+    X509_CERTIFICATE = 0x01
+
+
+class SslAuthenticationType(enum.IntEnum):
+    MD5_WITH_RSA_ENCRYPTION = 0x01
+
+
+class SslErrorType(enum.IntEnum):
+    NO_CIPHER_ERROR = 0x0001
+    NO_CERTIFICATE_ERROR = 0x0002
+    BAD_CERTIFICATE_ERROR = 0x0003
+    UNSUPPORTED_CERTIFICATE_TYPE_ERROR  = 0x0004
+
+
+class SslSessionIdVector(Vector):
+    @classmethod
+    def get_param(cls):
+        return VectorParamNumeric(item_size=1, min_byte_num=0, max_byte_num=16)
+
+
+class SslHandshakeClientHello(SslMessageBase):
+    def __init__(
+        self,
+        cipher_kinds,
+        session_id=SslSessionIdVector([]),
+        challenge=bytearray.fromhex('{:16x}'.format(random.getrandbits(128)).zfill(32)),
+    ):
+        self.cipher_kinds = cipher_kinds
+        self.session_id = session_id
+        self.challenge = challenge
+
+    @classmethod
+    def get_message_type(cls):
+        return SslMessageType.CLIENT_HELLO
+
+    def _parse(self, parsable_bytes):
+        raise NotImplementedError()
+
+    def compose(self):
+        composer = Composer()
+
+        composer.compose_numeric(SslVersion.SSL2, 2)
+
+        composer.compose_numeric(len(self.cipher_kinds) * 3, 2)
+        composer.compose_numeric(0, 2)
+        composer.compose_numeric(len(self.challenge), 2)
+
+        composer.compose_numeric_array(self.cipher_kinds, 3)
+        composer.compose_bytes(self.challenge)
+
+        return composer.composed_bytes
+
+
+class SslCertificateType(enum.IntEnum):
+    X509_CERTIFICATE = 0x01
+
+
+class SslHandshakeServerHello(SslMessageBase):
+    def __init__(
+        self,
+        certificate,
+        cipher_kinds,
+        connection_id=SslSessionIdVector([]),
+    ):
+        self.cipher_kinds = cipher_kinds
+        self.certificate = certificate
+        self.connection_id = connection_id
+
+    @classmethod
+    def get_message_type(cls):
+        return SslMessageType.SERVER_HELLO
+
+    @classmethod
+    def _parse(cls, parsable_bytes):
+        parser = Parser(parsable_bytes)
+
+        parser.parse_numeric('session_id_hit', 1)
+        parser.parse_numeric('certificate_type', 1, SslCertificateType)
+        parser.parse_numeric('version', 2, SslVersion)
+        parser.parse_numeric('certificate_length', 2)
+        parser.parse_numeric('cipher_kinds_length', 2)
+        parser.parse_numeric('connection_id_length', 2)
+        parser.parse_bytes('certificate', parser['certificate_length'])
+        parser.parse_numeric_array('cipher_kinds', parser['cipher_kinds_length'] / 3, 3, SslCipherKind)
+        parser.parse_bytes('connection_id', parser['connection_id_length'])
+
+        try:
+            certificate = cryptography.x509.load_der_x509_certificate(
+                bytes(parser['certificate']),
+                cryptography.hazmat.backends.default_backend()
+            )
+        except ValueError:
+            raise InvalidValue(value=parser['certificate'])
+
+        return SslHandshakeServerHello(
+            certificate=certificate,
+            cipher_kinds=parser['cipher_kinds'],
+            connection_id=parser['connection_id'],
+        ), parser.parsed_byte_num
+
+    def compose(self):
+        raise NotImplementedError()

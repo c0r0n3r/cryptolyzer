@@ -140,3 +140,7 @@ class TlsProtocolVersionDraft(TlsProtocolVersionBase):
             raise InvalidValue(value, TlsProtocolVersionDraft, 'draft number')
 
         self._minor = value
+
+
+class SslVersion(enum.IntEnum):
+    SSL2 = 0x0002
