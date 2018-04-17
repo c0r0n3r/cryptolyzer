@@ -58,6 +58,12 @@ class Parser(object):
     def __getitem__(self, key):
         return self._parsed_values[key]
 
+    def __getattr__(self, key):
+        if key in self._parsed_values:
+            return self._parsed_values[key]
+        
+        raise KeyError
+
     @property
     def parsed_byte_num(self):
         return self._parsed_byte_num

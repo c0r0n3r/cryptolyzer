@@ -235,6 +235,7 @@ class NByteEnumParsable(ParsableBase):
             if enum_item.value.code == parser['code']:
                 return enum_item, cls.get_byte_num()
         else:
+            #FIXME: when it raised record raises 
             raise InvalidValue(parser['code'], cls, 'code')
 
     @classmethod

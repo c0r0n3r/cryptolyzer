@@ -326,7 +326,7 @@ class TlsClient(object):
 
 
 class TlsClientHandshake(TlsClient):
-    def do_handshake(self, hello_message=None, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE):
+    def do_handshake(self, hello_message=None, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), last_handshake_message_type=TlsHandshakeType.CERTIFICATE):
         if hello_message is None:
             hello_message = TlsHandshakeClientHelloAnyAlgorithm(self._host)
 
@@ -347,8 +347,9 @@ class TlsClientHandshake(TlsClient):
                     if handshake_message.get_handshake_type() in server_messages:
                         raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
 
-                    server_messages[handshake_message.get_handshake_type()] = handshake_message
-                    if handshake_message.get_handshake_type() == last_handshake_message_type:
+                    handshake_type = handshake_message.get_handshake_type()
+                    server_messages[handshake_type] = handshake_message
+                    if handshake_type == last_handshake_message_type:
                         return server_messages
 
                 receivable_byte_num = 0

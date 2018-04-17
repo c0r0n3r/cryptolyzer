@@ -16,7 +16,7 @@ from crypton.common.exception import NotEnoughData, InvalidValue
 from crypton.common.parse import ParsableBase, Parser, Composer
 
 from crypton.tls.extension import TlsExtensions, TlsNamedCurve
-from crypton.tls.version import TlsVersion, TlsProtocolVersionBase, TlsProtocolVersionFinal, SslVersion
+from crypton.tls.version import TlsVersion, TlsProtocolVersionBase, TlsProtocolVersionFinal, TlsProtocolVersionDraft, SslVersion
 from crypton.tls.ciphersuite import TlsCipherSuiteFactory
 
 
@@ -191,6 +191,7 @@ class TlsHandshakeType(enum.IntEnum):
     SERVER_HELLO = 0x02
     HELLO_VERIFY_REQUEST = 0x03
     NEW_SESSION_TICKET = 0x04
+    HELLO_RETRY_REQUEST = 0x06
     CERTIFICATE = 0x0b
     SERVER_KEY_EXCHANGE = 0x0c
     CERTIFICATE_REQUEST = 0x0d
@@ -347,7 +348,9 @@ class TlsHandshakeHello(TlsHandshakeMessage):
 
         parser.parse_parsable('protocol_version', TlsProtocolVersionBase)
         parser.parse_parsable('random', TlsHandshakeHelloRandom)
-        parser.parse_parsable('session_id', TlsSessionIdVector)
+        protocol_version = parser['protocol_version']
+        if not (type(protocol_version) == TlsProtocolVersionDraft and protocol_version.minor < 22):
+            parser.parse_parsable('session_id', TlsSessionIdVector)
 
         return parser
 
@@ -457,7 +460,7 @@ class TlsHandshakeServerHello(TlsHandshakeHello):
         session_id=TlsSessionIdVector([random.randint(0, 255) for i in range(32)]),
         compression_method=TlsCompressionMethod.NULL,
         cipher_suite=None,
-        extensions=None,
+        extensions=[],
     ):
         super(TlsHandshakeServerHello, self).__init__(protocol_version, random, session_id)
 
@@ -476,7 +479,10 @@ class TlsHandshakeServerHello(TlsHandshakeHello):
         parser = cls._parse_hello_header(handshake_header_parser['payload'])
 
         parser.parse_parsable('cipher_suite', TlsCipherSuiteFactory)
-        parser.parse_numeric('compression_method', 1)
+
+        protocol_version = parser['protocol_version']
+        if not (type(protocol_version) == TlsProtocolVersionDraft and protocol_version.minor < 22):
+            parser.parse_numeric('compression_method', 1)
 
         if parser.parsed_byte_num < handshake_header_parser['handshake_length']:
             cls._parse_extensions(parser)
@@ -484,10 +490,10 @@ class TlsHandshakeServerHello(TlsHandshakeHello):
         return TlsHandshakeServerHello(
             protocol_version=parser['protocol_version'],
             random=parser['random'],
-            session_id=parser['session_id'],
-            compression_method=parser['compression_method'],
+            session_id=parser['session_id'] if hasattr(parser, 'session_id') else [],
+            compression_method=parser['compression_method'] if hasattr(parser, 'compression_method') else TlsCompressionMethod.NULL,
             cipher_suite=parser['cipher_suite'],
-            extensions=parser['extensions'] if hasattr(parser, 'extensions') else None,
+            extensions=parser['extensions'] if hasattr(parser, 'extensions') else [],
         ), handshake_header_parser.parsed_byte_num
 
     def compose(self):
@@ -794,3 +800,45 @@ class SslHandshakeServerHello(SslMessageBase):
 
     def compose(self):
         raise NotImplementedError()
+
+
+class TlsHandshakeHelloRetryRequest(TlsHandshakeHello):
+    def __init__(self, selected_group, protocol_version):
+        super(TlsHandshakeHelloRetryRequest, self).__init__()
+
+        self.protocol_version = protocol_version
+        self.selected_group = TlsNamedCurve(selected_group)
+
+    @classmethod
+    def get_handshake_type(cls):
+        return TlsHandshakeType.HELLO_RETRY_REQUEST
+
+    @classmethod
+    def _parse(cls, parsable_bytes):
+        # type: (bytes) -> Tuple[TlsHandshakeHelloRetryRequest, int]
+
+        handshake_header_parser = cls._parse_handshake_header(parsable_bytes)
+
+        parser = cls._parse_hello_header(handshake_header_parser['payload'])
+
+        parser = Parser(handshake_header_parser['payload'])
+        parser.parse_parsable('protocol_version', TlsProtocolVersionBase)
+        parser.parse_numeric('selected_group', 2, TlsNamedCurve)
+
+        return TlsHandshakeHelloRetryRequest(
+            parser['selected_group'],
+            parser['protocol_version']
+        ), handshake_header_parser.parsed_byte_num
+
+    def compose(self):
+        # type: () -> bytes
+        payload_composer = Composer()
+
+        payload_composer.compose_parsable(self.protocol_version)
+        payload_composer.compose_numeric(self.selected_group, 2)
+
+        extension_bytes = self._compose_extensions()
+
+        header_bytes = self._compose_header(payload_composer.composed_byte_num + len(extension_bytes))
+
+        return extension_bytes

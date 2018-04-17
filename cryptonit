@@ -13,10 +13,10 @@ from crypton.common.algorithm import Authentication, MAC
 from crypton.common.exception import NetworkError, NetworkErrorType
 
 from crypton.tls.ciphersuite import TlsCipherSuite
-from crypton.tls.extension import TlsExtensionType, TlsExtensionServerName, TlsExtensionEllipticCurves, TlsNamedCurve, TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms, TlsECPointFormat, TlsExtensionECPointFormats, TlsExtensionEllipticCurves
+from crypton.tls.extension import TlsExtensionType, TlsExtensionServerName, TlsExtensionEllipticCurves, TlsNamedCurve, TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms, TlsECPointFormat, TlsExtensionECPointFormats, TlsExtensionEllipticCurves, TlsExtensionSupportedVersions, TlsExtensionKeyShare, TlsExtensionKeyShareReserved, TlsKeyShareEntry
 from crypton.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription
 from crypton.tls.subprotocol import SslMessageType
-from crypton.tls.version import SslVersion, TlsVersion, TlsProtocolVersionFinal
+from crypton.tls.version import SslVersion, TlsVersion, TlsProtocolVersionFinal, TlsProtocolVersionDraft
 
 from crypton.tls.client import L7Client, TlsClientHandshake, TlsHandshakeClientHello, TlsHandshakeClientHelloAnyAlgorithm, TlsAlert
 from crypton.tls.client import SslClientHandshake, SslHandshakeClientHello, SslHandshakeClientHelloAnyAlgorithm, SslError
@@ -124,6 +124,62 @@ class SupportedVersions(PluginBase):
         supported_protocols = []
 
         client_hello = TlsHandshakeClientHelloAnyAlgorithm(self._l7_client.host)
+        client_hello.cipher_suites = TlsCipherSuiteVector(list(TlsCipherSuite))
+        record_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+
+
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+        from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+        # Generate a private key for use in the exchange.
+        private_key = X25519PrivateKey.generate()
+        # In a real handshake the peer_public_key will be received from the
+        # other party. For this example we'll generate another private key and
+        # get a public key from that. Note that in a DH handshake both peers
+        # must agree on a common set of parameters.
+        peer_public_key = X25519PrivateKey.generate().public_key()
+        shared_key = private_key.exchange(peer_public_key)
+        # Perform key derivation.
+        derived_key = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=None,
+            info=b'handshake data',
+            backend=default_backend()
+        ).derive(shared_key)
+
+
+        client_hello.extensions.append(TlsExtensionKeyShareReserved([TlsKeyShareEntry(TlsNamedCurve.X25519, map(ord, derived_key))]))
+        client_hello.extensions.append(TlsExtensionKeyShare([TlsKeyShareEntry(TlsNamedCurve.X25519, map(ord, derived_key))]))
+        supported_versions = [TlsProtocolVersionDraft(draft_number) for draft_number in range(28, -1, -1)]
+
+        while len(supported_versions) > 1:
+            client_hello.extensions.append(TlsExtensionSupportedVersions(supported_versions))
+            try:
+                client_hello.protocol_version = record_version
+                server_messages = self._l7_client.do_tls_handshake(client_hello, record_version, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO)
+            except TlsAlert as e:
+                if e.description != TlsAlertDescription.PROTOCOL_VERSION:
+                    raise e
+
+                del supported_versions[0]
+            except NetworkError as e:
+                pass
+            else:
+                for extension in server_messages[TlsHandshakeType.SERVER_HELLO].extensions:
+                    if extension.extension_type == TlsExtensionType.SUPPORTED_VERSIONS:
+                        supported_protocols.append(extension.supported_versions[0])
+                        break
+                else:
+                    server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
+                    if server_hello.protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+                        supported_protocols.append(server_hello.protocol_version)
+                break
+            finally:
+                del client_hello.extensions[-1]
+
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(self._l7_client.host)
         for tls_version in TlsVersion:
             try:
                 protocol_version = TlsProtocolVersionFinal(tls_version)
@@ -146,8 +202,7 @@ class SupportedVersions(PluginBase):
             if e.error != SslErrorType.NO_CIPHER_ERROR:
                 raise e
         except NetworkError as e:
-            if e.error != NetworkErrorType.NO_RESPONSE:
-                raise e
+            pass
         else:
             supported_protocols.append(SslVersion.SSL2)
 
@@ -249,7 +304,7 @@ class UsedCertificates(PluginBase):
 
 
 if __name__ == '__main__':
-    socket.setdefaulttimeout(5.0)
+    socket.setdefaulttimeout(1.0)
 
     argument_parser = get_argument_parser()
     arguments = argument_parser.parse_args()
@@ -269,7 +324,7 @@ if __name__ == '__main__':
         if arguments.command == 'versions':
             supported_protocol_version = SupportedVersions(l7_client).do()
             print(50 * '-')
-            print('\n'.join([str(version) for version in supported_protocol_version]))
+            print('\n'.join([str(version) for version in sorted(supported_protocol_version)]))
 
         if arguments.command == 'curves':
             supported_curves = SupportedCurves(l7_client).do()

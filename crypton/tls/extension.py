@@ -41,7 +41,7 @@ class TlsExtensionType(enum.IntEnum):
     TOKEN_BINDING = 0x0018                           # [DRAFT-IETF-TOKBIND-NEGOTIATION]
     CACHED_INFO = 0x0019                             # [RFC7924]
     SESSION_TICKET = 0x0023                          # [RFC4507]
-    KEY_SHARE = 0x0028                               # [DRAFT-IETF-TLS-TLS13-20]
+    KEY_SHARE_RESERVED = 0x0028                      # [DRAFT-IETF-TLS-TLS13-12]
     PRE_SHARED_KEY = 0x0029                          # [DRAFT-IETF-TLS-TLS13-20]
     EARLY_DATA = 0x002a                              # [DRAFT-IETF-TLS-TLS13-20]
     SUPPORTED_VERSIONS = 0x002b                      # [DRAFT-IETF-TLS-TLS13-20]
@@ -50,6 +50,7 @@ class TlsExtensionType(enum.IntEnum):
     CERTIFICATE_AUTHORITIES = 0x002f                 # [DRAFT-IETF-TLS-TLS13-20]
     OID_FILTERS = 0x0030                             # [DRAFT-IETF-TLS-TLS13-20]
     POST_HANDSHAKE_AUTH = 0x0030                     # [DRAFT-IETF-TLS-TLS13-20]
+    KEY_SHARE = 0x0033                               # [DRAFT-IETF-TLS-TLS13-20]
     RENEGOTIATION_INFO = 0Xff01                      # [RFC5746]
 
 
@@ -336,9 +337,13 @@ class TlsExtensionSupportedVersions(TlsExtensionParsed):
     def _parse(cls, parsable_bytes):
         parser = super(TlsExtensionSupportedVersions, cls)._parse_header(parsable_bytes)
 
-        parser.parse_parsable('supported_versions', TlsSupportedVersionVector)
-
-        return TlsExtensionSupportedVersions(parser['supported_versions']), parser.parsed_byte_num
+        # it possible only when the extension is part of the server hello message
+        if parser['extension_length'] == 2:
+            parser.parse_parsable('supported_version', TlsProtocolVersionBase)
+            return TlsExtensionSupportedVersions([parser['supported_version'], ]), parser.parsed_byte_num
+        else:
+            parser.parse_parsable('supported_versions', TlsSupportedVersionVector)
+            return TlsExtensionSupportedVersions(parser['supported_versions']), parser.parsed_byte_num
 
     def compose(self):
         payload_composer = Composer()
@@ -526,6 +531,39 @@ class TlsSignatureAndHashAlgorithm(TwoByteEnumComposer, enum.Enum):
         hash_algorithm=MAC.SHA512
     )
 
+    # RSASSA-PSS algorithms with public key OID rsaEncryption
+    RSA_PSS_RSAE_SHA256 = HashAndSignatureAlgorithmParam(
+        code=0x0804,
+        signature_algorithm=Authentication.RSA,
+        hash_algorithm=MAC.SHA256
+    )
+    RSA_PSS_RSAE_SHA384 = HashAndSignatureAlgorithmParam(
+        code=0x0805,
+        signature_algorithm=Authentication.RSA,
+        hash_algorithm=MAC.SHA384
+    )
+    RSA_PSS_RSAE_SHA512 = HashAndSignatureAlgorithmParam(
+        code=0x0806,
+        signature_algorithm=Authentication.RSA,
+        hash_algorithm=MAC.SHA512
+    )
+
+    RSA_PSS_PSS_SHA256 = HashAndSignatureAlgorithmParam(
+        code=0x0809,
+        signature_algorithm=Authentication.RSA,
+        hash_algorithm=MAC.SHA256
+    )
+    RSA_PSS_PSS_SHA384 = HashAndSignatureAlgorithmParam(
+        code=0x080a,
+        signature_algorithm=Authentication.RSA,
+        hash_algorithm=MAC.SHA384
+    )
+    RSA_PSS_PSS_SHA512 = HashAndSignatureAlgorithmParam(
+        code=0x080b,
+        signature_algorithm=Authentication.RSA,
+        hash_algorithm=MAC.SHA512
+    )
+
 
 class TlsSignatureAndHashAlgorithmVector(VectorParsableDerived):
     @classmethod
@@ -563,3 +601,76 @@ class TlsExtensionSignatureAlgorithms(TlsExtensionParsed):
         header_bytes = self._compose_header(payload_composer.composed_byte_num)
 
         return header_bytes + payload_composer.composed_bytes
+
+
+class TlsKeyExchangeVector(Vector):
+    @classmethod
+    def get_param(cls):
+        return VectorParamNumeric(item_size=1, min_byte_num=1, max_byte_num=2 ** 16 - 1)
+
+
+class TlsKeyShareEntry(ParsableBase):
+    def __init__(self, group, key_exchange):
+        self.group = TlsNamedCurve(group)
+        self.key_exchange = TlsKeyExchangeVector(key_exchange)
+
+    @classmethod
+    def _parse(cls, parsable_bytes):
+        parser = Parser(parsable_bytes)
+
+        parser.parse_numeric('group', 2, TlsNamedCurve)
+        parser.parse_parsable('key_exchange', TlsKeyExchangeVector)
+
+        return TlsKeyShareEntry(parser['group'], parser['key_exchange']), parser.parsed_byte_num
+
+    def compose(self):
+        composer = Composer()
+
+        composer.compose_numeric(self.group, 2)
+        composer.compose_parsable(self.key_exchange)
+
+        return composer.composed_bytes
+
+
+class TlsKeyShareEntryVector(VectorParsable):
+    @classmethod
+    def get_param(cls):
+        return VectorParamParsable(
+            item_class=TlsKeyShareEntry,
+            fallback_class=None,
+            min_byte_num=0, max_byte_num=2 ** 16 - 1
+        )
+
+
+class TlsExtensionKeyShare(TlsExtensionParsed):
+    def __init__(self, key_share_entries):
+        super(TlsExtensionKeyShare, self).__init__()
+
+        self.key_share_entries = TlsKeyShareEntryVector(key_share_entries)
+
+    @classmethod
+    def get_extension_type(cls):
+        return TlsExtensionType.KEY_SHARE
+
+    @classmethod
+    def _parse(cls, parsable_bytes):
+        parser = super(TlsExtensionKeyShare, cls)._parse_header(parsable_bytes)
+
+        parser.parse_parsable('key_share_entries', TlsKeyShareEntryVector)
+
+        return TlsExtensionKeyShare(parser['key_share_entries']), parser.parsed_byte_num
+
+    def compose(self):
+        payload_composer = Composer()
+
+        payload_composer.compose_parsable(self.key_share_entries)
+
+        header_bytes = self._compose_header(payload_composer.composed_byte_num)
+
+        return header_bytes + payload_composer.composed_bytes
+
+
+class TlsExtensionKeyShareReserved(TlsExtensionKeyShare):
+    @classmethod
+    def get_extension_type(cls):
+        return TlsExtensionType.KEY_SHARE_RESERVED

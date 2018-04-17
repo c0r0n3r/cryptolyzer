@@ -94,6 +94,9 @@ class TlsProtocolVersionFinal(TlsProtocolVersionBase):
         # type: (TlsVersion) -> None
         super(TlsProtocolVersionFinal, self).__init__(self._MAJOR, tls_version)
 
+    def __str__(self):
+        return str(self.minor)
+
     # pylint: disable=no-member
     @TlsProtocolVersionBase.major.setter
     def major(self, value):
@@ -107,11 +110,9 @@ class TlsProtocolVersionFinal(TlsProtocolVersionBase):
     def minor(self, value):
         # type: (TlsVersion) -> None
         try:
-            TlsVersion(value)
+            self._minor = TlsVersion(value)
         except ValueError as e:
             raise InvalidValue(e.args[0], TlsProtocolVersionFinal)
-
-        self._minor = value
 
 
 class TlsProtocolVersionDraft(TlsProtocolVersionBase):
@@ -121,6 +122,9 @@ class TlsProtocolVersionDraft(TlsProtocolVersionBase):
     def __init__(self, draft_number):
         # type: (int) -> None
         super(TlsProtocolVersionDraft, self).__init__(self._MAJOR, draft_number)
+
+    def __str__(self):
+        return str(TlsVersion.TLS1_3) + ' TlsDraftNumber.' + str(self._minor)
 
     # pylint: disable=no-member
     @TlsProtocolVersionBase.major.setter
