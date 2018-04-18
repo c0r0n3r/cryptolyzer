@@ -5,6 +5,7 @@ import abc
 
 from crypton.common.algorithm import Authentication, KeyExchange
 from crypton.common.exception import NotEnoughData, NetworkError, NetworkErrorType
+from crypton.common.parse import Parser
 from crypton.common.utils import get_leaf_classes
 
 from crypton.tls.ciphersuite import TlsCipherSuite
@@ -116,23 +117,23 @@ class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
 
 
 class L7Client(object):
-    def __init__(self, host, port):
+    def __init__(self, host, port, tls_client=None, ssl_client=None):
         self._host = host
         self._port = port
         self._socket = None
+        self._tls_client = tls_client if tls_client else TlsClientHandshake(self)
+        self._ssl_client = ssl_client if ssl_client else SslClientHandshake(self)
 
     def do_ssl_handshake(self, hello_message, last_handshake_message_type=SslMessageType.SERVER_HELLO):
         self._socket = self._connect()
-        tls_client = SslClientHandshake(self)
-        server_messages = tls_client.do_handshake(hello_message, SslVersion.SSL2, last_handshake_message_type)
+        server_messages = self._ssl_client.do_handshake(hello_message, SslVersion.SSL2, last_handshake_message_type)
         self._close()
 
         return server_messages
 
     def do_tls_handshake(self, hello_message, protocol_version, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO):
         self._socket = self._connect()
-        tls_client = TlsClientHandshake(self)
-        server_messages = tls_client.do_handshake(hello_message, protocol_version, last_handshake_message_type)
+        server_messages = self._tls_client.do_handshake(hello_message, protocol_version, last_handshake_message_type)
         self._close()
 
         return server_messages
@@ -301,6 +302,141 @@ class L7ClientIMAP(L7Client):
         if self._socket:
             self.client.quit()
 
+from crypton.vpn.openvpn import OpenVpnOpCode, OpenVPNPacketBase, OpenVPNPacketControlV1, OpenVPNPacketHardResetClientV2, OpenVPNPacketHardResetServerV2, OpenVPNPacketAckV1
+
+class L7ClientOpenVPNBase(L7Client):
+    _FRAGMENT_LENGHT = 100
+
+    def __init__(self, host, port):
+        super(L7ClientOpenVPNBase, self).__init__(host, port, TlsClientOpenVPN(self))
+
+        self.client_packet_id = 0x00000000
+        self.session_id = 0xdeadbabedeadbabe
+        self.remote_session_id = None
+
+    def _send_packet(self, sock, packet):
+        super(L7ClientOpenVPNBase, self).send(packet.compose())
+        #print('send:', packet.get_op_code())
+        if packet.get_op_code() != OpenVpnOpCode.ACK_V1:
+            self.client_packet_id += 1
+
+    def _reset_session(self, sock, is_udp=True):
+        self.client_packet_id = 0x00000000
+        self.session_id += 1
+
+        packet_client_hard_reset = OpenVPNPacketHardResetClientV2(
+            self.session_id,
+            self.client_packet_id
+        )
+        self._send_packet(sock, packet_client_hard_reset)
+
+        hard_reset_server_bytes = sock.recv(64)
+        #print(len(hard_reset_server_bytes))
+        packet_hard_reset_server, unparsed_bytes = OpenVPNPacketHardResetServerV2.parse_immutable_bytes(hard_reset_server_bytes)
+        if packet_hard_reset_server.remote_session_id is not None and packet_hard_reset_server.remote_session_id != self.session_id:
+            raise ValueError('Invalid session id; expected_session_id={} actual_session_id={}'.format(hex(self.session_id), hex(packet_hard_reset_server.remote_session_id)))
+
+        self.remote_session_id = packet_hard_reset_server.session_id
+        packet_ack_server_hard_reset = OpenVPNPacketAckV1(
+            self.session_id,
+            self.remote_session_id,
+            [packet_hard_reset_server.packet_id, ]
+        )
+        self._send_packet(sock, packet_ack_server_hard_reset)
+
+        return sock
+
+
+    def send(self, sendable_bytes):
+        fragment_count = int(len(sendable_bytes) / self._FRAGMENT_LENGHT) + 1
+        for fragment_num in range(fragment_count):
+            fragment_bytes = sendable_bytes[fragment_num * self._FRAGMENT_LENGHT:(fragment_num + 1) * self._FRAGMENT_LENGHT]
+
+            fragment_packet = OpenVPNPacketControlV1(
+                self.session_id,
+                [self.client_packet_id],
+                self.remote_session_id,
+                self.client_packet_id,
+                fragment_bytes
+            )
+            self._send_packet(self._socket, fragment_packet)
+
+    def receive(self, receivable_byte_num):
+        parser = None
+
+        while True:
+            try:
+                received_bytes = self._socket.recv(1024)
+            except socket.timeout:
+                break
+            parser = Parser(received_bytes)
+            #print('received_bytes:', len(received_bytes))
+            parser.parse_derived('packet', OpenVPNPacketBase)
+            #print('receive:', parser['packet'].get_op_code())
+            if parser['packet'].get_op_code() != OpenVpnOpCode.ACK_V1:
+                #print('break')
+                break
+
+        total_received_bytes = bytearray()
+        while parser and parser['packet'].get_op_code() == OpenVpnOpCode.CONTROL_V1:
+            #print('receive:', parser['packet'].get_op_code())
+            #print('packet_id', hex(parser['packet'].packet_id))
+            total_received_bytes += parser['packet'].data
+
+            packet_ack = OpenVPNPacketAckV1(
+                self.session_id,
+                self.remote_session_id,
+                [parser['packet'].packet_id, ]
+            )
+            self._send_packet(self._socket, packet_ack)
+
+            try:
+                received_bytes = self._socket.recv(1024)
+            except socket.timeout:
+                break
+
+            parser = Parser(received_bytes)
+            parser.parse_derived('packet', OpenVPNPacketBase)
+
+        if not total_received_bytes:
+            raise NotEnoughData(receivable_byte_num - len(total_received_bytes))
+
+        return total_received_bytes
+
+    def close(self):
+        if self._socket:
+            self._socket.close()
+
+
+class L7ClientOpenVPN(L7ClientOpenVPNBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'openvpn'
+
+    def _connect(self):
+        #print('connect')
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.connect((self._host, self._port))
+        #FIXME
+        self._socket = sock
+        self._reset_session(sock)
+        return sock
+
+
+class L7ClientOpenVPN(L7ClientOpenVPNBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'openvpntcp'
+
+    def _connect(self):
+        #print('connect')
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((self._host, self._port))
+        #FIXME
+        self._socket = sock
+        self._reset_session(sock)
+        return sock
+
 
 class InvalidState(ValueError):
     def __init__(self, description):
@@ -412,3 +548,7 @@ class SslClientHandshake(TlsClient):
                 else:
                     raise NetworkError(NetworkErrorType.NO_RESPONSE)
             received_bytes += actual_received_bytes
+
+
+class TlsClientOpenVPN(TlsClientHandshake):
+    pass

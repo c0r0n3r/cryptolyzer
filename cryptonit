@@ -15,7 +15,6 @@ from crypton.common.exception import NetworkError, NetworkErrorType
 from crypton.tls.ciphersuite import TlsCipherSuite
 from crypton.tls.extension import TlsExtensionType, TlsExtensionServerName, TlsExtensionEllipticCurves, TlsNamedCurve, TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms, TlsECPointFormat, TlsExtensionECPointFormats, TlsExtensionEllipticCurves, TlsExtensionSupportedVersions, TlsExtensionKeyShare, TlsExtensionKeyShareReserved, TlsKeyShareEntry
 from crypton.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription
-from crypton.tls.subprotocol import SslMessageType
 from crypton.tls.version import SslVersion, TlsVersion, TlsProtocolVersionFinal, TlsProtocolVersionDraft
 
 from crypton.tls.client import L7Client, TlsClientHandshake, TlsHandshakeClientHello, TlsHandshakeClientHelloAnyAlgorithm, TlsAlert
@@ -37,6 +36,12 @@ SUPPORTED_SCHEMES = {
     },
     'smtp': {
         'port': 587
+    },
+    'openvpn': {
+        'port': 1194
+    },
+    'openvpntcp': {
+        'port': 1194
     },
 }
 

@@ -48,6 +48,7 @@ class Parser(object):
         2: '!H',
         3: '!I',
         4: '!I',
+        8: '!Q',
     }
 
     def __init__(self, parsable_bytes):
@@ -62,7 +63,7 @@ class Parser(object):
         if key in self._parsed_values:
             return self._parsed_values[key]
         
-        raise KeyError
+        raise AttributeError
 
     @property
     def parsed_byte_num(self):
@@ -122,6 +123,25 @@ class Parser(object):
         self._parsed_byte_num += len(self._parsable_bytes) - self._parsed_byte_num - len(unparsed_bytes)
         self._parsed_values[name] = parsed_object
 
+    def _parse_derived(self, remaining_bytes_offset, item_classes, fallback_class=None):
+        for item_class in item_classes:
+            try:
+                return item_class._parse(self._parsable_bytes[remaining_bytes_offset:])
+            except InvalidValue:
+                pass
+        else:
+            if fallback_class is not None:
+                return fallback_class._parse(self._parsable_bytes[remaining_bytes_offset:])
+            else:
+                raise ValueError(self._parsable_bytes[remaining_bytes_offset:])
+
+    def parse_derived(self, name, item_base_class, fallback_class=None):
+        item_classes = utils.get_leaf_classes(item_base_class)
+        item, item_size = self._parse_derived(self._parsed_byte_num, item_classes, fallback_class)
+
+        self._parsed_byte_num += item_size
+        self._parsed_values[name] = item
+
     def _parse_parsable_array(self, name, items_size, item_classes, fallback_class=None):
         if items_size > self.unparsed_byte_num:
             raise NotEnoughData(bytes_needed=self._parsed_byte_num + items_size)
@@ -129,6 +149,7 @@ class Parser(object):
         items = []
         remaining_items_size = items_size
 
+        #FIXME refactor
         while remaining_items_size > 0:
             for item_class in item_classes:
                 try:
@@ -176,6 +197,7 @@ class Composer(object):
         2: '!H',
         3: '!I',
         4: '!I',
+        8: '!Q',
     }
 
     def __init__(self):
