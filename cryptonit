@@ -267,7 +267,7 @@ class SupportedSignatureAndHashAlgorithms(PluginBase):
                 )
 
                 try:
-                    server_messages = self._l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
+                    server_messages = self._l7_client.do_tls_handshake(client_hello, client_hello.protocol_version, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO)
                 except TlsAlert as e:
                     if (e.description != TlsAlertDescription.HANDSHAKE_FAILURE and
                         e.description != TlsAlertDescription.ILLEGAL_PARAMETER):

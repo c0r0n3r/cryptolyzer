@@ -148,6 +148,7 @@ class VectorParsable(VectorBase):
         parser = Parser(parsable_bytes)
 
         parser.parse_numeric('item_byte_num', vector_param.item_num_size)
+        #print('item_byte_num', parser['item_byte_num'])
         try:
             parser.parse_parsable_array(
                 'items',

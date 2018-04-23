@@ -510,7 +510,7 @@ class TlsHandshakeServerHello(TlsHandshakeHello):
 
         return header_bytes + payload_composer.composed_bytes
 
-
+import base64
 class TlsCertificate(ParsableBase):
     def __init__(self, certificate):
         self._certificate = certificate
@@ -520,15 +520,24 @@ class TlsCertificate(ParsableBase):
         parser = Parser(parsable_bytes)
 
         parser.parse_numeric('certificate_length', 3)
+        #print('certificate_length', parser['certificate_length'])
+        #print(parser.unparsed_byte_num)
         parser.parse_bytes('certificate', parser['certificate_length'])
+        #print(len(parser['certificate']))
+        #print('-----BEGIN CERTIFICATE-----')
+        #x=base64.b64encode(parser['certificate'])
+        #for i in range(0, len(x), 64):
+        #    print(x[i:i+64])
+        #print('-----END CERTIFICATE-----')
 
         try:
             certificate = cryptography.x509.load_der_x509_certificate(
                 bytes(parser['certificate']),
                 cryptography.hazmat.backends.default_backend()
             )
-        except ValueError:
-            raise InvalidValue(value=parser['certificate'])
+        except ValueError as e:
+            print(e)
+            raise InvalidValue(parser['certificate'], TlsCertificate, 'certificate')
 
         return TlsCertificate(certificate), parser.parsed_byte_num
 

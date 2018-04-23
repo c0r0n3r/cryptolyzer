@@ -16,6 +16,8 @@ class OpenVpnOpCode(enum.IntEnum):
 
 
 class OpenVPNPacketBase(ParsableBase):
+    IS_TCP = True
+
     def __init__(self, session_id, packet_id_array=[], remote_session_id=None):
         self.session_id = session_id
         self.packet_id_array = packet_id_array
@@ -31,11 +33,10 @@ class OpenVPNPacketBase(ParsableBase):
         parser = Parser(parsable_bytes)
 
         #FIXME
-        if False:
+        if cls.IS_TCP:
             parser.parse_numeric('packet_len', 2)
-            print(parser['packet_len'], parser.unparsed_byte_num)
-            if parser['packet_len'] < parser.unparsed_byte_num:
-                raise NotEnoughData(parser.unparsed_byte_num - parser['packet_len'])
+            if parser['packet_len'] > parser.unparsed_byte_num:
+                raise NotEnoughData(parser['packet_len']- parser.unparsed_byte_num)
 
         parser.parse_numeric('packet_type', 1)
         if parser['packet_type'] >> 3 != cls.get_op_code():
@@ -43,7 +44,6 @@ class OpenVPNPacketBase(ParsableBase):
 
         parser.parse_numeric('session_id', 8)
         parser.parse_numeric('packet_id_array_length', 1)
-        #print('packet_id_array_length', parser['packet_id_array_length'])
         if parser['packet_id_array_length']:
             parser.parse_numeric_array('packet_id_array', parser['packet_id_array_length'], 4)
             parser.parse_numeric('remote_session_id', 8)
@@ -62,7 +62,7 @@ class OpenVPNPacketBase(ParsableBase):
             composer.compose_numeric(self.remote_session_id, 8)
 
         #FIXME
-        if False:
+        if self.IS_TCP:
             composer_payload_length = Composer()
             composer_payload_length.compose_numeric(composer.composed_byte_num + payload_length, 2)
             return composer_payload_length.composed_bytes + composer.composed_bytes
@@ -101,7 +101,7 @@ class OpenVPNPacketControlV1(OpenVPNPacketBase):
             parser['session_id'],
             getattr(parser, 'packet_id_array', []),
             getattr(parser, 'remote_session_id', None),
-            getattr(parser, 'packet_id', None),
+            parser['packet_id'],
             parser['payload']
         ), parser.parsed_byte_num
 

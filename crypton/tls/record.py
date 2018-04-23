@@ -51,9 +51,10 @@ class TlsRecord(RecordBase):
             raise InvalidValue(e.value, TlsContentType)
         parser.parse_parsable('protocol_version', TlsProtocolVersionBase)
         parser.parse_numeric('record_length', 2)
+        #print('record_length', parser['record_length'], parser['content_type'], parser.unparsed_byte_num)
 
-        if parser.parsed_byte_num + parser['record_length'] > len(parsable_bytes):
-            raise NotEnoughData(parser['record_length'])
+        if parser['record_length'] > parser.unparsed_byte_num:
+            raise NotEnoughData(parser['record_length'] - parser.unparsed_byte_num)
 
         header_size = parser.parsed_byte_num
 
