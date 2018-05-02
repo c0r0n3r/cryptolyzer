@@ -162,8 +162,11 @@ class L7Client(object):
     ):
         try:
             self._socket = self._connect()
-        except ConnectionRefusedError:
-            raise NetworkError(NetworkErrorType.NO_CONNECTION)
+        except BaseException as e:  #pylint: disable=broad-except
+            if e.__class__.__name__ == 'ConnectionRefusedError':
+                raise NetworkError(NetworkErrorType.NO_CONNECTION)
+
+            raise e
 
         self._ip = self._socket.getpeername()[0]
 
@@ -312,8 +315,6 @@ class ClientPOP3(L7Client):
 
     def _connect(self):
         self.client = poplib.POP3(self._address, self._port, self._timeout)
-        if 'STLS' not in self.client.capa():
-            raise ValueError
         response = self.client._shortcmd('STLS')  # pylint: disable=protected-access
         if len(response) < 3 or response[:3] != b'+OK':
             raise ValueError
@@ -436,8 +437,8 @@ class TlsClientHandshake(TlsClient):
                 if record.content_type == TlsContentType.ALERT:
                     if record.messages[0].level == TlsAlertLevel.FATAL:
                         raise TlsAlert(record.messages[0].description)
-                    else:
-                        continue
+
+                    continue
                 elif record.content_type != TlsContentType.HANDSHAKE:
                     raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
 
@@ -458,8 +459,8 @@ class TlsClientHandshake(TlsClient):
             except NotEnoughData:
                 if self._l4_client.buffer:
                     raise NetworkError(NetworkErrorType.NO_CONNECTION)
-                else:
-                    raise NetworkError(NetworkErrorType.NO_RESPONSE)
+
+                raise NetworkError(NetworkErrorType.NO_RESPONSE)
 
 
 class SslError(ValueError):
@@ -520,7 +521,7 @@ class SslClientHandshake(TlsClient):
                                     TlsAlertDescription.INTERNAL_ERROR,
                                 ])):
                             raise NetworkError(NetworkErrorType.NO_RESPONSE)
-                        else:
-                            raise NetworkError(NetworkErrorType.NO_CONNECTION)
+
+                        raise NetworkError(NetworkErrorType.NO_CONNECTION)
                 else:
                     raise NetworkError(NetworkErrorType.NO_RESPONSE)

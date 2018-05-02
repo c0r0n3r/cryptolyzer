@@ -1,2 +1,4 @@
 enum34; python_version < '3.4'
+cryptography >= 2.5
 six
+urllib3
