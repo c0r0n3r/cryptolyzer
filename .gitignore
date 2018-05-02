@@ -1,0 +1,14 @@
+*.orig
+*.rej
+
+*.swp
+
+*.pyc
+
+.coverage
+.idea
+.mypy_cache
+
+/.eggs
+/*.egg-info
+/.tox
