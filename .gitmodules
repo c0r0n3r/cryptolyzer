@@ -1,0 +1,3 @@
+[submodule "submodules/cryptoparser"]
+	path = submodules/cryptoparser
+	url = https://gitlab.com/coroner/cryptoparser.git

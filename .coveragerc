@@ -1,0 +1,9 @@
+[run]
+source = cryptolyzer
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+include = cryptolyzer/*
+show_missing = True
