@@ -13,8 +13,13 @@ setup(
     url='https://github.com/c0r0n3r/cryptolyzer',
 
     entry_points={
-        'console_scripts': ['cryptolyze']
+        'console_scripts': ['cryptolyze = cryptolyzer.__main__:main']
     },
+    packages=[
+        'cryptolyzer',
+        'cryptolyzer.common',
+        'cryptolyzer.tls',
+    ],
 
     test_suite='tests',
 
