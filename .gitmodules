@@ -1,0 +1,3 @@
+[submodule "submodules/cryptoparser"]
+	path = submodules/cryptoparser
+	url = git+ssh://coroner@www.pfeifferszilard.hu/var/scm/git/tools/cryptoparser.git
