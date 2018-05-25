@@ -18,6 +18,7 @@ setup(
     packages=[
         'cryptolyzer',
         'cryptolyzer.common',
+        'cryptolyzer.ssh',
         'cryptolyzer.tls',
     ],
 
