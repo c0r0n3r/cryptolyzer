@@ -9,10 +9,10 @@ from cryptoparser.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAler
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription, SslMessageType, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
 
-from cryptolyzer.common.analyzer import AnalyzerTls, AnalyzerResultTls
+from cryptolyzer.common.analyzer import AnalyzerBase, AnalyzerResultBase
 
 
-class AnalyzerResultVersions(AnalyzerResultTls):
+class AnalyzerResultVersions(AnalyzerResultBase):
     def __init__(self, versions):
         self.versions = versions
 
@@ -20,7 +20,7 @@ class AnalyzerResultVersions(AnalyzerResultTls):
         return json.dumps([version.name for version in self.versions])
 
 
-class AnalyzerVersions(AnalyzerTls):
+class AnalyzerVersions(AnalyzerBase):
     @classmethod
     def get_name(cls):
         return 'versions'
