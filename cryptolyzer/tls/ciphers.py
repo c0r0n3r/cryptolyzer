@@ -5,16 +5,16 @@ import json
 
 from cryptoparser.common.exception import NetworkError, NetworkErrorType
 
-from cryptoparser.tls.ciphersuite import TlsCipherSuite
-from cryptoparser.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAlert
-from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription
+from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
+from cryptoparser.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAlert, SslHandshakeClientHelloAnyAlgorithm
+from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
-from cryptolyzer.common.analyzer import AnalyzerBase, AnalyzerResultBase
+from cryptolyzer.common.analyzer import AnalyzerTls, AnalyzerResultTls
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
-class AnalyzerResultCipherSuites(AnalyzerResultBase):
+class AnalyzerResultCipherSuites(AnalyzerResultTls):
     def __init__(self):
         self.cipher_suites = {}
 
@@ -30,7 +30,7 @@ class AnalyzerResultCipherSuites(AnalyzerResultBase):
         })
 
 
-class AnalyzerCipherSuites(AnalyzerBase):
+class AnalyzerCipherSuites(AnalyzerTls):
     @classmethod
     def get_name(cls):
         return 'ciphers'
@@ -43,16 +43,28 @@ class AnalyzerCipherSuites(AnalyzerBase):
         result = AnalyzerResultCipherSuites()
         for tls_version in AnalyzerVersions().analyze(l7_client).versions:
             accepted_cipher_suites = []
-            remaining_cipher_suites = list(TlsCipherSuite)
+            if tls_version in TlsVersion:
+                remaining_cipher_suites = list(TlsCipherSuite)
+            else:
+                remaining_cipher_suites = list(SslCipherKind)
+
             while True:
                 try:
-                    client_hello = TlsHandshakeClientHelloAnyAlgorithm(l7_client.host)
-                    client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
-                    client_hello.protocol_version = TlsProtocolVersionFinal(tls_version)
+                    if tls_version in TlsVersion:
+                        client_hello = TlsHandshakeClientHelloAnyAlgorithm(l7_client.host)
+                        client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
+                        client_hello.protocol_version = TlsProtocolVersionFinal(tls_version)
 
-                    server_messages = l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
+                        server_messages = l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
 
-                    server_cipher_suite = server_messages[TlsHandshakeType.SERVER_HELLO].cipher_suite
+                        server_cipher_suite = server_messages[TlsHandshakeType.SERVER_HELLO].cipher_suite
+                    else:
+                        client_hello = SslHandshakeClientHelloAnyAlgorithm()
+                        client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
+                        server_messages = l7_client.do_ssl_handshake(client_hello)
+
+                        accepted_cipher_suites = server_messages[SslMessageType.SERVER_HELLO].cipher_kinds
+                        break
 
                     for index, cipher_suite in enumerate(remaining_cipher_suites):
                         if cipher_suite == server_cipher_suite:
