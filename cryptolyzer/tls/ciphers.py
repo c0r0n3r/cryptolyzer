@@ -17,24 +17,10 @@ from cryptolyzer.tls.versions import AnalyzerVersions
 
 
 class AnalyzerResultCipherSuites(AnalyzerResultBase):
-    def __init__(self):
-        self.tls_versions = set()
-        self.cipher_suites = {}
-        self.cipher_suite_preference = {}
-
-    def add_cipher_suites(self, tls_version, cipher_suites, cipher_suite_preference):
-        self.tls_versions.add(tls_version)
-        self.cipher_suites[tls_version] = cipher_suites
-        self.cipher_suite_preference[tls_version] = cipher_suite_preference
-
-    def as_json(self):
-        return json.dumps(OrderedDict([
-            (tls_version.name, OrderedDict([
-                ('cipher_suite_preference', self.cipher_suite_preference[tls_version]),
-                ('cipher_suites', [cipher_suite.name for cipher_suite in self.cipher_suites[tls_version]])
-            ]))
-            for tls_version in self.tls_versions
-        ]))
+    def __init__(self, protocol_version, cipher_suites, cipher_suite_preference):
+        self.protocol_version = protocol_version
+        self.cipher_suites = cipher_suites
+        self.cipher_suite_preference = cipher_suite_preference
 
 
 class AnalyzerCipherSuites(AnalyzerBase):
@@ -46,16 +32,16 @@ class AnalyzerCipherSuites(AnalyzerBase):
     def get_help(cls):
         return 'Check which cipher suites supported by the server(s)'
 
-    def _get_accepted_cipher_suites(self, l7_client, tls_version, checkable_cipher_suites):
+    def _get_accepted_cipher_suites(self, l7_client, protocol_version, checkable_cipher_suites):
         accepted_cipher_suites = []
         remaining_cipher_suites = list(checkable_cipher_suites)
 
         while True:
             try:
-                if tls_version in TlsVersion:
+                if protocol_version in TlsVersion:
                     client_hello = TlsHandshakeClientHelloAnyAlgorithm(l7_client.host)
                     client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
-                    client_hello.protocol_version = TlsProtocolVersionFinal(tls_version)
+                    client_hello.protocol_version = TlsProtocolVersionFinal(protocol_version)
 
                     server_messages = l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
 
@@ -88,21 +74,17 @@ class AnalyzerCipherSuites(AnalyzerBase):
 
 
 
-    def analyze(self, l7_client):
-        result = AnalyzerResultCipherSuites()
-        for tls_version in AnalyzerVersions().analyze(l7_client).versions:
-            if tls_version in TlsVersion:
-                checkable_cipher_suites = list(TlsCipherSuite)
-            else:
-                checkable_cipher_suites = list(SslCipherKind)
+    def analyze(self, l7_client, protocol_version):
+        if protocol_version in TlsVersion:
+            checkable_cipher_suites = list(TlsCipherSuite)
+        else:
+            checkable_cipher_suites = list(SslCipherKind)
 
-            accepted_cipher_suites = self._get_accepted_cipher_suites(l7_client, tls_version, checkable_cipher_suites)
-            if len(accepted_cipher_suites) > 1:
-                checkable_cipher_suites = [accepted_cipher_suites[-1], accepted_cipher_suites[0]]
-                cipher_suite_preference = self._get_accepted_cipher_suites(l7_client, tls_version, checkable_cipher_suites) != checkable_cipher_suites
-            else:
-                cipher_suite_preference = None
+        accepted_cipher_suites = self._get_accepted_cipher_suites(l7_client, protocol_version, checkable_cipher_suites)
+        if len(accepted_cipher_suites) > 1:
+            checkable_cipher_suites = [accepted_cipher_suites[-1], accepted_cipher_suites[0]]
+            cipher_suite_preference = self._get_accepted_cipher_suites(l7_client, protocol_version, checkable_cipher_suites) != checkable_cipher_suites
+        else:
+            cipher_suite_preference = None
 
-            result.add_cipher_suites(tls_version, accepted_cipher_suites, cipher_suite_preference)
-
-        return result
+        return AnalyzerResultCipherSuites(protocol_version, accepted_cipher_suites, cipher_suite_preference)
