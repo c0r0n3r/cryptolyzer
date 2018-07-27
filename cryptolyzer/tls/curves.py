@@ -9,7 +9,7 @@ from cryptoparser.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, Tls
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType, TlsECCurveType
 from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve, TlsExtensionEllipticCurves
 
-from cryptolyzer.common.analyzer import AnalyzerBase, AnalyzerResultBase
+from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
 
 
@@ -19,7 +19,7 @@ class AnalyzerResultCurves(AnalyzerResultBase):  # pylint: disable=too-few-publi
         self.extension_supported = extension_supported
 
 
-class AnalyzerCurves(AnalyzerBase):
+class AnalyzerCurves(AnalyzerTlsBase):
     @classmethod
     def get_name(cls):
         return 'curves'
@@ -28,7 +28,7 @@ class AnalyzerCurves(AnalyzerBase):
     def get_help(cls):
         return 'Check which curve suites supported by the server(s)'
 
-    def analyze(self, l7_client):
+    def analyze(self, l7_client, protocol_version):
         client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(l7_client.host)
         for index, extension in enumerate(client_hello.extensions):
             if extension.get_extension_type() == TlsExtensionType.SUPPORTED_GROUPS:
