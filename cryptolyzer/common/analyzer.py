@@ -34,7 +34,10 @@ class ProtocolHandlerBase(object):
             l7_client = L7Client.from_scheme(**kwargs)
 
             for analyzer in analyzers:
-                yield analyzer.analyze(l7_client)
+                yield self._analyze(analyzer, l7_client)
+
+    def _analyze(self, analyzer, l7_client):
+        return analyzer.analyze(l7_client)
 
     @classmethod
     def analyzer_from_name(cls, name):
@@ -68,13 +71,10 @@ class AnalyzerResultBase(JSONSerializable):
 from cryptolyzer.tls import ciphers, pubkeys, curves, sigalgos, versions
 from cryptoparser.tls.client import L7Client
 
+from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion, SslProtocolVersion
 
-class ProtocolHandlerTls(ProtocolHandlerBase):
-    @classmethod
-    @abc.abstractmethod
-    def get_protocol(cls):
-        return 'tls'
 
+class ProtocolHandlerTlsCurrentVersionBase(ProtocolHandlerBase):
     @classmethod
     def get_analyzers(cls):
         return [analyzer_class for analyzer_class in get_leaf_classes(AnalyzerBase)]
@@ -82,3 +82,59 @@ class ProtocolHandlerTls(ProtocolHandlerBase):
     @classmethod
     def get_clients(cls):
         return [client_class for client_class in get_leaf_classes(L7Client)]
+
+    def _analyze(self, analyzer, l7_client):
+        return analyzer.analyze(l7_client, self._get_protocol_version())
+
+    @classmethod
+    @abc.abstractmethod
+    def _get_protocol_version(cls):
+        raise NotImplementedError()
+
+class ProtocolHandlerSsl2(ProtocolHandlerTlsCurrentVersionBase):
+    @classmethod
+    def get_protocol(cls):
+        return 'ssl2'
+
+    @classmethod
+    def _get_protocol_version(cls):
+        return SslProtocolVersion()
+
+class ProtocolHandlerSsl3(ProtocolHandlerTlsCurrentVersionBase):
+    @classmethod
+    def get_protocol(cls):
+        return 'ssl3'
+
+    @classmethod
+    def _get_protocol_version(cls):
+        return TlsProtocolVersionFinal(TlsVersion.SSL3)
+
+
+class ProtocolHandlerTls10(ProtocolHandlerTlsCurrentVersionBase):
+    @classmethod
+    def get_protocol(cls):
+        return 'tls1'
+
+    @classmethod
+    def _get_protocol_version(cls):
+        return TlsProtocolVersionFinal(TlsVersion.TLS1_0)
+
+
+class ProtocolHandlerTls11(ProtocolHandlerTlsCurrentVersionBase):
+    @classmethod
+    def get_protocol(cls):
+        return 'tls1_1'
+
+    @classmethod
+    def _get_protocol_version(cls):
+        return TlsProtocolVersionFinal(TlsVersion.TLS1_1)
+
+
+class ProtocolHandlerTls12(ProtocolHandlerTlsCurrentVersionBase):
+    @classmethod
+    def get_protocol(cls):
+        return 'tls1_2'
+
+    @classmethod
+    def _get_protocol_version(cls):
+        return TlsProtocolVersionFinal(TlsVersion.TLS1_2)
