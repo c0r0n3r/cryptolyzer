@@ -9,7 +9,7 @@ from cryptoparser.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAler
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription, SslMessageType, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
 
-from cryptolyzer.common.analyzer import AnalyzerTls, AnalyzerResultTls
+from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
 
 
 class AnalyzerResultVersions(AnalyzerResultTls):
@@ -17,10 +17,10 @@ class AnalyzerResultVersions(AnalyzerResultTls):
         self.versions = versions
 
     def as_json(self):
-        return json.dumps([version.name for version in self.versions])
+        return json.dumps({'versions': [repr(version) for version in self.versions]})
 
 
-class AnalyzerVersions(AnalyzerTls):
+class AnalyzerVersions(AnalyzerTlsBase):
     @classmethod
     def get_name(cls):
         return 'versions'
@@ -29,7 +29,7 @@ class AnalyzerVersions(AnalyzerTls):
     def get_help(cls):
         return 'Check which protocol versions supported by the server(s)'
 
-    def analyze(self, l7_client):
+    def analyze(self, l7_client, protocol_version):
         supported_protocols = []
 
         try:
@@ -43,7 +43,7 @@ class AnalyzerVersions(AnalyzerTls):
                 raise e
         else:
             if server_messages[SslMessageType.SERVER_HELLO].cipher_kinds:
-                supported_protocols.append(SslVersion.SSL2)
+                supported_protocols.append(SslProtocolVersion())
 
         client_hello = TlsHandshakeClientHelloAnyAlgorithm(l7_client.host)
         for tls_version in TlsVersion:
@@ -58,7 +58,8 @@ class AnalyzerVersions(AnalyzerTls):
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
             else:
-                if server_messages[TlsHandshakeType.SERVER_HELLO].protocol_version == protocol_version:
-                    supported_protocols.append(protocol_version.minor)
+                server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
+                if server_hello.protocol_version == protocol_version:
+                    supported_protocols.append(server_hello.protocol_version)
 
         return AnalyzerResultVersions(supported_protocols)
