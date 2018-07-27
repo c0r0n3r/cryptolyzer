@@ -9,7 +9,7 @@ from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm, TlsExtensio
 from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointFormats
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription
 
-from cryptolyzer.common.analyzer import AnalyzerBase, AnalyzerResultBase
+from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.tls.client import TlsHandshakeClientHello, TlsAlert
 
@@ -19,7 +19,7 @@ class AnalyzerResultSigAlgos(AnalyzerResultBase):  # pylint: disable=too-few-pub
         self.sig_algos = [sig_algo.name for sig_algo in sig_algos]
 
 
-class AnalyzerSigAlgos(AnalyzerBase):
+class AnalyzerSigAlgos(AnalyzerTlsBase):
     @classmethod
     def get_name(cls):
         return 'sigalgos'
@@ -28,7 +28,7 @@ class AnalyzerSigAlgos(AnalyzerBase):
     def get_help(cls):
         return 'Check which signature and hash algorithm combinations supported by the server(s)'
 
-    def analyze(self, l7_client):
+    def analyze(self, l7_client, protocol_version):
         supported_algorithms = []
         for authentication in [Authentication.DSS, Authentication.RSA, Authentication.ECDSA]:
             cipher_suites = TlsCipherSuiteVector([
