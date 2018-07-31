@@ -19,7 +19,7 @@ from cryptoparser.tls.client import TlsAlert, \
     TlsHandshakeClientHelloAuthenticationECDSA
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 
-from cryptolyzer.common.analyzer import AnalyzerBase, AnalyzerResultBase
+from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
 
 
 class AnalyzerResultPublicKeys(AnalyzerResultBase):
@@ -171,7 +171,7 @@ class AnalyzerResultPublicKeys(AnalyzerResultBase):
             self.certificate_chains.append(certificate_chain)
 
 
-class AnalyzerPublicKeys(AnalyzerBase):
+class AnalyzerPublicKeys(AnalyzerTlsBase):
     @classmethod
     def get_name(cls):
         return 'pubkeys'
@@ -180,7 +180,7 @@ class AnalyzerPublicKeys(AnalyzerBase):
     def get_help(cls):
         return 'Check which certificate used by the server(s)'
 
-    def analyze(self, l7_client):
+    def analyze(self, l7_client, protocol_version):
         certificate_chains = set()
         client_hello_messages = [
             TlsHandshakeClientHelloBasic(),
