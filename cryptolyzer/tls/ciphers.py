@@ -71,13 +71,13 @@ class AnalyzerCipherSuites(AnalyzerBase):
             except NetworkError as e:
                 if e.error == NetworkErrorType.NO_RESPONSE:
                     break
+                else:
+                    raise e
             finally:
                 if not remaining_cipher_suites:
                     break
 
         return accepted_cipher_suites
-
-
 
     def analyze(self, l7_client, protocol_version):
         if isinstance(protocol_version, SslProtocolVersion):
