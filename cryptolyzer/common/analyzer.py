@@ -40,7 +40,7 @@ class ProtocolHandlerBase(object):
         if uri.port:
             kwargs['port'] = int(uri.port)
 
-        return L7Client.from_scheme(**kwargs)
+        return L7ClientTls.from_scheme(**kwargs)
 
     def analyze(self, analyzer, uri):
         analyzer = self._analyzer_from_name(analyzer)
@@ -84,7 +84,7 @@ class AnalyzerTlsBase(object):
 
 
 from cryptolyzer.tls import ciphers, pubkeys, curves, sigalgos, versions
-from cryptoparser.tls.client import L7Client
+from cryptoparser.tls.client import L7ClientTls
 
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion, SslProtocolVersion
 
@@ -92,7 +92,7 @@ from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion, SslPro
 class ProtocolHandlerTlsBase(ProtocolHandlerBase):
     @classmethod
     def get_clients(cls):
-        return [client_class for client_class in get_leaf_classes(L7Client)]
+        return [client_class for client_class in get_leaf_classes(L7ClientTls)]
 
     @classmethod
     @abc.abstractmethod
