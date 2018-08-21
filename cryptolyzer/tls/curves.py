@@ -12,7 +12,10 @@ from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
 
 class AnalyzerResultCurves(AnalyzerResultBase):
     def __init__(self, curves):
-        self.curves = [curve.name for curve in curves]
+        self.curves = curves
+
+    def as_json(self):
+        return json.dumps({'curves': [repr(version) for curve in self.curves]})
 
 
 class AnalyzerCurves(AnalyzerTlsBase):
