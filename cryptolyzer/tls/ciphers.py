@@ -8,11 +8,11 @@ from cryptoparser.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAler
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
 from cryptoparser.tls.version import SslProtocolVersion
 
-from cryptolyzer.common.analyzer import AnalyzerResultTls
-from cryptolyzer.tls.versions import AnalyzerVersions
+from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.result import AnalyzerResultTls
 
 
-class AnalyzerResultCipherSuites(AnalyzerResultBase):  # pylint: disable=too-few-public-methods
+class AnalyzerResultCipherSuites(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
     def __init__(self, protocol_version, cipher_suites, cipher_suite_preference):
         super(AnalyzerResultCipherSuites, self).__init__()
 
@@ -21,7 +21,7 @@ class AnalyzerResultCipherSuites(AnalyzerResultBase):  # pylint: disable=too-few
         self.cipher_suite_preference = cipher_suite_preference
 
 
-class AnalyzerCipherSuites(AnalyzerTls):
+class AnalyzerCipherSuites(AnalyzerTlsBase):
     @classmethod
     def get_name(cls):
         return 'ciphers'

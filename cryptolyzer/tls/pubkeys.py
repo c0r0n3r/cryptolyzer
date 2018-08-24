@@ -13,7 +13,8 @@ from cryptoparser.tls.client import TlsAlert, \
     TlsHandshakeClientHelloAuthenticationECDSA
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 
-from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultTls
+from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.result import AnalyzerResultTls
 import cryptolyzer.common.x509 as x509
 
 

@@ -9,11 +9,12 @@ from cryptoparser.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, Tls
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType, TlsECCurveType
 from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve, TlsExtensionEllipticCurves
 
-from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
+from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
+from cryptolyzer.common.result import AnalyzerResultTls
 
 
-class AnalyzerResultCurves(AnalyzerResultBase):  # pylint: disable=too-few-public-methods
+class AnalyzerResultCurves(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
     def __init__(self, curves, extension_supported):
         self.curves = curves
         self.extension_supported = extension_supported

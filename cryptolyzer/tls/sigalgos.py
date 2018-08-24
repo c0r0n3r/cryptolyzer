@@ -9,12 +9,13 @@ from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm, TlsExtensio
 from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointFormats
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription
 
-from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
+from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError
+from cryptolyzer.common.result import AnalyzerResultTls
 from cryptolyzer.tls.client import TlsHandshakeClientHello, TlsAlert
 
 
-class AnalyzerResultSigAlgos(AnalyzerResultBase):  # pylint: disable=too-few-public-methods
+class AnalyzerResultSigAlgos(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
     def __init__(self, sig_algos):
         self.sig_algos = sig_algos
 
