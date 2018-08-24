@@ -11,7 +11,8 @@ from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
-from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
+from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.result import AnalyzerResultTls
 
 
 class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
