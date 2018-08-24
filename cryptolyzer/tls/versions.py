@@ -9,7 +9,8 @@ from cryptoparser.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAler
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription, SslMessageType, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
 
-from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
+from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.result import AnalyzerResultTls
 
 
 class AnalyzerResultVersions(AnalyzerResultTls):

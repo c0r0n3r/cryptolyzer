@@ -12,18 +12,19 @@ from cryptoparser.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAler
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
-from cryptolyzer.common.analyzer import AnalyzerTls, AnalyzerResultTls
+from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.result import AnalyzerResultTls
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
-class AnalyzerResultCipherSuites(AnalyzerResultBase):
+class AnalyzerResultCipherSuites(AnalyzerResultTls):
     def __init__(self, protocol_version, cipher_suites, cipher_suite_preference):
         self.protocol_version = protocol_version
         self.cipher_suites = cipher_suites
         self.cipher_suite_preference = cipher_suite_preference
 
 
-class AnalyzerCipherSuites(AnalyzerTls):
+class AnalyzerCipherSuites(AnalyzerTlsBase):
     @classmethod
     def get_name(cls):
         return 'ciphers'
