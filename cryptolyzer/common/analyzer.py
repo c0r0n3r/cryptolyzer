@@ -83,7 +83,7 @@ class AnalyzerTlsBase(object):
         raise NotImplementedError()
 
 
-from cryptolyzer.tls import ciphers, pubkeys, curves, sigalgos, versions
+from cryptolyzer.tls import ciphers, pubkeys, curves, sigalgos, versions, dhparams
 from cryptoparser.tls.client import L7ClientTls
 
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion, SslProtocolVersion
@@ -143,6 +143,7 @@ class ProtocolHandlerTls10(ProtocolHandlerTlsExactVersion):
     def get_analyzers(cls):
         return ProtocolHandlerSsl3.get_analyzers() + [
             curves.AnalyzerCurves,
+            dhparams.AnalyzerDHParams,
         ]
 
     @classmethod
