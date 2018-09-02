@@ -24,6 +24,14 @@ class DHParameter(JSONSerializable):
     def __init__(self, public_key):
         self.public_key = public_key
 
+        codes = default_backend()._ffi.new("int[]", 1)
+        if default_backend()._lib.Cryptography_DH_check(public_key._dh_cdata, codes) == 1:
+            self.prime = (codes[0] & 0x01) == 0 # DH_CHECK_P_NOT_PRIME
+            self.safe_prime = (codes[0] & 0x02) == 0 # DH_CHECK_P_NOT_SAFE_PRIME
+        else:
+            self.prime = None
+            self.safe_prime = None
+
     @property
     def key_size(self):
         return self.public_key.key_size
