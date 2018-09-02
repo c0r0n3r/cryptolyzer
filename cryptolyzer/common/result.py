@@ -21,8 +21,9 @@ class AnalyzerResultTls(AnalyzerResultBase):
 
 
 class DHParameter(JSONSerializable):
-    def __init__(self, public_key):
+    def __init__(self, public_key, reused):
         self.public_key = public_key
+        self.reused = reused
 
         codes = default_backend()._ffi.new("int[]", 1)
         if default_backend()._lib.Cryptography_DH_check(public_key._dh_cdata, codes) == 1:
