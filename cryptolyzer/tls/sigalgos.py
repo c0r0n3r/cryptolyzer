@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from cryptoparser.common.exception import NetworkError
 from cryptoparser.common.algorithm import Authentication
 
-from cryptoparser.tls.client import TlsHandshakeClientHello, TlsAlert
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionServerName, TlsNamedCurve, TlsExtensionEllipticCurves
 from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms
@@ -12,6 +10,8 @@ from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointForm
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
+from cryptolyzer.common.exception import NetworkError
+from cryptolyzer.tls.client import TlsHandshakeClientHello, TlsAlert
 
 
 class AnalyzerResultSigAlgos(AnalyzerResultBase):  # pylint: disable=too-few-public-methods

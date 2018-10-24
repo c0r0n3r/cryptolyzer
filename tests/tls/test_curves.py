@@ -3,9 +3,10 @@
 
 import unittest
 
-from cryptoparser.tls.client import L7Client
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.extension import TlsNamedCurve
 
+from cryptolyzer.tls.client import L7Client
 from cryptolyzer.tls.curves import AnalyzerCurves
 
 
@@ -19,4 +20,4 @@ class TestTlsCurves(unittest.TestCase):
 
     def test_curves(self):
         result = self._get_result('ecc256.badssl.com', 443)
-        self.assertEqual(result.curves, ['SECP256R1', ])
+        self.assertEqual(result.curves, [ TlsNamedCurve.SECP256R1, ])

@@ -5,9 +5,9 @@ import unittest
 
 from collections import OrderedDict
 
-from cryptoparser.tls.client import L7Client
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
+from cryptolyzer.tls.client import L7Client
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
 

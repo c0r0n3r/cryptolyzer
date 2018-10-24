@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from cryptoparser.common.exception import NetworkError, NetworkErrorType
-
-from cryptoparser.tls.client import TlsHandshakeClientHelloKeyExchangeDHE, TlsAlert
 from cryptoparser.tls.subprotocol import TlsHandshakeType
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.dhparam import parse_dh_params
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultBase, DHParameter
+from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE, TlsAlert
 
 
 class AnalyzerResultDHParams(AnalyzerResultBase):
@@ -42,8 +42,8 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                     raise e
             else:
                 server_key_exchange_message = server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
-                server_key_exchange_message.parse_dh_params()
-                dh_public_keys.append(server_key_exchange_message.dh_public_key)
+                dh_public_key = parse_dh_params(server_key_exchange_message.param_bytes)
+                dh_public_keys.append(dh_public_key)
 
                 if len(dh_public_keys) == 2:
                     dhparams.append(DHParameter(

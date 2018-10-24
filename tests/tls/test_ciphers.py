@@ -6,10 +6,10 @@ import unittest
 from cryptoparser.common.algorithm import Authentication, BlockCipher
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
-from cryptoparser.tls.client import L7Client
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
+from cryptolyzer.tls.client import L7Client
 
 
 class TestTlsCiphers(unittest.TestCase):

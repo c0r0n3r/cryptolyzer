@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from cryptoparser.common.exception import NetworkError, NetworkErrorType
-
-from cryptoparser.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, TlsAlert
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve, TlsExtensionEllipticCurves
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, TlsAlert
 
 
 class AnalyzerResultCurves(AnalyzerResultBase):  # pylint: disable=too-few-public-methods

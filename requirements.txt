@@ -1,1 +1,6 @@
 enum34; python_version < '3.4'
+coverage
+cryptography
+six
+unittest2
+urllib3
