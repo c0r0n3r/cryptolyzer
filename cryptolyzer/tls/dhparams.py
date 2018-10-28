@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from cryptoparser.common.exception import NetworkError, NetworkErrorType
-
-from cryptoparser.tls.client import TlsHandshakeClientHelloKeyExchangeDHE, TlsAlert
 from cryptoparser.tls.subprotocol import TlsHandshakeType
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_dh_params
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultBase, DHParameter
+from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE, TlsAlert
 
 
 class AnalyzerResultDHParams(AnalyzerResultBase):
