@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from cryptoparser.common.exception import NetworkError, NetworkErrorType
-
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
-from cryptoparser.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAlert, SslHandshakeClientHelloAnyAlgorithm
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
 from cryptoparser.tls.version import SslProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultTls
+from cryptolyzer.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAlert, SslHandshakeClientHelloAnyAlgorithm
 
 
 class AnalyzerResultCipherSuites(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
