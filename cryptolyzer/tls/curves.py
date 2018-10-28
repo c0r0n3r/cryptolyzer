@@ -3,15 +3,14 @@
 
 from collections import OrderedDict
 
-from cryptoparser.common.exception import NetworkError, NetworkErrorType
-
-from cryptoparser.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, TlsAlert
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType, TlsECCurveType
 from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve, TlsExtensionEllipticCurves
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultTls
+from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, TlsAlert
 
 
 class AnalyzerResultCurves(AnalyzerResultTls):  # pylint: disable=too-few-public-methods

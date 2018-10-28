@@ -3,16 +3,15 @@
 
 import json
 
-from cryptoparser.common.exception import NetworkError, NetworkErrorType
-
-from cryptoparser.tls.client import TlsHandshakeClientHelloMandatoryCiphers, TlsAlert
-from cryptoparser.tls.client import SslHandshakeClientHelloAnyAlgorithm, SslError
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultTls
+from cryptolyzer.tls.client import TlsHandshakeClientHelloMandatoryCiphers, TlsAlert
+from cryptolyzer.tls.client import SslHandshakeClientHelloAnyAlgorithm, SslError
 
 
 class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
@@ -50,11 +49,10 @@ class AnalyzerVersions(AnalyzerTlsBase):
             if server_messages[SslMessageType.SERVER_HELLO].cipher_kinds:
                 supported_protocols.append(SslProtocolVersion())
 
-        client_hello = TlsHandshakeClientHelloMandatoryCiphers()
-        for tls_version in TlsVersion:
+        for tls_version in (TlsVersion.SSL3, TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2):
             try:
                 protocol_version = TlsProtocolVersionFinal(tls_version)
-                client_hello.protocol_version = protocol_version
+                client_hello = TlsHandshakeClientHelloMandatoryCiphers(protocol_version)
                 server_messages = l7_client.do_tls_handshake(client_hello, protocol_version)
             except TlsAlert as e:
                 if e.description not in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.HANDSHAKE_FAILURE]:

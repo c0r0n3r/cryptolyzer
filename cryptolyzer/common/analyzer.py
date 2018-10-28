@@ -85,7 +85,7 @@ class AnalyzerTlsBase(object):
 
 
 from cryptolyzer.tls import ciphers, pubkeys, curves, sigalgos, versions, dhparams  # noqa: F401, pylint: disable=unused-import
-from cryptoparser.tls.client import L7ClientTls  # noqa: F401
+from cryptolyzer.tls.client import L7ClientTls  # noqa: F401
 
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion, SslProtocolVersion  # noqa: F401
 

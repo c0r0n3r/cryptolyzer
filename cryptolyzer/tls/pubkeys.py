@@ -6,14 +6,15 @@ from collections import OrderedDict
 import cryptography.x509 as cryptography_x509
 from cryptography.hazmat.backends import default_backend as cryptography_default_backend
 
-from cryptoparser.common.exception import NetworkError, NetworkErrorType
-from cryptoparser.tls.client import TlsAlert, \
-    TlsHandshakeClientHelloAuthenticationDSS, \
-    TlsHandshakeClientHelloAuthenticationRSA, \
-    TlsHandshakeClientHelloAuthenticationECDSA
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.tls.client import TlsAlert, \
+    TlsHandshakeClientHelloAuthenticationDSS, \
+    TlsHandshakeClientHelloAuthenticationRSA, \
+    TlsHandshakeClientHelloAuthenticationECDSA
+
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultTls
 import cryptolyzer.common.x509 as x509
 
