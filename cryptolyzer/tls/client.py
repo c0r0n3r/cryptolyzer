@@ -56,6 +56,7 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHello):
             extensions=[
                 TlsExtensionServerName(hostname),
                 TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
+                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
             ]
         )
 
@@ -505,4 +506,3 @@ class SslClientHandshake(TlsClient):
                             raise NetworkError(NetworkErrorType.NO_CONNECTION)
                 else:
                     raise NetworkError(NetworkErrorType.NO_RESPONSE)
-

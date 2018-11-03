@@ -58,7 +58,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                     acceptable_alerts = [TlsAlertDescription.HANDSHAKE_FAILURE, TlsAlertDescription.ILLEGAL_PARAMETER]
                     if e.description not in acceptable_alerts:
                         raise e
-                except NetworkError as e:
+                except NetworkError:
                     pass
                 else:
                     supported_algorithms.append(algorithm)

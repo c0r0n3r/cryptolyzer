@@ -3,16 +3,15 @@
 
 import json
 
-from cryptoparser.common.exception import NetworkError, NetworkErrorType
-
-from cryptoparser.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAlert
-from cryptoparser.tls.client import SslHandshakeClientHelloAnyAlgorithm, SslError
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultTls
+from cryptolyzer.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAlert
+from cryptolyzer.tls.client import SslHandshakeClientHelloAnyAlgorithm, SslError
 
 
 class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-public-methods

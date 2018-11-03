@@ -12,15 +12,15 @@ from cryptography.hazmat.backends import default_backend  # pylint: disable=impo
 from cryptography.hazmat.primitives import hashes  # pylint: disable=import-error
 from cryptography.hazmat.primitives import serialization  # pylint: disable=import-error
 
-from cryptoparser.common.exception import NetworkError, NetworkErrorType
-from cryptoparser.tls.client import TlsAlert, \
+from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
+
+from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
+from cryptolyzer.tls.client import TlsAlert, \
     TlsHandshakeClientHelloBasic, \
     TlsHandshakeClientHelloAuthenticationDSS, \
     TlsHandshakeClientHelloAuthenticationRSA, \
     TlsHandshakeClientHelloAuthenticationECDSA
-from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
-
-from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 
 
 class TlsPublicKey(object):  # pylint: disable=too-few-public-methods
