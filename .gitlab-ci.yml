@@ -1,0 +1,74 @@
+image: python
+
+stages:
+- test
+
+before_script:
+- git submodule sync --recursive
+- git submodule update --init --recursive
+- curl -O https://bootstrap.pypa.io/get-pip.py
+- python get-pip.py
+- pip install -r dev-requirements.txt
+
+python2:
+  image: python:2.7
+  stage: test
+  script: tox -e py27
+
+python34:
+  image: python:3.4
+  stage: test
+  script: tox -e py34
+
+python35:
+  image: python:3.5
+  stage: test
+  script: tox -e py35
+
+python36:
+  image: python:3.6
+  stage: test
+  script: tox -e py36
+
+python37:
+  image: python:3.7
+  stage: test
+  script: tox -e py37
+
+pythonrc:
+  image: python:rc
+  stage: test
+  script: tox -e py38
+
+pypy:
+  image: pypy:2
+  stage: test
+  script: tox -e pypy
+
+pypy3:
+  image: pypy:3
+  stage: test
+  script: tox -e pypy3
+
+pylint:
+  image: python:3.7
+  stage: test
+  script: tox -e pylint
+
+pep8:
+  stage: test
+  script: tox -e pep8
+
+coveralls:
+  image: python:3.7
+  variables:
+    CI_NAME: gitlab
+    CI_BUILD_NUMBER: "${CI_JOB_ID}"
+    CI_BUILD_URL: "${CI_JOB_URL}"
+    CI_BRANCH: "${CI_COMMIT_REF_NAME}"
+    PYTHONPATH: "${PYTHONPATH}:submodules/cryptoparser"
+  stage: test
+  script:
+    - pip install coveralls
+    - coverage run --source=cryptolyzer setup.py test
+    - coveralls
