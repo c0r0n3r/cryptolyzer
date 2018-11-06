@@ -5,11 +5,12 @@ from cryptoparser.common.base import TwoByteEnumComposer, TwoByteEnumParsable
 
 from cryptoparser.ssh.subprotocol import SshKeyExchangeInit
 
-from cryptolyzer.common.analyzer import AnalyzerSshBase, AnalyzerResultSsh
+from cryptolyzer.common.analyzer import AnalyzerSshBase
+from cryptolyzer.common.result import AnalyzerResultBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 
 
-class AnalyzerResultCiphers(AnalyzerResultSsh):
+class AnalyzerResultCiphers(AnalyzerResultBase):
     def __init__(
         self,
         kex_algorithms,
@@ -46,7 +47,7 @@ class AnalyzerCiphers(AnalyzerSshBase):
             if e.error != NetworkErrorType.NO_RESPONSE:
                 raise e
 
-        key_exchange_init_message = server_messages[SshKeyExchangeInit]
+        key_exchange_init_message = server_messages[SshKeyExchangeInit.get_message_code()]
         return AnalyzerResultCiphers(
             key_exchange_init_message.kex_algorithms,
             key_exchange_init_message.encryption_algorithms_client_to_server,
@@ -54,4 +55,3 @@ class AnalyzerCiphers(AnalyzerSshBase):
             key_exchange_init_message.mac_algorithms_client_to_server,
             key_exchange_init_message.mac_algorithms_server_to_client,
         )
-
