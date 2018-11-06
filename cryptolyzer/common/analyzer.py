@@ -42,7 +42,7 @@ class ProtocolHandlerBase(object):
         if uri.port:
             kwargs['port'] = int(uri.port)
 
-        return L7ClientTls.from_scheme(**kwargs)
+        return ClientSsh.from_scheme(**kwargs)
 
     def analyze(self, analyzer, uri):
         analyzer = self._analyzer_from_name(analyzer)
@@ -92,7 +92,7 @@ import cryptolyzer.tls.pubkeys  # noqa: F401
 import cryptolyzer.tls.curves  # noqa: F401
 import cryptolyzer.tls.sigalgos  # noqa: F401
 import cryptolyzer.tls.versions  # noqa: F401
-from cryptolyzer.tls.client import L7ClientTls  # noqa: F401
+from cryptolyzer.tls.client import L7Client, L7ClientTls  # noqa: F401
 
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion, SslProtocolVersion  # noqa: F401
 
@@ -246,7 +246,7 @@ class AnalyzerSshBase(object):
 
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
-from cryptolyzer.ssh import versions, ciphers
+from cryptolyzer.ssh import versions, ciphers, pubkeys
 from cryptolyzer.ssh.client import ClientSsh
 
 

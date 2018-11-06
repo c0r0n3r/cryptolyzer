@@ -238,6 +238,7 @@ class L7Client(object):
     @classmethod
     def from_scheme(cls, scheme, host, port=None, timeout=None):
         for client_class in get_leaf_classes(L7Client):
+            print(client_class.get_scheme())
             if client_class.get_scheme() == scheme:
                 port = client_class.get_default_port() if port is None else port
                 return client_class(host, port, timeout)
