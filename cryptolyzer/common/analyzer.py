@@ -246,7 +246,8 @@ class AnalyzerSshBase(object):
 
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
-from cryptolyzer.ssh import versions, ciphers, pubkeys
+#from cryptolyzer.ssh import versions, ciphers, dhparams, pubkeys
+from cryptolyzer.ssh import dhparams
 from cryptolyzer.ssh.client import ClientSsh
 
 
