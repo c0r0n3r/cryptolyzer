@@ -44,8 +44,7 @@ class AnalyzerCiphers(AnalyzerSshBase):
         try:
             server_messages = l7_client.do_handshake(last_message_type=SshKeyExchangeInit)
         except NetworkError as e:
-            if e.error != NetworkErrorType.NO_RESPONSE:
-                raise e
+            raise e
 
         key_exchange_init_message = server_messages[SshKeyExchangeInit.get_message_code()]
         return AnalyzerResultCiphers(
