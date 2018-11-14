@@ -36,17 +36,22 @@ setup(
     license='MPL 2.0',
     url='https://gitlab.com/coroner/cryptolyzer',
     entry_points={
-        'console_scripts': ['cryptolyze']
+        'console_scripts': ['cryptolyze = cryptolyzer.__main__:main']
     },
     install_requires=install_requirements,
     extras_require={
-        ":python_version < '3'": ["enum34", ],
+        ":python_version < '3'": ["enum34", "Mock", ],
         ":platform_python_implementation != 'PyPy'": ["cffi >= 1.7"],
 
         "test": test_requirements,
         "pep8": ["flake8", ],
         "pylint": ["pylint", ],
     },
+
+    packages=[
+        'cryptolyzer',
+        'cryptolyzer.common',
+    ],
 
     test_suite='setup.test_discover',
 
