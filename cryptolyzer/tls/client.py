@@ -414,7 +414,7 @@ class TlsClientHandshake(TlsClient):
         if handshake_type in self.server_messages:
             raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
         if (handshake_type == TlsHandshakeType.SERVER_HELLO and
-                handshake_message.protocol_version != protocol_version):
+                not handshake_message.protocol_version == protocol_version):
             raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
 
     def do_handshake(
