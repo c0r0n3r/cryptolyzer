@@ -50,6 +50,7 @@ setup(
     packages=[
         'cryptolyzer',
         'cryptolyzer.common',
+        'cryptolyzer.tls',
     ],
 
     test_suite='setup.test_discover',
