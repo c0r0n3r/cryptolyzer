@@ -86,7 +86,7 @@ class AnalyzerTlsBase(object):
         raise NotImplementedError()
 
 
-from cryptolyzer.tls import ciphers, pubkeys, curves, sigalgos, versions, dhparams  # noqa: F401
+from cryptolyzer.tls import ciphers, pubkeys, curves, sigalgos, versions, dhparams, extensions  # noqa: F401
 from cryptolyzer.tls.client import L7ClientTls  # noqa: F401
 
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion, SslProtocolVersion  # noqa: F401
@@ -173,6 +173,7 @@ class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
     def get_analyzers(cls):
         return ProtocolHandlerTls11.get_analyzers() + [
             sigalgos.AnalyzerSigAlgos,
+            extensions.AnalyzerExtensions,
         ]
 
     @classmethod
