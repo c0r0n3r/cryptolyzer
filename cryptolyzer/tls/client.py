@@ -8,8 +8,9 @@ import poplib
 import smtplib
 
 import socket
+import random
 
-from cryptoparser.common.algorithm import Authentication, KeyExchange
+from cryptoparser.common.algorithm import Authentication, KeyExchange, NamedGroupType
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.common.utils import get_leaf_classes
 
@@ -22,122 +23,191 @@ from cryptoparser.tls.extension import TlsExtensionServerName
 from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.extension import TlsExtensionECPointFormats, TlsECPointFormat
 from cryptoparser.tls.extension import TlsExtensionEllipticCurves, TlsNamedCurve
+from cryptoparser.tls.extension import TlsExtensionKeyShare, TlsKeyShareEntry, TlsExtensionKeyShareReserved
+from cryptoparser.tls.extension import TlsExtensionSupportedVersions
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, TlsProtocolVersionDraft, SslVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.kex import derive_key
 
 
-class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
-    def __init__(self, hostname):
-        super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
-            extensions=[
-                TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(list(TlsECPointFormat)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
+class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
+    def __init__(self, hostname, protocol_versions, cipher_suites, elliptic_curves, signature_algorithms, extensions):
+        if hostname is not None:
+            extensions.append(TlsExtensionServerName(hostname))
+
+        if protocol_versions is None:
+            protocol_versions = [
+                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
             ]
+
+        is_tls1_3_supported = self._is_tls1_3_supported(protocol_versions)
+
+        if protocol_versions:
+            if is_tls1_3_supported:
+                cipher_suites.extend([
+                    cipher_suites
+                    for cipher_suites in TlsCipherSuite
+                    if cipher_suites.value.min_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+                ])
+                extensions.extend([
+                    TlsExtensionKeyShareReserved([]),
+                    TlsExtensionKeyShare([]),
+                ])
+            extensions.append(TlsExtensionSupportedVersions(protocol_versions))
+
+        if elliptic_curves is None:
+            elliptic_curves = list(TlsNamedCurve)
+        if elliptic_curves:
+            extensions.append(TlsExtensionEllipticCurves(elliptic_curves))
+
+            if is_tls1_3_supported is False:
+                extensions.append(TlsExtensionECPointFormats(list(TlsECPointFormat)))
+
+        if signature_algorithms is None:
+            signature_algorithms = list(TlsSignatureAndHashAlgorithm)
+        if signature_algorithms:
+            extensions.append(TlsExtensionSignatureAlgorithms(signature_algorithms))
+
+        super(TlsHandshakeClientHelloSpecalization, self).__init__(
+            cipher_suites=cipher_suites,
+            extensions=extensions
+        )
+
+    @staticmethod
+    def _is_tls1_3_supported(protocol_versions):
+        return any(
+            version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            for version in protocol_versions
         )
 
 
-class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHello):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
+class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHelloSpecalization):
+    def __init__(self, hostname, protocol_versions=None):
+        super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
+            hostname=hostname,
+            protocol_versions=protocol_versions,
+            cipher_suites=[
+                cipher_suites
+                for cipher_suites in TlsCipherSuite
+                if cipher_suites.value.min_version < TlsProtocolVersionDraft(0)
+            ],
+            elliptic_curves=None,
+            signature_algorithms=None,
+            extensiona=[]
+        )
+
+
+class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloSpecalization):
+    _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.authentication and
             cipher_suite.value.authentication in [Authentication.RSA, Authentication.RSA_EXPORT])
-    ])
+    ]
 
-    def __init__(self, hostname):
+    def __init__(self, hostname, protocol_versions=None):
         super(TlsHandshakeClientHelloAuthenticationRSA, self).__init__(
+            hostname=hostname,
+            protocol_versions=protocol_versions,
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
-                TlsExtensionServerName(hostname),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-            ]
+            elliptic_curves=None,
+            signature_algorithms=None,
+            extensiona=[]
         )
 
 
-class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHello):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
+class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloSpecalization):
+    _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.authentication and
             cipher_suite.value.authentication in [Authentication.DSS, Authentication.DSS_EXPORT])
-    ])
+    ]
 
-    def __init__(self, hostname):
+    def __init__(self, hostname, protocol_versions=None, elliptic_curves=None):
         super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
-                TlsExtensionServerName(hostname),
-            ]
+            hostname=hostname,
+            protocol_versions=protocol_versions,
+            cipher_suites=self._CIPHER_SUITES,
+            elliptic_curves=elliptic_curves,
+            signature_algorithms=None,
+            extensiona=[]
         )
 
 
-class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHello):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
+class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloSpecalization):
+    _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.authentication and
             cipher_suite.value.authentication in [Authentication.ECDSA, ])
-    ])
+    ]
 
-    def __init__(self, hostname):
+    def __init__(self, hostname, protocol_versions=None):
         super(TlsHandshakeClientHelloAuthenticationECDSA, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
-                TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(list(TlsECPointFormat)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-            ]
+            hostname=hostname,
+            protocol_versions=protocol_versions,
+            cipher_suites=self._CIPHER_SUITES,
+            elliptic_curves=None,
+            signature_algorithms=None,
+            extensiona=[]
         )
 
 
-class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHello):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
+class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHelloSpecalization):
+    _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if cipher_suite.value.key_exchange == KeyExchange.DHE
-    ])
+    ]
 
-    def __init__(self, hostname):
+    def __init__(self, hostname, protocol_versions=None, elliptic_curves=None):
         super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
-                TlsExtensionServerName(hostname),
-            ]
+            hostname=hostname,
+            protocol_versions=protocol_versions,
+            cipher_suites=self._CIPHER_SUITES,
+            elliptic_curves=[
+                named_group
+                for named_group in TlsNamedCurve
+                if named_group.value.named_group and named_group.value.named_group.value.group_type == NamedGroupType.DH_PARAM
+            ],
+            signature_algorithms=None,
+            extensions=[]
         )
 
 
-class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHello):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
+class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHelloSpecalization):
+    _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.key_exchange and
             cipher_suite.value.key_exchange in [KeyExchange.ECDH, KeyExchange.ECDHE])
-    ])
+    ]
 
-    def __init__(self, hostname):
+    def __init__(self, hostname, protocol_versions=None):
         super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
-                TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(list(TlsECPointFormat)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-            ]
+            hostname=hostname,
+            protocol_versions=protocol_versions,
+            cipher_suites=self._CIPHER_SUITES,
+            elliptic_curves=None,
+            signature_algorithms=None,
+            extensions=[]
         )
 
 
-class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
+class TlsHandshakeClientHelloBasic(TlsHandshakeClientHelloSpecalization):
     def __init__(self):
         super(TlsHandshakeClientHelloBasic, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
+            hostname=None,
+            protocol_versions=[],
+            cipher_suites=list(TlsCipherSuite),
+            elliptic_curves=[],
+            signature_algorithms=[],
             extensions=[]
         )
 
@@ -429,9 +499,9 @@ class TlsClientHandshake(TlsClient):
                             handshake_message.protocol_version != protocol_version):
                         raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
 
-                    server_messages[handshake_message.get_handshake_type()] = handshake_message
-
-                    if handshake_message.get_handshake_type() == last_handshake_message_type:
+                    handshake_type = handshake_message.get_handshake_type()
+                    server_messages[handshake_type] = handshake_message
+                    if handshake_type == last_handshake_message_type:
                         return server_messages
 
                 receivable_byte_num = 0
@@ -499,8 +569,13 @@ class SslClientHandshake(TlsClient):
                     except ValueError:
                         raise NetworkError(NetworkErrorType.NO_CONNECTION)
                     else:
-                        if (tls_record.content_type == TlsContentType.ALERT and
-                                tls_record.messages[0].description == TlsAlertDescription.PROTOCOL_VERSION):
+                        if (
+                            tls_record.content_type == TlsContentType.ALERT and
+                            tls_record.messages[0].description in [
+                                TlsAlertDescription.PROTOCOL_VERSION,
+                                TlsAlertDescription.INTERNAL_ERROR,
+                            ]
+                        ):
                             raise NetworkError(NetworkErrorType.NO_RESPONSE)
                         else:
                             raise NetworkError(NetworkErrorType.NO_CONNECTION)

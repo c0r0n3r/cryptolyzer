@@ -24,7 +24,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
         return 'Check which curve suites supported by the server(s)'
 
     def analyze(self, l7_client, protocol_version):
-        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(l7_client.host)
+        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(l7_client.host, [protocol_version, ])
         for index, extension in enumerate(client_hello.extensions):
             if extension.get_extension_type() == TlsExtensionType.SUPPORTED_GROUPS:
                 del client_hello.extensions[index]

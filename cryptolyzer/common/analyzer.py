@@ -180,6 +180,16 @@ class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
         return TlsProtocolVersionFinal(TlsVersion.TLS1_2)
 
 
+class ProtocolHandlerTls13(ProtocolHandlerTlsExactVersion):
+    @classmethod
+    def get_analyzers(cls):
+        return ProtocolHandlerTls12.get_analyzers()
+
+    @classmethod
+    def _get_protocol_version(cls):
+        return TlsProtocolVersionFinal(TlsVersion.TLS1_3)
+
+
 class AnalyzerResultTls(AnalyzerResultBase):
     def __init__(self, analyzer, results):
         self.analyzer = analyzer

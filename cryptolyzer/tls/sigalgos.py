@@ -5,7 +5,7 @@ from cryptoparser.common.algorithm import Authentication
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionServerName, TlsNamedCurve, TlsExtensionEllipticCurves
-from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms
+from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms, TlsExtensionSignatureAlgorithmsCert
 from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointFormats
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription
 
@@ -13,6 +13,8 @@ from cryptolyzer.common.analyzer import AnalyzerTlsBase, AnalyzerResultBase
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.tls.client import TlsHandshakeClientHello, TlsAlert
 
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.extension import TlsExtensionSupportedVersions, TlsExtensionKeyShareReserved, TlsExtensionKeyShare
 
 class AnalyzerResultSigAlgos(AnalyzerResultBase):  # pylint: disable=too-few-public-methods
     def __init__(self, sig_algos):
@@ -30,12 +32,13 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
 
     def analyze(self, l7_client, protocol_version):
         supported_algorithms = []
-        for authentication in [Authentication.DSS, Authentication.RSA, Authentication.ECDSA]:
+        for authentication in [Authentication.DSS, Authentication.RSA, Authentication.ECDSA, Authentication.EDDSA]:
             cipher_suites = TlsCipherSuiteVector([
                 cipher_suite
                 for cipher_suite in TlsCipherSuite
-                if (cipher_suite.value.key_exchange and cipher_suite.value.key_exchange.value.pfs and
-                    cipher_suite.value.authentication and cipher_suite.value.authentication == authentication)
+                if cipher_suite.value.min_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+                #(cipher_suite.value.key_exchange and cipher_suite.value.key_exchange.value.pfs and
+                #    cipher_suite.value.authentication and cipher_suite.value.authentication == authentication)
             ])
 
             for algorithm in TlsSignatureAndHashAlgorithm:
@@ -49,6 +52,10 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                         TlsExtensionECPointFormats(list(TlsECPointFormat)),
                         TlsExtensionEllipticCurves(list(TlsNamedCurve)),
                         TlsExtensionSignatureAlgorithms([algorithm, ]),
+                        TlsExtensionSignatureAlgorithmsCert(list(TlsSignatureAndHashAlgorithm)),
+                        TlsExtensionSupportedVersions([TlsProtocolVersionFinal(TlsVersion.TLS1_3), ]),
+                        TlsExtensionKeyShareReserved([]),
+                        TlsExtensionKeyShare([]),
                     ]
                 )
 

@@ -3,7 +3,7 @@
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
-from cryptoparser.tls.version import SslProtocolVersion
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
@@ -44,9 +44,14 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                     accepted_cipher_suites = server_messages[SslMessageType.SERVER_HELLO].cipher_kinds
                     break
                 else:
-                    client_hello = TlsHandshakeClientHelloAnyAlgorithm(l7_client.host)
+                    if protocol_version <= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+                        client_hello = TlsHandshakeClientHelloAnyAlgorithm(l7_client.host)
+                        client_hello.protocol_version = protocol_version
+                    else:
+                        client_hello = TlsHandshakeClientHelloAnyAlgorithm(l7_client.host, [protocol_version, ])
+                        client_hello. protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+
                     client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
-                    client_hello.protocol_version = protocol_version
 
                     server_messages = l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
                     server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
@@ -78,7 +83,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         if isinstance(protocol_version, SslProtocolVersion):
             checkable_cipher_suites = list(SslCipherKind)
         else:
-            checkable_cipher_suites = list(TlsCipherSuite)
+            checkable_cipher_suites = list(TlsHandshakeClientHelloAnyAlgorithm(l7_client.host, [protocol_version, ]).cipher_suites)
 
         accepted_cipher_suites = self._get_accepted_cipher_suites(l7_client, protocol_version, checkable_cipher_suites)
         if len(accepted_cipher_suites) > 1:
