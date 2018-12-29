@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import abc
+from collections import OrderedDict
 
 from cryptoparser.common.utils import get_leaf_classes
 from cryptoparser.tls.version import TlsProtocolVersionFinal
@@ -9,7 +10,9 @@ from cryptoparser.tls.version import TlsVersion
 from cryptoparser.tls.version import SslProtocolVersion
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
+from cryptolyzer.common.result import AnalyzerResultTls
 from cryptolyzer.tls.client import L7ClientTls
+from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
@@ -47,6 +50,7 @@ class ProtocolHandlerSsl2(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
         return [
+            AnalyzerCipherSuites,
         ]
 
     @classmethod
@@ -96,6 +100,23 @@ class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
         return TlsProtocolVersionFinal(TlsVersion.TLS1_2)
 
 
+class AnalyzerResultTlsAllSupportedVersions(AnalyzerResultTls):
+    def __init__(self, target, results):
+        super(AnalyzerResultTlsAllSupportedVersions, self).__init__(target)
+
+        self.results = results
+
+    def _asdict(self):
+        results = []
+        for protocol_version, result in iter(self.results.items()):
+            result_as_dict = result._asdict()
+            del result_as_dict['target']
+
+            results.append((repr(protocol_version), result_as_dict))
+
+        return OrderedDict([('target', self.target)] + results)
+
+
 class ProtocolHandlerTlsAllSupportedVersions(ProtocolHandlerTlsBase):
     @classmethod
     def get_analyzers(cls):
@@ -114,4 +135,18 @@ class ProtocolHandlerTlsAllSupportedVersions(ProtocolHandlerTlsBase):
     def analyze(self, analyzer, uri):
         base_analyze = super(ProtocolHandlerTlsAllSupportedVersions, self).analyze
         analyzer_result = base_analyze(AnalyzerVersions.get_name(), uri)
-        return analyzer_result
+        if analyzer == AnalyzerVersions.get_name():
+            return analyzer_result
+
+        results = []
+        target = None
+        for protocol_handler_class in get_leaf_classes(ProtocolHandlerTlsExactVersion):
+            if analyzer in [analyzer_class.get_name() for analyzer_class in protocol_handler_class.get_analyzers()]:
+                result = protocol_handler_class().analyze(analyzer, uri)
+                target = result.target
+
+                results.append(
+                    (protocol_handler_class._get_protocol_version(), result)  # pylint: disable=protected-access
+                )
+
+        return AnalyzerResultTlsAllSupportedVersions(target, OrderedDict(results))
