@@ -61,16 +61,16 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHello):
         )
 
 
-class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHello):
+class TlsHandshakeClientHelloAuthenticationDeprecated(TlsHandshakeClientHello):
     _CIPHER_SUITES = TlsCipherSuiteVector([
         cipher_suite
         for cipher_suite in TlsCipherSuite
-        if (cipher_suite.value.authentication and
-            cipher_suite.value.authentication == Authentication.DSS)
+        if (cipher_suite.value.authentication is None or
+            cipher_suite.value.authentication not in [Authentication.RSA, Authentication.ECDSA])
     ])
 
     def __init__(self, hostname):
-        super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(
+        super(TlsHandshakeClientHelloAuthenticationDeprecated, self).__init__(
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
             extensions=[
                 TlsExtensionServerName(hostname),
@@ -78,12 +78,52 @@ class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHello):
         )
 
 
-class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHello):
+class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthenticationDeprecated):
     _CIPHER_SUITES = TlsCipherSuiteVector([
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.authentication and
-            cipher_suite.value.authentication in [Authentication.ECDSA, ])
+            cipher_suite.value.authentication == Authentication.DSS)
+    ])
+
+
+class TlsHandshakeClientHelloAuthenticationAnonymous(TlsHandshakeClientHelloAuthenticationDeprecated):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if (cipher_suite.value.authentication and cipher_suite.value.authentication == Authentication.anon)
+    ])
+
+
+class TlsHandshakeClientHelloAuthenticationPSK(TlsHandshakeClientHelloAuthenticationDeprecated):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if cipher_suite.value.authentication == Authentication.PSK
+    ])
+
+
+class TlsHandshakeClientHelloAuthenticationSRP(TlsHandshakeClientHelloAuthenticationDeprecated):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if cipher_suite.value.authentication == Authentication.SRP
+    ])
+
+
+class TlsHandshakeClientHelloAuthenticationKRB5(TlsHandshakeClientHelloAuthenticationDeprecated):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if (cipher_suite.value.authentication and cipher_suite.value.authentication == Authentication.KRB5)
+    ])
+
+
+class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHello):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if (cipher_suite.value.authentication and cipher_suite.value.authentication == Authentication.ECDSA)
     ])
 
     def __init__(self, hostname):
@@ -464,6 +504,9 @@ class SslError(ValueError):
         super(SslError, self).__init__()
 
         self.error = error
+
+    def __str__(self):
+        return 'SslError({})'.format(self.error.name)
 
 
 class SslHandshakeClientHelloAnyAlgorithm(SslHandshakeClientHello):
