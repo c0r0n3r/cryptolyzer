@@ -49,7 +49,7 @@ class TestTlsVersions(unittest.TestCase):
     def test_json(self):
         self.assertEqual(
             self._get_result('client.badssl.com', 443).as_json(),
-            '{"versions": ["tls1", "tls1_1", "tls1_2"]}'
+            '{"alerts_unsupported_tls_version": null, "versions": ["tls1", "tls1_1", "tls1_2"]}'
         )
 
     def test_with_client_auth(self):

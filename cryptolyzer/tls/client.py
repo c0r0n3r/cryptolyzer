@@ -61,7 +61,24 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHello):
         )
 
 
-class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHello):
+class TlsHandshakeClientHelloAuthenticationDeprecated(TlsHandshakeClientHello):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if (cipher_suite.value.authentication is None or
+            cipher_suite.value.authentication not in [Authentication.RSA, Authentication.ECDSA])
+    ])
+
+    def __init__(self, hostname):
+        super(TlsHandshakeClientHelloAuthenticationDeprecated, self).__init__(
+            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
+            extensions=[
+                TlsExtensionServerName(hostname),
+            ]
+        )
+
+
+class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthenticationDeprecated):
     _CIPHER_SUITES = TlsCipherSuiteVector([
         cipher_suite
         for cipher_suite in TlsCipherSuite
@@ -69,13 +86,39 @@ class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHello):
             cipher_suite.value.authentication == Authentication.DSS)
     ])
 
-    def __init__(self, hostname):
-        super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
-                TlsExtensionServerName(hostname),
-            ]
-        )
+
+class TlsHandshakeClientHelloAuthenticationAnonymous(TlsHandshakeClientHelloAuthenticationDeprecated):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if (cipher_suite.value.authentication and
+            cipher_suite.value.authentication in [Authentication.anon, Authentication.anon_EXPORT])
+    ])
+
+
+class TlsHandshakeClientHelloAuthenticationPSK(TlsHandshakeClientHelloAuthenticationDeprecated):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if cipher_suite.value.authentication == Authentication.PSK
+    ])
+
+
+class TlsHandshakeClientHelloAuthenticationSRP(TlsHandshakeClientHelloAuthenticationDeprecated):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if cipher_suite.value.authentication == Authentication.SRP
+    ])
+
+
+class TlsHandshakeClientHelloAuthenticationKRB5(TlsHandshakeClientHelloAuthenticationDeprecated):
+    _CIPHER_SUITES = TlsCipherSuiteVector([
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if (cipher_suite.value.authentication and
+            cipher_suite.value.authentication in [Authentication.KRB5, Authentication.KRB5_EXPORT])
+    ])
 
 
 class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHello):
@@ -143,7 +186,7 @@ class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
 
 
 class TlsHandshakeClientHelloMandatoryCiphers(TlsHandshakeClientHello):
-    def __init__(self, protocol_version):
+    def __init__(self, hostname, protocol_version):
         if protocol_version < TlsProtocolVersionFinal(TlsVersion.TLS1_0):
             mandatory_cipher_suites = [TlsCipherSuite.TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA, ]
         elif protocol_version < TlsProtocolVersionFinal(TlsVersion.TLS1_2):
@@ -156,7 +199,9 @@ class TlsHandshakeClientHelloMandatoryCiphers(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloMandatoryCiphers, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=mandatory_cipher_suites,
-            extensions=[]
+            extensions=[
+                TlsExtensionServerName(hostname),
+            ]
         )
 
 
@@ -444,7 +489,7 @@ class TlsClientHandshake(TlsClient):
                     if handshake_type in server_messages:
                         raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
                     if (handshake_type == TlsHandshakeType.SERVER_HELLO and
-                            handshake_message.protocol_version != protocol_version):
+                            handshake_message.protocol_version != hello_message.protocol_version):
                         raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
 
                     server_messages[handshake_message.get_handshake_type()] = handshake_message
@@ -470,6 +515,9 @@ class SslError(ValueError):
         super(SslError, self).__init__()
 
         self.error = error
+
+    def __str__(self):
+        return 'SslError({})'.format(self.error.name)
 
 
 class SslHandshakeClientHelloAnyAlgorithm(SslHandshakeClientHello):
