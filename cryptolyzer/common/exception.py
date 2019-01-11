@@ -14,3 +14,14 @@ class NetworkError(IOError):
         super(NetworkError, self).__init__()
 
         self.error = error
+
+class ResponseErrorType(enum.IntEnum):
+    PLAIN_TEXT_RESPONSE = 1
+    UNPARSABLE_RESPONSE = 2
+
+
+class ResponseError(ValueError):
+    def __init__(self, error):
+        super(ResponseError, self).__init__()
+
+        self.error = error
