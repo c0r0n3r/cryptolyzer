@@ -8,9 +8,10 @@ import poplib
 import smtplib
 
 import socket
+import string
 
 from cryptoparser.common.algorithm import Authentication, KeyExchange
-from cryptoparser.common.exception import NotEnoughData
+from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 from cryptoparser.common.utils import get_leaf_classes
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
@@ -26,7 +27,7 @@ from cryptoparser.tls.extension import TlsExtensionEllipticCurves, TlsNamedCurve
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError, ResponseErrorType
 
 
 class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
@@ -456,6 +457,15 @@ class TlsClient(object):
     def __init__(self, l4_client):
         self._l4_client = l4_client
 
+    @property
+    def _buffer_is_plain_text(self):
+        return all([c in string.printable for c in str(self._l4_client.buffer, 'utf-8')])
+
+    def handle_plain_text_response(self):
+        if self._l4_client.buffer and self._buffer_is_plain_text:
+            self._l4_client.flush_buffer()
+            raise ResponseError(ResponseErrorType.PLAIN_TEXT_RESPONSE)
+
     @abc.abstractmethod
     def do_handshake(self, hello_message, protocol_version, last_handshake_message_type):
         raise NotImplementedError()
@@ -500,10 +510,16 @@ class TlsClientHandshake(TlsClient):
                 receivable_byte_num = 0
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
+            except (InvalidType, InvalidValue) as e:
+                self.handle_plain_text_response()
+
+                raise ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE)
 
             try:
                 self._l4_client.receive(receivable_byte_num)
             except NotEnoughData:
+                self.handle_plain_text_response()
+
                 if self._l4_client.buffer:
                     raise NetworkError(NetworkErrorType.NO_CONNECTION)
                 else:
@@ -558,6 +574,8 @@ class SslClientHandshake(TlsClient):
             try:
                 self._l4_client.receive(receivable_byte_num)
             except NotEnoughData:
+                self.handle_plain_text_response()
+
                 if self._l4_client.buffer:
                     try:
                         tls_record = TlsRecord.parse_exact_size(self._l4_client.buffer)
