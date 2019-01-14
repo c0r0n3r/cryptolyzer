@@ -13,6 +13,7 @@ from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.result import AnalyzerResultTls
 from cryptolyzer.tls.client import L7ClientTls
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
+from cryptolyzer.tls.curves import AnalyzerCurves
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
@@ -72,6 +73,7 @@ class ProtocolHandlerTls10(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
         return ProtocolHandlerSsl3.get_analyzers() + [
+            AnalyzerCurves,
         ]
 
     @classmethod
