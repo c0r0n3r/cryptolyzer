@@ -16,6 +16,7 @@ from cryptolyzer.__main__ import main
 
 import tests.tls.test_ciphers
 import tests.tls.test_curves
+import tests.tls.test_dhparams
 import tests.tls.test_versions
 
 
@@ -72,6 +73,10 @@ class TestMain(unittest.TestCase):
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'curves', 'ecc256.badssl.com:443'),
             tests.tls.test_curves.TestTlsCurves.get_result('ecc256.badssl.com', 443).as_json() + '\n',
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result('tls1_2', 'dhparams', 'dh2048.badssl.com'),
+            tests.tls.test_dhparams.TestTlsDHParams.get_result('dh2048.badssl.com', 443).as_json() + '\n'
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls', 'versions', 'tls-v1-0.badssl.com:1010'),
