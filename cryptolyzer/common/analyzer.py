@@ -84,7 +84,7 @@ class AnalyzerTlsBase(object):
         raise NotImplementedError()
 
 
-from cryptolyzer.tls import ciphers, pubkeys, curves, sigalgos, versions, dhparams  # noqa: F401, pylint: disable=unused-import
+from cryptolyzer.tls import ciphers, curves, pubkeys, sigalgos, versions, dhparams  # noqa: F401, pylint: disable=unused-import
 from cryptolyzer.tls.client import L7ClientTls  # noqa: F401
 
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion, SslProtocolVersion  # noqa: F401
