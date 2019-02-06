@@ -15,6 +15,7 @@ from cryptolyzer.tls.client import L7ClientTls
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.curves import AnalyzerCurves
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
+from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
@@ -97,6 +98,7 @@ class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
         return ProtocolHandlerTls11.get_analyzers() + [
+            AnalyzerSigAlgos,
         ]
 
     @classmethod
