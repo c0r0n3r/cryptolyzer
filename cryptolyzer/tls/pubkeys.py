@@ -13,7 +13,8 @@ from cryptography.hazmat.backends import default_backend as cryptography_default
 from cryptography.hazmat.primitives.asymmetric import padding as cryptography_padding
 
 from cryptoparser.common.base import JSONSerializable
-from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
+from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription, TlsCipherSuiteVector
+from cryptoparser.tls.extension import TlsExtensionCertificateStatusRequest, TlsCertificateStatusType
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.tls.client import TlsAlert, \
@@ -24,6 +25,7 @@ from cryptolyzer.tls.client import TlsAlert, \
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+import cryptolyzer.common.utils
 import cryptolyzer.common.x509
 
 
@@ -56,6 +58,12 @@ class TlsCertificateChain(JSONSerializable):  # pylint: disable=too-few-public-m
                     break
             else:
                 self.verified = True
+
+    def __hash__(self):
+        return hash(tuple([bytes(certificate_byte) for certificate_byte in self._certificate_bytes]))
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
 
     @staticmethod
     def _is_signed_verifiable(issuer_public_key, cert_to_check):
@@ -90,12 +98,6 @@ class TlsCertificateChain(JSONSerializable):  # pylint: disable=too-few-public-m
 
         raise StopIteration()
 
-    def __hash__(self):
-        return hash(tuple([bytes(certificate_byte) for certificate_byte in self._certificate_bytes]))
-
-    def __eq__(self, other):
-        return hash(self) == hash(other)
-
     @property
     def contains_anchor(self):
         return any([cert.is_self_signed for cert in self.items])
@@ -110,11 +112,47 @@ class TlsCertificateChain(JSONSerializable):  # pylint: disable=too-few-public-m
         ])
 
 
+class CertificateStatus(JSONSerializable):
+    def __init__(self, ocsp_response):
+        self.ocsp_response = ocsp_response
+
+    def as_json(self):
+        if self.ocsp_response is None:
+            return OrderedDict()
+        if self.ocsp_response.response_status != cryptography_ocsp.OCSPResponseStatus.SUCCESSFUL:
+            return OrderedDict()
+
+        cert_status = self.ocsp_response.certificate_status
+        return OrderedDict([
+            ('status', cert_status.name.lower()),
+            ('responder', 
+                self.ocsp_response.responder_name.rfc4514_string()
+                if self.ocsp_response.responder_name
+                else utils.bytes_to_colon_separated_hex(self.ocsp_response.responder_key_hash)
+            ),
+            ('produced_at', str(self.ocsp_response.produced_at)),
+            ('this_update', str(self.ocsp_response.this_update)),
+            ('next_update', str(self.ocsp_response.next_update)),
+            ('update_interval', str(self.ocsp_response.next_update - self.ocsp_response.this_update)),
+            ('revocation_time',
+                str(self.ocsp_response.revocation_time)
+                if cert_status == cryptography_ocsp.OCSPCertStatus.REVOKED
+                else None
+            ),
+            ('revocation_reason',
+                str(self.ocsp_response.revocation_reason)
+                if cert_status == cryptography_ocsp.OCSPCertStatus.REVOKED
+                else None
+            ),
+        ])
+
+
 class TlsPublicKey(JSONSerializable):
-    def __init__(self, sni_sent, subject_matches, tls_certificate_chain):
+    def __init__(self, sni_sent, subject_matches, tls_certificate_chain, ocsp_response):
         self.sni_sent = sni_sent
         self.subject_matches = subject_matches
         self.certificate_chain = tls_certificate_chain
+        self.status = CertificateStatus(ocsp_response)
 
 
 class AnalyzerResultPublicKeys(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
@@ -163,6 +201,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             TlsHandshakeClientHelloAuthenticationRSA(l7_client.address),
             TlsHandshakeClientHelloAuthenticationECDSA(l7_client.address),
         ]
+        accepted_client_hello_messages = []
 
         for client_hello in client_hello_messages:
             try:
@@ -170,7 +209,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 server_messages = l7_client.do_tls_handshake(
                     client_hello,
                     client_hello.protocol_version,
-                    TlsHandshakeType.CERTIFICATE
+                    TlsHandshakeType.SERVER_HELLO
                 )
             except TlsAlert as e:
                 if (e.description != TlsAlertDescription.HANDSHAKE_FAILURE and
@@ -180,6 +219,32 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
             else:
+                client_hello.cipher_suites = TlsCipherSuiteVector([
+                    server_messages[TlsHandshakeType.SERVER_HELLO].cipher_suite,
+                ])
+                accepted_client_hello_messages.append(client_hello)
+
+        for idx, client_hello in enumerate(accepted_client_hello_messages):
+            client_hello.extensions.extend([
+                TlsExtensionCertificateStatusRequest(),
+            ])
+
+            try:
+                server_messages = l7_client.do_tls_handshake(
+                    client_hello,
+                    client_hello.protocol_version,
+                    TlsHandshakeType.SERVER_HELLO_DONE
+                )
+            except NetworkError as e:
+                if e.error != NetworkErrorType.NO_RESPONSE:
+                    raise e
+            else:
+                ocsp_response = None
+                if TlsHandshakeType.CERTIFICATE_STATUS in server_messages:
+                    status_message = server_messages[TlsHandshakeType.CERTIFICATE_STATUS]
+                    if status_message.status_type == TlsCertificateStatusType.OCSP:
+                        ocsp_response = cryptography_ocsp.load_der_ocsp_response(status_message.status)
+
                 sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
                 certificate_chain = self._get_tls_certificate_chain(server_messages)
                 leaf_certificate = certificate_chain.items[0]
@@ -192,7 +257,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                         certificate_chain in [result.certificate_chain for result in results]):
                     continue
 
-                results.append(TlsPublicKey(sni_sent, subject_matches, certificate_chain))
+                results.append(TlsPublicKey(sni_sent, subject_matches, certificate_chain, ocsp_response))
 
         return AnalyzerResultPublicKeys(
             AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),
