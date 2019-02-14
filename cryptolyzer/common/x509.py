@@ -20,6 +20,23 @@ from cryptoparser.common.base import JSONSerializable
 import cryptolyzer.common.utils
 
 
+class SignedCertificateTimestamp(JSONSerializable):
+    def __init__(self, sct):
+        self._sct = sct
+
+    def __getattr__(self, name):
+        if hasattr(self._sct, name):
+            return getattr(self._sct, name)
+
+        raise AttributeError(name)
+
+    def as_json(self):
+        return OrderedDict([
+            ('log_id', base64.b64encode(self.log_id).decode('ascii')),
+            ('timestamp', str(self.timestamp)),
+        ])
+
+
 def is_subject_matches(common_names, subject_alternative_names, host_name):
     try:
         ssl.match_hostname({
@@ -284,6 +301,17 @@ class PublicKeyX509(PublicKey):
     def is_self_signed(self):
         return self._certificate.subject and self._certificate.subject == self._certificate.issuer
 
+    @property
+    def scts(self):
+        try:
+            extension = self._certificate.extensions.get_extension_for_class(
+                cryptography_x509.PrecertificateSignedCertificateTimestamps
+            )
+        except cryptography_x509.ExtensionNotFound:
+            return []
+
+        return [SignedCertificateTimestamp(sct) for sct in extension.value._signed_certificate_timestamps]
+
     def as_json(self):
         return OrderedDict([
             ('serial_number', str(self._certificate.serial_number)),
@@ -314,6 +342,13 @@ class PublicKeyX509(PublicKey):
                 ('crl_distribution_points', self.crl_distribution_points),
                 ('ocsp_responders', self.ocsp_responders),
             ])),
+            ('scts', [
+                OrderedDict([
+                    ('log_id', base64.b64encode(sct.log_id).decode('ascii')),
+                    ('timestamp', str(sct.timestamp)),
+                ])
+                for sct in self.scts
+            ]),
             ('fingerprints', {mac.name: fingerprint for (mac, fingerprint) in iteritems(self.fingerprints)}),
             ('public_key_pin', self.public_key_pin),
             ('version', self._certificate.version.name),
