@@ -14,7 +14,9 @@ from cryptography.hazmat.primitives.asymmetric import padding as cryptography_pa
 
 from cryptoparser.common.base import JSONSerializable
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription, TlsCipherSuiteVector
+from cryptoparser.tls.extension import TlsExtensionType
 from cryptoparser.tls.extension import TlsExtensionCertificateStatusRequest, TlsCertificateStatusType
+from cryptoparser.tls.extension import TlsExtensionSignedCertificateTimestamp, SignedCertificateTimestampVector
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.tls.client import TlsAlert, \
@@ -116,6 +118,17 @@ class CertificateStatus(JSONSerializable):
     def __init__(self, ocsp_response):
         self.ocsp_response = ocsp_response
 
+    @property
+    def scts(self):
+        try:
+            extension = self.ocsp_response.single_extensions.get_extension_for_class(
+                cryptography_x509.SignedCertificateTimestamps
+            )
+        except cryptography_x509.ExtensionNotFound:
+            return []
+        else:
+            return [x509.SignedCertificateTimestamp(sct) for sct in list(extension.value)]
+
     def as_json(self):
         if self.ocsp_response is None:
             return OrderedDict()
@@ -144,18 +157,21 @@ class CertificateStatus(JSONSerializable):
                 if cert_status == cryptography_ocsp.OCSPCertStatus.REVOKED
                 else None
             ),
+            ('scts', self.scts),
         ])
 
 
 class TlsPublicKey(JSONSerializable):  # pylint: disable=too-few-public-methods
-    def __init__(self, certificate_bytes, certificate_chain, ocsp_response):
+    def __init__(self, certificate_bytes, certificate_chain, ocsp_response, scts):
         self.certificate_chain = TlsCertificateChain(certificate_bytes, certificate_chain)
         self.status = CertificateStatus(ocsp_response)
+        self.scts = [x509.SignedCertificateTimestamp(sct) for sct in scts]
 
     def as_json(self):
         return OrderedDict([
             ('certificate_chain', self.certificate_chain),
             ('status', self.status),
+            ('scts', self.scts),
         ])
 
 
@@ -175,7 +191,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         return 'Check which certificate used by the server(s)'
 
     @staticmethod
-    def _get_tls_public_key(server_messages, ocsp_response):
+    def _get_tls_public_key(server_messages, ocsp_response, scts):
         certificate_chain = []
         certificate_bytes = []
 
@@ -195,6 +211,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             certificate_bytes=certificate_bytes,
             certificate_chain=certificate_chain,
             ocsp_response=ocsp_response,
+            scts=scts,
         )
 
     def analyze(self, l7_client, protocol_version):
@@ -231,6 +248,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         for idx, client_hello in enumerate(accepted_client_hello_messages):
             client_hello.extensions.extend([
                 TlsExtensionCertificateStatusRequest(),
+                TlsExtensionSignedCertificateTimestamp([]),
             ])
 
             try:
@@ -249,8 +267,14 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                     if status_message.status_type == TlsCertificateStatusType.OCSP:
                         ocsp_response = cryptography_ocsp.load_der_ocsp_response(status_message.status)
 
+                signed_certificate_timestamps = []
+                for extension in server_messages[TlsHandshakeType.SERVER_HELLO].extensions:
+                    if extension.extension_type == TlsExtensionType.SIGNED_CERTIFICATE_TIMESTAMP:
+                        signed_certificate_timestamps = extension.scts
+                        break
+
                 sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
-                tls_public_key = self._get_tls_public_key(server_messages, ocsp_response)
+                tls_public_key = self._get_tls_public_key(server_messages, ocsp_response, signed_certificate_timestamps)
                 leaf_certificate = tls_public_key.certificate_chain.items[0]
                 subject_matches = x509.is_subject_matches(
                     leaf_certificate.common_names,
