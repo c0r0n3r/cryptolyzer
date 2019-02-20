@@ -280,6 +280,10 @@ class PublicKeyX509(PublicKey):
 
         return extension.value.ca
 
+    @property
+    def is_self_signed(self):
+        return self._certificate.subject and self._certificate.subject == self._certificate.issuer
+
     def as_json(self):
         return OrderedDict([
             ('serial_number', str(self._certificate.serial_number)),
