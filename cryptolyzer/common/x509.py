@@ -20,6 +20,18 @@ from cryptoparser.common.base import JSONSerializable
 import cryptolyzer.common.utils
 
 
+def is_subject_matches(common_names, subject_alternative_names, host_name):
+    try:
+        ssl.match_hostname({
+            'subject': (tuple([('commonName', name) for name in common_names]),),
+            'subjectAltName': tuple([('DNS', name) for name in subject_alternative_names]),
+        }, host_name)
+    except ssl.CertificateError:
+        return False
+
+    return True
+
+
 class PublicKey(JSONSerializable):
     @property
     @abc.abstractmethod
@@ -256,6 +268,17 @@ class PublicKeyX509(PublicKey):
                 for access_description in extension.value
                 if access_description.access_method == cryptography_x509.AuthorityInformationAccessOID.OCSP
             ]
+
+    @property
+    def is_ca(self):
+        try:
+            extension = self._certificate.extensions.get_extension_for_class(
+                cryptography_x509.BasicConstraints
+            )
+        except cryptography_x509.ExtensionNotFound:
+            return False
+
+        return extension.value.ca
 
     def as_json(self):
         return OrderedDict([
