@@ -23,3 +23,7 @@ class TestTlsPubKeys(unittest.TestCase):
 
         result = self.get_result('wrong.host.badssl.com', 443)
         self.assertFalse(result.pubkeys[0].subject_matches)
+
+    def test_fallback_certificate(self):
+        result = self.get_result('cloudflare.com', 443)
+        self.assertEqual(len(result.pubkeys), 3)

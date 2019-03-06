@@ -80,6 +80,11 @@ class TestPublicKeyX509(unittest.TestCase):
             ['http://ocsp.comodoca.com']
         )
 
+    def test_is_ca(self):
+        result = self._get_result('badssl.com', 443)
+        self.assertFalse(result.pubkeys[0].certificate_chain.items[0].is_ca)
+        self.assertTrue(result.pubkeys[0].certificate_chain.items[1].is_ca)
+
     def test_validity(self):
         result = self._get_result('expired.badssl.com', 443)
         self.assertEqual(
