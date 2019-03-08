@@ -222,7 +222,7 @@ class ProtocolHandlerTlsAllSupportedVersions(ProtocolHandlerTlsBase):
             return analyzer_result
 
         results = {
-            analyzer_result.target.protocol_version: protocol_handler_class().analyze(analyzer, uri)
+            analyzer_result.target.proto_version: protocol_handler_class().analyze(analyzer, uri)
             for protocol_handler_class in get_leaf_classes(ProtocolHandlerTlsExactVersion)
             if analyzer in [analyzer_class.get_name() for analyzer_class in protocol_handler_class.get_analyzers()]
         }

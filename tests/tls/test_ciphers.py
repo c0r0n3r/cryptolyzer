@@ -5,23 +5,44 @@ import unittest
 
 from cryptoparser.common.algorithm import Authentication, BlockCipher
 
-from cryptoparser.tls.ciphersuite import TlsCipherSuite
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7Client
 
 
+class TestSslCiphers(unittest.TestCase):
+    @staticmethod
+    def get_result(host, port):
+        analyzer = AnalyzerCipherSuites()
+        l7_client = L7Client.from_scheme('tls', host, port)
+        result = analyzer.analyze(l7_client, SslProtocolVersion())
+        return result
+
+    def test_ciphers(self):
+        result = self.get_result('164.100.148.73', 443)
+
+        self.assertEqual(result.cipher_suite_preference, True)
+        self.assertEqual(
+            result.cipher_suites,
+            [
+                SslCipherKind.RC4_128_WITH_MD5,
+                SslCipherKind.DES_192_EDE3_CBC_WITH_MD5,
+            ]
+        )
+
+
 class TestTlsCiphers(unittest.TestCase):
     @staticmethod
-    def _get_result(host, port):
+    def get_result(host, port):
         analyzer = AnalyzerCipherSuites()
         l7_client = L7Client.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_0))
         return result
 
     def test_cbc(self):
-        result = self._get_result('cbc.badssl.com', 443)
+        result = self.get_result('cbc.badssl.com', 443)
 
         self.assertEqual(result.cipher_suite_preference, True)
         self.assertEqual(
@@ -37,7 +58,7 @@ class TestTlsCiphers(unittest.TestCase):
         )
 
     def test_rc4(self):
-        result = self._get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443)
 
         rc4_block_ciphers = [
             BlockCipher.RC4_40,
@@ -50,13 +71,13 @@ class TestTlsCiphers(unittest.TestCase):
         ]))
 
     def test_rc4_md5(self):
-        result = self._get_result('rc4-md5.badssl.com', 443)
+        result = self.get_result('rc4-md5.badssl.com', 443)
 
         self.assertEqual(result.cipher_suite_preference, None)
         self.assertEqual(result.cipher_suites, [TlsCipherSuite.TLS_RSA_WITH_RC4_128_MD5, ])
 
     def test_triple_des(self):
-        result = self._get_result('3des.badssl.com', 443)
+        result = self.get_result('3des.badssl.com', 443)
 
         triple_des_block_ciphers = [
             BlockCipher.TRIPLE_DES,
@@ -69,7 +90,7 @@ class TestTlsCiphers(unittest.TestCase):
         ]))
 
     def test_anon(self):
-        result = self._get_result('null.badssl.com', 443)
+        result = self.get_result('null.badssl.com', 443)
 
         self.assertTrue(all([
             'NULL' in cipher_suite.name or 'anon' in cipher_suite.name
@@ -77,7 +98,7 @@ class TestTlsCiphers(unittest.TestCase):
         ]))
 
     def test_rsa(self):
-        result = self._get_result('static-rsa.badssl.com', 443)
+        result = self.get_result('static-rsa.badssl.com', 443)
 
         self.assertTrue(all([
             cipher_suite.value.authentication == Authentication.RSA

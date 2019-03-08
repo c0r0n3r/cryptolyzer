@@ -46,16 +46,16 @@ def parse_ecdh_params(param_bytes):
     named_curve = parser['named_curve']
 
     try:
-        cryptography_curve = cryptography_ec._CURVE_TYPES[named_curve.name]  # pylint: disable=protected-access
+        cryptography_curve = getattr(cryptography_ec, named_curve.name)()
     except KeyError:
         raise NotImplementedError(named_curve)
 
     parser.parse_numeric('point_length', 1)
     parser.parse_bytes('point', parser['point_length'])
 
-    return cryptography_ec.EllipticCurvePublicNumbers.from_encoded_point(
+    return cryptography_ec.EllipticCurvePublicKey.from_encoded_point(
         cryptography_curve,
-        parser['point']
+        bytes(parser['point'])
     )
 
 
@@ -65,8 +65,8 @@ class DHParameter(JSONSerializable):
         self.reused = reused
 
         codes = cryptography_default_backend()._ffi.new("int[]", 1)  # pylint: disable=protected-access
-        cryptography_dh_check = cryptography_default_backend()._lib.Cryptography_DH_check  # pylint: disable=protected-access
-        if cryptography_dh_check(public_key._dh_cdata, codes) == 1:  # pylint: disable=protected-access
+        dh_check_func = cryptography_default_backend()._lib.dh_check_func  # pylint: disable=protected-access
+        if dh_check_func(public_key._dh_cdata, codes) == 1:  # pylint: disable=protected-access
             self.prime = (codes[0] & 0x01) == 0  # DH_CHECK_P_NOT_PRIME
             if self.prime:
                 self.safe_prime = (codes[0] & 0x02) == 0  # DH_CHECK_P_NOT_SAFE_PRIME
