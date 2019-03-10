@@ -12,6 +12,7 @@ from cryptoparser.tls.version import SslProtocolVersion
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.result import AnalyzerResultTls
 from cryptolyzer.tls.client import L7ClientTls
+from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.curves import AnalyzerCurves
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
@@ -53,6 +54,7 @@ class ProtocolHandlerSsl2(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
         return [
+            AnalyzerPublicKeys,
             AnalyzerCipherSuites,
         ]
 
