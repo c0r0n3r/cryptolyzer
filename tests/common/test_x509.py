@@ -22,35 +22,35 @@ class TestPublicKeyX509(unittest.TestCase):
     def test_common_name(self):
         result = self._get_result('no-common-name.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
-        self.assertEqual(len(result.pubkeys[0].certificate_chain), 3)
-        self.assertNotEqual(result.pubkeys[0].certificate_chain[0].subject, [])
-        self.assertFalse('commonName' in result.pubkeys[0].certificate_chain[0].subject)
+        self.assertEqual(len(result.pubkeys[0].certificate_chain.items), 3)
+        self.assertNotEqual(result.pubkeys[0].certificate_chain.items[0].subject, [])
+        self.assertFalse('commonName' in result.pubkeys[0].certificate_chain.items[0].subject)
 
         result = self._get_result('long-extended-subdomain-name-containing-many-letters-and-dashes.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].common_names, ['*.badssl.com', ])
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].common_names, ['*.badssl.com', ])
 
     def test_subject_alternative_names(self):
         result = self._get_result('no-subject.badssl.com', 443)
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[0].subject_alternative_names,
+            result.pubkeys[0].certificate_chain.items[0].subject_alternative_names,
             ['no-subject.badssl.com']
         )
 
         result = self._get_result('badssl.com', 443)
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[1].subject_alternative_names,
+            result.pubkeys[0].certificate_chain.items[1].subject_alternative_names,
             []
         )
 
     def test_no_subject(self):
         result = self._get_result('no-subject.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].subject, [])
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].subject, [])
 
     def test_issuer(self):
         result = self._get_result('expired.badssl.com', 443)
         self.assertEqual(
-            [attr.rfc4514_string() for attr in result.pubkeys[0].certificate_chain[0].issuer],
+            [attr.rfc4514_string() for attr in result.pubkeys[0].certificate_chain.items[0].issuer],
             [
                 'C=GB',
                 'ST=Greater Manchester',
@@ -63,50 +63,55 @@ class TestPublicKeyX509(unittest.TestCase):
     def test_crl_distribution_points(self):
         result = self._get_result('expired.badssl.com', 443)
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[0].crl_distribution_points,
+            result.pubkeys[0].certificate_chain.items[0].crl_distribution_points,
             ['http://crl.comodoca.com/COMODORSADomainValidationSecureServerCA.crl']
         )
 
         result = self._get_result('letsencrypt.org', 443)
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[0].crl_distribution_points,
+            result.pubkeys[0].certificate_chain.items[0].crl_distribution_points,
             []
         )
 
     def test_ocsp_responders(self):
         result = self._get_result('expired.badssl.com', 443)
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[1].ocsp_responders,
+            result.pubkeys[0].certificate_chain.items[1].ocsp_responders,
             ['http://ocsp.comodoca.com']
         )
 
+    def test_is_ca(self):
+        result = self._get_result('badssl.com', 443)
+        self.assertFalse(result.pubkeys[0].certificate_chain.items[0].is_ca)
+        self.assertTrue(result.pubkeys[0].certificate_chain.items[1].is_ca)
+
     def test_validity(self):
         result = self._get_result('expired.badssl.com', 443)
-        self.assertTrue(result.pubkeys[0].certificate_chain[0].expired)
+        self.assertTrue(result.pubkeys[0].certificate_chain.items[0].expired)
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[0].valid_not_before,
+            result.pubkeys[0].certificate_chain.items[0].valid_not_before,
             datetime.datetime(2015, 4, 9, 0, 0)
         )
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[0].valid_not_after,
+            result.pubkeys[0].certificate_chain.items[0].valid_not_after,
             datetime.datetime(2015, 4, 12, 23, 59, 59)
         )
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[0].validity_period,
+            result.pubkeys[0].certificate_chain.items[0].validity_period,
             datetime.timedelta(days=4, seconds=-1)
         )
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[0].validity_remaining_time,
+            result.pubkeys[0].certificate_chain.items[0].validity_remaining_time,
             None
         )
 
         result = self._get_result('badssl.com', 443)
-        self.assertFalse(result.pubkeys[0].certificate_chain[0].expired)
+        self.assertFalse(result.pubkeys[0].certificate_chain.items[0].expired)
 
     def test_fingerprints(self):
         result = self._get_result('expired.badssl.com', 443)
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[0].fingerprints,
+            result.pubkeys[0].certificate_chain.items[0].fingerprints,
             {
                 MAC.MD5:
                     '67:34:4E:61:C0:43:1C:F1:F7:25:7C:1D:6D:E7:A7:85',
@@ -121,42 +126,42 @@ class TestPublicKeyX509(unittest.TestCase):
     def test_public_key_pin(self):
         result = self._get_result('expired.badssl.com', 443)
         self.assertEqual(
-            result.pubkeys[0].certificate_chain[0].public_key_pin,
+            result.pubkeys[0].certificate_chain.items[0].public_key_pin,
             '9SLklscvzMYj8f+52lp5ze/hY0CFHyLSPQzSpYYIBm8='
         )
 
     def test_extended_validation(self):
         result = self._get_result('extended-validation.badssl.com', 443)
-        self.assertTrue(result.pubkeys[0].certificate_chain[0].extended_validation)
+        self.assertTrue(result.pubkeys[0].certificate_chain.items[0].extended_validation)
 
         result = self._get_result('badssl.com', 443)
-        self.assertFalse(result.pubkeys[0].certificate_chain[0].extended_validation)
+        self.assertFalse(result.pubkeys[0].certificate_chain.items[0].extended_validation)
 
     def test_key_type_and_size(self):
         result = self._get_result('ecc256.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_type, 'EllipticCurve')
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_size, 256)
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, 'EllipticCurve')
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 256)
         result = self._get_result('ecc384.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_type, 'EllipticCurve')
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_size, 384)
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, 'EllipticCurve')
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 384)
 
         result = self._get_result('rsa2048.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_type, 'RSA')
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_size, 2048)
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, 'RSA')
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 2048)
         result = self._get_result('rsa4096.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_type, 'RSA')
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_size, 4096)
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, 'RSA')
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 4096)
         result = self._get_result('rsa8192.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_type, 'RSA')
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].key_size, 8192)
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, 'RSA')
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 8192)
 
     def test_signature_algorithm(self):
         result = self._get_result('sha1-intermediate.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].signature_hash_algorithm, MAC.SHA256)
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm, MAC.SHA256)
 
         result = self._get_result('sha256.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].signature_hash_algorithm, MAC.SHA256)
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm, MAC.SHA256)
         result = self._get_result('sha384.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].signature_hash_algorithm, MAC.SHA384)
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm, MAC.SHA384)
         result = self._get_result('sha512.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].certificate_chain[0].signature_hash_algorithm, MAC.SHA512)
+        self.assertEqual(result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm, MAC.SHA512)
