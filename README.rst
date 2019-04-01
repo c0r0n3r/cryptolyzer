@@ -44,6 +44,4 @@ License
 The code is available under the terms of Mozilla Public License Version 2.0 (MPL 2.0).
 
 A non-comprehensive, but straightforward description of MPL 2 can be found at `Choose an open source
-license <https://choosealicense.com/licenses#mpl-2.0>`__ website. The Markdown version of license text comes from
-`Markdown Licenses <https://github.com/IQAndreas/markdown-licenses>`__ project of Andreas Renberg. The original version
-of the license is located on Mozilla `website <https://www.mozilla.org/en-US/MPL/2.0/>`__.
+license <https://choosealicense.com/licenses#mpl-2.0>`__ website.
