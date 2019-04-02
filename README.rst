@@ -28,7 +28,7 @@ CryptoLyzer can be installed directly via pip:
     pip install cryptolyzer
 
 Development environment
------------------------
+^^^^^^^^^^^^^^^^^^^^^^^
 
 If you want to setup a development environment, you are in need of `pipenv <https://docs.pipenv.org/>`__.
 
@@ -37,6 +37,74 @@ If you want to setup a development environment, you are in need of `pipenv <http
     $ cd cryptolyzer
     $ pipenv install --dev
     $ pipenv shell
+
+Generic Features
+----------------
+
+Protocols
+^^^^^^^^^
+
+* Secure Socket Layer (SSL)
+
+  * `SSL 2.0 <https://tools.ietf.org/html/draft-hickman-netscape-ssl-00>`_
+  * `SSL 3.0 <https://tools.ietf.org/html/rfc6101>`_
+
+* Transport Layer Security (TLS)
+
+  * `TLS 1.0 <https://tools.ietf.org/html/rfc2246>`_
+  * `TLS 1.1 <https://tools.ietf.org/html/rfc4346>`_
+  * `TLS 1.2 <https://tools.ietf.org/html/rfc5246>`_
+
+Analyzers
+^^^^^^^^^
+
+.. table:: Supported analyzers by cryptographic protocol versions
+
+    +------------------------------------------+---------------------------------------+
+    ||                                         | **Protocos**                          |
+    ||                                         +---------------+-----------------------+
+    ||                                         | *SSL*         | *TLS*                 |
+    ||                                         +-------+-------+-------+-------+-------+
+    || **Features**                            |  2.0  |  3.0  |  1.0  |  1.1  |  1.2  |
+    +==========================================+=======+=======+=======+=======+=======+
+    | Cipher Suites (``ciphers``)              |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |
+    +------------------------------------------+-------+-------+-------+-------+-------+
+    | X.509 Public Keys (``pubkeys``)          |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |
+    +------------------------------------------+-------+-------+-------+-------+-------+
+    | Elliptic Curves (``curves``)             |  n/a  |  n/a  |   ✓   |   ✓   |   ✓   |
+    +------------------------------------------+-------+-------+-------+-------+-------+
+    | Diffie-Hellman parameters (``dhparams``) |  n/a  |  n/a  |   ✓   |   ✓   |   ✓   |
+    +------------------------------------------+-------+-------+-------+-------+-------+
+    | Signature Algorithms (``sigalgos``)      |  n/a  |  n/a  |  n/a  |   ✓   |   ✓   |
+    +------------------------------------------+-------+-------+-------+-------+-------+
+
+Python implementation
+^^^^^^^^^^^^^^^^^^^^^
+
+* CPython (2.7, >=3.3)
+* PyPy (2.7, 3.5)
+
+Operating systems
+^^^^^^^^^^^^^^^^^
+
+* Linux
+* macOS
+* Windows
+
+Protocol Specific Features
+--------------------------
+
+Transport Layer Security (TLS)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Only features that cannot be or difficultly implemented by the most popular SSL/TLS implementations (eg:
+`GnuTls <https://www.gnutls.org/>`_, `LibreSSL <https://www.libressl.org/>`_, `OpenSSL <https://www.openssl.org/>`_,
+`wolfSSL <https://www.wolfssl.com/>`_, ...) are listed.
+
+Cipher Suites
+"""""""""""""
+
+#. supports each cipher suites discussed on `ciphersuite.info <https://ciphersuite.info>`_
 
 License
 -------
