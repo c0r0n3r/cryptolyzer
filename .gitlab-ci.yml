@@ -72,3 +72,6 @@ coveralls:
     - pip install coveralls
     - coverage run --source=cryptolyzer setup.py test
     - coveralls
+  only:
+    refs:
+      - master
