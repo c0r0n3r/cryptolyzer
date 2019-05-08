@@ -71,3 +71,17 @@ class TestTlsVersions(unittest.TestCase):
             self.get_result('client.badssl.com', 443).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
+
+    def test_long_cipher_suite_list_intolerance(self):
+        self.assertEqual(
+            self.get_result('secure.simplepay.hu', 443).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+        self.assertEqual(
+            self.get_result('www.aegon.hu', 443).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
+        )
+        self.assertEqual(
+            self.get_result('direkt.nn.hu', 443).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )

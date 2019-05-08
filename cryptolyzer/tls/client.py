@@ -85,6 +85,29 @@ class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenti
         ])
 
 
+class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHello):
+    def __init__(self, hostname):
+        _cipher_suites = TlsCipherSuiteVector([
+            cipher_suite
+            for cipher_suite in TlsCipherSuite
+            if (cipher_suite.value.authentication and
+                cipher_suite.value.authentication in [
+                    Authentication.DSS,
+                    Authentication.KRB5,
+                    Authentication.PSK,
+                    Authentication.SRP,
+                    Authentication.anon,
+                ])
+        ])
+
+        super(TlsHandshakeClientHelloAuthenticationRarelyUsed, self).__init__(
+            cipher_suites=TlsCipherSuiteVector(_cipher_suites),
+            extensions=[
+                TlsExtensionServerName(hostname),
+            ]
+        )
+
+
 class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHello):
     _CIPHER_SUITES = TlsCipherSuiteVector([
         cipher_suite
