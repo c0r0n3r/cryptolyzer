@@ -12,7 +12,7 @@ from cryptoparser.tls.version import TlsVersion
 from cryptoparser.tls.version import SslProtocolVersion
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
-from cryptolyzer.common.result import AnalyzerResultTls
+from cryptolyzer.common.result import AnalyzerResultAllSupportedVersions
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
@@ -104,7 +104,7 @@ class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
 
 
 @attr.s
-class AnalyzerResultTlsAllSupportedVersions(AnalyzerResultTls):
+class AnalyzerResultTlsAllSupportedVersions(AnalyzerResultAllSupportedVersions):
     results = attr.ib(validator=attr.validators.instance_of(OrderedDict))
 
     def _asdict(self):

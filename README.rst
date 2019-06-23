@@ -26,7 +26,9 @@ CryptoLyzer can be installed directly via pip
 .. code-block:: sh
 
     pip install cryptolyzer
+    
     cryptolyze tls ciphers www.example.com
+    cryptolyze ssh2 ciphers www.example.com
 
 or via APT on Debian based systems
 
@@ -35,8 +37,11 @@ or via APT on Debian based systems
     apt update && apt install -y gnupg2 curl
     echo 'deb https://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer:/dev/Debian_10/ /' >/etc/apt/sources.list.d/cryptolyzer.list
     curl -s https://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer:/dev/Debian_10/Release.key | apt-key add -
+    
     apt update && apt install -y python3-pkg-resources python3-cryptoparser python3-cryptolyzer
+    
     cryptolyze tls ciphers www.example.com
+    cryptolyze ssh2 ciphers www.example.com
 
 or via DNF on Fedora based systems
 
@@ -52,6 +57,7 @@ or can be used via Docker
 .. code-block:: sh
 
     docker run --rm coroner/cryptolyzer tls ciphers www.example.com
+    docker run --rm coroner/cryptolyzer ssh2 ciphers www.example.com
 
 .. code-block:: sh
 
@@ -77,6 +83,26 @@ Generic Features
 
 Protocols
 ^^^^^^^^^
+
+SSH
+"""
+
+* `SSH 2.0 <https://tools.ietf.org/html/rfc4253>`_
+
+Analyzers
+^^^^^^^^^
+
+.. table:: Supported analyzers by cryptographic protocol versions
+
+    +------------------------------------------+--------------+
+    ||                                         | **Protocol** |
+    ||                                         +--------------+
+    ||                                         | *SSH*        |
+    ||                                         +--------------+
+    || **Analyzers**                           |  2.0         |
+    +==========================================+==============+
+    | Cipher Suites (``ciphers``)              |   ✓          |
+    +------------------------------------------+--------------+
 
 SSL/TLS
 """""""

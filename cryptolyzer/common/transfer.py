@@ -105,8 +105,9 @@ class L4TransferTCP(L4TransferBase):
             if not actual_received_bytes:
                 raise NotEnoughData(receivable_byte_num - total_received_byte_num)
 
-    def receive_until(self, terminator):
+    def receive_until(self, terminator, max_line_length=None):
         terminator_len = len(terminator)
+        original_buffer_len = len(self._buffer)
         self.receive(terminator_len)
 
         while True:
@@ -114,6 +115,12 @@ class L4TransferTCP(L4TransferBase):
                 break
 
             self._buffer += self._socket.recv(1)
+
+            if max_line_length is not None and (len(self._buffer) - original_buffer_len) == max_line_length:
+                raise StopIteration
+
+    def receive_line(self, max_line_length):
+        self.receive_until(b'\n', max_line_length - 1)
 
     @abc.abstractmethod
     def _init_connection(self):
