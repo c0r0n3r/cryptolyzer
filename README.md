@@ -130,6 +130,7 @@ Supported analyzers by cryptographic protocol versions
 | ---------------------------------------- | ---------- |
 | Cipher Suites (`ciphers`)                | ✓          |
 | Diffie-Hellman parameters (`dhparams`)   | ✓          |
+| Host Keys (`pubkeys`)                    | ✓          |
 
 
 ### SSL/TLS

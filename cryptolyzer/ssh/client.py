@@ -5,7 +5,7 @@ import math
 import attr
 import six
 
-from cryptoparser.common.algorithm import KeyExchange, NamedGroup
+from cryptoparser.common.algorithm import Authentication, KeyExchange, NamedGroup
 from cryptoparser.common.exception import NotEnoughData
 
 from cryptoparser.ssh.record import SshRecordInit, SshRecordKexDH, SshRecordKexDHGroup
@@ -13,6 +13,7 @@ from cryptoparser.ssh.ciphersuite import (
     SshCompressionAlgorithm,
     SshEncryptionAlgorithm,
     SshHostKeyAlgorithm,
+    SshHostKeyType,
     SshKexAlgorithm,
     SshMacAlgorithm,
 )
@@ -133,6 +134,34 @@ class SshKeyExchangeInitHostKeyBase(SshKeyExchangeInitAnyAlgorithm):
                 algorithm.value.authentication == authentication and algorithm.value.key_type == host_key_type,
                 SshHostKeyAlgorithm
             ))
+        )
+
+
+class SshKeyExchangeInitHostKeyDSS(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostKeyDSS, self).__init__(
+            SshHostKeyType.KEY, Authentication.DSS
+        )
+
+
+class SshKeyExchangeInitHostKeyRSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostKeyRSA, self).__init__(
+            SshHostKeyType.KEY, Authentication.RSA
+        )
+
+
+class SshKeyExchangeInitHostKeyECDSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostKeyECDSA, self).__init__(
+            SshHostKeyType.KEY, Authentication.ECDSA
+        )
+
+
+class SshKeyExchangeInitHostKeyEDDSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostKeyEDDSA, self).__init__(
+            SshHostKeyType.KEY, Authentication.EDDSA
         )
 
 

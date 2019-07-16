@@ -69,7 +69,7 @@ class TestSshClientHandshake(TestL7ClientBase):
         l7_client = L7ClientSsh('github.com')
         key_exchange_init_message = SshKeyExchangeInitKeyExchangeECDHE()
         key_exchange_init_message.kex_algorithms = SshKexAlgorithmVector(filter(
-            lambda kex_algorithm: SSH_KEX_ALGORITHMS_TO_NAMED_GROUP[kex_algorithm] in [
+            lambda kex_algorithm: SSH_KEX_ALGORITHMS_TO_NAMED_GROUP.get(kex_algorithm, None) in [
                 NamedGroup.CURVE25519,
                 NamedGroup.CURVE448,
             ],
@@ -84,7 +84,7 @@ class TestSshClientHandshake(TestL7ClientBase):
         l7_client = L7ClientSsh('github.com')
         key_exchange_init_message = SshKeyExchangeInitKeyExchangeECDHE()
         key_exchange_init_message.kex_algorithms = SshKexAlgorithmVector(filter(
-            lambda kex_algorithm: SSH_KEX_ALGORITHMS_TO_NAMED_GROUP[kex_algorithm] not in [
+            lambda kex_algorithm: SSH_KEX_ALGORITHMS_TO_NAMED_GROUP.get(kex_algorithm, None) not in [
                 NamedGroup.CURVE25519,
                 NamedGroup.CURVE448,
             ],
