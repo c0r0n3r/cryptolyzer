@@ -9,7 +9,11 @@ import ssl
 from collections import OrderedDict
 from six import iteritems
 
+import cryptography
 import cryptography.x509 as cryptography_x509  # pylint: disable=import-error
+import cryptography.hazmat.primitives.asymmetric.rsa as cryptography_rsa
+import cryptography.hazmat.primitives.asymmetric.ec as cryptography_ec
+from cryptography.hazmat.primitives.asymmetric import padding as cryptography_padding
 from cryptography.hazmat.primitives import hashes as cryptography_hashes  # pylint: disable=import-error
 from cryptography.hazmat.primitives import serialization as cryptography_serialization  # pylint: disable=import-error
 from cryptography.hazmat.backends import default_backend as cryptography_default_backend  # pylint: disable=import-error
@@ -131,6 +135,18 @@ class PublicKeyX509(PublicKey):
 
     def __init__(self, certificate):
         self._certificate = certificate
+
+    def __eq__(self, other):
+        self_in_der_format = self._certificate.public_key().public_bytes(
+            encoding=cryptography_serialization.Encoding.DER,
+            format=cryptography_serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        other_in_der_format = other._certificate.public_key().public_bytes(  # pylint: disable=protected-access
+            encoding=cryptography_serialization.Encoding.DER,
+            format=cryptography_serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+
+        return self_in_der_format == other_in_der_format
 
     @property
     def valid_not_before(self):
@@ -277,6 +293,34 @@ class PublicKeyX509(PublicKey):
             return False
 
         return extension.value.ca
+
+    @property
+    def is_self_signed(self):
+        return self._certificate.subject and self._certificate.subject == self._certificate.issuer
+
+    def verify(self, public_key):
+        verify_args = {
+            'signature': public_key._certificate.signature,  # pylint: disable=protected-access
+            'data': public_key._certificate.tbs_certificate_bytes,  # pylint: disable=protected-access
+        }
+        public_key_signature_hash_algorithm = \
+            public_key._certificate.signature_hash_algorithm  # pylint: disable=protected-access
+        if isinstance(self._certificate.public_key(), cryptography_rsa.RSAPublicKey):
+            verify_args['padding'] = cryptography_padding.PKCS1v15()
+            verify_args['algorithm'] = public_key_signature_hash_algorithm
+        if isinstance(self._certificate.public_key(), cryptography_ec.EllipticCurvePublicKey):
+            verify_args['signature_algorithm'] = cryptography_ec.ECDSA(
+                public_key_signature_hash_algorithm
+            )
+        else:
+            verify_args['algorithm'] = public_key_signature_hash_algorithm
+
+        try:
+            self._certificate.public_key().verify(**verify_args)
+        except cryptography.exceptions.InvalidSignature:
+            return False
+
+        return True
 
     def _asdict(self):
         return OrderedDict([
