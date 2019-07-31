@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import cryptography.x509 as cryptography_x509  # pylint: disable=import-error
-from cryptography.hazmat.backends import default_backend as cryptography_default_backend  # pylint: disable=import-error
+from collections import OrderedDict
+
+import cryptography.x509 as cryptography_x509
+
+from cryptography.hazmat.backends import default_backend as cryptography_default_backend
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
@@ -23,12 +26,61 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
     def __init__(self, certificate_bytes, certificate_chain):
         self._certificate_bytes = certificate_bytes
         self.items = certificate_chain
+        self.verified = None
+
+        ordered_certificate_chain = [cert for cert in certificate_chain if not cert.is_ca]
+
+        while True:
+            try:
+                next_certificate = self._get_issuer(ordered_certificate_chain[-1])
+                ordered_certificate_chain.append(next_certificate)
+            except StopIteration:
+                break
+
+        if len(ordered_certificate_chain) > 1:
+            self.ordered = self.items == ordered_certificate_chain
+            self.items = ordered_certificate_chain
+
+            for chain_index in range(len(self.items) - 1):
+                issuer_public_key = self.items[chain_index + 1]
+                cert_to_check = self.items[chain_index]
+
+                if not issuer_public_key.verify(cert_to_check):
+                    break
+            else:
+                self.verified = True
+        else:
+            self.ordered = None
+            self.verified = None
+
+    def _get_issuer(self, certificate):
+        issuer_certificates = [
+            issuer_certificate
+            for issuer_certificate in self.items
+            if issuer_certificate.is_ca and issuer_certificate.subject == certificate.issuer
+        ]
+        if len(issuer_certificates) == 1 and certificate != issuer_certificates[0]:
+            return issuer_certificates[0]
+
+        raise StopIteration()
+
+    @property
+    def contains_anchor(self):
+        return any([cert.is_self_signed for cert in self.items])
 
     def __hash__(self):
         return hash(tuple([bytes(certificate_byte) for certificate_byte in self._certificate_bytes]))
 
     def __eq__(self, other):
         return hash(self) == hash(other)
+
+    def _asdict(self):
+        return OrderedDict([
+            ('items_chain', self.items),
+            ('ordered', self.ordered),
+            ('verified', self.verified),
+            ('contains_anchor', self.contains_anchor),
+        ])
 
 
 class TlsPublicKey(Serializable):
@@ -103,7 +155,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             else:
                 sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
                 certificate_chain = self._get_tls_certificate_chain(server_messages)
-                leaf_certificate = [cert for cert in certificate_chain.items if not cert.is_ca][0]
+                leaf_certificate = certificate_chain.items[0]
                 subject_matches = cryptolyzer.common.x509.is_subject_matches(
                     leaf_certificate.common_names,
                     leaf_certificate.subject_alternative_names,
