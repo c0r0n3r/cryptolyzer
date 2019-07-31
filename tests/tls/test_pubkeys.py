@@ -25,5 +25,5 @@ class TestTlsPubKeys(unittest.TestCase):
         self.assertFalse(result.pubkeys[0].subject_matches)
 
     def test_fallback_certificate(self):
-        result = self.get_result('cloudflare.com', 443)
-        self.assertEqual(len(result.pubkeys), 3)
+        result = self.get_result('unexisting-hostname-to-get-wildcard-certificate-without-sni.badssl.com', 443)
+        self.assertEqual(len(result.pubkeys), 1)
