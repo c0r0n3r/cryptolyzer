@@ -11,7 +11,7 @@ from cryptoparser.tls.version import SslProtocolVersion
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.result import AnalyzerResultTls
-from cryptolyzer.tls.client import L7ClientTls
+from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.curves import AnalyzerCurves
@@ -23,7 +23,7 @@ from cryptolyzer.tls.versions import AnalyzerVersions
 class ProtocolHandlerTlsBase(ProtocolHandlerBase):
     @classmethod
     def get_clients(cls):
-        return [client_class for client_class in get_leaf_classes(L7ClientTls)]
+        return [client_class for client_class in get_leaf_classes(L7ClientTlsBase)]
 
     @classmethod
     @abc.abstractmethod

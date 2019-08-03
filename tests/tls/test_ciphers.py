@@ -9,14 +9,14 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
-from cryptolyzer.tls.client import L7Client
+from cryptolyzer.tls.client import L7ClientTlsBase
 
 
 class TestSslCiphers(unittest.TestCase):
     @staticmethod
     def get_result(host, port):
         analyzer = AnalyzerCipherSuites()
-        l7_client = L7Client.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, SslProtocolVersion())
         return result
 
@@ -37,7 +37,7 @@ class TestTlsCiphers(unittest.TestCase):
     @staticmethod
     def get_result(host, port):
         analyzer = AnalyzerCipherSuites()
-        l7_client = L7Client.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_0))
         return result
 
