@@ -1,0 +1,17 @@
+**/*.egg-info
+**/*.orig
+**/*.pyc
+**/*.rej
+**/*.retry
+**/*.swp
+**/.coverage
+**/.eggs
+**/.git
+**/.idea
+**/.mypy_cache
+**/.tox
+**/Pipfile
+**/Pipfile.lock
+**/__pycache__
+**/build
+**/dist
