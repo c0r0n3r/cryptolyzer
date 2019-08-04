@@ -21,11 +21,19 @@ Paramiko, ...).
 Quick start
 -----------
 
-CryptoLyzer can be installed directly via pip:
+CryptoLyzer can be installed directly via pip
 
 ::
 
     pip install cryptolyzer
+    cryptolyzer tls ciphers www.example.com
+
+or can be used via docker
+
+::
+
+    docker pull coroner/cryptolyzer
+    docker run coroner/cryptolyzer tls ciphers www.example.com
 
 Development environment
 ^^^^^^^^^^^^^^^^^^^^^^^
