@@ -142,7 +142,7 @@ class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
         )
 
 
-class L7Client(object):
+class L7ClientTlsBase(object):
     _DEFAULT_TIMEOUT = 5
 
     def __init__(self, address, port, timeout=None):
@@ -247,7 +247,7 @@ class L7Client(object):
 
     @classmethod
     def from_scheme(cls, scheme, address, port=None, timeout=None):
-        for client_class in get_leaf_classes(L7Client):
+        for client_class in get_leaf_classes(L7ClientTlsBase):
             if client_class.get_scheme() == scheme:
                 port = client_class.get_default_port() if port is None else port
                 return client_class(address, port, timeout)
@@ -256,7 +256,7 @@ class L7Client(object):
 
     @classmethod
     def get_supported_schemes(cls):
-        return {leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(L7Client)}
+        return {leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(L7ClientTlsBase)}
 
     @abc.abstractmethod
     def _connect(self):
@@ -273,7 +273,7 @@ class L7Client(object):
         raise NotImplementedError()
 
 
-class L7ClientTls(L7Client):
+class L7ClientTls(L7ClientTlsBase):
     @classmethod
     def get_scheme(cls):
         return 'tls'
@@ -286,7 +286,7 @@ class L7ClientTls(L7Client):
         return socket.create_connection((self._address, self._port), self._timeout)
 
 
-class L7ClientHTTPS(L7Client):
+class L7ClientHTTPS(L7ClientTlsBase):
     @classmethod
     def get_scheme(cls):
         return 'https'
@@ -299,7 +299,7 @@ class L7ClientHTTPS(L7Client):
         return socket.create_connection((self._address, self._port), self._timeout)
 
 
-class ClientPOP3(L7Client):
+class ClientPOP3(L7ClientTlsBase):
     def __init__(self, address, port, timeout=None):
         super(ClientPOP3, self).__init__(address, port, timeout)
 
@@ -325,7 +325,7 @@ class ClientPOP3(L7Client):
             self.client.quit()
 
 
-class ClientSMTP(L7Client):
+class ClientSMTP(L7ClientTlsBase):
     def __init__(self, address, port, timeout=None):
         super(ClientSMTP, self).__init__(address, port, timeout)
 
@@ -355,7 +355,7 @@ class ClientSMTP(L7Client):
             self.client.quit()
 
 
-class ClientIMAP(L7Client):
+class ClientIMAP(L7ClientTlsBase):
     def __init__(self, address, port, timeout=None):
         super(ClientIMAP, self).__init__(address, port, timeout)
 

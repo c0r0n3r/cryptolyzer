@@ -46,7 +46,11 @@ def get_argument_parser():
         parsers_plugin.required = True
         for analyzer_class in analyzers:
             parser_plugin = parsers_plugin.add_parser(analyzer_class.get_name(), help=analyzer_class.get_help())
-            parser_plugin.add_argument('uris', metavar='URI', nargs='+')
+            schemes = [client.get_scheme() for client in protocol_handler.get_clients()]
+            parser_plugin.add_argument(
+                'uris', metavar='URI', nargs='+',
+                help='[{{{}}}://]f.q.d.n'.format(','.join(schemes))
+            )
 
     return parser
 

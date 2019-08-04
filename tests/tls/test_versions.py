@@ -5,7 +5,7 @@ import unittest
 
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
-from cryptolyzer.tls.client import L7Client
+from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
@@ -13,7 +13,7 @@ class TestSslVersions(unittest.TestCase):
     @staticmethod
     def get_result(host, port):
         analyzer = AnalyzerVersions()
-        l7_client = L7Client.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, SslProtocolVersion())
         return result
 
@@ -37,7 +37,7 @@ class TestTlsVersions(unittest.TestCase):
     @staticmethod
     def get_result(host, port):
         analyzer = AnalyzerVersions()
-        l7_client = L7Client.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         analyzer_result = analyzer.analyze(l7_client, None)
 
         return analyzer_result

@@ -7,7 +7,7 @@ import datetime
 from cryptoparser.common.algorithm import MAC
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
-from cryptolyzer.tls.client import L7Client
+from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
 
@@ -15,7 +15,7 @@ class TestPublicKeyX509(unittest.TestCase):
     @staticmethod
     def _get_result(host, port):
         analyzer = AnalyzerPublicKeys()
-        l7_client = L7Client.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         return result
 

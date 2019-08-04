@@ -44,16 +44,29 @@ Generic Features
 Protocols
 ^^^^^^^^^
 
-* Secure Socket Layer (SSL)
+SSL/TLS
+"""""""
 
-  * `SSL 2.0 <https://tools.ietf.org/html/draft-hickman-netscape-ssl-00>`_
-  * `SSL 3.0 <https://tools.ietf.org/html/rfc6101>`_
+* transport layer
 
-* Transport Layer Security (TLS)
+  * Secure Socket Layer (SSL)
+  
+    * `SSL 2.0 <https://tools.ietf.org/html/draft-hickman-netscape-ssl-00>`_
+    * `SSL 3.0 <https://tools.ietf.org/html/rfc6101>`_
+  
+  * Transport Layer Security (TLS)
+  
+    * `TLS 1.0 <https://tools.ietf.org/html/rfc2246>`_
+    * `TLS 1.1 <https://tools.ietf.org/html/rfc4346>`_
+    * `TLS 1.2 <https://tools.ietf.org/html/rfc5246>`_
 
-  * `TLS 1.0 <https://tools.ietf.org/html/rfc2246>`_
-  * `TLS 1.1 <https://tools.ietf.org/html/rfc4346>`_
-  * `TLS 1.2 <https://tools.ietf.org/html/rfc5246>`_
+* application layer
+
+  * `opportunistic TLS <https://en.wikipedia.org/wiki/Opportunistic_TLS>`_ (STARTTLS)
+
+    * `IMAP <https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol>`_
+    * `POP3 <https://en.wikipedia.org/wiki/Post_Office_Protocol>`_
+    * `SMTP <https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol>`_
 
 Analyzers
 ^^^^^^^^^
@@ -65,7 +78,7 @@ Analyzers
     ||                                         +---------------+-----------------------+
     ||                                         | *SSL*         | *TLS*                 |
     ||                                         +-------+-------+-------+-------+-------+
-    || **Features**                            |  2.0  |  3.0  |  1.0  |  1.1  |  1.2  |
+    || **Analyzers**                           |  2.0  |  3.0  |  1.0  |  1.1  |  1.2  |
     +==========================================+=======+=======+=======+=======+=======+
     | Cipher Suites (``ciphers``)              |   ✓   |   ✓   |   ✓   |   ✓   |   ✓   |
     +------------------------------------------+-------+-------+-------+-------+-------+
