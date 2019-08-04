@@ -2,6 +2,7 @@ image: python
 
 stages:
 - test
+- deploy
 
 before_script:
 - git submodule sync --recursive
@@ -67,11 +68,29 @@ coveralls:
     CI_BUILD_URL: "${CI_JOB_URL}"
     CI_BRANCH: "${CI_COMMIT_REF_NAME}"
     PYTHONPATH: "${PYTHONPATH}:submodules/cryptoparser"
-  stage: test
+  stage: deploy
   script:
     - pip install coveralls
     - coverage run --source=cryptolyzer setup.py test
     - coveralls
+  only:
+    refs:
+      - master
+
+dockerhub:
+  image: docker:latest
+  stage: deploy
+  services:
+    - docker:dind
+  variables:
+    DOCKER_NAME: coroner/${CI_PROJECT_NAME}
+    GIT_SUBMODULE_STRATEGY: recursive
+  before_script:
+    - if ! [ -z ${CI_COMMIT_TAG} ] ; then DOCKER_NAME="${DOCKER_NAME}:${CI_COMMIT_TAG}" ; fi
+    - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
+  script:
+    - docker build -t "$DOCKER_NAME" .
+    - docker push "$DOCKER_NAME"
   only:
     refs:
       - master
