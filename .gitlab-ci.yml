@@ -2,6 +2,7 @@ image: python
 
 stages:
 - test
+- deploy
 
 before_script:
 - git submodule sync --recursive
@@ -67,7 +68,7 @@ coveralls:
     CI_BUILD_URL: "${CI_JOB_URL}"
     CI_BRANCH: "${CI_COMMIT_REF_NAME}"
     PYTHONPATH: "${PYTHONPATH}:submodules/cryptoparser"
-  stage: test
+  stage: deploy
   script:
     - pip install coveralls
     - coverage run --source=cryptolyzer setup.py test
