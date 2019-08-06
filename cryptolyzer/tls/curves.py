@@ -63,7 +63,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
             server_key_exchange = self._get_key_exchange_message(l7_client, client_hello, curve)
             if server_key_exchange is not None:
                 try:
-                    parse_ecdh_params(server_key_exchange.param_bytes)
+                    supported_curve, _ = parse_ecdh_params(server_key_exchange.param_bytes)
                 except NotImplementedError as e:
                     if isinstance(e.args[0], TlsECCurveType):
                         break
@@ -71,7 +71,10 @@ class AnalyzerCurves(AnalyzerTlsBase):
                         named_curve = TlsNamedCurve(e.args[0])
                         supported_curves.update([(named_curve.name, named_curve), ])
                 else:
-                    supported_curves.update([(curve.name, curve), ])
+                    supported_curves.update([(supported_curve.name, supported_curve), ])
+                    if supported_curve != curve:
+                        extension_supported = False
+                        break
 
             del client_hello.extensions[-1]
 

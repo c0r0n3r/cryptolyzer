@@ -66,7 +66,7 @@ def parse_ecdh_params(param_bytes):
             bytes(parser['point'])
         )
 
-    return public_key
+    return parser['named_curve'], public_key
 
 
 class DHParameter(Serializable):
