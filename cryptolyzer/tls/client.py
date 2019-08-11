@@ -420,7 +420,7 @@ class TlsClientHandshake(TlsClient):
     def do_handshake(
             self,
             hello_message,
-            record_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+            record_version=TlsProtocolVersionFinal(TlsVersion.SSL3),
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
     ):
         self.server_messages = {}
