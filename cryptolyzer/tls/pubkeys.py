@@ -142,8 +142,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 client_hello.protocol_version = protocol_version
                 server_messages = l7_client.do_tls_handshake(
                     client_hello,
-                    client_hello.protocol_version,
-                    TlsHandshakeType.CERTIFICATE
+                    last_handshake_message_type=TlsHandshakeType.CERTIFICATE
                 )
             except TlsAlert as e:
                 if (e.description != TlsAlertDescription.HANDSHAKE_FAILURE and

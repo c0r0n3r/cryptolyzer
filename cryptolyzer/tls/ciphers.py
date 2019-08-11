@@ -42,7 +42,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
         client_hello.protocol_version = protocol_version
 
-        server_messages = l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
+        server_messages = l7_client.do_tls_handshake(client_hello)
         server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
         for index, cipher_suite in enumerate(remaining_cipher_suites):
             if cipher_suite == server_hello.cipher_suite:

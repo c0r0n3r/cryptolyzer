@@ -157,7 +157,7 @@ class L7ClientTlsBase(object):
             self,
             tls_client,
             hello_message,
-            protocol_version,
+            record_version,
             last_handshake_message_type
     ):
         try:
@@ -171,7 +171,7 @@ class L7ClientTlsBase(object):
         self._ip = self._socket.getpeername()[0]
 
         try:
-            tls_client.do_handshake(hello_message, protocol_version, last_handshake_message_type)
+            tls_client.do_handshake(hello_message, record_version, last_handshake_message_type)
         finally:
             self._close()
 
@@ -188,13 +188,13 @@ class L7ClientTlsBase(object):
     def do_tls_handshake(
             self,
             hello_message,
-            protocol_version,
+            record_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0),
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
     ):
         return self._do_handshake(
             TlsClientHandshake(self),
             hello_message,
-            protocol_version,
+            record_version,
             last_handshake_message_type
         )
 
@@ -404,7 +404,7 @@ class TlsClient(object):
         self.server_messages = {}
 
     @abc.abstractmethod
-    def do_handshake(self, hello_message, protocol_version, last_handshake_message_type):
+    def do_handshake(self, hello_message, record_version, last_handshake_message_type):
         raise NotImplementedError()
 
 
@@ -420,13 +420,13 @@ class TlsClientHandshake(TlsClient):
     def do_handshake(
             self,
             hello_message,
-            protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+            record_version=TlsProtocolVersionFinal(TlsVersion.SSL3),
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
     ):
         self.server_messages = {}
         self._last_processed_message_type = None
 
-        tls_record = TlsRecord([hello_message, ], protocol_version)
+        tls_record = TlsRecord([hello_message, ], record_version)
         self._l4_client.send(tls_record.compose())
 
         while True:
@@ -443,7 +443,7 @@ class TlsClientHandshake(TlsClient):
                     raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
 
                 for handshake_message in record.messages:
-                    self._process_message(handshake_message, protocol_version)
+                    self._process_message(handshake_message, hello_message.protocol_version)
                     self._last_processed_message_type = handshake_message.get_handshake_type()
                     self.server_messages[self._last_processed_message_type] = handshake_message
 
@@ -481,7 +481,7 @@ class SslClientHandshake(TlsClient):
     def do_handshake(
             self,
             hello_message=None,
-            protocol_version=SslVersion.SSL2,
+            record_version=SslVersion.SSL2,
             last_handshake_message_type=SslMessageType.SERVER_HELLO
     ):
         ssl_record = SslRecord(hello_message)

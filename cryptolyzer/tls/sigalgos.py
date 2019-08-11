@@ -7,12 +7,12 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionServerName, TlsNamedCurve, TlsExtensionEllipticCurves
 from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms
 from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointFormats
-from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription
+from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription, TlsHandshakeClientHello
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-from cryptolyzer.tls.client import TlsHandshakeClientHello, TlsAlert
+from cryptolyzer.tls.client import TlsAlert
 
 
 class AnalyzerResultSigAlgos(AnalyzerResultTls):
@@ -46,6 +46,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                     continue
 
                 client_hello = TlsHandshakeClientHello(
+                    protocol_version=protocol_version,
                     cipher_suites=cipher_suites,
                     extensions=[
                         TlsExtensionServerName(l7_client.address),
@@ -56,7 +57,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                 )
 
                 try:
-                    l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
+                    l7_client.do_tls_handshake(client_hello)
                 except TlsAlert as e:
                     acceptable_alerts = [TlsAlertDescription.HANDSHAKE_FAILURE, TlsAlertDescription.ILLEGAL_PARAMETER]
                     if e.description not in acceptable_alerts:
