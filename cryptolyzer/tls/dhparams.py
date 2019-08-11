@@ -35,8 +35,8 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             try:
                 server_messages = l7_client.do_tls_handshake(
                     client_hello,
-                    client_hello.protocol_version,
-                    TlsHandshakeType.SERVER_KEY_EXCHANGE)
+                    last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE
+                )
             except TlsAlert:
                 pass
             except NetworkError as e:

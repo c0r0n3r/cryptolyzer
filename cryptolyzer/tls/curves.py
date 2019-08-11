@@ -36,7 +36,6 @@ class AnalyzerCurves(AnalyzerTlsBase):
             client_hello.extensions.append(TlsExtensionEllipticCurves([curve, ]))
             server_messages = l7_client.do_tls_handshake(
                 hello_message=client_hello,
-                record_version=client_hello.protocol_version,
                 last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE
             )
             return server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]

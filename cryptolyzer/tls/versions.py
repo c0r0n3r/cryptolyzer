@@ -53,7 +53,8 @@ class AnalyzerVersions(AnalyzerTlsBase):
                 protocol_version = TlsProtocolVersionFinal(tls_version)
                 client_hello = TlsHandshakeClientHelloAnyAlgorithm(l7_client.address)
                 client_hello.protocol_version = protocol_version
-                server_messages = l7_client.do_tls_handshake(client_hello, protocol_version)
+
+                server_messages = l7_client.do_tls_handshake(client_hello)
             except TlsAlert as e:
                 if e.description not in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.HANDSHAKE_FAILURE]:
                     raise e

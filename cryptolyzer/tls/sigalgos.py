@@ -56,7 +56,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                 )
 
                 try:
-                    l7_client.do_tls_handshake(client_hello, client_hello.protocol_version)
+                    l7_client.do_tls_handshake(client_hello)
                 except TlsAlert as e:
                     acceptable_alerts = [TlsAlertDescription.HANDSHAKE_FAILURE, TlsAlertDescription.ILLEGAL_PARAMETER]
                     if e.description not in acceptable_alerts:
