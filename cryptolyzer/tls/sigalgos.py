@@ -7,12 +7,12 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionServerName, TlsNamedCurve, TlsExtensionEllipticCurves
 from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms
 from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointFormats
-from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription
+from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription, TlsHandshakeClientHello
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-from cryptolyzer.tls.client import TlsHandshakeClientHello, TlsAlert
+from cryptolyzer.tls.client import TlsAlert
 
 
 class AnalyzerResultSigAlgos(AnalyzerResultTls):
