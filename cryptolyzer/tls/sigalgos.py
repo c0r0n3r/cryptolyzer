@@ -46,6 +46,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                     continue
 
                 client_hello = TlsHandshakeClientHello(
+                    protocol_version=protocol_version,
                     cipher_suites=cipher_suites,
                     extensions=[
                         TlsExtensionServerName(l7_client.address),
