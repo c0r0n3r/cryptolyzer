@@ -42,58 +42,68 @@ class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
         )
 
 
-class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHello):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
-        cipher_suite
-        for cipher_suite in TlsCipherSuite
-        if (cipher_suite.value.authentication and
-            cipher_suite.value.authentication == Authentication.RSA)
-    ])
+class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHello):
+    def __init__(self, hostname, authentication):
+        _cipher_suites = TlsCipherSuiteVector([
+            cipher_suite
+            for cipher_suite in TlsCipherSuite
+            if (cipher_suite.value.authentication and
+                cipher_suite.value.authentication == authentication)
+        ])
 
-    def __init__(self, hostname):
-        super(TlsHandshakeClientHelloAuthenticationRSA, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
-                TlsExtensionServerName(hostname),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-            ]
-        )
-
-
-class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHello):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
-        cipher_suite
-        for cipher_suite in TlsCipherSuite
-        if (cipher_suite.value.authentication and
-            cipher_suite.value.authentication == Authentication.DSS)
-    ])
-
-    def __init__(self, hostname):
-        super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
+        super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
+            cipher_suites=TlsCipherSuiteVector(_cipher_suites),
             extensions=[
                 TlsExtensionServerName(hostname),
             ]
         )
 
 
-class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHello):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
-        cipher_suite
-        for cipher_suite in TlsCipherSuite
-        if (cipher_suite.value.authentication and
-            cipher_suite.value.authentication in [Authentication.ECDSA, ])
-    ])
-
+class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthenticationBase):
     def __init__(self, hostname):
-        super(TlsHandshakeClientHelloAuthenticationECDSA, self).__init__(
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
+        super(TlsHandshakeClientHelloAuthenticationRSA, self).__init__(hostname, Authentication.RSA)
+
+        self.extensions.extend([
+            TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
+            TlsExtensionEllipticCurves(list(TlsNamedCurve)),
+        ])
+
+
+class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthenticationBase):
+    def __init__(self, hostname):
+        super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(hostname, Authentication.DSS)
+
+
+class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenticationBase):
+    def __init__(self, hostname):
+        super(TlsHandshakeClientHelloAuthenticationECDSA, self).__init__(hostname, Authentication.ECDSA)
+
+        self.extensions.extend([
+            TlsExtensionECPointFormats(list(TlsECPointFormat)),
+            TlsExtensionEllipticCurves(list(TlsNamedCurve)),
+            TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
+        ])
+
+
+class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHello):
+    def __init__(self, hostname):
+        _cipher_suites = TlsCipherSuiteVector([
+            cipher_suite
+            for cipher_suite in TlsCipherSuite
+            if (cipher_suite.value.authentication and
+                cipher_suite.value.authentication in [
+                    Authentication.DSS,
+                    Authentication.KRB5,
+                    Authentication.PSK,
+                    Authentication.SRP,
+                    Authentication.anon,
+                ])
+        ])
+
+        super(TlsHandshakeClientHelloAuthenticationRarelyUsed, self).__init__(
+            cipher_suites=TlsCipherSuiteVector(_cipher_suites),
             extensions=[
                 TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(list(TlsECPointFormat)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
             ]
         )
 
