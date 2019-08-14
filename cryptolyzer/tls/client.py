@@ -268,9 +268,8 @@ class L7ClientTlsBase(object):
     def get_supported_schemes(cls):
         return {leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(L7ClientTlsBase)}
 
-    @abc.abstractmethod
     def _connect(self):
-        raise NotImplementedError()
+        return socket.create_connection((self._address, self._port), self._timeout)
 
     @classmethod
     @abc.abstractmethod
@@ -292,9 +291,6 @@ class L7ClientTls(L7ClientTlsBase):
     def get_default_port(cls):
         return 443
 
-    def _connect(self):
-        return socket.create_connection((self._address, self._port), self._timeout)
-
 
 class L7ClientHTTPS(L7ClientTlsBase):
     @classmethod
@@ -305,8 +301,15 @@ class L7ClientHTTPS(L7ClientTlsBase):
     def get_default_port(cls):
         return 443
 
-    def _connect(self):
-        return socket.create_connection((self._address, self._port), self._timeout)
+
+class L7ClientPOP3S(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'pop3s'
+
+    @classmethod
+    def get_default_port(cls):
+        return 995
 
 
 class ClientPOP3(L7ClientTlsBase):
@@ -317,7 +320,7 @@ class ClientPOP3(L7ClientTlsBase):
 
     @classmethod
     def get_scheme(cls):
-        return 'pop'
+        return 'pop3'
 
     @classmethod
     def get_default_port(cls):
@@ -333,6 +336,16 @@ class ClientPOP3(L7ClientTlsBase):
     def close(self):
         if self.client:
             self.client.quit()
+
+
+class L7ClientSMTPS(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'smtps'
+
+    @classmethod
+    def get_default_port(cls):
+        return 465
 
 
 class ClientSMTP(L7ClientTlsBase):
@@ -363,6 +376,16 @@ class ClientSMTP(L7ClientTlsBase):
     def close(self):
         if self.client:
             self.client.quit()
+
+
+class L7ClientIMAPS(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'imaps'
+
+    @classmethod
+    def get_default_port(cls):
+        return 993
 
 
 class ClientIMAP(L7ClientTlsBase):
