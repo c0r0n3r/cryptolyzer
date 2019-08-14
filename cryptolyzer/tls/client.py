@@ -268,9 +268,8 @@ class L7ClientTlsBase(object):
     def get_supported_schemes(cls):
         return {leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(L7ClientTlsBase)}
 
-    @abc.abstractmethod
     def _connect(self):
-        raise NotImplementedError()
+        return socket.create_connection((self._address, self._port), self._timeout)
 
     @classmethod
     @abc.abstractmethod
@@ -292,9 +291,6 @@ class L7ClientTls(L7ClientTlsBase):
     def get_default_port(cls):
         return 443
 
-    def _connect(self):
-        return socket.create_connection((self._address, self._port), self._timeout)
-
 
 class L7ClientHTTPS(L7ClientTlsBase):
     @classmethod
@@ -304,9 +300,6 @@ class L7ClientHTTPS(L7ClientTlsBase):
     @classmethod
     def get_default_port(cls):
         return 443
-
-    def _connect(self):
-        return socket.create_connection((self._address, self._port), self._timeout)
 
 
 class ClientPOP3(L7ClientTlsBase):
