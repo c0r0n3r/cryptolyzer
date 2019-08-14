@@ -39,10 +39,9 @@ class TestL7Client(unittest.TestCase):
 
     def test_pop3_client(self):
         self.assertEqual(
-            self.get_result('pop', 'pop3.comcast.net', None).versions,
+            self.get_result('pop3', 'pop3.comcast.net', None).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
-        # self.assertEqual(self.get_result('pop', 'pop3.citromail.hu', None).versions, [])
 
     def test_imap_client(self):
         self.assertEqual(

@@ -310,7 +310,7 @@ class ClientPOP3(L7ClientTlsBase):
 
     @classmethod
     def get_scheme(cls):
-        return 'pop'
+        return 'pop3'
 
     @classmethod
     def get_default_port(cls):
