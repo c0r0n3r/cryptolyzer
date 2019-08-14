@@ -49,7 +49,7 @@ def get_argument_parser():
             schemes = [client.get_scheme() for client in protocol_handler.get_clients()]
             parser_plugin.add_argument(
                 'uris', metavar='URI', nargs='+',
-                help='[{{{}}}://]f.q.d.n'.format(','.join(schemes))
+                help='[{{{}}}://]f.q.d.n[:port]'.format(','.join(schemes))
             )
 
     return parser
