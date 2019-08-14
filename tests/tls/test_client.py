@@ -43,14 +43,32 @@ class TestL7Client(unittest.TestCase):
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
+    def test_pop3s_client(self):
+        self.assertEqual(
+            self.get_result('pop3s', 'pop.gmail.com', None).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+
     def test_imap_client(self):
         self.assertEqual(
             self.get_result('imap', 'imap.comcast.net', None).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
+    def test_imaps_client(self):
+        self.assertEqual(
+            self.get_result('imaps', 'imap.gmail.com', None).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+
     def test_smtp_client(self):
         self.assertEqual(
             self.get_result('smtp', 'smtp.gmail.com', None).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+
+    def test_smtps_client(self):
+        self.assertEqual(
+            self.get_result('smtps', 'smtp.gmail.com', None).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )

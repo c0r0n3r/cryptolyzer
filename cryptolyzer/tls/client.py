@@ -302,6 +302,16 @@ class L7ClientHTTPS(L7ClientTlsBase):
         return 443
 
 
+class L7ClientPOP3S(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'pop3s'
+
+    @classmethod
+    def get_default_port(cls):
+        return 995
+
+
 class ClientPOP3(L7ClientTlsBase):
     def __init__(self, address, port, timeout=None):
         super(ClientPOP3, self).__init__(address, port, timeout)
@@ -326,6 +336,16 @@ class ClientPOP3(L7ClientTlsBase):
     def close(self):
         if self.client:
             self.client.quit()
+
+
+class L7ClientSMTPS(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'smtps'
+
+    @classmethod
+    def get_default_port(cls):
+        return 465
 
 
 class ClientSMTP(L7ClientTlsBase):
@@ -356,6 +376,16 @@ class ClientSMTP(L7ClientTlsBase):
     def close(self):
         if self.client:
             self.client.quit()
+
+
+class L7ClientIMAPS(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'imaps'
+
+    @classmethod
+    def get_default_port(cls):
+        return 993
 
 
 class ClientIMAP(L7ClientTlsBase):
