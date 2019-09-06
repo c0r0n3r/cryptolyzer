@@ -85,3 +85,13 @@ class TestTlsVersions(unittest.TestCase):
             self.get_result('direkt.nn.hu', 443).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
+
+    def test_plain_text_response(self):
+        self.assertEqual(
+            self.get_result('ptt.cc', 443).versions,
+            [TlsProtocolVersionFinal(version) for version in []]
+        )
+        self.assertEqual(
+            self.get_result('cplusplus.com', 443).versions,
+            [TlsProtocolVersionFinal(version) for version in []]
+        )

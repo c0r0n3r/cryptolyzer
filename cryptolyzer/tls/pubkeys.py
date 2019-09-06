@@ -17,7 +17,7 @@ from cryptolyzer.tls.client import TlsAlert, \
     TlsHandshakeClientHelloAuthenticationRSA, \
     TlsHandshakeClientHelloAuthenticationECDSA
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 import cryptolyzer.common.x509
 
@@ -151,6 +151,11 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
+            except ResponseError:
+                if client_hello == client_hello_messages[0]:
+                    break
+                else:
+                    continue
             else:
                 sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
                 certificate_chain = self._get_tls_certificate_chain(server_messages)

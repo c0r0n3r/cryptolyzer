@@ -5,7 +5,7 @@ from cryptoparser.tls.subprotocol import TlsHandshakeType
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_dh_params, DHParameter
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE, TlsAlert
 
@@ -42,6 +42,8 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
+            except ResponseError:
+                break
             else:
                 server_key_exchange_message = server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
                 dh_public_key = parse_dh_params(server_key_exchange_message.param_bytes)

@@ -11,10 +11,10 @@ from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
 class TestTlsPubKeys(unittest.TestCase):
     @staticmethod
-    def get_result(host, port):
+    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)):
         analyzer = AnalyzerPublicKeys()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
-        result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = analyzer.analyze(l7_client, protocol_version)
         return result
 
     def test_subject_match(self):
@@ -68,3 +68,7 @@ class TestTlsPubKeys(unittest.TestCase):
         self.assertEqual(incomplete_chain.verified, None)
 
         self.assertEqual(trusted_root_chain.items[0], incomplete_chain.items[0])
+
+    def test_plain_text_response(self):
+        self.assertEqual(self.get_result('ptt.cc', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)).pubkeys, [])
+        self.assertEqual(self.get_result('cplusplus.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)).pubkeys, [])
