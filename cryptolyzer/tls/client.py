@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 
 import abc
 
@@ -7,6 +8,7 @@ import imaplib
 import poplib
 import smtplib
 
+import collections
 import random
 import socket
 
@@ -807,6 +809,62 @@ class ClientLDAP(L7ClientStartTlsBase):
 
         if ext_response.result_code != LDAPResultCode.SUCCESS:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+    def _deinit_l7(self):
+        pass
+
+
+class ClientSieve(L7ClientStartTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'sieve'
+
+    @classmethod
+    def get_default_port(cls):
+        return 4190
+
+    def _get_capabilities(self):
+        capabilities = collections.OrderedDict()
+
+        while True:
+            self.l4_transfer.receive_line()
+            key_and_value = self.l4_transfer.buffer.decode('ascii').strip().split(' ', 1)
+            self.l4_transfer.flush_buffer()
+
+            key = key_and_value[0].strip('"')
+            if key == 'OK':
+                break
+
+            if len(key_and_value) > 1:
+                value = key_and_value[1]
+            else:
+                value = None
+
+            capabilities[key] = value
+
+        return capabilities
+
+    def _init_l7(self):
+        try:
+            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client.init_connection()
+            self.l4_transfer = self._l7_client.l4_transfer
+
+            capabilities = self._get_capabilities()
+            if 'STARTTLS' in capabilities:
+                self.l4_transfer.send(b'STARTTLS\r\n')
+
+                self.l4_transfer.receive_line()
+                if self.l4_transfer.buffer[:2] == b'OK':
+                    self.l4_transfer.flush_buffer()
+                else:
+                    raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+            else:
+                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        except UnicodeDecodeError as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+        except NotEnoughData as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
     def _deinit_l7(self):
         pass

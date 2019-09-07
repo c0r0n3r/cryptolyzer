@@ -64,7 +64,7 @@ class TestL4ClientTCP(unittest.TestCase):
         _, result = self._create_client_and_receive_text(address, 587, 4 + len(address))
         self.assertEqual(result, '220 ' + address)
 
-    def test_receive_unit(self):
+    def test_receive_until(self):
         address = 'smtp.gmail.com'
 
         l4_client = L4ClientTCP(address, 587)
