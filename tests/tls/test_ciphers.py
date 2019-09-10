@@ -66,7 +66,7 @@ class TestTlsCiphers(unittest.TestCase):
         ]
 
         self.assertTrue(all([
-            cipher_suite.value.block_cipher in rc4_block_ciphers
+            cipher_suite.value.bulk_cipher in rc4_block_ciphers
             for cipher_suite in result.cipher_suites
         ]))
 
@@ -85,7 +85,7 @@ class TestTlsCiphers(unittest.TestCase):
         ]
 
         self.assertTrue(all([
-            cipher_suite.value.block_cipher in triple_des_block_ciphers
+            cipher_suite.value.bulk_cipher in triple_des_block_ciphers
             for cipher_suite in result.cipher_suites
         ]))
 

@@ -37,7 +37,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
             cipher_suites = TlsCipherSuiteVector([
                 cipher_suite
                 for cipher_suite in TlsCipherSuite
-                if (cipher_suite.value.key_exchange and cipher_suite.value.key_exchange.value.pfs and
+                if (cipher_suite.value.key_exchange and cipher_suite.value.key_exchange.value.fs and
                     cipher_suite.value.authentication and cipher_suite.value.authentication == authentication)
             ])
 
