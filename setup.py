@@ -18,6 +18,7 @@ with codecs.open(os.path.join(this_directory, 'README.rst'), encoding='utf-8') a
 test_requirements = [
     "unittest2",
     "coverage",
+    "six",
 ]
 
 
