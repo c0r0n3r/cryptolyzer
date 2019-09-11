@@ -35,7 +35,7 @@ setup(
     long_description=long_description,
     author='Szilárd Pfeiffer',
     author_email='coroner@pfeifferszilard.hu',
-    license='MPL 2.0',
+    license='MPL-2.0',
     url='https://gitlab.com/coroner/cryptolyzer',
     entry_points={
         'console_scripts': ['cryptolyze = cryptolyzer.__main__:main']
