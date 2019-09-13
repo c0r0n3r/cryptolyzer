@@ -10,7 +10,7 @@ from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointForm
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription, TlsHandshakeClientHello
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
-from cryptolyzer.common.exception import NetworkError
+from cryptolyzer.common.exception import NetworkError, ResponseError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import TlsAlert
 
@@ -41,10 +41,12 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                     cipher_suite.value.authentication and cipher_suite.value.authentication == authentication)
             ])
 
-            for algorithm in TlsSignatureAndHashAlgorithm:
-                if algorithm.value.signature_algorithm != authentication:
-                    continue
-
+            matching_algorithms = [
+                algorithm
+                for algorithm in TlsSignatureAndHashAlgorithm
+                if algorithm.value.signature_algorithm == authentication
+            ]
+            for algorithm in matching_algorithms:
                 client_hello = TlsHandshakeClientHello(
                     protocol_version=protocol_version,
                     cipher_suites=cipher_suites,
@@ -59,11 +61,20 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                 try:
                     l7_client.do_tls_handshake(client_hello)
                 except TlsAlert as e:
+                    if (algorithm == matching_algorithms[0] and
+                            e.description == TlsAlertDescription.PROTOCOL_VERSION):
+                        break
+
                     acceptable_alerts = [TlsAlertDescription.HANDSHAKE_FAILURE, TlsAlertDescription.ILLEGAL_PARAMETER]
                     if e.description not in acceptable_alerts:
                         raise e
                 except NetworkError:
                     pass
+                except ResponseError:
+                    if algorithm == matching_algorithms[0]:
+                        break
+                    else:
+                        continue
                 else:
                     supported_algorithms.append(algorithm)
                 finally:

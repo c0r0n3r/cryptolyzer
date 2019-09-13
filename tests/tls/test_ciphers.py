@@ -104,3 +104,7 @@ class TestTlsCiphers(unittest.TestCase):
             cipher_suite.value.authentication == Authentication.RSA
             for cipher_suite in result.cipher_suites
         ]))
+
+    def test_plain_text_response(self):
+        self.assertEqual(self.get_result('ptt.cc', 443).cipher_suites, [])
+        self.assertEqual(self.get_result('cplusplus.com', 443).cipher_suites, [])

@@ -37,3 +37,7 @@ class TestTlsDHParams(unittest.TestCase):
         self.assertEqual(result.dhparams[0].key_size, 2048)
         self.assertEqual(result.dhparams[0].prime, True)
         self.assertEqual(result.dhparams[0].safe_prime, False)
+
+    def test_plain_text_response(self):
+        self.assertEqual(self.get_result('ptt.cc', 443).dhparams, [])
+        self.assertEqual(self.get_result('cplusplus.com', 443).dhparams, [])

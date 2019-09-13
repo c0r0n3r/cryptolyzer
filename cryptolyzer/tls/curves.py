@@ -8,7 +8,7 @@ from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve, TlsExten
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, TlsAlert
 
@@ -39,14 +39,25 @@ class AnalyzerCurves(AnalyzerTlsBase):
                 last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE
             )
             return server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
-        except TlsAlert as e:
-            if e.description != TlsAlertDescription.HANDSHAKE_FAILURE:
-                raise e
         except NetworkError as e:
             if e.error != NetworkErrorType.NO_RESPONSE:
                 raise e
 
         return None
+
+    @staticmethod
+    def _get_supported_curve(server_key_exchange):
+        try:
+            supported_curve, _ = parse_ecdh_params(server_key_exchange.param_bytes)
+        except NotImplementedError as e:
+            if isinstance(e.args[0], TlsECCurveType):
+                supported_curve = None
+            elif isinstance(e.args[0], TlsNamedCurve):
+                supported_curve = TlsNamedCurve(e.args[0])
+            else:
+                raise e
+
+        return supported_curve
 
     def analyze(self, l7_client, protocol_version):
         client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(l7_client.address)
@@ -59,23 +70,33 @@ class AnalyzerCurves(AnalyzerTlsBase):
         supported_curves = OrderedDict()
         extension_supported = True
         for curve in TlsNamedCurve:
-            server_key_exchange = self._get_key_exchange_message(l7_client, client_hello, curve)
-            if server_key_exchange is not None:
-                try:
-                    supported_curve, _ = parse_ecdh_params(server_key_exchange.param_bytes)
-                except NotImplementedError as e:
-                    if isinstance(e.args[0], TlsECCurveType):
-                        break
-                    elif isinstance(e.args[0], TlsNamedCurve):
-                        named_curve = TlsNamedCurve(e.args[0])
-                        supported_curves.update([(named_curve.name, named_curve), ])
-                else:
-                    supported_curves.update([(supported_curve.name, supported_curve), ])
-                    if supported_curve != curve:
-                        extension_supported = False
-                        break
+            try:
+                server_key_exchange = self._get_key_exchange_message(l7_client, client_hello, curve)
+            except TlsAlert as e:
+                if (curve == next(iter(TlsNamedCurve)) and
+                        e.description == TlsAlertDescription.PROTOCOL_VERSION):
+                    extension_supported = None
+                    break
 
-            del client_hello.extensions[-1]
+                if e.description != TlsAlertDescription.HANDSHAKE_FAILURE:
+                    raise e
+
+                continue
+            except ResponseError:
+                if curve == next(iter(TlsNamedCurve)):
+                    extension_supported = None
+                    break
+
+                continue
+            finally:
+                del client_hello.extensions[-1]
+
+            supported_curve = self._get_supported_curve(server_key_exchange)
+            if supported_curve is not None:
+                supported_curves.update([(supported_curve.name, supported_curve), ])
+                if supported_curve != curve:
+                    extension_supported = False
+                    break
 
         return AnalyzerResultCurves(
             AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),
