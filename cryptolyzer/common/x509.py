@@ -264,7 +264,7 @@ class PublicKeyX509(PublicKey):
                         cryptography_x509.oid.NameOID.COMMON_NAME
                     )
                     for relative_name in attributes:
-                        crl_distribution_points.append(relative_name)
+                        crl_distribution_points.append(relative_name.value)
 
             return crl_distribution_points
 
