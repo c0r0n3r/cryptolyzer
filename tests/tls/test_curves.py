@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
-
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.extension import TlsNamedCurve
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.curves import AnalyzerCurves
 
+from .classes import TestTlsCases
 
-class TestTlsCurves(unittest.TestCase):
+
+class TestTlsCurves(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0)):
         analyzer = AnalyzerCurves()

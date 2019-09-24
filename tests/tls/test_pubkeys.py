@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
-
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
+from .classes import TestTlsCases
 
-class TestTlsPubKeys(unittest.TestCase):
+
+class TestTlsPubKeys(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)):
         analyzer = AnalyzerPublicKeys()

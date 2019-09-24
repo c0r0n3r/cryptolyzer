@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
-
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos
 
+from .classes import TestTlsCases
 
-class TestTlsSigAlgos(unittest.TestCase):
+
+class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)):
         analyzer = AnalyzerSigAlgos()

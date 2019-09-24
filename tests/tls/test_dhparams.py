@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
-
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 
+from .classes import TestTlsCases
 
-class TestTlsDHParams(unittest.TestCase):
-    @staticmethod
-    def get_result(host, port):
+
+class TestTlsDHParams(TestTlsCases.TestTlsBase):
+    @classmethod
+    def get_result(cls, host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)):
         analyzer = AnalyzerDHParams()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
-        result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = analyzer.analyze(l7_client, protocol_version)
         return result
 
     def test_size(self):

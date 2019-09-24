@@ -8,6 +8,8 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslPro
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.versions import AnalyzerVersions
 
+from .classes import TestTlsCases
+
 
 class TestSslVersions(unittest.TestCase):
     @staticmethod
@@ -33,12 +35,12 @@ class TestSslVersions(unittest.TestCase):
         )
 
 
-class TestTlsVersions(unittest.TestCase):
+class TestTlsVersions(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port):
+    def get_result(host, port, protocol_version=None):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
-        analyzer_result = analyzer.analyze(l7_client, None)
+        analyzer_result = analyzer.analyze(l7_client, protocol_version)
 
         return analyzer_result
 

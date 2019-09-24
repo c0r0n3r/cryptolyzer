@@ -11,6 +11,8 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslPro
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
 
+from .classes import TestTlsCases
+
 
 class TestSslCiphers(unittest.TestCase):
     @staticmethod
@@ -33,12 +35,12 @@ class TestSslCiphers(unittest.TestCase):
         )
 
 
-class TestTlsCiphers(unittest.TestCase):
+class TestTlsCiphers(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port):
+    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0)):
         analyzer = AnalyzerCipherSuites()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
-        result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_0))
+        result = analyzer.analyze(l7_client, protocol_version)
         return result
 
     def test_cbc(self):
