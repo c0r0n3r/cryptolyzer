@@ -175,7 +175,7 @@ class L7ClientTlsBase(object):
             self._setup_connection()
         except BaseException as e:  # pylint: disable=broad-except
             if self._socket:
-                self._close()
+                self.close()
 
             if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, socket.error):
                 raise NetworkError(NetworkErrorType.NO_CONNECTION)
@@ -187,7 +187,7 @@ class L7ClientTlsBase(object):
         try:
             tls_client.do_handshake(hello_message, record_version, last_handshake_message_type)
         finally:
-            self._close()
+            self.close()
 
         return tls_client.server_messages
 
@@ -214,6 +214,10 @@ class L7ClientTlsBase(object):
 
     def _close(self):
         self._socket.close()
+
+    def close(self):
+        if self._socket is not None:
+            self._close()
         self._socket = None
 
     def _send(self, sendable_bytes):
@@ -334,16 +338,22 @@ class ClientPOP3(L7ClientTlsBase):
         return 110
 
     def _setup_connection(self):
-        self.client = poplib.POP3(self._address, self._port, self._timeout)
-        self._socket = self.client.sock
+        try:
+            self.client = poplib.POP3(self._address, self._port, self._timeout)
+            self._socket = self.client.sock
 
-        response = self.client._shortcmd('STLS')  # pylint: disable=protected-access
-        if len(response) < 3 or response[:3] != b'+OK':
-            raise ValueError
+            response = self.client._shortcmd('STLS')  # pylint: disable=protected-access
+            if len(response) < 3 or response[:3] != b'+OK':
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+        except poplib.error_proto:
+            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
 
-    def close(self):
-        if self.client:
-            self.client.quit()
+    def _close(self):
+        if self.client is not None:
+            try:
+                self.client.quit()
+            except poplib.error_proto:
+                self._socket.close()
 
 
 class L7ClientSMTPS(L7ClientTlsBase):
@@ -371,20 +381,26 @@ class ClientSMTP(L7ClientTlsBase):
         return 587
 
     def _setup_connection(self):
-        self.client = smtplib.SMTP()
-        self.client.connect(self._address, self._port)
-        self._socket = self.client.sock
+        try:
+            self.client = smtplib.SMTP()
+            self.client.connect(self._address, self._port)
+            self._socket = self.client.sock
 
-        self.client.ehlo()
-        if not self.client.has_extn('STARTTLS'):
-            raise ValueError
-        response, _ = self.client.docmd('STARTTLS')
-        if response != 220:
-            raise ValueError
+            self.client.ehlo()
+            if not self.client.has_extn('STARTTLS'):
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+            response, _ = self.client.docmd('STARTTLS')
+            if response != 220:
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+        except smtplib.SMTPException:
+            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
 
-    def close(self):
-        if self.client:
-            self.client.quit()
+    def _close(self):
+        if self.client is not None:
+            try:
+                self.client.quit()
+            except smtplib.SMTPServerDisconnected:
+                self._socket.close()
 
 
 class L7ClientIMAPS(L7ClientTlsBase):
@@ -411,17 +427,24 @@ class ClientIMAP(L7ClientTlsBase):
     def get_default_port(cls):
         return 143
 
+    @property
+    def _capabilities(self):
+        return self.client.capabilities
+
     def _setup_connection(self):
-        self.client = imaplib.IMAP4(self._address, self._port)
-        self._socket = self.client.socket()
+        try:
+            self.client = imaplib.IMAP4(self._address, self._port)
+            self._socket = self.client.socket()
 
-        if 'STARTTLS' not in self.client.capabilities:
-            raise ValueError
-        response, _ = self.client.xatom('STARTTLS')
-        if response != 'OK':
-            raise ValueError
+            if 'STARTTLS' not in self._capabilities:
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+            response, _ = self.client.xatom('STARTTLS')
+            if response != 'OK':
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+        except imaplib.IMAP4.error:
+            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
 
-    def close(self):
+    def _close(self):
         if self.client:
             self.client.shutdown()
 
