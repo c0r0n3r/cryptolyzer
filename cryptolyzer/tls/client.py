@@ -172,7 +172,7 @@ class L7ClientTlsBase(object):
             last_handshake_message_type
     ):
         try:
-            self._socket = self._connect()
+            self._setup_connection()
         except BaseException as e:  # pylint: disable=broad-except
             if self._socket:
                 self._close()
@@ -275,8 +275,8 @@ class L7ClientTlsBase(object):
     def get_supported_schemes(cls):
         return {leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(L7ClientTlsBase)}
 
-    def _connect(self):
-        return socket.create_connection((self._address, self._port), self._timeout)
+    def _setup_connection(self):
+        self._socket = socket.create_connection((self._address, self._port), self._timeout)
 
     @classmethod
     @abc.abstractmethod
@@ -333,12 +333,13 @@ class ClientPOP3(L7ClientTlsBase):
     def get_default_port(cls):
         return 110
 
-    def _connect(self):
+    def _setup_connection(self):
         self.client = poplib.POP3(self._address, self._port, self._timeout)
+        self._socket = self.client.sock
+
         response = self.client._shortcmd('STLS')  # pylint: disable=protected-access
         if len(response) < 3 or response[:3] != b'+OK':
             raise ValueError
-        return self.client.sock
 
     def close(self):
         if self.client:
@@ -369,16 +370,17 @@ class ClientSMTP(L7ClientTlsBase):
     def get_default_port(cls):
         return 587
 
-    def _connect(self):
+    def _setup_connection(self):
         self.client = smtplib.SMTP()
         self.client.connect(self._address, self._port)
+        self._socket = self.client.sock
+
         self.client.ehlo()
         if not self.client.has_extn('STARTTLS'):
             raise ValueError
         response, _ = self.client.docmd('STARTTLS')
         if response != 220:
             raise ValueError
-        return self.client.sock
 
     def close(self):
         if self.client:
@@ -409,18 +411,19 @@ class ClientIMAP(L7ClientTlsBase):
     def get_default_port(cls):
         return 143
 
-    def _connect(self):
+    def _setup_connection(self):
         self.client = imaplib.IMAP4(self._address, self._port)
+        self._socket = self.client.socket()
+
         if 'STARTTLS' not in self.client.capabilities:
             raise ValueError
         response, _ = self.client.xatom('STARTTLS')
         if response != 'OK':
             raise ValueError
-        return self.client.socket()
 
     def close(self):
         if self.client:
-            self.client.quit()
+            self.client.shutdown()
 
 
 class InvalidState(ValueError):
