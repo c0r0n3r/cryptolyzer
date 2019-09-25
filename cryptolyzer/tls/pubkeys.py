@@ -112,16 +112,12 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         certificate_bytes = []
 
         for tls_certificate in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain:
-            try:
-                certificate = cryptography_x509.load_der_x509_certificate(
-                    bytes(tls_certificate.certificate),
-                    cryptography_default_backend()
-                )
-            except ValueError:
-                pass
-            else:
-                certificate_bytes.append(tls_certificate.certificate)
-                certificate_chain.append(cryptolyzer.common.x509.PublicKeyX509(certificate))
+            certificate = cryptography_x509.load_der_x509_certificate(
+                bytes(tls_certificate.certificate),
+                cryptography_default_backend()
+            )
+            certificate_bytes.append(tls_certificate.certificate)
+            certificate_chain.append(cryptolyzer.common.x509.PublicKeyX509(certificate))
 
         return TlsCertificateChain(
             certificate_bytes=certificate_bytes,
@@ -138,6 +134,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         ]
 
         for client_hello in client_hello_messages:
+            server_messages = []
             try:
                 client_hello.protocol_version = protocol_version
                 server_messages = l7_client.do_tls_handshake(
@@ -154,22 +151,25 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             except ResponseError:
                 if client_hello == client_hello_messages[0]:
                     break
-                else:
-                    continue
+
+            if not server_messages:
+                continue
+
+            try:
+                certificate_chain = self._get_tls_certificate_chain(server_messages)
+            except ValueError:
+                continue
             else:
                 sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
-                certificate_chain = self._get_tls_certificate_chain(server_messages)
                 leaf_certificate = certificate_chain.items[0]
                 subject_matches = cryptolyzer.common.x509.is_subject_matches(
                     leaf_certificate.common_names,
                     leaf_certificate.subject_alternative_names,
                     l7_client.address
                 )
-                if ((not sni_sent and not subject_matches) or
-                        certificate_chain in [result.certificate_chain for result in results]):
-                    continue
-
-                results.append(TlsPublicKey(sni_sent, subject_matches, certificate_chain))
+                if ((sni_sent or subject_matches) and
+                        certificate_chain not in [result.certificate_chain for result in results]):
+                    results.append(TlsPublicKey(sni_sent, subject_matches, certificate_chain))
 
         return AnalyzerResultPublicKeys(
             AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),

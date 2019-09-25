@@ -1,8 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
+import cryptography.x509 as cryptography_x509
+
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
+from cryptolyzer.common.exception import ResponseError, ResponseErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
@@ -16,6 +24,63 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
+
+    @mock.patch.object(
+        AnalyzerPublicKeys, '_get_tls_certificate_chain',
+        side_effect=[
+            ValueError,
+            mock.DEFAULT,
+        ]
+    )
+    def test_error_response_error_no_response(self, _):
+        result = self.get_result('badssl.com', 443)
+        self.assertEqual(len(result.pubkeys), 1)
+
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_tls_handshake',
+        side_effect=[
+            [],
+            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
+            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
+            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
+        ]
+    )
+    def test_error_response_error_no_response_last_time(self, _):
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertEqual(len(result.pubkeys), 0)
+
+    @mock.patch.object(
+        cryptography_x509, 'load_der_x509_certificate',
+        side_effect=ValueError
+    )
+    def test_error_load_certificate(self, _):
+        result = self.get_result('badssl.com', 443)
+        self.assertEqual(result.pubkeys, [])
+
+    def test_eq(self):
+        result_badssl_com = self.get_result('badssl.com', 443)
+        result_wrong_host_badssl_com = self.get_result('wrong.host.badssl.com', 443)
+        self.assertEqual(
+            result_badssl_com.pubkeys[0].certificate_chain,
+            result_wrong_host_badssl_com.pubkeys[0].certificate_chain
+        )
+
+        result_expired_badssl_com = self.get_result('expired.badssl.com', 443)
+        result_self_signed_badssl_com = self.get_result('self-signed.badssl.com', 443)
+        result_untrusted_root_badssl_com = self.get_result('untrusted-root.badssl.com', 443)
+        result_revoked_badssl_com = self.get_result('revoked.badssl.com', 443)
+        self.assertNotEqual(
+            result_expired_badssl_com.pubkeys[0].certificate_chain,
+            result_self_signed_badssl_com.pubkeys[0].certificate_chain
+        )
+        self.assertNotEqual(
+            result_expired_badssl_com.pubkeys[0].certificate_chain,
+            result_untrusted_root_badssl_com.pubkeys[0].certificate_chain
+        )
+        self.assertNotEqual(
+            result_expired_badssl_com.pubkeys[0].certificate_chain,
+            result_revoked_badssl_com.pubkeys[0].certificate_chain
+        )
 
     def test_subject_match(self):
         result = self.get_result('badssl.com', 443)
