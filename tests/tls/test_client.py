@@ -1,11 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import socket
+import sys
 import unittest
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
@@ -16,6 +23,32 @@ class TestL7Client(unittest.TestCase):
         l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout)
         result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         return result
+
+    @unittest.skipIf(
+        sys.version_info < (3, 0),
+        'There is no ConnectionRefusedError in Python < 3.0'
+    )
+    def test_error_connection_refused(self):
+        with mock.patch.object(L7ClientTlsBase, '_setup_connection', side_effect=ConnectionRefusedError), \
+                self.assertRaises(NetworkError) as context_manager:
+            self.get_result('tls', 'badssl.com', 443)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    @unittest.skipIf(
+        sys.version_info >= (3, 0),
+        'ConnectionRefusedError is raised instead of socket.error in Python >= 3.0'
+    )
+    def test_error_connection_refused_socket_error(self):
+        with mock.patch.object(L7ClientTlsBase, '_setup_connection', side_effect=socket.error), \
+                self.assertRaises(NetworkError) as context_manager:
+            self.get_result('tls', 'badssl.com', 443)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    @mock.patch.object(L7ClientTlsBase, '_send', return_value=0)
+    def test_error_send(self, _):
+        with self.assertRaises(NetworkError) as context_manager:
+            self.get_result('tls', 'badssl.com', 443)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     def test_tls_client(self):
         self.assertEqual(

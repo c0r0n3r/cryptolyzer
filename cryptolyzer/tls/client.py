@@ -174,7 +174,10 @@ class L7ClientTlsBase(object):
         try:
             self._socket = self._connect()
         except BaseException as e:  # pylint: disable=broad-except
-            if e.__class__.__name__ == 'ConnectionRefusedError':
+            if self._socket:
+                self._close()
+
+            if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, socket.error):
                 raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
             raise e
@@ -213,12 +216,15 @@ class L7ClientTlsBase(object):
         self._socket.close()
         self._socket = None
 
+    def _send(self, sendable_bytes):
+        return self._socket.send(sendable_bytes)
+
     def send(self, sendable_bytes):
         total_sent_byte_num = 0
         while total_sent_byte_num < len(sendable_bytes):
-            actual_sent_byte_num = self._socket.send(sendable_bytes[total_sent_byte_num:])
+            actual_sent_byte_num = self._send(sendable_bytes[total_sent_byte_num:])
             if actual_sent_byte_num == 0:
-                raise IOError()
+                raise NetworkError(NetworkErrorType.NO_CONNECTION)
             total_sent_byte_num = total_sent_byte_num + actual_sent_byte_num
 
     def receive(self, receivable_byte_num):
