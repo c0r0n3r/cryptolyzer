@@ -59,14 +59,18 @@ class AnalyzerCurves(AnalyzerTlsBase):
 
         return supported_curve
 
-    def analyze(self, l7_client, protocol_version):
+    @staticmethod
+    def _get_client_hello(l7_client, protocol_version):
         client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(l7_client.address)
         client_hello.protocol_version = protocol_version
         for index, extension in enumerate(client_hello.extensions):
             if extension.get_extension_type() == TlsExtensionType.SUPPORTED_GROUPS:
                 del client_hello.extensions[index]
                 break
+        return client_hello
 
+    def analyze(self, l7_client, protocol_version):
+        client_hello = self._get_client_hello(l7_client, protocol_version)
         supported_curves = OrderedDict()
         extension_supported = True
         for curve in TlsNamedCurve:
@@ -91,12 +95,13 @@ class AnalyzerCurves(AnalyzerTlsBase):
             finally:
                 del client_hello.extensions[-1]
 
-            supported_curve = self._get_supported_curve(server_key_exchange)
-            if supported_curve is not None:
-                supported_curves.update([(supported_curve.name, supported_curve), ])
-                if supported_curve != curve:
-                    extension_supported = False
-                    break
+            if server_key_exchange is not None:
+                supported_curve = self._get_supported_curve(server_key_exchange)
+                if supported_curve is not None:
+                    supported_curves.update([(supported_curve.name, supported_curve), ])
+                    if supported_curve != curve:
+                        extension_supported = False
+                        break
 
         return AnalyzerResultCurves(
             AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),
