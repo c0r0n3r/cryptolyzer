@@ -23,7 +23,7 @@ from cryptolyzer.tls.versions import AnalyzerVersions
 class ProtocolHandlerTlsBase(ProtocolHandlerBase):
     @classmethod
     def get_clients(cls):
-        return [client_class for client_class in get_leaf_classes(L7ClientTlsBase)]
+        return list(get_leaf_classes(L7ClientTlsBase))
 
     @classmethod
     @abc.abstractmethod
