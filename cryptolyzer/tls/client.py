@@ -449,13 +449,6 @@ class ClientIMAP(L7ClientTlsBase):
             self.client.shutdown()
 
 
-class InvalidState(ValueError):
-    def __init__(self, description):
-        super(InvalidState, self).__init__()
-
-        self.description = description
-
-
 class TlsAlert(ValueError):
     def __init__(self, description):
         super(TlsAlert, self).__init__()
@@ -600,8 +593,6 @@ class SslClientHandshake(TlsClient):
                         self._l4_client.flush_buffer()
                     except (InvalidType, InvalidValue):
                         self.raise_response_error()
-                    except ValueError:
-                        raise NetworkError(NetworkErrorType.NO_CONNECTION)
                     else:
                         if (tls_record.content_type == TlsContentType.ALERT and
                                 (tls_record.messages[0].description in [
