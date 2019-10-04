@@ -17,7 +17,7 @@ class ProtocolHandlerBase(object):
         plugin_root_dir_parts = __file__.split(os.path.sep)[:-2]  # remove common/analyzer.py
         plugin_module_dir_parts = set()
         for path in glob.iglob(os.path.sep.join(plugin_root_dir_parts + ['*', 'analyzer.py'])):
-            if plugin_root_dir_parts[-3:] == ['cryptolyzer', 'common', 'analyzer.py']:
+            if path == __file__:
                 continue
 
             plugin_path_parts = path.split(os.path.sep)[-3:-1]  # split plugin dirs
