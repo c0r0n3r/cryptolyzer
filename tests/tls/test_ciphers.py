@@ -2,12 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from cryptoparser.common.algorithm import Authentication, BlockCipher
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
+from cryptolyzer.common.exception import ResponseError, ResponseErrorType
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
 
@@ -35,6 +40,22 @@ class TestSslCiphers(unittest.TestCase):
         )
 
 
+ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES = \
+    AnalyzerCipherSuites._next_accepted_cipher_suites  # pylint: disable=protected-access
+
+
+def _wrapped_next_accepted_cipher_suites(l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
+    if len(accepted_cipher_suites) == 1:
+        raise ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE)
+
+    return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
+        l7_client,
+        protocol_version,
+        remaining_cipher_suites,
+        accepted_cipher_suites
+    )
+
+
 class TestTlsCiphers(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), timeout=None):
@@ -42,6 +63,32 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        wraps=_wrapped_next_accepted_cipher_suites
+    )
+    def test_error_response_error_no_response_last_time(self, _):
+        result = self.get_result('rc4.badssl.com', 443)
+        self.assertEqual(len(result.cipher_suites), 1)
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_get_accepted_cipher_suites_all',
+        return_value=(TlsCipherSuite, TlsCipherSuite)
+    )
+    def test_long_cipher_suite_list_intolerance(self, _):
+        result = self.get_result('rc4.badssl.com', 443)
+
+        rc4_block_ciphers = [
+            BlockCipher.RC4_40,
+            BlockCipher.RC4_128,
+        ]
+
+        self.assertTrue(all([
+            cipher_suite.value.bulk_cipher in rc4_block_ciphers
+            for cipher_suite in result.cipher_suites
+        ]))
+        self.assertTrue(result.long_cipher_suite_list_intolerance)
 
     def test_cbc(self):
         result = self.get_result('cbc.badssl.com', 443)
