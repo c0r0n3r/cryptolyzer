@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from cryptography.hazmat.backends import default_backend as cryptography_default_backend  # pylint: disable=import-error
-import cryptography.exceptions  # pylint: disable=import-error
-import cryptography.hazmat.primitives.asymmetric.ec as cryptography_ec  # pylint: disable=import-error
-import cryptography.hazmat.primitives.asymmetric.dh as cryptography_dh  # pylint: disable=import-error
-import cryptography.hazmat.primitives.asymmetric.x25519 as cryptography_x25519  # pylint: disable=import-error
+from cryptography.hazmat.backends import default_backend as cryptography_default_backend
+import cryptography.exceptions
+import cryptography.hazmat.primitives.asymmetric.ec as cryptography_ec
+import cryptography.hazmat.primitives.asymmetric.dh as cryptography_dh
+import cryptography.hazmat.primitives.asymmetric.x25519 as cryptography_x25519
 
 from cryptoparser.common.base import Vector, VectorParamNumeric, Serializable
 from cryptoparser.common.parse import ParserBinary
