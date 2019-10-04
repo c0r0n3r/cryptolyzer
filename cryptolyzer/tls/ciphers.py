@@ -79,13 +79,13 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                     return [], remaining_cipher_suites
                 if e.description == TlsAlertDescription.HANDSHAKE_FAILURE:
                     break
-                else:
-                    raise e
+
+                raise e
             except NetworkError as e:
                 if e.error == NetworkErrorType.NO_RESPONSE:
                     break
-                else:
-                    raise e
+
+                raise e
             except ResponseError:
                 if len(remaining_cipher_suites) == len(checkable_cipher_suites):
                     return [], remaining_cipher_suites

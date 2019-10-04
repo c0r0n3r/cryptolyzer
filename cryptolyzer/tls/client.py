@@ -489,7 +489,8 @@ class TlsClientHandshake(TlsClient):
                         raise TlsAlert(record.messages[0].description)
 
                     continue
-                elif record.content_type != TlsContentType.HANDSHAKE:
+
+                if record.content_type != TlsContentType.HANDSHAKE:
                     raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
 
                 for handshake_message in record.messages:
