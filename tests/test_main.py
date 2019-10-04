@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
-
 try:
     from unittest.mock import patch
 except ImportError:
     from mock import patch
+
+import unittest
 
 import sys
 import os
