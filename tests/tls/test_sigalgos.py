@@ -12,7 +12,7 @@ from .classes import TestTlsCases
 
 class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)):
+    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2), timeout=None):
         analyzer = AnalyzerSigAlgos()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, protocol_version)

@@ -11,9 +11,9 @@ from cryptolyzer.tls.versions import AnalyzerVersions
 
 class TestL7Client(unittest.TestCase):
     @staticmethod
-    def get_result(proto, host, port):
+    def get_result(proto, host, port, timeout=None):
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsBase.from_scheme(proto, host, port)
+        l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout)
         result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         return result
 
@@ -39,7 +39,7 @@ class TestL7Client(unittest.TestCase):
 
     def test_pop3_client(self):
         self.assertEqual(
-            self.get_result('pop3', 'pop3.comcast.net', None).versions,
+            self.get_result('pop3', 'pop3.comcast.net', None, 10).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 

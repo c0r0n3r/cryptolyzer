@@ -18,7 +18,7 @@ class TestTlsCases:
     class TestTlsBase(unittest.TestCase):
         @staticmethod
         @abc.abstractmethod
-        def get_result(host, port, protocol_version=None):
+        def get_result(host, port, protocol_version=None, timeout=None):
             raise NotImplementedError()
 
         @mock.patch.object(

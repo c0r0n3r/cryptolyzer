@@ -12,7 +12,7 @@ from .classes import TestTlsCases
 
 class TestTlsCurves(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0)):
+    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), timeout=None):
         analyzer = AnalyzerCurves()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, protocol_version)

@@ -37,7 +37,7 @@ class TestSslCiphers(unittest.TestCase):
 
 class TestTlsCiphers(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0)):
+    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), timeout=None):
         analyzer = AnalyzerCipherSuites()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, protocol_version)
