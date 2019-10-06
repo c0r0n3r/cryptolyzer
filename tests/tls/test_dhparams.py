@@ -41,3 +41,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
     def test_plain_text_response(self):
         self.assertEqual(self.get_result('ptt.cc', 443).dhparams, [])
         self.assertEqual(self.get_result('cplusplus.com', 443).dhparams, [])
+
+    def test_no_dhe_support(self):
+        result = self.get_result('static-rsa.badssl.com', 443)
+        self.assertEqual(len(result.dhparams), 0)
