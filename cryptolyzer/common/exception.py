@@ -7,6 +7,7 @@ import enum
 class NetworkErrorType(enum.IntEnum):
     NO_CONNECTION = 0
     NO_RESPONSE = 1
+    NO_ADDRESS = 2
 
 
 class NetworkError(IOError):

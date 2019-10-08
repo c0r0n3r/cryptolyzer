@@ -61,6 +61,15 @@ class TestMain(unittest.TestCase):
             main()
             return stdout.getvalue()
 
+    def test_analyzer_uris_non_ip(self):
+        self._get_test_analyzer_result('tls', 'versions', 'dns.google#non-ip-address')
+
+    def test_analyzer_uris_ipv4(self):
+        self.assertIn(
+            '"ip": "8.8.8.8"',
+            self._get_test_analyzer_result('tls', 'versions', 'dns.google#8.8.8.8')
+        )
+
     def test_analyzer_output(self):
         self.assertEqual(
             self._get_test_analyzer_result('tls1', 'ciphers', 'rc4-md5.badssl.com'),

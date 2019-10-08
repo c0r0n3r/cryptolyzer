@@ -35,14 +35,30 @@ from cryptolyzer.tls.versions import AnalyzerVersions
 
 class TestL7ClientBase(unittest.TestCase):
     @staticmethod
-    def get_result(proto, host, port, timeout=None):
+    def get_result(proto, host, port, timeout=None, ip=None):
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout)
+        l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout, ip=ip)
         result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         return result
 
 
 class TestL7ClientTlsBase(TestL7ClientBase):
+    def test_error_unexisting_hostname(self):
+        with self.assertRaises(NetworkError) as context_manager:
+            self.get_result('tls', 'unexisting.hostname', 443)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_ADDRESS)
+
+    @mock.patch.object(socket, 'getaddrinfo', return_value=[])
+    def test_error_hostname_with_no_address(self, _):
+        with self.assertRaises(NetworkError) as context_manager:
+            self.get_result('tls', 'hostname.with.no.address', 443)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_ADDRESS)
+
+    def test_error_invalid_address(self):
+        with self.assertRaises(NetworkError) as context_manager:
+            self.get_result('tls', 'badssl.com', 443, ip='not.an.ip.address')
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_ADDRESS)
+
     @unittest.skipIf(
         sys.version_info < (3, 0),
         'There is no ConnectionRefusedError in Python < 3.0'

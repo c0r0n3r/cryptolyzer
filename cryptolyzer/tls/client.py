@@ -3,6 +3,8 @@
 
 import abc
 
+import ipaddress
+
 import imaplib
 import poplib
 import smtplib
@@ -156,13 +158,30 @@ class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
 class L7ClientTlsBase(object):
     _DEFAULT_TIMEOUT = 5
 
-    def __init__(self, address, port, timeout=None):
+    def __init__(self, address, port, timeout=None, ip=None):
         self._address = address
-        self._ip = None
         self._port = port
         self._socket = None
         self._timeout = self._DEFAULT_TIMEOUT if timeout is None else timeout
         self._buffer = bytearray()
+
+        if ip:
+            try:
+                ipaddress.ip_address(ip)
+            except ValueError:
+                raise NetworkError(NetworkErrorType.NO_ADDRESS)
+        else:
+            try:
+                ip_addresses = [
+                    addrinfo[4][0]
+                    for addrinfo in socket.getaddrinfo(self._address, self._port, 0, socket.SOCK_STREAM)
+                ]
+            except socket.gaierror:
+                raise NetworkError(NetworkErrorType.NO_ADDRESS)
+            if not ip_addresses:
+                raise NetworkError(NetworkErrorType.NO_ADDRESS)
+            ip = ip_addresses[0]
+        self._ip = ip
 
     def _do_handshake(
             self,
@@ -181,8 +200,6 @@ class L7ClientTlsBase(object):
                 raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
             raise e
-
-        self._ip = self._socket.getpeername()[0]
 
         try:
             tls_client.do_handshake(hello_message, record_version, last_handshake_message_type)
@@ -267,11 +284,11 @@ class L7ClientTlsBase(object):
         self._buffer = self._buffer[byte_num:]
 
     @classmethod
-    def from_scheme(cls, scheme, address, port=None, timeout=None):
+    def from_scheme(cls, scheme, address, port=None, timeout=None, ip=None):  # pylint: disable=too-many-arguments
         for client_class in get_leaf_classes(L7ClientTlsBase):
             if client_class.get_scheme() == scheme:
                 port = client_class.get_default_port() if port is None else port
-                return client_class(address, port, timeout)
+                return client_class(address, port, timeout, ip)
 
         raise ValueError()
 
@@ -280,7 +297,7 @@ class L7ClientTlsBase(object):
         return {leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(L7ClientTlsBase)}
 
     def _setup_connection(self):
-        self._socket = socket.create_connection((self._address, self._port), self._timeout)
+        self._socket = socket.create_connection((self._ip, self._port), self._timeout)
 
     @classmethod
     @abc.abstractmethod
@@ -324,8 +341,8 @@ class L7ClientPOP3S(L7ClientTlsBase):
 
 
 class ClientPOP3(L7ClientTlsBase):
-    def __init__(self, address, port, timeout=None):
-        super(ClientPOP3, self).__init__(address, port, timeout)
+    def __init__(self, address, port, timeout=None, ip=None):
+        super(ClientPOP3, self).__init__(address, port, timeout, ip)
 
         self.client = None
 
@@ -339,7 +356,7 @@ class ClientPOP3(L7ClientTlsBase):
 
     def _setup_connection(self):
         try:
-            self.client = poplib.POP3(self._address, self._port, self._timeout)
+            self.client = poplib.POP3(self._ip, self._port, self._timeout)
             self._socket = self.client.sock
 
             response = self.client._shortcmd('STLS')  # pylint: disable=protected-access
@@ -367,8 +384,8 @@ class L7ClientSMTPS(L7ClientTlsBase):
 
 
 class ClientSMTP(L7ClientTlsBase):
-    def __init__(self, address, port, timeout=None):
-        super(ClientSMTP, self).__init__(address, port, timeout)
+    def __init__(self, address, port, timeout=None, ip=None):
+        super(ClientSMTP, self).__init__(address, port, timeout, ip)
 
         self.client = None
 
@@ -383,7 +400,7 @@ class ClientSMTP(L7ClientTlsBase):
     def _setup_connection(self):
         try:
             self.client = smtplib.SMTP()
-            self.client.connect(self._address, self._port)
+            self.client.connect(self._ip, self._port)
             self._socket = self.client.sock
 
             self.client.ehlo()
@@ -414,8 +431,8 @@ class L7ClientIMAPS(L7ClientTlsBase):
 
 
 class ClientIMAP(L7ClientTlsBase):
-    def __init__(self, address, port, timeout=None):
-        super(ClientIMAP, self).__init__(address, port, timeout)
+    def __init__(self, address, port, timeout=None, ip=None):
+        super(ClientIMAP, self).__init__(address, port, timeout, ip)
 
         self.client = None
 
@@ -433,7 +450,7 @@ class ClientIMAP(L7ClientTlsBase):
 
     def _setup_connection(self):
         try:
-            self.client = imaplib.IMAP4(self._address, self._port)
+            self.client = imaplib.IMAP4(self._ip, self._port)
             self._socket = self.client.socket()
 
             if 'STARTTLS' not in self._capabilities:
