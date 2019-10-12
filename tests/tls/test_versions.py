@@ -2,11 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
+from cryptoparser.tls.subprotocol import SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
-from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.client import L7ClientTlsBase, SslError
 from cryptolyzer.tls.versions import AnalyzerVersions
+
+from .classes import TestTlsCases
 
 
 class TestSslVersions(unittest.TestCase):
@@ -16,6 +23,15 @@ class TestSslVersions(unittest.TestCase):
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, SslProtocolVersion())
         return result
+
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_ssl_handshake',
+        side_effect=SslError(SslErrorType.NO_CERTIFICATE_ERROR)
+    )
+    def test_error_ssl_error(self, _):
+        with self.assertRaises(SslError) as context_manager:
+            self.get_result('badssl.com', 443)
+        self.assertEqual(context_manager.exception.error, SslErrorType.NO_CERTIFICATE_ERROR)
 
     def test_versions(self):
         result = self.get_result('164.100.148.73', 443)
@@ -33,12 +49,12 @@ class TestSslVersions(unittest.TestCase):
         )
 
 
-class TestTlsVersions(unittest.TestCase):
+class TestTlsVersions(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port):
+    def get_result(host, port, protocol_version=None, timeout=None):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
-        analyzer_result = analyzer.analyze(l7_client, None)
+        analyzer_result = analyzer.analyze(l7_client, protocol_version)
 
         return analyzer_result
 

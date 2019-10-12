@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import copy
+
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
 from cryptoparser.tls.version import SslProtocolVersion
@@ -58,15 +60,12 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 accepted_cipher_suites.append(cipher_suite)
                 break
 
-        if not remaining_cipher_suites:
-            raise StopIteration
-
     @staticmethod
     def _get_accepted_cipher_suites(l7_client, protocol_version, checkable_cipher_suites):
         accepted_cipher_suites = []
-        remaining_cipher_suites = checkable_cipher_suites
+        remaining_cipher_suites = copy.copy(checkable_cipher_suites)
 
-        while True:
+        while remaining_cipher_suites:
             try:
                 AnalyzerCipherSuites._next_accepted_cipher_suites(
                     l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites
@@ -79,20 +78,29 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                     return [], remaining_cipher_suites
                 if e.description == TlsAlertDescription.HANDSHAKE_FAILURE:
                     break
-                else:
-                    raise e
+
+                raise e
             except NetworkError as e:
                 if e.error == NetworkErrorType.NO_RESPONSE:
                     break
-                else:
-                    raise e
+
+                raise e
             except ResponseError:
                 if len(remaining_cipher_suites) == len(checkable_cipher_suites):
                     return [], remaining_cipher_suites
 
                 continue
+            finally:
+                if remaining_cipher_suites:
+                    del remaining_cipher_suites[0]
 
         return accepted_cipher_suites, remaining_cipher_suites
+
+    @staticmethod
+    def _get_accepted_cipher_suites_all(l7_client, protocol_version, checkable_cipher_suites):
+        return AnalyzerCipherSuites._get_accepted_cipher_suites(
+            l7_client, protocol_version, checkable_cipher_suites
+        )
 
     @staticmethod
     def _get_accepted_cipher_suites_fallback(l7_client, protocol_version):
@@ -122,7 +130,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             checkable_cipher_suites = list(TlsCipherSuite)
 
         long_cipher_suite_list_intolerance = False
-        accepted_cipher_suites, remaining_cipher_suites = self._get_accepted_cipher_suites(
+        accepted_cipher_suites, remaining_cipher_suites = self._get_accepted_cipher_suites_all(
             l7_client, protocol_version, checkable_cipher_suites
         )
         if len(checkable_cipher_suites) == len(remaining_cipher_suites):

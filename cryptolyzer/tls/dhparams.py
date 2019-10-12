@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from cryptoparser.tls.subprotocol import TlsHandshakeType
+from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_dh_params, DHParameter
@@ -37,8 +37,9 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                     client_hello,
                     last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE
                 )
-            except TlsAlert:
-                pass
+            except TlsAlert as e:
+                if e.description != TlsAlertDescription.HANDSHAKE_FAILURE:
+                    raise e
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e

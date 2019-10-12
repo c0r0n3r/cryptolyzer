@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from cryptography.hazmat.backends import default_backend as cryptography_default_backend  # pylint: disable=import-error
-import cryptography.exceptions  # pylint: disable=import-error
-import cryptography.hazmat.primitives.asymmetric.ec as cryptography_ec  # pylint: disable=import-error
-import cryptography.hazmat.primitives.asymmetric.dh as cryptography_dh  # pylint: disable=import-error
-import cryptography.hazmat.primitives.asymmetric.x25519 as cryptography_x25519  # pylint: disable=import-error
+from cryptography.hazmat.backends import default_backend as cryptography_default_backend
+import cryptography.exceptions
+import cryptography.hazmat.primitives.asymmetric.ec as cryptography_ec
+import cryptography.hazmat.primitives.asymmetric.dh as cryptography_dh
+import cryptography.hazmat.primitives.asymmetric.x25519 as cryptography_x25519
 
 from cryptoparser.common.base import Vector, VectorParamNumeric, Serializable
 from cryptoparser.common.parse import ParserBinary
 from cryptoparser.tls.extension import TlsNamedCurve, TlsNamedCurveFactory
 from cryptoparser.tls.subprotocol import TlsECCurveType
+
+from cryptolyzer.common.exception import ResponseError, ResponseErrorType
 
 
 class TlsDHParamVector(Vector):  # pylint: disable=too-many-ancestors
@@ -53,18 +55,21 @@ def parse_ecdh_params(param_bytes):
     if named_curve == TlsNamedCurve.X25519:
         try:
             public_key = cryptography_x25519.X25519PublicKey.from_public_bytes(bytes(parser['point']))
-        except cryptography.exceptions.UnsupportedAlgorithm:
+        except cryptography.exceptions.UnsupportedAlgorithm:  # pragma: no cover
             raise NotImplementedError(named_curve)
     else:
         try:
             cryptography_curve = getattr(cryptography_ec, named_curve.name)()
-        except AttributeError:
+        except AttributeError:  # pragma: no cover
             raise NotImplementedError(named_curve)
 
-        public_key = cryptography_ec.EllipticCurvePublicKey.from_encoded_point(
-            cryptography_curve,
-            bytes(parser['point'])
-        )
+        try:
+            public_key = cryptography_ec.EllipticCurvePublicKey.from_encoded_point(
+                cryptography_curve,
+                bytes(parser['point'])
+            )
+        except ValueError:
+            raise ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE)
 
     return parser['named_curve'], public_key
 

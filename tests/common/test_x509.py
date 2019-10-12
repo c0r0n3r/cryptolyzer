@@ -1,8 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
 import datetime
+import unittest
+import six
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
+import cryptography
+import cryptography.x509 as cryptography_x509
+import cryptography.hazmat.backends.openssl
 
 from cryptoparser.common.algorithm import MAC
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
@@ -73,6 +83,30 @@ class TestPublicKeyX509(unittest.TestCase):
             []
         )
 
+    @mock.patch.object(
+        cryptography_x509.DistributionPoint, 'full_name',
+        mock.PropertyMock(return_value=[]),
+        create=True
+    )
+    @mock.patch.object(
+        cryptography_x509.DistributionPoint, 'relative_name',
+        mock.PropertyMock(
+            return_value=cryptography_x509.RelativeDistinguishedName([
+                cryptography_x509.NameAttribute(
+                    cryptography_x509.oid.NameOID.COMMON_NAME,
+                    six.text_type('mocked CRL Distribution Point')
+                )
+            ])
+        ),
+        create=True
+    )
+    def test_crl_distribution_points_relative_name(self):
+        result = self._get_result('badssl.com', 443)
+        self.assertEqual(
+            result.pubkeys[0].certificate_chain.items[0].crl_distribution_points,
+            ['mocked CRL Distribution Point', 'mocked CRL Distribution Point']
+        )
+
     def test_ocsp_responders(self):
         result = self._get_result('expired.badssl.com', 443)
         self.assertEqual(
@@ -80,10 +114,30 @@ class TestPublicKeyX509(unittest.TestCase):
             ['http://ocsp.comodoca.com']
         )
 
+    @mock.patch.object(
+        cryptography_x509.extensions.Extensions, 'get_extension_for_class',
+        side_effect=cryptography_x509.ExtensionNotFound(None, cryptography_x509.AuthorityInformationAccess)
+    )
+    def test_ocsp_responders_no_extension(self, _):
+        result = self._get_result('expired.badssl.com', 443)
+        self.assertEqual(
+            result.pubkeys[0].certificate_chain.items[1].ocsp_responders,
+            []
+        )
+
     def test_is_ca(self):
         result = self._get_result('badssl.com', 443)
         self.assertFalse(result.pubkeys[0].certificate_chain.items[0].is_ca)
         self.assertTrue(result.pubkeys[0].certificate_chain.items[1].is_ca)
+
+    @mock.patch.object(
+        cryptography_x509.extensions.Extensions, 'get_extension_for_class',
+        side_effect=cryptography_x509.ExtensionNotFound(None, cryptography_x509.BasicConstraints)
+    )
+    def test_is_ca_no_extension(self, _):
+        result = self._get_result('badssl.com', 443)
+        self.assertFalse(result.pubkeys[0].certificate_chain.items[0].is_ca)
+        self.assertFalse(result.pubkeys[0].certificate_chain.items[1].is_ca)
 
     def test_validity(self):
         result = self._get_result('expired.badssl.com', 443)
@@ -137,6 +191,14 @@ class TestPublicKeyX509(unittest.TestCase):
         result = self._get_result('badssl.com', 443)
         self.assertFalse(result.pubkeys[0].certificate_chain.items[0].extended_validation)
 
+    @mock.patch.object(
+        cryptography_x509.extensions.Extensions, 'get_extension_for_class',
+        side_effect=cryptography_x509.ExtensionNotFound(None, cryptography_x509.CertificatePolicies)
+    )
+    def test_extended_validation_no_extension(self, _):
+        result = self._get_result('badssl.com', 443)
+        self.assertFalse(result.pubkeys[0].certificate_chain.items[0].extended_validation)
+
     def test_key_type_and_size(self):
         result = self._get_result('ecc256.badssl.com', 443)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, 'EllipticCurve')
@@ -165,3 +227,12 @@ class TestPublicKeyX509(unittest.TestCase):
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm, MAC.SHA384)
         result = self._get_result('sha512.badssl.com', 443)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm, MAC.SHA512)
+
+    @mock.patch.object(
+        cryptography.hazmat.backends.openssl.rsa, '_rsa_sig_verify',
+        side_effect=cryptography.exceptions.InvalidSignature
+    )
+    def test_verified(self, _):
+        result = self._get_result('badssl.com', 443)
+        trusted_root_chain = result.pubkeys[0].certificate_chain
+        self.assertFalse(trusted_root_chain.verified)

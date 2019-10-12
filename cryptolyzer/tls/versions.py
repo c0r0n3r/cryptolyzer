@@ -83,7 +83,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
                     if e.description == TlsAlertDescription.PROTOCOL_VERSION:
                         alerts_unsupported_tls_version = True
                         break
-                    elif tls_version == TlsVersion.SSL3:
+                    if tls_version == TlsVersion.SSL3:
                         break
                 except NetworkError as e:
                     if e.error != NetworkErrorType.NO_RESPONSE:

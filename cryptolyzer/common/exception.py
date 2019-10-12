@@ -19,6 +19,7 @@ class NetworkError(IOError):
 class ResponseErrorType(enum.IntEnum):
     PLAIN_TEXT_RESPONSE = 1
     UNPARSABLE_RESPONSE = 2
+    UNSUPPORTED_SECURITY = 3
 
 
 class ResponseError(ValueError):

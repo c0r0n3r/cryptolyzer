@@ -221,11 +221,11 @@ class PublicKeyX509(PublicKey):
 
     @property
     def subject(self):
-        return [attribute for attribute in self._certificate.subject]
+        return list(self._certificate.subject)
 
     @property
     def issuer(self):
-        return [attribute for attribute in self._certificate.issuer]
+        return list(self._certificate.issuer)
 
     @property
     def common_names(self):
@@ -264,7 +264,7 @@ class PublicKeyX509(PublicKey):
                         cryptography_x509.oid.NameOID.COMMON_NAME
                     )
                     for relative_name in attributes:
-                        crl_distribution_points.append(relative_name)
+                        crl_distribution_points.append(relative_name.value)
 
             return crl_distribution_points
 

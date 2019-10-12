@@ -172,9 +172,12 @@ class L7ClientTlsBase(object):
             last_handshake_message_type
     ):
         try:
-            self._socket = self._connect()
+            self._setup_connection()
         except BaseException as e:  # pylint: disable=broad-except
-            if e.__class__.__name__ == 'ConnectionRefusedError':
+            if self._socket:
+                self.close()
+
+            if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, socket.error):
                 raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
             raise e
@@ -184,7 +187,7 @@ class L7ClientTlsBase(object):
         try:
             tls_client.do_handshake(hello_message, record_version, last_handshake_message_type)
         finally:
-            self._close()
+            self.close()
 
         return tls_client.server_messages
 
@@ -211,14 +214,21 @@ class L7ClientTlsBase(object):
 
     def _close(self):
         self._socket.close()
+
+    def close(self):
+        if self._socket is not None:
+            self._close()
         self._socket = None
+
+    def _send(self, sendable_bytes):
+        return self._socket.send(sendable_bytes)
 
     def send(self, sendable_bytes):
         total_sent_byte_num = 0
         while total_sent_byte_num < len(sendable_bytes):
-            actual_sent_byte_num = self._socket.send(sendable_bytes[total_sent_byte_num:])
+            actual_sent_byte_num = self._send(sendable_bytes[total_sent_byte_num:])
             if actual_sent_byte_num == 0:
-                raise IOError()
+                raise NetworkError(NetworkErrorType.NO_CONNECTION)
             total_sent_byte_num = total_sent_byte_num + actual_sent_byte_num
 
     def receive(self, receivable_byte_num):
@@ -269,8 +279,8 @@ class L7ClientTlsBase(object):
     def get_supported_schemes(cls):
         return {leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(L7ClientTlsBase)}
 
-    def _connect(self):
-        return socket.create_connection((self._address, self._port), self._timeout)
+    def _setup_connection(self):
+        self._socket = socket.create_connection((self._address, self._port), self._timeout)
 
     @classmethod
     @abc.abstractmethod
@@ -327,16 +337,23 @@ class ClientPOP3(L7ClientTlsBase):
     def get_default_port(cls):
         return 110
 
-    def _connect(self):
-        self.client = poplib.POP3(self._address, self._port, self._timeout)
-        response = self.client._shortcmd('STLS')  # pylint: disable=protected-access
-        if len(response) < 3 or response[:3] != b'+OK':
-            raise ValueError
-        return self.client.sock
+    def _setup_connection(self):
+        try:
+            self.client = poplib.POP3(self._address, self._port, self._timeout)
+            self._socket = self.client.sock
 
-    def close(self):
-        if self.client:
-            self.client.quit()
+            response = self.client._shortcmd('STLS')  # pylint: disable=protected-access
+            if len(response) < 3 or response[:3] != b'+OK':
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+        except poplib.error_proto:
+            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+
+    def _close(self):
+        if self.client is not None:
+            try:
+                self.client.quit()
+            except poplib.error_proto:
+                self._socket.close()
 
 
 class L7ClientSMTPS(L7ClientTlsBase):
@@ -363,20 +380,27 @@ class ClientSMTP(L7ClientTlsBase):
     def get_default_port(cls):
         return 587
 
-    def _connect(self):
-        self.client = smtplib.SMTP()
-        self.client.connect(self._address, self._port)
-        self.client.ehlo()
-        if not self.client.has_extn('STARTTLS'):
-            raise ValueError
-        response, _ = self.client.docmd('STARTTLS')
-        if response != 220:
-            raise ValueError
-        return self.client.sock
+    def _setup_connection(self):
+        try:
+            self.client = smtplib.SMTP()
+            self.client.connect(self._address, self._port)
+            self._socket = self.client.sock
 
-    def close(self):
-        if self.client:
-            self.client.quit()
+            self.client.ehlo()
+            if not self.client.has_extn('STARTTLS'):
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+            response, _ = self.client.docmd('STARTTLS')
+            if response != 220:
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+        except smtplib.SMTPException:
+            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+
+    def _close(self):
+        if self.client is not None:
+            try:
+                self.client.quit()
+            except smtplib.SMTPServerDisconnected:
+                self._socket.close()
 
 
 class L7ClientIMAPS(L7ClientTlsBase):
@@ -403,25 +427,26 @@ class ClientIMAP(L7ClientTlsBase):
     def get_default_port(cls):
         return 143
 
-    def _connect(self):
-        self.client = imaplib.IMAP4(self._address, self._port)
-        if 'STARTTLS' not in self.client.capabilities:
-            raise ValueError
-        response, _ = self.client.xatom('STARTTLS')
-        if response != 'OK':
-            raise ValueError
-        return self.client.socket()
+    @property
+    def _capabilities(self):
+        return self.client.capabilities
 
-    def close(self):
+    def _setup_connection(self):
+        try:
+            self.client = imaplib.IMAP4(self._address, self._port)
+            self._socket = self.client.socket()
+
+            if 'STARTTLS' not in self._capabilities:
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+            response, _ = self.client.xatom('STARTTLS')
+            if response != 'OK':
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+        except imaplib.IMAP4.error:
+            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+
+    def _close(self):
         if self.client:
-            self.client.quit()
-
-
-class InvalidState(ValueError):
-    def __init__(self, description):
-        super(InvalidState, self).__init__()
-
-        self.description = description
+            self.client.shutdown()
 
 
 class TlsAlert(ValueError):
@@ -489,7 +514,8 @@ class TlsClientHandshake(TlsClient):
                         raise TlsAlert(record.messages[0].description)
 
                     continue
-                elif record.content_type != TlsContentType.HANDSHAKE:
+
+                if record.content_type != TlsContentType.HANDSHAKE:
                     raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
 
                 for handshake_message in record.messages:
@@ -567,8 +593,6 @@ class SslClientHandshake(TlsClient):
                         self._l4_client.flush_buffer()
                     except (InvalidType, InvalidValue):
                         self.raise_response_error()
-                    except ValueError:
-                        raise NetworkError(NetworkErrorType.NO_CONNECTION)
                     else:
                         if (tls_record.content_type == TlsContentType.ALERT and
                                 (tls_record.messages[0].description in [
