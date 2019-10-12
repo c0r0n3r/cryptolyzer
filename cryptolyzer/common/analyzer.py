@@ -4,6 +4,7 @@
 import abc
 import glob
 import importlib
+import ipaddress
 import pkgutil
 import os
 
@@ -79,6 +80,13 @@ class ProtocolHandlerBase(object):
 
         if uri.port:
             kwargs['port'] = int(uri.port)
+        if uri.fragment:
+            try:
+                ipaddress.ip_address(uri.fragment)
+            except ValueError:
+                pass
+            else:
+                kwargs['ip'] = uri.fragment
 
         for client_class in cls.get_clients():
             if client_class.get_scheme() == uri.scheme:
