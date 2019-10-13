@@ -330,6 +330,16 @@ class L7ClientHTTPS(L7ClientTlsBase):
         return 443
 
 
+class L7ClientDoH(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'doh'
+
+    @classmethod
+    def get_default_port(cls):
+        return 443
+
+
 class L7ClientPOP3S(L7ClientTlsBase):
     @classmethod
     def get_scheme(cls):

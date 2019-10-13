@@ -214,6 +214,14 @@ class TestClientSMTP(TestL7ClientBase):
         )
 
 
+class TestClientDoH(TestL7ClientBase):
+    def test_doh_client(self):
+        self.assertEqual(
+            self.get_result('doh', 'dns.google', None).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
+        )
+
+
 class TestTlsClientHandshake(TestL7ClientBase):
     @mock.patch.object(
         TlsRecord, 'messages', mock.PropertyMock(
