@@ -409,7 +409,7 @@ class ClientSMTP(L7ClientTlsBase):
 
     def _setup_connection(self):
         try:
-            self.client = smtplib.SMTP()
+            self.client = smtplib.SMTP(timeout=self._timeout)
             self.client.connect(self._ip, self._port)
             self._socket = self.client.sock
 
@@ -440,6 +440,18 @@ class L7ClientIMAPS(L7ClientTlsBase):
         return 993
 
 
+class IMAP4(imaplib.IMAP4, object):
+    def __init__(self, host, port, timeout):
+        self._timeout = timeout
+        super(IMAP4, self).__init__(host, port)
+
+    def open(self, host='', port=imaplib.IMAP4_PORT):
+        self.host = host
+        self.port = port
+        self.sock = socket.create_connection((host, port), self._timeout)
+        self.file = self.sock.makefile('rb')
+
+
 class ClientIMAP(L7ClientTlsBase):
     def __init__(self, address, port, timeout=None, ip=None):
         super(ClientIMAP, self).__init__(address, port, timeout, ip)
@@ -460,7 +472,7 @@ class ClientIMAP(L7ClientTlsBase):
 
     def _setup_connection(self):
         try:
-            self.client = imaplib.IMAP4(self._ip, self._port)
+            self.client = IMAP4(self._ip, self._port, self._timeout)
             self._socket = self.client.socket()
 
             if 'STARTTLS' not in self._capabilities:
