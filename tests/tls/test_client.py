@@ -28,7 +28,7 @@ from cryptoparser.tls.subprotocol import (
 )
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
-from cryptolyzer.tls.client import L7ClientTlsBase, ClientIMAP, TlsAlert, SslError
+from cryptolyzer.tls.client import L7ClientTlsBase, L7ClientTls, ClientIMAP, TlsAlert, SslError
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError, ResponseErrorType
 from cryptolyzer.tls.versions import AnalyzerVersions
 
@@ -40,6 +40,12 @@ class TestL7ClientBase(unittest.TestCase):
         l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout, ip=ip)
         result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         return result
+
+
+class L7ClientTlsMock(L7ClientTls):
+    def _close(self):
+        super(L7ClientTlsMock, self)._close()
+        raise socket.timeout()
 
 
 class TestL7ClientTlsBase(TestL7ClientBase):
@@ -88,6 +94,18 @@ class TestL7ClientTlsBase(TestL7ClientBase):
     def test_error_unsupported_scheme(self):
         with self.assertRaises(ValueError):
             self.get_result('unsupported_scheme', 'badssl.com', 443)
+
+    def test_error_connection_timeout_on_close(self):
+        analyzer = AnalyzerVersions()
+        l7_client = L7ClientTlsMock('badssl.com', 443)
+        self.assertEqual(
+            analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2)).versions,
+            [
+                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            ]
+        )
 
     def test_tls_client(self):
         self.assertEqual(

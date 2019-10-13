@@ -204,7 +204,10 @@ class L7ClientTlsBase(object):
         try:
             tls_client.do_handshake(hello_message, record_version, last_handshake_message_type)
         finally:
-            self.close()
+            try:
+                self.close()
+            except (socket.error, socket.timeout):
+                pass
 
         return tls_client.server_messages
 
