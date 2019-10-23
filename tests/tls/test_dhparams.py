@@ -3,6 +3,8 @@
 
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
+from cryptolyzer.common.dhparam import WellKnownDHParams
+
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 
@@ -23,6 +25,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparams[0].key_size, 480)
         self.assertEqual(result.dhparams[0].prime, True)
         self.assertEqual(result.dhparams[0].safe_prime, True)
+        self.assertEqual(result.dhparams[0].well_known, None)
 
     def test_prime(self):
         result = self.get_result('dh-composite.badssl.com', 443)
@@ -30,6 +33,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparams[0].key_size, 2047)
         self.assertEqual(result.dhparams[0].prime, False)
         self.assertEqual(result.dhparams[0].safe_prime, False)
+        self.assertEqual(result.dhparams[0].well_known, None)
 
     def test_safe_prime(self):
         result = self.get_result('dh-small-subgroup.badssl.com', 443)
@@ -37,6 +41,15 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparams[0].key_size, 2048)
         self.assertEqual(result.dhparams[0].prime, True)
         self.assertEqual(result.dhparams[0].safe_prime, False)
+        self.assertEqual(result.dhparams[0].well_known, None)
+
+    def test_weel_known_prime(self):
+        result = self.get_result('www.owasp.org', 443)
+        self.assertEqual(len(result.dhparams), 1)
+        self.assertEqual(result.dhparams[0].key_size, 2048)
+        self.assertEqual(result.dhparams[0].prime, True)
+        self.assertEqual(result.dhparams[0].safe_prime, True)
+        self.assertEqual(result.dhparams[0].well_known, WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP)
 
     def test_plain_text_response(self):
         self.assertEqual(self.get_result('ptt.cc', 443).dhparams, [])
