@@ -193,11 +193,11 @@ class L7ClientTlsBase(object):
         try:
             self._setup_connection()
         except BaseException as e:  # pylint: disable=broad-except
+            if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, (socket.error, socket.timeout)):
+                raise NetworkError(NetworkErrorType.NO_CONNECTION)
+
             if self._socket:
                 self.close()
-
-            if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, socket.error):
-                raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
             raise e
 
