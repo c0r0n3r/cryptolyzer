@@ -129,6 +129,35 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             certificate_chain=certificate_chain,
         )
 
+    @staticmethod
+    def _get_server_messages(l7_client, client_hello, sni_sent, client_hello_messages):
+        server_messages = []
+
+        try:
+            server_messages = l7_client.do_tls_handshake(
+                client_hello,
+                last_handshake_message_type=TlsHandshakeType.CERTIFICATE
+            )
+        except TlsAlert as e:
+            if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
+                if sni_sent:
+                    raise StopIteration
+            elif e.description not in [
+                    TlsAlertDescription.HANDSHAKE_FAILURE,
+                    TlsAlertDescription.INTERNAL_ERROR,
+                    TlsAlertDescription.ILLEGAL_PARAMETER,
+                    TlsAlertDescription.INSUFFICIENT_SECURITY
+            ]:
+                raise e
+        except NetworkError as e:
+            if e.error != NetworkErrorType.NO_RESPONSE:
+                raise e
+        except ResponseError:
+            if client_hello == client_hello_messages[0]:
+                raise StopIteration
+
+        return server_messages
+
     def analyze(self, l7_client, protocol_version):
         results = []
         client_hello_messages = [
@@ -139,22 +168,11 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         ]
 
         for client_hello in client_hello_messages:
-            server_messages = []
+            sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
             try:
-                server_messages = l7_client.do_tls_handshake(
-                    client_hello,
-                    last_handshake_message_type=TlsHandshakeType.CERTIFICATE
-                )
-            except TlsAlert as e:
-                if (e.description != TlsAlertDescription.HANDSHAKE_FAILURE and
-                        e.description != TlsAlertDescription.PROTOCOL_VERSION):
-                    raise e
-            except NetworkError as e:
-                if e.error != NetworkErrorType.NO_RESPONSE:
-                    raise e
-            except ResponseError:
-                if client_hello == client_hello_messages[0]:
-                    break
+                server_messages = self._get_server_messages(l7_client, client_hello, sni_sent, client_hello_messages)
+            except StopIteration:
+                break
 
             if not server_messages:
                 continue
@@ -164,7 +182,6 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             except ValueError:
                 continue
             else:
-                sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
                 leaf_certificate = certificate_chain.items[0]
                 subject_matches = cryptolyzer.common.x509.is_subject_matches(
                     leaf_certificate.common_names,

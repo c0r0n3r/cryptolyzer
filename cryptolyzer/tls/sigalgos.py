@@ -50,10 +50,14 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                 l7_client.do_tls_handshake(client_hello)
             except TlsAlert as e:
                 if (algorithm == matching_algorithms[0] and
-                        e.description == TlsAlertDescription.PROTOCOL_VERSION):
+                        e.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]):
                     break
 
-                acceptable_alerts = [TlsAlertDescription.HANDSHAKE_FAILURE, TlsAlertDescription.ILLEGAL_PARAMETER]
+                acceptable_alerts = [
+                    TlsAlertDescription.HANDSHAKE_FAILURE,
+                    TlsAlertDescription.ILLEGAL_PARAMETER,
+                    TlsAlertDescription.INTERNAL_ERROR
+                ]
                 if e.description not in acceptable_alerts:
                     raise e
             except NetworkError as e:
