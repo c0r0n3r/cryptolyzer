@@ -131,7 +131,8 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
         wraps=_wrapped_next_accepted_cipher_suites_internal_error_once
     )
-    def test_error_unreconized_name_once(self, _):
+    @mock.patch('time.sleep', return_value=None)
+    def test_error_internal_error_once(self, _, __):
         result = self.get_result('rc4.badssl.com', 443)
         self.assertEqual(len(result.cipher_suites), 2)
 

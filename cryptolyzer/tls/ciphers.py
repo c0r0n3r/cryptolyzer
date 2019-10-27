@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import copy
+import time
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
@@ -67,6 +68,9 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
         while remaining_cipher_suites:
             try:
+                if retried_internal_error:
+                    time.sleep(1)
+
                 AnalyzerCipherSuites._next_accepted_cipher_suites(
                     l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites
                 )
@@ -81,6 +85,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                         raise e
 
                     retried_internal_error = True
+                    time.sleep(5)
                     continue
 
                 if e.description in [
