@@ -88,10 +88,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 if len(remaining_cipher_suites) == len(checkable_cipher_suites):
                     return [], remaining_cipher_suites
 
-                continue
-            finally:
-                if remaining_cipher_suites:
-                    del remaining_cipher_suites[0]
+                del remaining_cipher_suites[0]
 
         return accepted_cipher_suites, remaining_cipher_suites
 
@@ -141,7 +138,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 l7_client,
                 protocol_version,
                 checkable_cipher_suites
-            ) != checkable_cipher_suites
+            )[0] != checkable_cipher_suites
         else:
             cipher_suite_preference = None
 
