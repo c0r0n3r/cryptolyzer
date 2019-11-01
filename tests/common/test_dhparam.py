@@ -2,17 +2,47 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+import json
 
+import cryptography.hazmat.primitives.asymmetric.dh as cryptography_dh
 from cryptography.hazmat.backends import default_backend as cryptography_default_backend
 from cryptography.hazmat.primitives import serialization as cryptography_serialization
 
 from cryptoparser.tls.extension import TlsNamedCurve
 
-from cryptolyzer.common.dhparam import parse_ecdh_params
+from cryptolyzer.common.dhparam import parse_ecdh_params, DHParameter, WellKnownDHParams
 from cryptolyzer.common.exception import ResponseError, ResponseErrorType
 
 
 class TestParse(unittest.TestCase):
+    @staticmethod
+    def _generate_dh_param(parameter_numbers, reused):
+        public_numbers = cryptography_dh.DHPublicNumbers(
+            0x012345678abcdef,
+            parameter_numbers
+        )
+        public_key = public_numbers.public_key(cryptography_default_backend())
+
+        return DHParameter(public_key, reused)
+
+    def test_parse_dh_param(self):
+        dh_parameter = self._generate_dh_param(
+            WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP.value.dh_param_numbers, False
+        )
+        self.assertEqual(dh_parameter.key_size, 2048)
+        self.assertEqual(dh_parameter.well_known, WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP)
+        self.assertEqual(
+            dh_parameter.well_known.as_json(),
+            json.dumps({"name": "2048-bit MODP Group", "source": "RFC3526"})
+        )
+
+    def test_all_well_known_dhparam(self):
+        dh_params = [
+            self._generate_dh_param(well_known_dh_param.value.dh_param_numbers, False)
+            for well_known_dh_param in WellKnownDHParams
+        ]
+        self.assertTrue(all([dh_param.well_known for dh_param in dh_params]))
+
     def test_parse_ecdh_param_x25519(self):
         point_data = bytes(
             b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f' +
