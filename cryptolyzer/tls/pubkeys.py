@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import copy
+
 from collections import OrderedDict
 
 import cryptography.x509 as cryptography_x509
@@ -28,12 +30,14 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
         self.items = certificate_chain
         self.verified = None
 
-        ordered_certificate_chain = [cert for cert in certificate_chain if not cert.is_ca]
+        original_certificate_chain = copy.copy(certificate_chain)
+        ordered_certificate_chain = [cert for cert in original_certificate_chain if not cert.is_ca]
 
-        while True:
+        while original_certificate_chain:
             try:
-                next_certificate = self._get_issuer(ordered_certificate_chain[-1])
-                ordered_certificate_chain.append(next_certificate)
+                issuer_certificate = self._get_issuer(original_certificate_chain, ordered_certificate_chain[-1])
+                ordered_certificate_chain.append(issuer_certificate)
+                original_certificate_chain.remove(issuer_certificate)
             except StopIteration:
                 break
 
@@ -53,13 +57,14 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
             self.ordered = None
             self.verified = None
 
-    def _get_issuer(self, certificate):
+    @staticmethod
+    def _get_issuer(certificates, certificate):
         issuer_certificates = [
             issuer_certificate
-            for issuer_certificate in self.items
+            for issuer_certificate in certificates
             if issuer_certificate.is_ca and issuer_certificate.subject == certificate.issuer
         ]
-        if len(issuer_certificates) == 1 and certificate != issuer_certificates[0]:
+        if len(issuer_certificates) == 1:
             return issuer_certificates[0]
 
         raise StopIteration()

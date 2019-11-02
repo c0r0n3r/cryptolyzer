@@ -134,6 +134,19 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
 
         self.assertEqual(trusted_root_chain.items[0], incomplete_chain.items[0])
 
+    def test_certificate_chain_cross_signed_cas(self):
+        result = self.get_result('www.gov.tw', 443)
+        self.assertEqual(len(result.pubkeys), 1)
+
+        cross_signed_chain = result.pubkeys[0].certificate_chain
+        self.assertEqual(len(cross_signed_chain.items), 4)
+        self.assertFalse(cross_signed_chain.contains_anchor)
+        self.assertTrue(cross_signed_chain.ordered)
+        self.assertTrue(cross_signed_chain.verified)
+
+        self.assertEqual(cross_signed_chain.items[-1].subject, cross_signed_chain.items[-2].issuer)
+        self.assertEqual(cross_signed_chain.items[-2].subject, cross_signed_chain.items[-1].issuer)
+
     def test_plain_text_response(self):
         self.assertEqual(self.get_result('ptt.cc', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)).pubkeys, [])
         self.assertEqual(self.get_result('cplusplus.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)).pubkeys, [])
