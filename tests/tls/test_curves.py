@@ -128,3 +128,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         with self.assertRaises(NetworkError) as context_manager:
             self.get_result('badssl.com', 443)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    def test_json(self):
+        result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self.assertTrue(result)

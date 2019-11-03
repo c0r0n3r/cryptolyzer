@@ -58,3 +58,9 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
     def test_no_dhe_support(self):
         result = self.get_result('static-rsa.badssl.com', 443)
         self.assertEqual(len(result.dhparams), 0)
+
+    def test_json(self):
+        result = self.get_result('dh480.badssl.com', 443)
+        self.assertTrue(result)
+        result = self.get_result('www.owasp.org', 443)
+        self.assertTrue(result)

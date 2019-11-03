@@ -39,6 +39,10 @@ class TestSslCiphers(unittest.TestCase):
             ]
         )
 
+    def test_json(self):
+        result = self.get_result('164.100.148.73', 443)
+        self.assertTrue(result)
+
 
 ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES = \
     AnalyzerCipherSuites._next_accepted_cipher_suites  # pylint: disable=protected-access
@@ -157,3 +161,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
     def test_plain_text_response(self):
         self.assertEqual(self.get_result('ptt.cc', 443).cipher_suites, [])
         self.assertEqual(self.get_result('cplusplus.com', 443).cipher_suites, [])
+
+    def test_json(self):
+        result = self.get_result('mozill.old.badssl.com', 443)
+        self.assertTrue(result)

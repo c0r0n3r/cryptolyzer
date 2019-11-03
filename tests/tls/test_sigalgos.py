@@ -67,3 +67,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_0)
         self.assertEqual(self.get_result('ptt.cc', 443, protocol_version).sig_algos, [])
         self.assertEqual(self.get_result('cplusplus.com', 443, protocol_version).sig_algos, [])
+
+    def test_json(self):
+        result = self.get_result('ecc256.badssl.com', 443)
+        self.assertTrue(result)
