@@ -346,7 +346,7 @@ class PublicKeyX509(PublicKey):
                 ('not_before', str(self.valid_not_before)),
                 ('not_after', str(self.valid_not_after)),
                 ('period', str(self.validity_period)),
-                ('remaining', str(self.validity_remaining_time.days)),
+                ('remaining', str(self.validity_remaining_time.days) if self.validity_remaining_time else None),
             ])),
             ('revocation', OrderedDict([
                 ('crl_distribution_points', self.crl_distribution_points),

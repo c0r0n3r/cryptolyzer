@@ -150,3 +150,16 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
     def test_plain_text_response(self):
         self.assertEqual(self.get_result('ptt.cc', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)).pubkeys, [])
         self.assertEqual(self.get_result('cplusplus.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)).pubkeys, [])
+
+    def test_json(self):
+        result = self.get_result('expired.badssl.com', 443)
+        self.assertTrue(result.as_json())
+
+        result = self.get_result('self-signed.badssl.com', 443)
+        self.assertTrue(result.as_json())
+
+        result = self.get_result('untrusted-root.badssl.com', 443)
+        self.assertTrue(result.as_json())
+
+        result = self.get_result('revoked.badssl.com', 443)
+        self.assertTrue(result.as_json())
