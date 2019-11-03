@@ -61,8 +61,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
 
     @staticmethod
     def _get_client_hello(l7_client, protocol_version):
-        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(l7_client.address)
-        client_hello.protocol_version = protocol_version
+        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(protocol_version, l7_client.address)
         for index, extension in enumerate(client_hello.extensions):
             if extension.get_extension_type() == TlsExtensionType.SUPPORTED_GROUPS:
                 del client_hello.extensions[index]

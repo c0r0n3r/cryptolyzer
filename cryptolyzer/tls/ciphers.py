@@ -48,9 +48,8 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             accepted_cipher_suites.extend(server_messages[SslMessageType.SERVER_HELLO].cipher_kinds)
             raise StopIteration
 
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm(l7_client.address)
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(protocol_version, l7_client.address)
         client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
-        client_hello.protocol_version = protocol_version
 
         server_messages = l7_client.do_tls_handshake(client_hello)
         server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
@@ -106,9 +105,9 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
     def _get_accepted_cipher_suites_fallback(l7_client, protocol_version):
         accepted_cipher_suites = []
         client_hello_messsages_in_order_of_probability = (
-            TlsHandshakeClientHelloAuthenticationRSA(l7_client.address),
-            TlsHandshakeClientHelloAuthenticationECDSA(l7_client.address),
-            TlsHandshakeClientHelloAuthenticationRarelyUsed(l7_client.address),
+            TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
+            TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, l7_client.address),
+            TlsHandshakeClientHelloAuthenticationRarelyUsed(protocol_version, l7_client.address),
         )
         for client_hello in client_hello_messsages_in_order_of_probability:
             accepted_cipher_suites.extend(

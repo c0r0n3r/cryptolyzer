@@ -33,8 +33,9 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType, Respons
 
 
 class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
-    def __init__(self, hostname):
+    def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
+            protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
             extensions=[
                 TlsExtensionServerName(hostname),
@@ -46,7 +47,7 @@ class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
 
 
 class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHello):
-    def __init__(self, hostname, authentication):
+    def __init__(self, protocol_version, hostname, authentication):
         _cipher_suites = TlsCipherSuiteVector([
             cipher_suite
             for cipher_suite in TlsCipherSuite
@@ -55,6 +56,7 @@ class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHello):
         ])
 
         super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
+            protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(_cipher_suites),
             extensions=[
                 TlsExtensionServerName(hostname),
@@ -63,8 +65,12 @@ class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHello):
 
 
 class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthenticationBase):
-    def __init__(self, hostname):
-        super(TlsHandshakeClientHelloAuthenticationRSA, self).__init__(hostname, Authentication.RSA)
+    def __init__(self, protocol_version, hostname):
+        super(TlsHandshakeClientHelloAuthenticationRSA, self).__init__(
+            protocol_version=protocol_version,
+            hostname=hostname,
+            authentication=Authentication.RSA
+        )
 
         self.extensions.extend([
             TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
@@ -73,13 +79,21 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthentica
 
 
 class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthenticationBase):
-    def __init__(self, hostname):
-        super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(hostname, Authentication.DSS)
+    def __init__(self, protocol_version, hostname):
+        super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(
+            protocol_version=protocol_version,
+            hostname=hostname,
+            authentication=Authentication.DSS
+        )
 
 
 class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenticationBase):
-    def __init__(self, hostname):
-        super(TlsHandshakeClientHelloAuthenticationECDSA, self).__init__(hostname, Authentication.ECDSA)
+    def __init__(self, protocol_version, hostname):
+        super(TlsHandshakeClientHelloAuthenticationECDSA, self).__init__(
+            protocol_version=protocol_version,
+            hostname=hostname,
+            authentication=Authentication.ECDSA
+        )
 
         self.extensions.extend([
             TlsExtensionECPointFormats(list(TlsECPointFormat)),
@@ -89,7 +103,7 @@ class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenti
 
 
 class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHello):
-    def __init__(self, hostname):
+    def __init__(self, protocol_version, hostname):
         _cipher_suites = TlsCipherSuiteVector([
             cipher_suite
             for cipher_suite in TlsCipherSuite
@@ -104,6 +118,7 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHello):
         ])
 
         super(TlsHandshakeClientHelloAuthenticationRarelyUsed, self).__init__(
+            protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(_cipher_suites),
             extensions=[
                 TlsExtensionServerName(hostname),
@@ -118,8 +133,9 @@ class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHello):
         if cipher_suite.value.key_exchange == KeyExchange.DHE
     ])
 
-    def __init__(self, hostname):
+    def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
+            protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
             extensions=[
                 TlsExtensionServerName(hostname),
@@ -135,8 +151,9 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHello):
             cipher_suite.value.key_exchange in [KeyExchange.ECDH, KeyExchange.ECDHE])
     ])
 
-    def __init__(self, hostname):
+    def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
+            protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
             extensions=[
                 TlsExtensionServerName(hostname),
@@ -148,8 +165,9 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHello):
 
 
 class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
-    def __init__(self):
+    def __init__(self, protocol_version):
         super(TlsHandshakeClientHelloBasic, self).__init__(
+            protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
             extensions=[]
         )

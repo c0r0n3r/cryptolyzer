@@ -132,16 +132,15 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
     def analyze(self, l7_client, protocol_version):
         results = []
         client_hello_messages = [
-            TlsHandshakeClientHelloBasic(),
-            TlsHandshakeClientHelloAuthenticationDSS(l7_client.address),
-            TlsHandshakeClientHelloAuthenticationRSA(l7_client.address),
-            TlsHandshakeClientHelloAuthenticationECDSA(l7_client.address),
+            TlsHandshakeClientHelloBasic(protocol_version),
+            TlsHandshakeClientHelloAuthenticationDSS(protocol_version, l7_client.address),
+            TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
+            TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, l7_client.address),
         ]
 
         for client_hello in client_hello_messages:
             server_messages = []
             try:
-                client_hello.protocol_version = protocol_version
                 server_messages = l7_client.do_tls_handshake(
                     client_hello,
                     last_handshake_message_type=TlsHandshakeType.CERTIFICATE
