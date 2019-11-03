@@ -38,7 +38,7 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
                 issuer_certificate = self._get_issuer(original_certificate_chain, ordered_certificate_chain[-1])
                 ordered_certificate_chain.append(issuer_certificate)
                 original_certificate_chain.remove(issuer_certificate)
-            except StopIteration:
+            except (StopIteration, IndexError):
                 break
 
         if len(ordered_certificate_chain) > 1:
