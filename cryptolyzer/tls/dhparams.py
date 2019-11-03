@@ -27,7 +27,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
         return 'Check DH parameters offered by the server(s)'
 
     def analyze(self, l7_client, protocol_version):
-        client_hello = TlsHandshakeClientHelloKeyExchangeDHE(l7_client.address)
+        client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, l7_client.address)
 
         dhparams = []
         dh_public_keys = []

@@ -60,12 +60,11 @@ class AnalyzerVersions(AnalyzerTlsBase):
         for tls_version in (TlsVersion.SSL3, TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2):
             protocol_version = TlsProtocolVersionFinal(tls_version)
             client_hello_messsages_in_order_of_probability = (
-                TlsHandshakeClientHelloAuthenticationRSA(l7_client.address),
-                TlsHandshakeClientHelloAuthenticationECDSA(l7_client.address),
-                TlsHandshakeClientHelloAuthenticationRarelyUsed(l7_client.address),
+                TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
+                TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, l7_client.address),
+                TlsHandshakeClientHelloAuthenticationRarelyUsed(protocol_version, l7_client.address),
             )
             for client_hello in client_hello_messsages_in_order_of_probability:
-                client_hello.protocol_version = protocol_version
                 try:
                     server_messages = l7_client.do_tls_handshake(
                         hello_message=client_hello,
