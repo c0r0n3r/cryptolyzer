@@ -285,14 +285,10 @@ class PublicKeyX509(PublicKey):
 
     @property
     def is_ca(self):
-        try:
-            extension = self._certificate.extensions.get_extension_for_class(
-                cryptography_x509.BasicConstraints
-            )
-        except cryptography_x509.ExtensionNotFound:
-            return False
-
-        return extension.value.ca
+        ca_type = cryptography_default_backend()._lib.X509_check_ca(  # pylint: disable=protected-access
+            self._certificate._x509  # pylint: disable=protected-access
+        )
+        return ca_type > 0
 
     @property
     def is_self_signed(self):

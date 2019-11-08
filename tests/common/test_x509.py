@@ -130,15 +130,6 @@ class TestPublicKeyX509(unittest.TestCase):
         self.assertFalse(result.pubkeys[0].certificate_chain.items[0].is_ca)
         self.assertTrue(result.pubkeys[0].certificate_chain.items[1].is_ca)
 
-    @mock.patch.object(
-        cryptography_x509.extensions.Extensions, 'get_extension_for_class',
-        side_effect=cryptography_x509.ExtensionNotFound(None, cryptography_x509.BasicConstraints)
-    )
-    def test_is_ca_no_extension(self, _):
-        result = self._get_result('badssl.com', 443)
-        self.assertFalse(result.pubkeys[0].certificate_chain.items[0].is_ca)
-        self.assertFalse(result.pubkeys[0].certificate_chain.items[1].is_ca)
-
     def test_validity(self):
         result = self._get_result('expired.badssl.com', 443)
         self.assertTrue(result.pubkeys[0].certificate_chain.items[0].expired)
