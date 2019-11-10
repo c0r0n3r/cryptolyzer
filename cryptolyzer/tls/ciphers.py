@@ -85,10 +85,10 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
                 raise e
             except ResponseError:
-                if len(remaining_cipher_suites) == len(checkable_cipher_suites):
-                    return [], remaining_cipher_suites
+                if accepted_cipher_suites:
+                    break
 
-                del remaining_cipher_suites[0]
+                return [], remaining_cipher_suites
 
         return accepted_cipher_suites, remaining_cipher_suites
 
