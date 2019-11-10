@@ -5,6 +5,7 @@ import abc
 
 import ipaddress
 
+import ftplib
 import imaplib
 import poplib
 import smtplib
@@ -507,6 +508,52 @@ class ClientIMAP(L7ClientTlsBase):
     def _close(self):
         if self.client:
             self.client.shutdown()
+
+
+class L7ClientFTPS(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'ftps'
+
+    @classmethod
+    def get_default_port(cls):
+        return 990
+
+
+class ClientFTP(L7ClientTlsBase):
+    def __init__(self, address, port, timeout=None, ip=None):
+        super(ClientFTP, self).__init__(address, port, timeout, ip)
+
+        self.client = None
+
+    @classmethod
+    def get_scheme(cls):
+        return 'ftp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 21
+
+    def _setup_connection(self):
+        try:
+            self.client = ftplib.FTP()
+            response = self.client.connect(self._ip, self._port, self._timeout)
+            if not response.startswith('220'):
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+            self._socket = self.client.sock
+
+            response = self.client.sendcmd('AUTH TLS')
+            if not response.startswith('234'):
+                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+        except ftplib.all_errors:
+            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+
+    def _close(self):
+        if self.client is not None:
+            try:
+                self.client.quit()
+            except ftplib.all_errors:
+                self._socket.close()
 
 
 class TlsAlert(ValueError):

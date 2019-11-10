@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import ftplib
 import imaplib
 import poplib
 import smtplib
@@ -228,6 +229,39 @@ class TestClientSMTP(TestL7ClientBase):
     def test_smtps_client(self):
         self.assertEqual(
             self.get_result('smtps', 'smtp.gmail.com', None).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+
+
+class TestClientFTP(TestL7ClientBase):
+    @mock.patch.object(ftplib.FTP, '__init__', side_effect=ftplib.error_reply)
+    def test_error_ftplib_error(self, _):
+        self.assertEqual(self.get_result('ftp', 'ftp.cert.dfn.de', None).versions, [])
+
+    @mock.patch.object(ftplib.FTP, 'sendcmd', return_value='502 Command not implemented')
+    def test_error_unsupported_starttls(self, _):
+        self.assertEqual(self.get_result('ftp', 'ftp.cert.dfn.de', None).versions, [])
+
+    @mock.patch.object(ftplib.FTP, 'connect', return_value='534 Could Not Connect to Server - Policy Requires SSL')
+    def test_error_ftp_error_on_connect(self, _):
+        self.assertEqual(self.get_result('ftp', 'ftp.cert.dfn.de', None).versions, [])
+
+    @mock.patch.object(ftplib.FTP, 'quit', side_effect=ftplib.error_reply)
+    def test_error_ftp_error_on_quit(self, _):
+        self.assertEqual(
+            self.get_result('ftp', 'ftp.cert.dfn.de', None).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+
+    def test_ftp_client(self):
+        self.assertEqual(
+            self.get_result('ftp', 'ftp.cert.dfn.de', None).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+
+    def test_ftps_client(self):
+        self.assertEqual(
+            self.get_result('ftps', 'test.rebex.net', None).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
