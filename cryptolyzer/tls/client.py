@@ -562,6 +562,12 @@ class TlsAlert(ValueError):
 
         self.description = description
 
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return 'TlsAlert(TlsAlertDescription.{})'.format(self.description.name)
+
 
 class TlsClient(object):
     def __init__(self, l4_client):

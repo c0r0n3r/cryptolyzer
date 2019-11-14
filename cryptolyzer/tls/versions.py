@@ -73,17 +73,18 @@ class AnalyzerVersions(AnalyzerTlsBase):
                     supported_protocols.append(server_hello.protocol_version)
                     break
                 except TlsAlert as e:
-                    if e.description not in [
-                            TlsAlertDescription.PROTOCOL_VERSION,
-                            TlsAlertDescription.HANDSHAKE_FAILURE
-                    ]:
-                        raise e
-
+                    if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
+                        return [], alerts_unsupported_tls_version
                     if e.description == TlsAlertDescription.PROTOCOL_VERSION:
                         alerts_unsupported_tls_version = True
                         break
+                    if e.description in [TlsAlertDescription.HANDSHAKE_FAILURE, TlsAlertDescription.INTERNAL_ERROR]:
+                        alerts_unsupported_tls_version = False
+                        break
                     if tls_version == TlsVersion.SSL3:
                         break
+
+                    raise e
                 except NetworkError as e:
                     if e.error != NetworkErrorType.NO_RESPONSE:
                         raise e

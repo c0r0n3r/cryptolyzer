@@ -34,6 +34,12 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType, Respons
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
+class TestTlsAlert(unittest.TestCase):
+    def test_repr_and_str(self):
+        alert = TlsAlert(TlsAlertDescription.HANDSHAKE_FAILURE)
+        self.assertEqual(str(alert), repr(alert))
+
+
 class TestL7ClientBase(unittest.TestCase):
     @staticmethod
     def get_result(proto, host, port, timeout=None, ip=None):

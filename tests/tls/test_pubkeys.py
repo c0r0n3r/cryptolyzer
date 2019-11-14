@@ -8,10 +8,11 @@ except ImportError:
 
 import cryptography.x509 as cryptography_x509
 
+from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.common.exception import ResponseError, ResponseErrorType
-from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
 from .classes import TestTlsCases
@@ -48,6 +49,15 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
     def test_error_response_error_no_response_last_time(self, _):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(len(result.pubkeys), 0)
+
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_tls_handshake',
+        side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME)
+    )
+    def test_error_unrecognized_name(self, mocked_do_tls_handshake):
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertEqual(len(result.pubkeys), 0)
+        self.assertEqual(mocked_do_tls_handshake.call_count, 2)
 
     @mock.patch.object(
         cryptography_x509, 'load_der_x509_certificate',

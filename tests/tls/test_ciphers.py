@@ -8,13 +8,14 @@ except ImportError:
     import mock
 
 from cryptoparser.common.algorithm import Authentication, BlockCipher
+from cryptoparser.tls.subprotocol import TlsAlertDescription
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
 from cryptolyzer.common.exception import ResponseError, ResponseErrorType
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
-from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
 
 from .classes import TestTlsCases
 
@@ -47,8 +48,25 @@ class TestSslCiphers(unittest.TestCase):
 ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES = \
     AnalyzerCipherSuites._next_accepted_cipher_suites  # pylint: disable=protected-access
 
+INTERNAL_ERROR_ALREADY_RAISED = False
 
-def _wrapped_next_accepted_cipher_suites(l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
+
+def _wrapped_next_accepted_cipher_suites_internal_error_once(
+        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
+    if not globals()['INTERNAL_ERROR_ALREADY_RAISED']:
+        globals()['INTERNAL_ERROR_ALREADY_RAISED'] = True
+        raise TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
+
+    return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
+        l7_client,
+        protocol_version,
+        remaining_cipher_suites,
+        accepted_cipher_suites
+    )
+
+
+def _wrapped_next_accepted_cipher_suites_response_error(
+        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
     if len(accepted_cipher_suites) == 1:
         raise ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE)
 
@@ -70,7 +88,57 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
-        wraps=_wrapped_next_accepted_cipher_suites
+        side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
+    )
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_get_accepted_cipher_suites_fallback',
+        return_value=[]
+    )
+    def test_error_protocol_version(self, mocked_next_accepted_cipher_suites, _):
+        result = self.get_result('rc4.badssl.com', 443)
+        self.assertEqual(len(result.cipher_suites), 0)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 1)
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        side_effect=TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
+    )
+    def test_error_internal_error(self, mocked_next_accepted_cipher_suites):
+        with self.assertRaises(TlsAlert) as context_manager:
+            self.get_result('badssl.com', 443)
+        self.assertEqual(context_manager.exception.description, TlsAlertDescription.INTERNAL_ERROR)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 2)
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        side_effect=TlsAlert(TlsAlertDescription.INSUFFICIENT_SECURITY)
+    )
+    def test_error_insufficient_security(self, mocked_next_accepted_cipher_suites):
+        result = self.get_result('rc4.badssl.com', 443)
+        self.assertEqual(len(result.cipher_suites), 0)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 4)
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        side_effect=TlsAlert(TlsAlertDescription.ILLEGAL_PARAMETER)
+    )
+    def test_error_illegal_parameter(self, mocked_next_accepted_cipher_suites):
+        result = self.get_result('rc4.badssl.com', 443)
+        self.assertEqual(len(result.cipher_suites), 0)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 4)
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        wraps=_wrapped_next_accepted_cipher_suites_internal_error_once
+    )
+    @mock.patch('time.sleep', return_value=None)
+    def test_error_internal_error_once(self, _, __):
+        result = self.get_result('rc4.badssl.com', 443)
+        self.assertEqual(len(result.cipher_suites), 2)
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        wraps=_wrapped_next_accepted_cipher_suites_response_error
     )
     def test_error_response_error_no_response_last_time(self, _):
         result = self.get_result('rc4.badssl.com', 443)

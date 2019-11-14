@@ -76,12 +76,20 @@ class AnalyzerCurves(AnalyzerTlsBase):
             try:
                 server_key_exchange = self._get_key_exchange_message(l7_client, client_hello, curve)
             except TlsAlert as e:
-                if (curve == next(iter(TlsNamedCurve)) and
-                        e.description == TlsAlertDescription.PROTOCOL_VERSION):
-                    extension_supported = None
-                    break
+                if curve == next(iter(TlsNamedCurve)):
+                    acceptable_alerts = [
+                        TlsAlertDescription.PROTOCOL_VERSION,
+                        TlsAlertDescription.UNRECOGNIZED_NAME,
+                        TlsAlertDescription.INSUFFICIENT_SECURITY,
+                    ]
+                    if e.description in acceptable_alerts:
+                        extension_supported = None
+                        break
 
-                if e.description != TlsAlertDescription.HANDSHAKE_FAILURE:
+                if (e.description not in [
+                        TlsAlertDescription.HANDSHAKE_FAILURE,
+                        TlsAlertDescription.INTERNAL_ERROR,
+                        TlsAlertDescription.INSUFFICIENT_SECURITY]):
                     raise e
 
                 continue

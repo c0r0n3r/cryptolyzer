@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import copy
+import time
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
@@ -61,11 +62,15 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
     @staticmethod
     def _get_accepted_cipher_suites(l7_client, protocol_version, checkable_cipher_suites):
+        retried_internal_error = False
         accepted_cipher_suites = []
         remaining_cipher_suites = copy.copy(checkable_cipher_suites)
 
         while remaining_cipher_suites:
             try:
+                if retried_internal_error:
+                    time.sleep(1)
+
                 AnalyzerCipherSuites._next_accepted_cipher_suites(
                     l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites
                 )
@@ -73,9 +78,21 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 break
             except TlsAlert as e:
                 if (len(checkable_cipher_suites) == len(remaining_cipher_suites) and
-                        e.description == TlsAlertDescription.PROTOCOL_VERSION):
+                        e.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]):
                     return [], remaining_cipher_suites
-                if e.description == TlsAlertDescription.HANDSHAKE_FAILURE:
+                if e.description == TlsAlertDescription.INTERNAL_ERROR:  # maybe too many handshake request
+                    if retried_internal_error:
+                        raise e
+
+                    retried_internal_error = True
+                    time.sleep(5)
+                    continue
+
+                if e.description in [
+                        TlsAlertDescription.HANDSHAKE_FAILURE,  # no match in remaining cipher suites
+                        TlsAlertDescription.INSUFFICIENT_SECURITY,  # not enough secure cipher suites remained
+                        TlsAlertDescription.ILLEGAL_PARAMETER  # unimplemented cipher suites remained
+                ]:
                     break
 
                 raise e

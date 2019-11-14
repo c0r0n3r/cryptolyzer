@@ -7,10 +7,10 @@ try:
 except ImportError:
     import mock
 
-from cryptoparser.tls.subprotocol import SslErrorType
+from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
-from cryptolyzer.tls.client import L7ClientTlsBase, SslError
+from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert, SslError
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 from .classes import TestTlsCases
@@ -50,6 +50,13 @@ class TestSslVersions(unittest.TestCase):
 
 
 class TestTlsVersions(TestTlsCases.TestTlsBase):
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_tls_handshake',
+        side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME),
+    )
+    def test_error_tls_alert_unrecognized_name(self, _):
+        self.assertEqual(self.get_result('badssl.com', 443).versions, [])
+
     @staticmethod
     def get_result(host, port, protocol_version=None, timeout=None):
         analyzer = AnalyzerVersions()
