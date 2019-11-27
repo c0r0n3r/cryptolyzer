@@ -23,7 +23,7 @@ test_requirements = [
 
 def test_discover():
     test_loader = unittest.TestLoader()
-    test_suite = test_loader.discover('tests', pattern='test_*.py')
+    test_suite = test_loader.discover('test', pattern='test_*.py')
     return test_suite
 
 
