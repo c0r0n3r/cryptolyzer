@@ -1,7 +1,8 @@
 image: python
 
 stages:
-- test
+- earlytest
+- fulltest
 - deploy
 
 before_script:
@@ -11,54 +12,54 @@ before_script:
 - python get-pip.py
 - pip install -r dev-requirements.txt
 
+pylint:
+  image: python:3.7
+  stage: earlytest
+  script: tox -e pylint
+
+pep8:
+  stage: earlytest
+  script: tox -e pep8
+
 python2:
   image: python:2.7
-  stage: test
+  stage: earlytest
   script: tox -e py27
+
+python3:
+  image: python:3.7
+  stage: earlytest
+  script: tox -e py37
 
 python34:
   image: python:3.4
-  stage: test
+  stage: fulltest
   script: tox -e py34
 
 python35:
   image: python:3.5
-  stage: test
+  stage: fulltest
   script: tox -e py35
 
 python36:
   image: python:3.6
-  stage: test
+  stage: fulltest
   script: tox -e py36
-
-python37:
-  image: python:3.7
-  stage: test
-  script: tox -e py37
 
 pythonrc:
   image: python:rc
-  stage: test
+  stage: fulltest
   script: tox -e py38
 
 pypy:
   image: pypy:2
-  stage: test
+  stage: fulltest
   script: tox -e pypy
 
 pypy3:
   image: pypy:3
-  stage: test
+  stage: fulltest
   script: tox -e pypy3
-
-pylint:
-  image: python:3.7
-  stage: test
-  script: tox -e pylint
-
-pep8:
-  stage: test
-  script: tox -e pep8
 
 coveralls:
   image: python:3.7
