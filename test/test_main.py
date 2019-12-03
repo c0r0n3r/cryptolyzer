@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 try:
@@ -10,16 +9,17 @@ import unittest
 
 import sys
 import os
+
+import test.tls.test_ciphers
+import test.tls.test_curves
+import test.tls.test_dhparams
+import test.tls.test_pubkeys
+import test.tls.test_sigalgos
+import test.tls.test_versions
+
 import six
 
 from cryptolyzer.__main__ import main
-
-import tests.tls.test_ciphers
-import tests.tls.test_curves
-import tests.tls.test_dhparams
-import tests.tls.test_pubkeys
-import tests.tls.test_sigalgos
-import tests.tls.test_versions
 
 
 class TestMain(unittest.TestCase):
@@ -73,9 +73,9 @@ class TestMain(unittest.TestCase):
     def test_analyzer_output(self):
         self.assertEqual(
             self._get_test_analyzer_result('tls1', 'ciphers', 'rc4-md5.badssl.com'),
-            tests.tls.test_ciphers.TestTlsCiphers.get_result('rc4-md5.badssl.com', 443).as_json() + '\n'
+            test.tls.test_ciphers.TestTlsCiphers.get_result('rc4-md5.badssl.com', 443).as_json() + '\n'
         )
-        simple_result = tests.tls.test_ciphers.TestTlsCiphers.get_result('tls-v1-0.badssl.com', 1010)
+        simple_result = test.tls.test_ciphers.TestTlsCiphers.get_result('tls-v1-0.badssl.com', 1010)
         del simple_result.target
         self.assertTrue(
             simple_result.as_json() in
@@ -83,21 +83,21 @@ class TestMain(unittest.TestCase):
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'curves', 'ecc256.badssl.com:443'),
-            tests.tls.test_curves.TestTlsCurves.get_result('ecc256.badssl.com', 443).as_json() + '\n',
+            test.tls.test_curves.TestTlsCurves.get_result('ecc256.badssl.com', 443).as_json() + '\n',
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'dhparams', 'dh2048.badssl.com'),
-            tests.tls.test_dhparams.TestTlsDHParams.get_result('dh2048.badssl.com', 443).as_json() + '\n'
+            test.tls.test_dhparams.TestTlsDHParams.get_result('dh2048.badssl.com', 443).as_json() + '\n'
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'pubkeys', 'badssl.com'),
-            tests.tls.test_pubkeys.TestTlsPubKeys.get_result('badssl.com', 443).as_json() + '\n'
+            test.tls.test_pubkeys.TestTlsPubKeys.get_result('badssl.com', 443).as_json() + '\n'
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'sigalgos', 'ecc256.badssl.com:443'),
-            tests.tls.test_sigalgos.TestTlsSigAlgos.get_result('ecc256.badssl.com', 443).as_json() + '\n',
+            test.tls.test_sigalgos.TestTlsSigAlgos.get_result('ecc256.badssl.com', 443).as_json() + '\n',
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls', 'versions', 'tls-v1-0.badssl.com:1010'),
-            tests.tls.test_versions.TestTlsVersions.get_result('tls-v1-0.badssl.com', 1010).as_json() + '\n',
+            test.tls.test_versions.TestTlsVersions.get_result('tls-v1-0.badssl.com', 1010).as_json() + '\n',
         )
