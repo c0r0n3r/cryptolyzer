@@ -94,7 +94,11 @@ dockerhub:
     - docker push "$DOCKER_NAME"
   only:
     refs:
-      - master
+      - branches
+      - tags
+    variables:
+      - $CI_COMMIT_TAG =~ /^v\d+.\d+.\d+$/
+      - $CI_COMMIT_REF_NAME == "master"
 
 obs:
   image: coroner/cryptolyzer:obs
@@ -105,4 +109,8 @@ obs:
     - obs.sh
   only:
     refs:
-      - master
+      - branches
+      - tags
+    variables:
+      - $CI_COMMIT_TAG =~ /^v\d+.\d+.\d+$/
+      - $CI_COMMIT_REF_NAME == "master"

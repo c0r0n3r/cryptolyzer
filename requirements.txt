@@ -1,4 +1,4 @@
-cryptoparser
+cryptoparser>=0.2.0
 cryptography>=2.5
 enum34;python_version<"3.4"
 urllib3
