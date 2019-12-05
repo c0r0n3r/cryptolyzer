@@ -26,7 +26,7 @@ CryptoLyzer can be installed directly via pip
 .. code-block:: sh
 
     pip install cryptolyzer
-    cryptolyzer tls ciphers www.example.com
+    cryptolyze tls ciphers www.example.com
 
 or can be used via docker
 
