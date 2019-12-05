@@ -23,14 +23,14 @@ Quick start
 
 CryptoLyzer can be installed directly via pip
 
-::
+.. code-block:: sh
 
     pip install cryptolyzer
     cryptolyzer tls ciphers www.example.com
 
 or can be used via docker
 
-::
+.. code-block:: sh
 
     docker pull coroner/cryptolyzer
     docker run coroner/cryptolyzer tls ciphers www.example.com
@@ -40,7 +40,7 @@ Development environment
 
 If you want to setup a development environment, you are in need of `pipenv <https://docs.pipenv.org/>`__.
 
-::
+.. code-block:: sh
 
     $ cd cryptolyzer
     $ pipenv install --dev
