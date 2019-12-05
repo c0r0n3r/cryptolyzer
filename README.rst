@@ -28,6 +28,25 @@ CryptoLyzer can be installed directly via pip
     pip install cryptolyzer
     cryptolyze tls ciphers www.example.com
 
+or via APT on Debian based systems
+
+.. code-block:: sh
+
+    apt update && apt install -y gnupg2 curl
+    echo 'deb https://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer:/dev/Debian_10/ /' >/etc/apt/sources.list.d/cryptolyzer.list
+    curl -s https://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer:/dev/Debian_10/Release.key | apt-key add -
+    apt update && apt install -y python3-pkg-resources python3-cryptoparser python3-cryptolyzer
+    cryptolyze tls ciphers www.example.com
+
+or via DNF on Fedora based systems
+
+.. code-block:: sh
+
+    dnf install 'dnf-command(config-manager)'
+    dnf config-manager --add-repo https://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer:/dev/Fedora_31/
+    rpm --import http://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer:/dev/Fedora_31/repodata/repomd.xml.key
+    dnf install python3-urllib3 python3-cryptography cryptoparser cryptolyzer
+
 or can be used via docker
 
 .. code-block:: sh

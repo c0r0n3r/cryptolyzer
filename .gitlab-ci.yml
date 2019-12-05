@@ -94,3 +94,14 @@ dockerhub:
   only:
     refs:
       - master
+
+obs:
+  image: coroner/cryptolyzer:obs
+  stage: deploy
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - obs.sh
+  only:
+    refs:
+      - master
