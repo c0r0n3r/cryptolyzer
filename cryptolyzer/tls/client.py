@@ -13,7 +13,7 @@ import attr
 
 import six
 
-from cryptoparser.common.algorithm import Authentication, KeyExchange
+from cryptoparser.common.algorithm import Authentication, KeyExchange, NamedGroupType
 from cryptoparser.common.exception import NotEnoughData, TooMuchData, InvalidType, InvalidValue
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
@@ -34,17 +34,12 @@ from cryptoparser.tls.subprotocol import SslMessageType, SslHandshakeClientHello
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsContentType, TlsHandshakeType
 from cryptoparser.tls.subprotocol import TlsAlertLevel, TlsAlertDescription
-from cryptoparser.tls.extension import TlsExtensions, TlsExtensionServerName
+from cryptoparser.tls.extension import TlsExtensionServerName
 from cryptoparser.tls.extension import (
-    TlsECPointFormat,
-    TlsECPointFormatVector,
-    TlsEllipticCurveVector,
-    TlsExtensionECPointFormats,
     TlsExtensionEllipticCurves,
     TlsExtensionSignatureAlgorithms,
     TlsNamedCurve,
     TlsSignatureAndHashAlgorithm,
-    TlsSignatureAndHashAlgorithmVector,
 )
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
@@ -55,22 +50,63 @@ from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
 
 
-class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
-    def __init__(self, protocol_version, hostname):
-        super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
-            protocol_version=protocol_version,
-            cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
-            extensions=TlsExtensions([
-                TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
-                TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
-                TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
-            ])
+class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
+    def __init__(
+            self,
+            hostname,
+            protocol_versions,
+            cipher_suites,
+            elliptic_curves,
+            signature_algorithms,
+            extensions
+    ):  # pylint: disable=too-many-arguments
+        if hostname is not None:
+            extensions.append(TlsExtensionServerName(hostname))
+
+        if len(protocol_versions) > 1:
+            raise NotImplementedError
+
+        if protocol_versions[0] >= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+            if elliptic_curves is None:
+                elliptic_curves = list(TlsNamedCurve)
+            if elliptic_curves:
+                extensions.append(TlsExtensionEllipticCurves(elliptic_curves))
+
+        if protocol_versions[0] >= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+            if signature_algorithms is None:
+                signature_algorithms = list(TlsSignatureAndHashAlgorithm)
+            if signature_algorithms:
+                extensions.append(TlsExtensionSignatureAlgorithms(signature_algorithms))
+
+        super(TlsHandshakeClientHelloSpecalization, self).__init__(
+            cipher_suites=cipher_suites,
+            protocol_version=protocol_versions[0],
+            extensions=extensions
         )
 
 
-class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHello):
-    def __init__(self, protocol_version, hostname, authentication):
+class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHelloSpecalization):
+    def __init__(self, protocol_versions, hostname):
+        super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
+            hostname=hostname,
+            protocol_versions=protocol_versions,
+            cipher_suites=list(TlsCipherSuite),
+            elliptic_curves=None,
+            signature_algorithms=None,
+            extensions=[]
+        )
+
+
+class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHelloSpecalization):
+    # pylint: disable=too-many-ancestors
+    def __init__(
+            self,
+            protocol_version,
+            hostname,
+            authentication,
+            elliptic_curves=(),
+            signature_algorithms=()
+    ):  # pylint: disable=too-many-arguments
         _cipher_suites = TlsCipherSuiteVector([
             cipher_suite
             for cipher_suite in TlsCipherSuite
@@ -79,53 +115,53 @@ class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHello):
         ])
 
         super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
-            protocol_version=protocol_version,
+            hostname=hostname,
+            protocol_versions=[protocol_version, ],
             cipher_suites=TlsCipherSuiteVector(_cipher_suites),
-            extensions=TlsExtensions([
-                TlsExtensionServerName(hostname),
-            ])
+            elliptic_curves=elliptic_curves,
+            signature_algorithms=signature_algorithms,
+            extensions=[]
         )
 
 
 class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthenticationBase):
+    # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloAuthenticationRSA, self).__init__(
-            protocol_version=protocol_version,
             hostname=hostname,
-            authentication=Authentication.RSA
+            protocol_version=protocol_version,
+            authentication=Authentication.RSA,
+            elliptic_curves=None,
+            signature_algorithms=None,
         )
-
-        self.extensions.extend([
-            TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
-            TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
-        ])
 
 
 class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthenticationBase):
+    # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(
             protocol_version=protocol_version,
             hostname=hostname,
-            authentication=Authentication.DSS
+            authentication=Authentication.DSS,
+            elliptic_curves=None,
+            signature_algorithms=None,
         )
 
 
 class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenticationBase):
+    # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloAuthenticationECDSA, self).__init__(
-            protocol_version=protocol_version,
             hostname=hostname,
-            authentication=Authentication.ECDSA
+            protocol_version=protocol_version,
+            authentication=Authentication.ECDSA,
+            elliptic_curves=None,
+            signature_algorithms=None,
         )
-
-        self.extensions.extend([
-            TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
-            TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
-            TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
-        ])
 
 
 class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthenticationBase):
+    # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloAuthenticationGOST, self).__init__(
             protocol_version=protocol_version,
@@ -134,7 +170,7 @@ class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthentic
         )
 
 
-class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHello):
+class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHelloSpecalization):
     def __init__(self, protocol_version, hostname):
         _cipher_suites = TlsCipherSuiteVector([
             cipher_suite
@@ -150,15 +186,16 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHello):
         ])
 
         super(TlsHandshakeClientHelloAuthenticationRarelyUsed, self).__init__(
-            protocol_version=protocol_version,
+            hostname=hostname,
+            protocol_versions=[protocol_version, ],
             cipher_suites=TlsCipherSuiteVector(_cipher_suites),
-            extensions=TlsExtensions([
-                TlsExtensionServerName(hostname),
-            ])
+            elliptic_curves=[],
+            signature_algorithms=[],
+            extensions=[]
         )
 
 
-class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHello):
+class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHelloSpecalization):
     _CIPHER_SUITES = TlsCipherSuiteVector([
         cipher_suite
         for cipher_suite in TlsCipherSuite
@@ -167,15 +204,21 @@ class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHello):
 
     def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
-            protocol_version=protocol_version,
+            hostname=hostname,
+            protocol_versions=[protocol_version, ],
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=TlsExtensions([
-                TlsExtensionServerName(hostname),
-            ])
+            elliptic_curves=[
+                named_group
+                for named_group in TlsNamedCurve
+                if (named_group.value.named_group and
+                    named_group.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
+            ],
+            signature_algorithms=None,
+            extensions=[]
         )
 
 
-class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHello):
+class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHelloSpecalization):
     _CIPHER_SUITES = TlsCipherSuiteVector([
         cipher_suite
         for cipher_suite in TlsCipherSuite
@@ -185,23 +228,24 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHello):
 
     def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
-            protocol_version=protocol_version,
+            hostname=hostname,
+            protocol_versions=[protocol_version, ],
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=TlsExtensions([
-                TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
-                TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
-                TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
-            ])
+            elliptic_curves=None,
+            signature_algorithms=None,
+            extensions=[]
         )
 
 
-class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
+class TlsHandshakeClientHelloBasic(TlsHandshakeClientHelloSpecalization):
     def __init__(self, protocol_version):
         super(TlsHandshakeClientHelloBasic, self).__init__(
-            protocol_version=protocol_version,
-            cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
-            extensions=TlsExtensions([])
+            hostname=None,
+            protocol_versions=[protocol_version, ],
+            cipher_suites=list(TlsCipherSuite),
+            elliptic_curves=[],
+            signature_algorithms=[],
+            extensions=[]
         )
 
 

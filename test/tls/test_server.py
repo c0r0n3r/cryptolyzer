@@ -76,7 +76,7 @@ class TestL7ServerBase(unittest.TestCase):
 
     def _test_tls_handshake(self):
         protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm(protocol_version, self.threaded_server.l7_server.address)
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm([protocol_version, ], self.threaded_server.l7_server.address)
         l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
         server_messages = l7_client.do_tls_handshake(hello_message=client_hello)
         self.assertEqual(list(server_messages.keys()), [TlsHandshakeType.SERVER_HELLO])

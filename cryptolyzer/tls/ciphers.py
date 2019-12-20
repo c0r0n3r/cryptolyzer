@@ -49,7 +49,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             accepted_cipher_suites.extend(server_messages[SslMessageType.SERVER_HELLO].cipher_kinds)
             raise StopIteration
 
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm(protocol_version, l7_client.address)
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm([protocol_version, ], l7_client.address)
         client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
 
         server_messages = l7_client.do_tls_handshake(client_hello)

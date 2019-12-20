@@ -490,7 +490,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
         threaded_server.wait_for_server_listen()
         l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm(TlsProtocolVersionFinal(TlsVersion.TLS1_2), 'localhost')
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersionFinal(TlsVersion.TLS1_2), ], 'localhost')
         with self.assertRaises(NetworkError) as context_manager:
             l7_client.do_tls_handshake(client_hello)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_RESPONSE)
