@@ -44,12 +44,11 @@ from cryptoparser.tls.extension import (
     TlsExtensionEllipticCurves,
     TlsExtensionServerName,
     TlsExtensionSignatureAlgorithms,
-    TlsExtensionsClient,
     TlsNamedCurve,
 )
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, TlsProtocolVersionDraft, SslVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.exception import TlsAlert
@@ -72,7 +71,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
         if len(protocol_versions) > 1:
             raise NotImplementedError
 
-        if protocol_versions[0] >= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+        if protocol_versions[0] >= TlsProtocolVersionFinal(TlsVersion.TLS1_0):
             if elliptic_curves is None:
                 elliptic_curves = list(TlsNamedCurve)
             if elliptic_curves:
@@ -98,7 +97,11 @@ class TlsHandshakeClientHelloAnyAlgorithm(  # pylint: disable=too-many-ancestors
         super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
             hostname=hostname,
             protocol_versions=protocol_versions,
-            cipher_suites=list(TlsCipherSuite),
+            cipher_suites=[
+                cipher_suites
+                for cipher_suites in TlsCipherSuite
+                if cipher_suites.value.min_version < TlsProtocolVersionDraft(0)
+            ],
             elliptic_curves=None,
             signature_algorithms=None,
             extensions=[]
