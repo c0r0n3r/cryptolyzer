@@ -147,6 +147,11 @@ Cipher Suites
 
 #. supports each cipher suites discussed on `ciphersuite.info <https://ciphersuite.info>`_
 
+Credits
+-------
+
+Icons made by `Freepik <https://www.flaticon.com/authors/freepik>`_ from `Flaticon <https://www.flaticon.com/>`_.
+
 License
 -------
 
