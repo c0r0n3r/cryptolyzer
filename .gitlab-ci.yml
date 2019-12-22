@@ -46,10 +46,15 @@ python36:
   stage: fulltest
   script: tox -e py36
 
+python38:
+  image: python:3.8
+  stage: fulltest
+  script: tox -e py38
+
 pythonrc:
   image: python:rc
   stage: fulltest
-  script: tox -e py38
+  script: tox -e py39
 
 pypy:
   image: pypy:2
