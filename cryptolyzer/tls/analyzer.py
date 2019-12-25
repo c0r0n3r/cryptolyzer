@@ -10,6 +10,7 @@ from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.curves import AnalyzerCurves
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
+from cryptolyzer.tls.extensions import AnalyzerExtensions
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos
 from cryptolyzer.tls.versions import AnalyzerVersions
 from cryptolyzer.tls.all import AnalyzerAll
@@ -67,6 +68,7 @@ class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
     def get_analyzers(cls):
         return ProtocolHandlerTls11.get_analyzers() + (
             AnalyzerSigAlgos,
+            AnalyzerExtensions,
         )
 
     @classmethod
