@@ -2,7 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
+from cryptoparser.tls.algorithm import TlsProtocolName
+from cryptoparser.tls.extension import (
+    TlsExtensionApplicationLayerProtocolNegotiation,
+)
+from cryptoparser.tls.subprotocol import (
+    TlsCipherSuite,
+    TlsHandshakeServerHello,
+    TlsHandshakeType,
+)
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -16,6 +29,35 @@ class TestTlsExtensions(unittest.TestCase):
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
+
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_tls_handshake',
+        return_value={
+            TlsHandshakeType.SERVER_HELLO:
+            TlsHandshakeServerHello(
+                cipher_suite=TlsCipherSuite.TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256,
+                extensions=[
+                    TlsExtensionApplicationLayerProtocolNegotiation([TlsProtocolName.HTTP_1_1, ])
+                ]
+            )
+        }
+    )
+    def test_error_application_layer_protocols(self, _):
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertEqual(
+            set(result.application_layer_protocols),
+            set([TlsProtocolName.HTTP_1_1, ])
+        )
+
+    def test_application_layer_protocols(self):
+        result = self.get_result('www.mail.ru', 443)
+        self.assertEqual(result.application_layer_protocols, [])
+
+        result = self.get_result('www.wikipedia.org', 443)
+        self.assertEqual(
+            set(result.application_layer_protocols),
+            set([TlsProtocolName.HTTP_1_0, TlsProtocolName.H2, TlsProtocolName.HTTP_1_1])
+        )
 
     def test_encrypt_then_mac(self):
         result = self.get_result('tls-v1-0.badssl.com', 1010, TlsProtocolVersionFinal(TlsVersion.TLS1_0))

@@ -4,7 +4,9 @@
 import attr
 import six
 
+from cryptoparser.tls.algorithm import TlsProtocolName
 from cryptoparser.tls.extension import (
+    TlsExtensionApplicationLayerProtocolNegotiation,
     TlsExtensionEncryptThenMAC,
     TlsExtensionExtendedMasterSecret,
     TlsExtensionSessionTicket,
@@ -25,6 +27,9 @@ from cryptolyzer.tls.client import (
 
 @attr.s  # pylint: disable=too-few-public-methods
 class AnalyzerResultExtensions(AnalyzerResultTls):
+    application_layer_protocols = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(TlsProtocolName))
+    )
     session_ticket_supported = attr.ib(validator=attr.validators.instance_of(bool))
     extended_master_secret_supported = attr.ib(validator=attr.validators.instance_of(bool))
     encrypt_then_mac_supported = attr.ib(
@@ -41,6 +46,40 @@ class AnalyzerExtensions(AnalyzerTlsBase):
     @classmethod
     def get_help(cls):
         return 'Check which extensions supported by the server(s)'
+
+    @classmethod
+    def _analyze_alpn(cls, analyzable, protocol_version):
+        supported_protocol_names = []
+        remaining_protocol_names = set(TlsProtocolName)
+
+        while remaining_protocol_names:
+            client_hello = cls._get_client_hello(
+                analyzable, protocol_version, TlsExtensionApplicationLayerProtocolNegotiation(remaining_protocol_names)
+            )
+
+            try:
+                server_messages = analyzable.do_tls_handshake(client_hello)
+                alpn_extensions = list(filter(
+                    lambda extension:
+                    extension.extension_type == TlsExtensionType.APPLICATION_LAYER_PROTOCOL_NEGOTIATION,
+                    server_messages[TlsHandshakeType.SERVER_HELLO].extensions
+                ))
+            except (TlsAlert, NetworkError):
+                break
+
+            if not alpn_extensions:
+                break
+
+            protocol_name = alpn_extensions[0].protocol_names[0]
+            already_known_protocol_names = protocol_name in supported_protocol_names
+            supported_protocol_names.append(protocol_name)
+
+            if already_known_protocol_names:
+                break
+
+            remaining_protocol_names.remove(protocol_name)
+
+        return supported_protocol_names
 
     @classmethod
     def _get_client_hello(cls, analyzable, protocol_version, extension=None):
@@ -115,12 +154,14 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         return True
 
     def analyze(self, analyzable, protocol_version):
+        supported_protocol_names = self._analyze_alpn(analyzable, protocol_version)
         session_ticket_supported = self._analyze_session_ticket(analyzable, protocol_version)
         extended_master_secret_supported = self._analyze_extended_master_secret(analyzable, protocol_version)
         encrypt_then_mac_supported = self._analyze_encrypt_than_mac(analyzable, protocol_version)
 
         return AnalyzerResultExtensions(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
+            supported_protocol_names,
             session_ticket_supported,
             extended_master_secret_supported,
             encrypt_then_mac_supported,
