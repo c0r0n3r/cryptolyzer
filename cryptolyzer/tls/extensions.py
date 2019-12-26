@@ -2,21 +2,33 @@
 # -*- coding: utf-8 -*-
 
 import attr
+import six
 
 from cryptoparser.tls.extension import (
+    TlsExtensionEncryptThenMAC,
     TlsExtensionExtendedMasterSecret,
+    TlsExtensionType,
 )
 from cryptoparser.tls.subprotocol import TlsHandshakeType
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-from cryptolyzer.tls.client import TlsHandshakeClientHelloAnyAlgorithm, TlsAlert
+from cryptolyzer.tls.client import (
+    TlsHandshakeClientHelloAnyAlgorithm,
+    TlsHandshakeClientHelloBlockCipherModeCBC,
+    TlsAlert,
+)
 
 
 @attr.s  # pylint: disable=too-few-public-methods
 class AnalyzerResultExtensions(AnalyzerResultTls):
     extended_master_secret_supported = attr.ib(validator=attr.validators.instance_of(bool))
+    encrypt_then_mac_supported = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(bool)),
+        metadata={'human_readable_name': 'Encrypt then MAC Supported'}
+    )
 
 
 class AnalyzerExtensions(AnalyzerTlsBase):
@@ -28,34 +40,77 @@ class AnalyzerExtensions(AnalyzerTlsBase):
     def get_help(cls):
         return 'Check which extensions supported by the server(s)'
 
-    @staticmethod
-    def _analyze_symmetric_extension(analyzable, protocol_version, client_extension):
+    @classmethod
+    def _get_client_hello(cls, analyzable, protocol_version, extension=None):
         client_hello = TlsHandshakeClientHelloAnyAlgorithm([protocol_version, ], analyzable.address)
-        client_hello.extensions.append(client_extension)
 
+        if extension:
+            client_hello.extensions.append(extension)
+
+        return client_hello
+
+    @classmethod
+    def _get_server_messsages(cls, analyzable, client_hello):
         try:
-            server_messages = analyzable.do_tls_handshake(client_hello)
-        except (TlsAlert, NetworkError):
+            server_messages = analyzable.do_tls_handshake(
+                client_hello, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
+            )
+        except (TlsAlert, NetworkError) as e:
+            six.raise_from(KeyError, e)
+
+        return server_messages
+
+    @classmethod
+    def _get_symmetric_extension(cls, analyzable, client_hello, extension_type):
+        server_messages = cls._get_server_messsages(analyzable, client_hello)
+
+        extensions = server_messages[TlsHandshakeType.SERVER_HELLO].extensions
+        extension = extensions.get_item_by_type(extension_type)
+
+        return extension
+
+    @classmethod
+    def _analyze_symmetric_extension(cls, analyzable, client_hello, extension_type):
+        try:
+            result = cls._get_symmetric_extension(analyzable, client_hello, extension_type) is not None
+        except KeyError:
             return False
+
+        return result
+
+    @classmethod
+    def _analyze_extended_master_secret(cls, analyzable, protocol_version):
+        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionExtendedMasterSecret())
+        return cls._analyze_symmetric_extension(
+            analyzable, client_hello, TlsExtensionType.EXTENDED_MASTER_SECRET,
+        )
+
+    @classmethod
+    def _analyze_encrypt_than_mac(cls, analyzable, protocol_version):
+        if protocol_version < TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+            return None
+
+        client_hello = TlsHandshakeClientHelloBlockCipherModeCBC(protocol_version, analyzable.address)
+        client_hello.extensions.append(TlsExtensionEncryptThenMAC())
+        try:
+            server_messages = cls._get_server_messsages(analyzable, client_hello)
+        except KeyError:
+            return None
 
         try:
             extensions = server_messages[TlsHandshakeType.SERVER_HELLO].extensions
-            extensions.get_item_by_type(client_extension.extension_type)
+            extensions.get_item_by_type(TlsExtensionType.ENCRYPT_THEN_MAC)
         except KeyError:
             return False
 
         return True
 
-    @staticmethod
-    def _analyze_extended_master_secret(analyzable, protocol_version):
-        return AnalyzerExtensions._analyze_symmetric_extension(
-            analyzable, protocol_version, TlsExtensionExtendedMasterSecret()
-        )
-
     def analyze(self, analyzable, protocol_version):
         extended_master_secret_supported = self._analyze_extended_master_secret(analyzable, protocol_version)
+        encrypt_then_mac_supported = self._analyze_encrypt_than_mac(analyzable, protocol_version)
 
         return AnalyzerResultExtensions(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
             extended_master_secret_supported,
+            encrypt_then_mac_supported,
         )
