@@ -8,11 +8,11 @@ except ImportError:
     import mock
 
 from cryptoparser.tls.algorithm import TlsProtocolName
+from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsExtensionApplicationLayerProtocolNegotiation,
 )
 from cryptoparser.tls.subprotocol import (
-    TlsCipherSuite,
     TlsHandshakeServerHello,
     TlsHandshakeType,
 )
@@ -78,6 +78,13 @@ class TestTlsExtensions(unittest.TestCase):
 
         result = self.get_result('www.cloudflare.com', 443)
         self.assertTrue(result.extended_master_secret_supported)
+
+    def test_renegotiation_info(self):
+        result = self.get_result('www.deloton.com', 443)
+        self.assertFalse(result.renegotiation_supported)
+
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertTrue(result.renegotiation_supported)
 
     def test_session_ticket(self):
         result = self.get_result('www.github.com', 443)

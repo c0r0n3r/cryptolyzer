@@ -9,6 +9,7 @@ from cryptoparser.tls.extension import (
     TlsExtensionApplicationLayerProtocolNegotiation,
     TlsExtensionEncryptThenMAC,
     TlsExtensionExtendedMasterSecret,
+    TlsExtensionRenegotiationInfo,
     TlsExtensionSessionTicket,
     TlsExtensionType,
 )
@@ -30,6 +31,7 @@ class AnalyzerResultExtensions(AnalyzerResultTls):
     application_layer_protocols = attr.ib(
         validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(TlsProtocolName))
     )
+    renegotiation_supported = attr.ib(validator=attr.validators.instance_of(bool))
     session_ticket_supported = attr.ib(validator=attr.validators.instance_of(bool))
     extended_master_secret_supported = attr.ib(validator=attr.validators.instance_of(bool))
     encrypt_then_mac_supported = attr.ib(
@@ -126,6 +128,18 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             analyzable, client_hello, TlsExtensionType.EXTENDED_MASTER_SECRET,
         )
 
+    def _analyze_renegotiation(cls, analyzable, protocol_version):
+        client_hello = cls._get_client_hello(analyzable, protocol_version)
+        client_hello.empty_renegotiation_info_scsv = True
+        if AnalyzerExtensions._analyze_symmetric_extension(
+                analyzable, client_hello, TlsExtensionType.RENEGOTIATION_INFO):
+            return True
+
+        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionRenegotiationInfo())
+        return AnalyzerExtensions._analyze_symmetric_extension(
+            analyzable, client_hello, TlsExtensionType.RENEGOTIATION_INFO
+        )
+
     @classmethod
     def _analyze_session_ticket(cls, analyzable, protocol_version):
         client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionSessionTicket())
@@ -155,6 +169,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
     def analyze(self, analyzable, protocol_version):
         supported_protocol_names = self._analyze_alpn(analyzable, protocol_version)
+        renegotiation_supported = self._analyze_renegotiation(analyzable, protocol_version)
         session_ticket_supported = self._analyze_session_ticket(analyzable, protocol_version)
         extended_master_secret_supported = self._analyze_extended_master_secret(analyzable, protocol_version)
         encrypt_then_mac_supported = self._analyze_encrypt_than_mac(analyzable, protocol_version)
@@ -162,6 +177,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         return AnalyzerResultExtensions(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
             supported_protocol_names,
+            renegotiation_supported,
             session_ticket_supported,
             extended_master_secret_supported,
             encrypt_then_mac_supported,
