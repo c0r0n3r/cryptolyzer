@@ -7,6 +7,7 @@ import six
 from cryptoparser.tls.extension import (
     TlsExtensionEncryptThenMAC,
     TlsExtensionExtendedMasterSecret,
+    TlsExtensionSessionTicket,
     TlsExtensionType,
 )
 from cryptoparser.tls.subprotocol import TlsHandshakeType
@@ -24,6 +25,7 @@ from cryptolyzer.tls.client import (
 
 @attr.s  # pylint: disable=too-few-public-methods
 class AnalyzerResultExtensions(AnalyzerResultTls):
+    session_ticket_supported = attr.ib(validator=attr.validators.instance_of(bool))
     extended_master_secret_supported = attr.ib(validator=attr.validators.instance_of(bool))
     encrypt_then_mac_supported = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(bool)),
@@ -86,6 +88,13 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         )
 
     @classmethod
+    def _analyze_session_ticket(cls, analyzable, protocol_version):
+        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionSessionTicket())
+        return AnalyzerExtensions._analyze_symmetric_extension(
+            analyzable, client_hello, TlsExtensionType.SESSION_TICKET,
+        )
+
+    @classmethod
     def _analyze_encrypt_than_mac(cls, analyzable, protocol_version):
         if protocol_version < TlsProtocolVersionFinal(TlsVersion.TLS1_2):
             return None
@@ -106,11 +115,13 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         return True
 
     def analyze(self, analyzable, protocol_version):
+        session_ticket_supported = self._analyze_session_ticket(analyzable, protocol_version)
         extended_master_secret_supported = self._analyze_extended_master_secret(analyzable, protocol_version)
         encrypt_then_mac_supported = self._analyze_encrypt_than_mac(analyzable, protocol_version)
 
         return AnalyzerResultExtensions(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
+            session_ticket_supported,
             extended_master_secret_supported,
             encrypt_then_mac_supported,
         )

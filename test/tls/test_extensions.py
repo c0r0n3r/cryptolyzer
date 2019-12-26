@@ -36,3 +36,10 @@ class TestTlsExtensions(unittest.TestCase):
 
         result = self.get_result('www.cloudflare.com', 443)
         self.assertTrue(result.extended_master_secret_supported)
+
+    def test_session_ticket(self):
+        result = self.get_result('www.github.com', 443)
+        self.assertFalse(result.session_ticket_supported)
+
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertTrue(result.session_ticket_supported)
