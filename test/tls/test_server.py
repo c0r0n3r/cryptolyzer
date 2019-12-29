@@ -74,12 +74,14 @@ class TestL7ServerBase(unittest.TestCase):
 
         self.threaded_server.join()
 
-    def _test_tls_handshake(self):
-        protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+    def _test_tls_handshake(self, protocol_version, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO):
         client_hello = TlsHandshakeClientHelloAnyAlgorithm([protocol_version, ], self.threaded_server.l7_server.address)
         l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
-        server_messages = l7_client.do_tls_handshake(hello_message=client_hello)
-        self.assertEqual(list(server_messages.keys()), [TlsHandshakeType.SERVER_HELLO])
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=last_handshake_message_type
+        )
+        self.assertEqual(list(server_messages.keys()), [last_handshake_message_type])
 
         self.threaded_server.join()
 
@@ -164,7 +166,18 @@ class TestL7ServerTls(TestL7ServerBase):
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
 
     def test_handshake(self):
-        self._test_tls_handshake()
+        self._test_tls_handshake(TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+
+
+class TestL7ServerTls13(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server()
+
+    def test_handshake(self):
+        self._test_tls_handshake(
+            TlsProtocolVersionFinal(TlsVersion.TLS1_3),
+            TlsHandshakeType.HELLO_RETRY_REQUEST
+        )
 
 
 class TestL7ServerTlsFallbackToSsl(TestL7ServerBase):
@@ -182,7 +195,7 @@ class TestL7ServerTlsFallbackToSsl(TestL7ServerBase):
         self._test_ssl_handshake()
 
     def test_tls_handshake(self):
-        self._test_tls_handshake()
+        self._test_tls_handshake(TlsProtocolVersionFinal(TlsVersion.TLS1_2))
 
 
 class TestL7ServerTlsCloseOnError(TestL7ServerBase):
@@ -190,4 +203,4 @@ class TestL7ServerTlsCloseOnError(TestL7ServerBase):
         self.threaded_server = self.create_server(TlsServerConfiguration(close_on_error=True))
 
     def test_tls_handshake(self):
-        self._test_tls_handshake()
+        self._test_tls_handshake(TlsProtocolVersionFinal(TlsVersion.TLS1_2))

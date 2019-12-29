@@ -7,6 +7,7 @@ import imaplib
 import poplib
 import smtplib
 
+import random
 import socket
 
 import attr
@@ -16,7 +17,7 @@ import six
 from cryptoparser.common.algorithm import Authentication, KeyExchange, NamedGroupType
 from cryptoparser.common.exception import NotEnoughData, TooMuchData, InvalidType, InvalidValue
 
-from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
+from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm, TlsECPointFormat
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.ldap import (
     LDAPResultCode,
@@ -32,6 +33,7 @@ from cryptoparser.tls.rdp import (
     RDPNegotiationResponse,
 )
 from cryptoparser.tls.subprotocol import (
+    TLS_HANDSHAKE_HELLO_RETRY_REQUEST_RANDOM,
     SslHandshakeClientHello,
     SslMessageType,
     TlsAlertDescription,
@@ -41,9 +43,16 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeType,
 )
 from cryptoparser.tls.extension import (
+    TlsExtensionECPointFormats,
     TlsExtensionEllipticCurves,
+    TlsExtensionKeyShareClient,
+    TlsExtensionKeyShareReservedClient,
     TlsExtensionServerName,
     TlsExtensionSignatureAlgorithms,
+    TlsExtensionSignatureAlgorithmsCert,
+    TlsExtensionSupportedVersionsClient,
+    TlsExtensionsClient,
+    TlsKeyShareEntry,
     TlsNamedCurve,
 )
 
@@ -61,32 +70,84 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             hostname,
             protocol_versions,
             cipher_suites,
-            elliptic_curves,
+            named_curves,
             signature_algorithms,
             extensions
     ):  # pylint: disable=too-many-arguments
+        is_tls1_3_supported = self._is_tls1_3_supported(protocol_versions)
+
         if hostname is not None:
             extensions.append(TlsExtensionServerName(hostname))
+        if named_curves is None:
+            named_curves = list(TlsNamedCurve)
+        if signature_algorithms is None:
+            signature_algorithms = list((
+                signature_algorithm
+                for signature_algorithm in TlsSignatureAndHashAlgorithm
+                if not is_tls1_3_supported or (
+                    signature_algorithm.value.signature_algorithm not in [Authentication.anon, Authentication.DSS] and
+                    signature_algorithm.value.hash_algorithm is not None)
+            ))
 
-        if len(protocol_versions) > 1:
+        if is_tls1_3_supported:
+            #  filter out non TLS 1.3 cipher suites
+            cipher_suites = [
+                cipher_suites
+                for cipher_suites in TlsCipherSuite
+                if cipher_suites.value.min_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            ]
+
+            key_share_entries = [
+                TlsKeyShareEntry(
+                    named_curve, (
+                        random.randint(0, 255)
+                        for i in range(
+                            int(named_curve.value.named_group.value.size / 8) +
+                            (1 if named_curve.value.named_group.value.size % 8 else 0)
+                        )
+                    )
+                )
+                for named_curve in named_curves
+                if (named_curve.value.named_group is not None and
+                    named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
+            ]
+
+            extensions.extend([
+                TlsExtensionKeyShareReservedClient(key_share_entries),
+                TlsExtensionKeyShareClient(key_share_entries),
+            ])
+            extensions.append(TlsExtensionSupportedVersionsClient(protocol_versions))
+        elif len(protocol_versions) > 1:
             raise NotImplementedError
 
-        if protocol_versions[0] >= TlsProtocolVersionFinal(TlsVersion.TLS1_0):
-            if elliptic_curves is None:
-                elliptic_curves = list(TlsNamedCurve)
-            if elliptic_curves:
-                extensions.append(TlsExtensionEllipticCurves(elliptic_curves))
+        if is_tls1_3_supported or protocol_versions[0] >= TlsProtocolVersionFinal(TlsVersion.TLS1_0):
+            if named_curves:
+                extensions.append(TlsExtensionEllipticCurves(named_curves))
 
-        if protocol_versions[0] >= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
-            if signature_algorithms is None:
-                signature_algorithms = list(TlsSignatureAndHashAlgorithm)
-            if signature_algorithms:
-                extensions.append(TlsExtensionSignatureAlgorithms(signature_algorithms))
+                if not is_tls1_3_supported:
+                    extensions.append(TlsExtensionECPointFormats(TlsECPointFormat))
+
+        if signature_algorithms:
+            extensions.append(TlsExtensionSignatureAlgorithms(signature_algorithms))
+            if is_tls1_3_supported:
+                extensions.append(TlsExtensionSignatureAlgorithmsCert(signature_algorithms))
+
+        if is_tls1_3_supported:
+            protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        else:
+            protocol_version = protocol_versions[0]
 
         super(TlsHandshakeClientHelloSpecalization, self).__init__(
             cipher_suites=cipher_suites,
-            protocol_version=protocol_versions[0],
-            extensions=extensions
+            protocol_version=protocol_version,
+            extensions=TlsExtensionsClient(extensions)
+        )
+
+    @classmethod
+    def _is_tls1_3_supported(cls, protocol_versions):
+        return any(
+            version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            for version in protocol_versions
         )
 
 
@@ -102,7 +163,7 @@ class TlsHandshakeClientHelloAnyAlgorithm(  # pylint: disable=too-many-ancestors
                 for cipher_suites in TlsCipherSuite
                 if cipher_suites.value.min_version < TlsProtocolVersionDraft(0)
             ],
-            elliptic_curves=None,
+            named_curves=None,
             signature_algorithms=None,
             extensions=[]
         )
@@ -117,7 +178,7 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             protocol_version,
             hostname,
             authentication,
-            elliptic_curves=(),
+            named_curves=(),
             signature_algorithms=()
     ):  # pylint: disable=too-many-arguments
         _cipher_suites = [
@@ -127,12 +188,23 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
                 cipher_suite.value.authentication == authentication)
         ]
 
+        if signature_algorithms:
+            _signature_algorithms = signature_algorithms
+        elif protocol_version >= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+            _signature_algorithms = list(
+                signature_algorithm
+                for signature_algorithm in TlsSignatureAndHashAlgorithm
+                if signature_algorithm.value.signature_algorithm == authentication
+            )
+        else:
+            _signature_algorithms = None
+
         super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
-            elliptic_curves=elliptic_curves,
-            signature_algorithms=signature_algorithms,
+            named_curves=named_curves,
+            signature_algorithms=_signature_algorithms,
             extensions=[]
         )
 
@@ -144,7 +216,7 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthentica
             hostname=hostname,
             protocol_version=protocol_version,
             authentication=Authentication.RSA,
-            elliptic_curves=None,
+            named_curves=None,
             signature_algorithms=None,
         )
 
@@ -156,7 +228,7 @@ class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthentica
             protocol_version=protocol_version,
             hostname=hostname,
             authentication=Authentication.DSS,
-            elliptic_curves=None,
+            named_curves=None,
             signature_algorithms=None,
         )
 
@@ -168,7 +240,7 @@ class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenti
             hostname=hostname,
             protocol_version=protocol_version,
             authentication=Authentication.ECDSA,
-            elliptic_curves=None,
+            named_curves=None,
             signature_algorithms=None,
         )
 
@@ -179,7 +251,9 @@ class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthentic
         super(TlsHandshakeClientHelloAuthenticationGOST, self).__init__(
             protocol_version=protocol_version,
             hostname=hostname,
-            authentication=Authentication.GOST_R3410_94
+            authentication=Authentication.GOST_R3410_94,
+            named_curves=list(TlsNamedCurve),
+            signature_algorithms=list(TlsSignatureAndHashAlgorithm),
         )
 
 
@@ -204,7 +278,7 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(  # pylint: disable=too-ma
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
-            elliptic_curves=[],
+            named_curves=[],
             signature_algorithms=[],
             extensions=[]
         )
@@ -216,20 +290,25 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
     _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
-        if cipher_suite.value.key_exchange == KeyExchange.DHE
+        if (cipher_suite.value.key_exchange == KeyExchange.DHE or
+            cipher_suite.value.min_version > TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+    ]
+    _NAMED_CURVES = [
+        named_curve
+        for named_curve in TlsNamedCurve
+        if (named_curve.value.named_group is not None
+            and named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
     ]
 
-    def __init__(self, protocol_version, hostname):
+    def __init__(self, protocol_version, hostname, named_curves=None):
+        if named_curves is None:
+            named_curves = self._NAMED_CURVES
+
         super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self._CIPHER_SUITES,
-            elliptic_curves=[
-                named_group
-                for named_group in TlsNamedCurve
-                if (named_group.value.named_group and
-                    named_group.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
-            ],
+            named_curves=named_curves,
             signature_algorithms=None,
             extensions=[]
         )
@@ -241,16 +320,25 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
     _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
-        if (cipher_suite.value.key_exchange and
-            cipher_suite.value.key_exchange in [KeyExchange.ECDH, KeyExchange.ECDHE])
+        if (cipher_suite.value.key_exchange in [KeyExchange.ECDH, KeyExchange.ECDHE] or
+            cipher_suite.value.min_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+    ]
+    _NAMED_CURVES = [
+        named_curve
+        for named_curve in TlsNamedCurve
+        if (named_curve.value.named_group is not None
+            and named_curve.value.named_group.value.group_type == NamedGroupType.ELLIPTIC_CURVE)
     ]
 
-    def __init__(self, protocol_version, hostname):
+    def __init__(self, protocol_version, hostname, named_curves=None):
+        if named_curves is None:
+            named_curves = self._NAMED_CURVES
+
         super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self._CIPHER_SUITES,
-            elliptic_curves=None,
+            named_curves=named_curves,
             signature_algorithms=None,
             extensions=[]
         )
@@ -264,7 +352,7 @@ class TlsHandshakeClientHelloBasic(  # pylint: disable=too-many-ancestors
             hostname=None,
             protocol_versions=[protocol_version, ],
             cipher_suites=list(TlsCipherSuite),
-            elliptic_curves=[],
+            named_curves=[],
             signature_algorithms=[],
             extensions=[]
         )
@@ -290,7 +378,7 @@ class L7ClientTlsBase(L7TransferBase):
 
     def _do_handshake(
             self,
-            tls_client,
+            l7_client,
             hello_message,
             record_version,
             last_handshake_message_type
@@ -298,11 +386,11 @@ class L7ClientTlsBase(L7TransferBase):
         self.init_connection()
 
         try:
-            tls_client.do_handshake(self, hello_message, record_version, last_handshake_message_type)
+            l7_client.do_handshake(self, hello_message, record_version, last_handshake_message_type)
         finally:
             self._close_connection()
 
-        return tls_client.server_messages
+        return l7_client.server_messages
 
     def do_ssl_handshake(self, hello_message, last_handshake_message_type=SslMessageType.SERVER_HELLO):
         return self._do_handshake(
@@ -742,13 +830,22 @@ class TlsClient(object):
 
 
 class TlsClientHandshake(TlsClient):
-    def _process_message(self, handshake_message, protocol_version):
-        handshake_type = handshake_message.get_handshake_type()
-        if handshake_type in self.server_messages:
-            raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
-        if (handshake_type == TlsHandshakeType.SERVER_HELLO and
-                not handshake_message.protocol_version == protocol_version):
-            raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
+    def _process_record(self, protocol_version, record, last_handshake_message_type):
+        for handshake_message in record.messages:
+            handshake_type = handshake_message.get_handshake_type()
+            is_repeated_messages = handshake_type in self.server_messages
+            last_processed_message_type = handshake_message.get_handshake_type()
+            self.server_messages[last_processed_message_type] = handshake_message
+
+            if is_repeated_messages:
+                raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
+            if (handshake_type == TlsHandshakeType.SERVER_HELLO and
+                    handshake_message.random != TLS_HANDSHAKE_HELLO_RETRY_REQUEST_RANDOM and
+                    not handshake_message.protocol_version == protocol_version):
+                raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
+
+            if last_processed_message_type == last_handshake_message_type:
+                raise StopIteration
 
     def do_handshake(
             self,
@@ -758,7 +855,6 @@ class TlsClientHandshake(TlsClient):
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
     ):
         self.server_messages = {}
-        self._last_processed_message_type = None
 
         tls_record = TlsRecord([hello_message, ], record_version)
         transfer.send(tls_record.compose())
@@ -778,19 +874,16 @@ class TlsClientHandshake(TlsClient):
 
                 if record.content_type != TlsContentType.HANDSHAKE:
                     raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
-                for handshake_message in record.messages:
-                    self._process_message(handshake_message, hello_message.protocol_version)
-                    self._last_processed_message_type = handshake_message.get_handshake_type()
-                    self.server_messages[self._last_processed_message_type] = handshake_message
 
-                    if self._last_processed_message_type == last_handshake_message_type:
-                        return
+                self._process_record(hello_message.protocol_version, record, last_handshake_message_type)
 
                 receivable_byte_num = 0
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
             except (InvalidType, InvalidValue):
                 self.raise_response_error(transfer)
+            except StopIteration:
+                return
 
             try:
                 transfer.receive(receivable_byte_num)

@@ -123,7 +123,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
     def test_error_insufficient_security(self, mocked_next_accepted_cipher_suites):
         result = self.get_result('rc4.badssl.com', 443)
         self.assertEqual(len(result.cipher_suites), 0)
-        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 4)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 5)
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
@@ -132,7 +132,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
     def test_error_illegal_parameter(self, mocked_next_accepted_cipher_suites):
         result = self.get_result('rc4.badssl.com', 443)
         self.assertEqual(len(result.cipher_suites), 0)
-        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 4)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 5)
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
@@ -239,20 +239,17 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
 
     def test_gost(self):
         result = self.get_result('cryptopro.ru', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
-        self.assertEqual(result.cipher_suites, [
-            TlsCipherSuite.OLD_TLS_GOSTR341112_256_WITH_28147_CNT_IMIT,
-            TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
-            TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-            TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-            TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-            TlsCipherSuite.TLS_RSA_WITH_AES_256_GCM_SHA384,
-            TlsCipherSuite.TLS_RSA_WITH_AES_128_GCM_SHA256,
-            TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA256,
-            TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA256,
-            TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA,
-            TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
-            TlsCipherSuite.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-        ])
+        self.assertIn(TlsCipherSuite.OLD_TLS_GOSTR341112_256_WITH_28147_CNT_IMIT, result.cipher_suites)
+
+    def test_tls_1_3(self):
+        self.assertEqual(
+            self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).cipher_suites,
+            [
+                TlsCipherSuite.TLS_AES_128_GCM_SHA256,
+                TlsCipherSuite.TLS_AES_256_GCM_SHA384,
+                TlsCipherSuite.TLS_CHACHA20_POLY1305_SHA256,
+            ]
+        )
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(

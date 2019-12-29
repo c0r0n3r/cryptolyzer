@@ -81,10 +81,12 @@ class TestTlsAlert(unittest.TestCase):
 
 class TestL7ClientBase(unittest.TestCase):
     @staticmethod
-    def get_result(proto, host, port, timeout=None, ip=None):
+    def get_result(  # pylint: disable=too-many-arguments
+            proto, host, port, timeout=None, ip=None, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+    ):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout, ip=ip)
-        result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = analyzer.analyze(l7_client, protocol_version)
         return result
 
 
@@ -159,27 +161,33 @@ class TestL7ClientTlsBase(TestL7ClientBase):
 class TestClientPOP3(TestL7ClientBase):
     @mock.patch.object(poplib.POP3, '_shortcmd', return_value=b'-ERR')
     def test_error_unsupported_starttls(self, _):
-        self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, 10).versions, [])
+        self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, timeout=10).versions, [])
 
     @mock.patch.object(poplib.POP3, '__init__', side_effect=poplib.error_proto)
     def test_error_pop3_error_on_connect(self, _):
-        self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, 10).versions, [])
+        self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, timeout=10).versions, [])
 
     @mock.patch.object(poplib.POP3, '_shortcmd', return_value=b'-ERR')
     @mock.patch.object(poplib.POP3, 'quit', side_effect=poplib.error_proto)
     def test_error_pop3_error_on_quit(self, _, __):
-        self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, 10).versions, [])
+        self.assertEqual(
+            self.get_result('pop3', 'pop3.comcast.net', None, timeout=10).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
 
     def test_pop3_client(self):
         self.assertEqual(
-            self.get_result('pop3', 'pop3.comcast.net', None, 10).versions,
+            self.get_result('pop3', 'pop3.comcast.net', None, timeout=10).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
     def test_pop3s_client(self):
         self.assertEqual(
             self.get_result('pop3s', 'pop.gmail.com', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [
+                TlsProtocolVersionFinal(version)
+                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
         )
 
 
@@ -199,11 +207,11 @@ class TestClientIMAP(TestL7ClientBase):
         create=True
     )
     def test_error_unsupported_starttls(self):
-        self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, 10).versions, [])
+        self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, timeout=10).versions, [])
 
     @mock.patch.object(imaplib.IMAP4, '__init__', side_effect=imaplib.IMAP4.error)
     def test_error_imap_error(self, _):
-        self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, 10).versions, [])
+        self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, timeout=10).versions, [])
 
     @mock.patch.object(
         imaplib.IMAP4, 'xatom',
@@ -211,18 +219,21 @@ class TestClientIMAP(TestL7ClientBase):
     )
     @mock.patch.object(imaplib.IMAP4, 'shutdown', side_effect=imaplib.IMAP4.error)
     def test_error_starttls_error(self, _, __):
-        self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, 10).versions, [])
+        self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, timeout=10).versions, [])
 
     def test_imap_client(self):
         self.assertEqual(
-            self.get_result('imap', 'imap.comcast.net', None, 10).versions,
+            self.get_result('imap', 'imap.comcast.net', None, timeout=10).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
     def test_imaps_client(self):
         self.assertEqual(
             self.get_result('imaps', 'imap.gmail.com', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [
+                TlsProtocolVersionFinal(version)
+                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
         )
 
 
@@ -239,7 +250,10 @@ class TestClientSMTP(TestL7ClientBase):
     def test_error_smtp_error_on_quit(self, _):
         self.assertEqual(
             self.get_result('smtp', 'smtp.gmail.com', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [
+                TlsProtocolVersionFinal(version)
+                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
         )
 
     @mock.patch.object(smtplib.SMTP, 'docmd', return_value=(454, 'TLS not available due to temporary reason'))
@@ -249,13 +263,19 @@ class TestClientSMTP(TestL7ClientBase):
     def test_smtp_client(self):
         self.assertEqual(
             self.get_result('smtp', 'smtp.gmail.com', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [
+                TlsProtocolVersionFinal(version)
+                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
         )
 
     def test_smtps_client(self):
         self.assertEqual(
             self.get_result('smtps', 'smtp.gmail.com', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [
+                TlsProtocolVersionFinal(version)
+                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
         )
 
 
@@ -277,13 +297,13 @@ class TestClientFTP(TestL7ClientBase):
     def test_error_ftp_error_on_quit(self, _):
         self.assertEqual(
             self.get_result('ftp', 'ftp.cert.dfn.de', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, ]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
 
     def test_ftp_client(self):
         self.assertEqual(
             self.get_result('ftp', 'ftp.cert.dfn.de', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, ]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
 
     def test_ftps_client(self):
@@ -483,7 +503,7 @@ class TestClientDoH(TestL7ClientBase):
     def test_doh_client(self):
         self.assertEqual(
             self.get_result('doh', 'dns.google', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]]
         )
 
 

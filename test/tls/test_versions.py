@@ -6,7 +6,7 @@ except ImportError:
     import mock
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionDraft, TlsProtocolVersionFinal, SslProtocolVersion
 
 from cryptolyzer.tls.client import L7ClientTlsBase, SslError
 from cryptolyzer.tls.exception import TlsAlert
@@ -71,7 +71,10 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
         result = self.get_result('www.google.com', 443)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [
+                TlsProtocolVersionFinal(version)
+                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
         )
 
 
@@ -113,6 +116,29 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         self.assertEqual(
             self.get_result('badssl.com', 443).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+
+    def test_tls_1_3(self):
+        self.assertEqual(
+            self.get_result('www.cloudflare.com', 443).versions,
+            [
+                TlsProtocolVersionFinal(version)
+                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
+        )
+
+    def test_tls_1_3_draft(self):
+        self.assertEqual(
+            self.get_result('www.internet.org', 443).versions,
+            [
+                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersionDraft(23),
+                TlsProtocolVersionDraft(26),
+                TlsProtocolVersionDraft(28),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_3),
+            ]
         )
 
     def test_ecdsa_only(self):

@@ -51,8 +51,10 @@ class ProtocolHandlerBase(object):
     def get_protocols(cls):
         cls.import_plugins()
 
-        for handler_class in get_leaf_classes(cls):
-            yield handler_class.get_protocol()
+        return sorted([
+            handler_class.get_protocol()
+            for handler_class in get_leaf_classes(cls)
+        ])
 
     @classmethod
     @abc.abstractmethod
