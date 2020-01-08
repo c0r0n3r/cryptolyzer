@@ -147,6 +147,12 @@ Cipher Suites
 
 #. supports each cipher suites discussed on `ciphersuite.info <https://ciphersuite.info>`_
 
+Social Media
+------------
+
+* `Twitter <https://twitter.com/CryptoLyzer>`_
+* `Facebook <https://www.facebook.com/cryptolyzer>`_
+
 Credits
 -------
 
