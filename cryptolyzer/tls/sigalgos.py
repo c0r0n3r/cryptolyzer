@@ -9,7 +9,7 @@ from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointForm
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription, TlsHandshakeClientHello
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import TlsAlert
 
@@ -62,7 +62,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
-            except ResponseError:
+            except SecurityError:
                 if algorithm == matching_algorithms[0]:
                     break
 

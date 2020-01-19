@@ -7,7 +7,7 @@ from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve, TlsExten
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, TlsAlert
 
@@ -92,7 +92,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
                     raise e
 
                 continue
-            except ResponseError:
+            except SecurityError:
                 if curve == next(iter(TlsNamedCurve)):
                     extension_supported = None
                     break

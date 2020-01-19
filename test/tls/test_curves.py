@@ -18,7 +18,7 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.extension import TlsNamedCurve
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError, ResponseErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
 from cryptolyzer.tls.curves import AnalyzerCurves
 
@@ -30,7 +30,7 @@ ORIGINAL_GET_KEY_EXCHANGE_MESSAGE = AnalyzerCurves._get_key_exchange_message  # 
 
 def _wrapped_get_key_exchange_message(l7_client, client_hello, curve):
     if curve == TlsNamedCurve.X25519:
-        raise ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE)
+        raise SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE)
     return ORIGINAL_GET_KEY_EXCHANGE_MESSAGE(l7_client, client_hello, curve)
 
 

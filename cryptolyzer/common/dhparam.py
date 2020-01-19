@@ -14,7 +14,7 @@ from cryptoparser.common.parse import ParserBinary
 from cryptoparser.tls.extension import TlsNamedCurve, TlsNamedCurveFactory
 from cryptoparser.tls.subprotocol import TlsECCurveType
 
-from cryptolyzer.common.exception import ResponseError, ResponseErrorType
+from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 
 
 class DHParamWellKnown(object):
@@ -370,7 +370,7 @@ def parse_ecdh_params(param_bytes):
                 bytes(parser['point'])
             )
         except ValueError:
-            raise ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE)
+            raise SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE)
 
     return parser['named_curve'], public_key
 

@@ -12,7 +12,7 @@ from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
-from cryptolyzer.common.exception import ResponseError, ResponseErrorType
+from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
 
@@ -67,7 +67,7 @@ def _wrapped_next_accepted_cipher_suites_internal_error_once(
 def _wrapped_next_accepted_cipher_suites_response_error(
         l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
     if len(accepted_cipher_suites) == 1:
-        raise ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE)
+        raise SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE)
 
     return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
         l7_client,

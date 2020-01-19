@@ -10,7 +10,7 @@ import cryptography.x509 as cryptography_x509
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
-from cryptolyzer.common.exception import ResponseError, ResponseErrorType
+from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
@@ -40,9 +40,9 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=[
             [],
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
+            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
+            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
+            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
         ]
     )
     def test_error_response_error_no_response_last_time(self, _):

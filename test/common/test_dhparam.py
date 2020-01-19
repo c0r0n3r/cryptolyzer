@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import serialization as cryptography_seriali
 from cryptoparser.tls.extension import TlsNamedCurve
 
 from cryptolyzer.common.dhparam import parse_ecdh_params, DHParameter, WellKnownDHParams
-from cryptolyzer.common.exception import ResponseError, ResponseErrorType
+from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 
 
 class TestParse(unittest.TestCase):
@@ -102,6 +102,6 @@ class TestParse(unittest.TestCase):
             b''
         )
 
-        with self.assertRaises(ResponseError) as context_manager:
+        with self.assertRaises(SecurityError) as context_manager:
             parse_ecdh_params(param_bytes)
-        self.assertEqual(context_manager.exception.error, ResponseErrorType.UNPARSABLE_RESPONSE)
+        self.assertEqual(context_manager.exception.error, SecurityErrorType.UNPARSABLE_RESPONSE)

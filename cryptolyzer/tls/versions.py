@@ -5,7 +5,7 @@ from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import (
     SslError,
@@ -44,7 +44,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
                 raise e
         except NetworkError:
             pass
-        except ResponseError:
+        except SecurityError:
             pass
         else:
             if server_messages[SslMessageType.SERVER_HELLO].cipher_kinds:
@@ -89,7 +89,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
                         raise e
                     if tls_version == TlsVersion.SSL3:
                         break
-                except ResponseError:
+                except SecurityError:
                     break
 
         if (alerts_unsupported_tls_version is None and

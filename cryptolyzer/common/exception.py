@@ -16,14 +16,14 @@ class NetworkError(IOError):
         self.error = error
 
 
-class ResponseErrorType(enum.IntEnum):
+class SecurityErrorType(enum.IntEnum):
     PLAIN_TEXT_RESPONSE = 1
     UNPARSABLE_RESPONSE = 2
     UNSUPPORTED_SECURITY = 3
 
 
-class ResponseError(ValueError):
+class SecurityError(ValueError):
     def __init__(self, error):
-        super(ResponseError, self).__init__()
+        super(SecurityError, self).__init__()
 
         self.error = error

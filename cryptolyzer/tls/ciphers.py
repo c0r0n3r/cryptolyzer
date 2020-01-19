@@ -8,7 +8,7 @@ from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType,
 from cryptoparser.tls.version import SslProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import (
     SslHandshakeClientHelloAnyAlgorithm,
@@ -100,7 +100,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                     break
 
                 raise e
-            except ResponseError:
+            except SecurityError:
                 if accepted_cipher_suites:
                     break
 
