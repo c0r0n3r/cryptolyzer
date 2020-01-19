@@ -370,7 +370,7 @@ def parse_ecdh_params(param_bytes):
                 bytes(parser['point'])
             )
         except ValueError:
-            raise SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE)
+            raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
 
     return parser['named_curve'], public_key
 

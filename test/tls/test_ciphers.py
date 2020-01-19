@@ -67,7 +67,7 @@ def _wrapped_next_accepted_cipher_suites_internal_error_once(
 def _wrapped_next_accepted_cipher_suites_response_error(
         l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
     if len(accepted_cipher_suites) == 1:
-        raise SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE)
+        raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
 
     return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
         l7_client,

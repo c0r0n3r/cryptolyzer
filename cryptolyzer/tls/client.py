@@ -589,7 +589,7 @@ class TlsClient(object):
         if response_is_plain_text:
             raise SecurityError(SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
-        raise SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE)
+        raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
 
     @abc.abstractmethod
     def do_handshake(self, hello_message, record_version, last_handshake_message_type):

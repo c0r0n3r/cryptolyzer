@@ -104,4 +104,4 @@ class TestParse(unittest.TestCase):
 
         with self.assertRaises(SecurityError) as context_manager:
             parse_ecdh_params(param_bytes)
-        self.assertEqual(context_manager.exception.error, SecurityErrorType.UNPARSABLE_RESPONSE)
+        self.assertEqual(context_manager.exception.error, SecurityErrorType.UNPARSABLE_MESSAGE)

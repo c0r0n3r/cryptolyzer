@@ -36,14 +36,14 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=[
             mock.DEFAULT,
-            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
-            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
-            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
-            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
-            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
-            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
-            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
-            SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
         ]
     )
     def test_error_response_error_no_response(self, _):

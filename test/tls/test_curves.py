@@ -30,7 +30,7 @@ ORIGINAL_GET_KEY_EXCHANGE_MESSAGE = AnalyzerCurves._get_key_exchange_message  # 
 
 def _wrapped_get_key_exchange_message(l7_client, client_hello, curve):
     if curve == TlsNamedCurve.X25519:
-        raise SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE)
+        raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
     return ORIGINAL_GET_KEY_EXCHANGE_MESSAGE(l7_client, client_hello, curve)
 
 
