@@ -120,7 +120,7 @@ class AnalyzerBase(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def analyze(self, l7_client):
+    def analyze(self, analyzable):
         raise NotImplementedError()
 
 
@@ -130,5 +130,5 @@ class AnalyzerResultBase(Serializable):
 
 class AnalyzerTlsBase(object):
     @abc.abstractmethod
-    def analyze(self, l7_client, protocol_version):
+    def analyze(self, analyzable, protocol_version):
         raise NotImplementedError()

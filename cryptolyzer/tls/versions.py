@@ -35,10 +35,10 @@ class AnalyzerVersions(AnalyzerTlsBase):
         return 'Check which protocol versions supported by the server(s)'
 
     @staticmethod
-    def _is_ssl2_supported(l7_client):
+    def _is_ssl2_supported(analyzable):
         try:
             client_hello = SslHandshakeClientHelloAnyAlgorithm()
-            server_messages = l7_client.do_ssl_handshake(client_hello)
+            server_messages = analyzable.do_ssl_handshake(client_hello)
         except SslError as e:
             if e.error != SslErrorType.NO_CIPHER_ERROR:
                 raise e
@@ -53,19 +53,19 @@ class AnalyzerVersions(AnalyzerTlsBase):
         return False
 
     @staticmethod
-    def _analyze_supported_tls_versions(l7_client):
+    def _analyze_supported_tls_versions(analyzable):
         alerts_unsupported_tls_version = None
         supported_protocols = []
         for tls_version in (TlsVersion.SSL3, TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2):
             protocol_version = TlsProtocolVersionFinal(tls_version)
             client_hello_messsages_in_order_of_probability = (
-                TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
-                TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, l7_client.address),
-                TlsHandshakeClientHelloAuthenticationRarelyUsed(protocol_version, l7_client.address),
+                TlsHandshakeClientHelloAuthenticationRSA(protocol_version, analyzable.address),
+                TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, analyzable.address),
+                TlsHandshakeClientHelloAuthenticationRarelyUsed(protocol_version, analyzable.address),
             )
             for client_hello in client_hello_messsages_in_order_of_probability:
                 try:
-                    server_messages = l7_client.do_tls_handshake(
+                    server_messages = analyzable.do_tls_handshake(
                         hello_message=client_hello,
                     )
                     server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
@@ -98,17 +98,17 @@ class AnalyzerVersions(AnalyzerTlsBase):
 
         return supported_protocols, alerts_unsupported_tls_version
 
-    def analyze(self, l7_client, protocol_version):
+    def analyze(self, analyzable, protocol_version):
         supported_protocols = []
 
-        if self._is_ssl2_supported(l7_client):
+        if self._is_ssl2_supported(analyzable):
             supported_protocols.append(SslProtocolVersion())
 
-        supported_tls_protocols, alerts_unsupported_tls_version = self._analyze_supported_tls_versions(l7_client)
+        supported_tls_protocols, alerts_unsupported_tls_version = self._analyze_supported_tls_versions(analyzable)
         supported_protocols.extend(supported_tls_protocols)
 
         return AnalyzerResultVersions(
-            AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),
+            AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
             supported_protocols,
             alerts_unsupported_tls_version
         )

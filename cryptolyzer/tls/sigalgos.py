@@ -74,7 +74,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
 
         return supported_algorithms
 
-    def analyze(self, l7_client, protocol_version):
+    def analyze(self, analyzable, protocol_version):
         supported_algorithms = []
         for authentication in [Authentication.DSS, Authentication.RSA, Authentication.ECDSA]:
             cipher_suites = TlsCipherSuiteVector([
@@ -90,10 +90,10 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                 if algorithm.value.signature_algorithm == authentication
             ]
             supported_algorithms.extend(
-                self._analyze_algorithms(l7_client, protocol_version, cipher_suites, matching_algorithms)
+                self._analyze_algorithms(analyzable, protocol_version, cipher_suites, matching_algorithms)
             )
 
         return AnalyzerResultSigAlgos(
-            AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),
+            AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
             supported_algorithms
         )
