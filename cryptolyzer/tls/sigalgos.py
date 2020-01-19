@@ -11,7 +11,7 @@ from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescripti
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-from cryptolyzer.tls.client import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class AnalyzerResultSigAlgos(AnalyzerResultTls):

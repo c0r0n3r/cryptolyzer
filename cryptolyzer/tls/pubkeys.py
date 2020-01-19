@@ -12,11 +12,13 @@ from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
-from cryptolyzer.tls.client import TlsAlert, \
-    TlsHandshakeClientHelloBasic, \
-    TlsHandshakeClientHelloAuthenticationDSS, \
-    TlsHandshakeClientHelloAuthenticationRSA, \
+from cryptolyzer.tls.client import (
+    TlsHandshakeClientHelloBasic,
+    TlsHandshakeClientHelloAuthenticationDSS,
+    TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationECDSA
+)
+from cryptolyzer.tls.exception import TlsAlert
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls

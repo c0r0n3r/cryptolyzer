@@ -19,8 +19,9 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.extension import TlsNamedCurve
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
-from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
+from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.curves import AnalyzerCurves
+from cryptolyzer.tls.exception import TlsAlert
 
 from .classes import TestTlsCases
 

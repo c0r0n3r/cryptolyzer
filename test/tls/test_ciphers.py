@@ -14,7 +14,8 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslPro
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
-from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
+from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.exception import TlsAlert
 
 from .classes import TestTlsCases
 

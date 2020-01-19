@@ -9,8 +9,9 @@ from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm
 
-from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
+from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos
 
 from .classes import TestTlsCases

@@ -12,12 +12,12 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType, Securit
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import (
     SslHandshakeClientHelloAnyAlgorithm,
-    TlsAlert,
     TlsHandshakeClientHelloAnyAlgorithm,
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationRarelyUsed,
 )
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class AnalyzerResultCipherSuites(AnalyzerResultTls):  # pylint: disable=too-few-public-methods

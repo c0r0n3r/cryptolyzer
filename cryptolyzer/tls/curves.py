@@ -9,7 +9,8 @@ from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, TlsAlert
+from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class AnalyzerResultCurves(AnalyzerResultTls):  # pylint: disable=too-few-public-methods

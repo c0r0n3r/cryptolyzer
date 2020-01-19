@@ -6,7 +6,8 @@ from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_dh_params, DHParameter
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE, TlsAlert
+from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class AnalyzerResultDHParams(AnalyzerResultTls):

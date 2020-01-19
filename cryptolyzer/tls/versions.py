@@ -10,11 +10,11 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import (
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
-    TlsAlert,
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationRarelyUsed,
 )
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
