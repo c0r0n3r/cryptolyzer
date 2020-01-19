@@ -323,7 +323,7 @@ class TestSslClientHandshake(unittest.TestCase):
     def test_error_unparsable_response(self, _):
         with self.assertRaises(SecurityError) as context_manager:
             L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
-        self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_RESPONSE)
+        self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
     @mock.patch.object(L7ClientTlsBase, 'receive', side_effect=NotEnoughData(100))
     @mock.patch.object(

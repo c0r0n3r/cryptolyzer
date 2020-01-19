@@ -587,7 +587,7 @@ class TlsClient(object):
         self._l4_client.flush_buffer()
 
         if response_is_plain_text:
-            raise SecurityError(SecurityErrorType.PLAIN_TEXT_RESPONSE)
+            raise SecurityError(SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
         raise SecurityError(SecurityErrorType.UNPARSABLE_RESPONSE)
 

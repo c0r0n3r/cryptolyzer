@@ -17,7 +17,7 @@ class NetworkError(IOError):
 
 
 class SecurityErrorType(enum.IntEnum):
-    PLAIN_TEXT_RESPONSE = 1
+    PLAIN_TEXT_MESSAGE = 1
     UNPARSABLE_RESPONSE = 2
     UNSUPPORTED_SECURITY = 3
 
