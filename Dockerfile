@@ -1,6 +1,6 @@
 FROM python:3.8-slim
 
-MAINTAINER Szilárd Pfeiffer "coroner@pfeifferszilard.hu"
+LABEL maintainer Szilárd Pfeiffer "coroner@pfeifferszilard.hu"
 
 ADD . /usr/src/cryptolyzer
 WORKDIR /usr/src/cryptolyzer
