@@ -11,4 +11,4 @@ WORKDIR /usr/src/cryptolyzer/submodules/cryptoparser
 RUN pip3 --no-cache-dir install --force-reinstall .
 
 ENTRYPOINT ["cryptolyze"]
-CMD []
+CMD ["--help"]
