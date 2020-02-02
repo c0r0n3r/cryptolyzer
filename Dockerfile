@@ -9,5 +9,7 @@ ADD . /usr/src/cryptolyzer
 RUN pip3 --no-cache-dir install /usr/src/cryptolyzer \
  && pip3 --no-cache-dir install --force-reinstall /usr/src/cryptolyzer/submodules/cryptoparser 
 
+USER nobody
+
 ENTRYPOINT ["cryptolyze"]
 CMD ["--help"]
