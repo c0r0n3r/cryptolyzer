@@ -1,12 +1,15 @@
-FROM python:3
+FROM python:3.8-slim
 
-MAINTAINER Szilárd Pfeiffer "coroner@pfeifferszilard.hu"
+LABEL maintainer Szilárd Pfeiffer "coroner@pfeifferszilard.hu"
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ADD . /usr/src/cryptolyzer
-WORKDIR /usr/src/cryptolyzer
-RUN pip3 install .
-WORKDIR /usr/src/cryptolyzer/submodules/cryptoparser
-RUN pip3 install --force-reinstall .
+
+RUN pip3 install --no-cache-dir /usr/src/cryptolyzer \
+ && pip3 install --no-cache-dir --force-reinstall /usr/src/cryptolyzer/submodules/cryptoparser 
+
+USER nobody
 
 ENTRYPOINT ["cryptolyze"]
-CMD []
+CMD ["--help"]
