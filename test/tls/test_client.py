@@ -5,7 +5,6 @@ import imaplib
 import poplib
 import smtplib
 import socket
-import sys
 import unittest
 try:
     from unittest import mock
@@ -28,9 +27,38 @@ from cryptoparser.tls.subprotocol import (
 )
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
-from cryptolyzer.tls.client import L7ClientTlsBase, L7ClientTls, ClientIMAP, TlsAlert, SslError
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
+from cryptolyzer.tls.client import (
+    ClientIMAP,
+    L7ClientTls,
+    L7ClientTlsBase,
+    SslError,
+    SslHandshakeClientHelloAnyAlgorithm,
+    TlsAlert,
+    TlsHandshakeClientHelloAnyAlgorithm
+)
+from cryptolyzer.common.exception import (
+    NetworkError,
+    NetworkErrorType,
+    SecurityError,
+    SecurityErrorType
+)
+from cryptolyzer.tls.server import L7ServerTlsBase, L7ServerTls, TlsServerHandshake, SslServerHandshake
+from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.versions import AnalyzerVersions
+
+from .classes import L7ServerTlsTest
+
+
+class L7ServerTlsFatalResponse(TlsServerHandshake):
+    def _process_handshake_message(self, record, last_handshake_message_type):
+        self._send_alert(TlsAlertLevel.WARNING, TlsAlertDescription.USER_CANCELED)
+        raise StopIteration()
+
+
+class L7ServerSslPlainTextResponse(SslServerHandshake):
+    def _process_handshake_message(self, record, last_handshake_message_type):
+        self._l4_transfer.send(b'\x00\x01\x00\xff\x00')
+        raise StopIteration()
 
 
 class TestTlsAlert(unittest.TestCase):
@@ -49,9 +77,7 @@ class TestL7ClientBase(unittest.TestCase):
 
 
 class L7ClientTlsMock(L7ClientTls):
-    def _close(self):
-        super(L7ClientTlsMock, self)._close()
-        raise socket.timeout()
+    pass
 
 
 class TestL7ClientTlsBase(TestL7ClientBase):
@@ -71,27 +97,7 @@ class TestL7ClientTlsBase(TestL7ClientBase):
             self.get_result('tls', 'badssl.com', 443, ip='not.an.ip.address')
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_ADDRESS)
 
-    @unittest.skipIf(
-        sys.version_info < (3, 0),
-        'There is no ConnectionRefusedError in Python < 3.0'
-    )
-    def test_error_connection_refused(self):
-        with mock.patch.object(L7ClientTlsBase, '_setup_connection', side_effect=ConnectionRefusedError), \
-                self.assertRaises(NetworkError) as context_manager:
-            self.get_result('tls', 'badssl.com', 443)
-        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
-
-    @unittest.skipIf(
-        sys.version_info >= (3, 0),
-        'ConnectionRefusedError is raised instead of socket.error in Python >= 3.0'
-    )
-    def test_error_connection_refused_socket_error(self):
-        with mock.patch.object(L7ClientTlsBase, '_setup_connection', side_effect=socket.error), \
-                self.assertRaises(NetworkError) as context_manager:
-            self.get_result('tls', 'badssl.com', 443)
-        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
-
-    @mock.patch.object(L7ClientTlsBase, '_send', return_value=0)
+    @mock.patch.object(L4ClientTCP, '_send', return_value=0)
     def test_error_send(self, _):
         with self.assertRaises(NetworkError) as context_manager:
             self.get_result('tls', 'badssl.com', 443)
@@ -189,7 +195,8 @@ class TestClientIMAP(TestL7ClientBase):
         imaplib.IMAP4, 'xatom',
         return_value=[('BAD', 'command unknown or arguments invalid'), mock.DEFAULT]
     )
-    def test_error_starttls_error(self, _):
+    @mock.patch.object(imaplib.IMAP4, 'shutdown', side_effect=imaplib.IMAP4.error)
+    def test_error_starttls_error(self, _, __):
         self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, 10).versions, [])
 
     def test_imap_client(self):
@@ -248,7 +255,8 @@ class TestClientFTP(TestL7ClientBase):
         self.assertEqual(self.get_result('ftp', 'ftp.cert.dfn.de', None).versions, [])
 
     @mock.patch.object(ftplib.FTP, 'connect', return_value='534 Could Not Connect to Server - Policy Requires SSL')
-    def test_error_ftp_error_on_connect(self, _):
+    @mock.patch.object(ftplib.FTP, 'quit', side_effect=ftplib.error_perm)
+    def test_error_ftp_error_on_connect(self, _, __):
         self.assertEqual(self.get_result('ftp', 'ftp.cert.dfn.de', None).versions, [])
 
     @mock.patch.object(ftplib.FTP, 'quit', side_effect=ftplib.error_reply)
@@ -289,7 +297,9 @@ class TestTlsClientHandshake(TestL7ClientBase):
         TlsRecord, 'content_type', mock.PropertyMock(return_value=TlsContentType.ALERT)
     )
     def test_error_always_alert_wargning(self):
-        self.assertEqual(self.get_result('https', 'badssl.com', None).versions, [])
+        with self.assertRaises(TlsAlert) as context_manager:
+            self.get_result('https', 'badssl.com', None)
+        self.assertEqual(context_manager.exception.description, TlsAlertDescription.CLOSE_NOTIFY)
 
     @mock.patch.object(
         TlsRecord, 'content_type', mock.PropertyMock(return_value=TlsContentType.CHANGE_CIPHER_SPEC)
@@ -298,6 +308,34 @@ class TestTlsClientHandshake(TestL7ClientBase):
         with self.assertRaises(TlsAlert) as context_manager:
             self.assertEqual(self.get_result('https', 'badssl.com', None).versions, [])
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
+
+    @mock.patch.object(L7ServerTlsBase, '_get_handshake_class', return_value=L7ServerTlsFatalResponse)
+    def test_error_fatal_alert(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, timeout=1),
+            fallback_to_ssl=False
+        )
+        threaded_server.wait_for_server_listen()
+        l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.port)
+
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(TlsProtocolVersionFinal(TlsVersion.TLS1_2), 'localhost')
+        with self.assertRaises(NetworkError) as context_manager:
+            l7_client.do_tls_handshake(client_hello)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_RESPONSE)
+
+    @mock.patch.object(L7ServerTlsBase, '_get_handshake_class', return_value=L7ServerSslPlainTextResponse)
+    def test_error_plain_text_response(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, timeout=1),
+            fallback_to_ssl=False
+        )
+        threaded_server.wait_for_server_listen()
+        l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.port)
+
+        client_hello = SslHandshakeClientHelloAnyAlgorithm()
+        with self.assertRaises(SecurityError) as context_manager:
+            l7_client.do_ssl_handshake(client_hello)
+        self.assertEqual(context_manager.exception.error, SecurityErrorType.UNPARSABLE_MESSAGE)
 
 
 class TestSslClientHandshake(unittest.TestCase):
@@ -309,9 +347,9 @@ class TestSslClientHandshake(unittest.TestCase):
             L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CIPHER_ERROR)
 
-    @mock.patch.object(L7ClientTlsBase, 'receive', side_effect=NotEnoughData(100))
+    @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
     @mock.patch.object(
-        L7ClientTlsBase, 'buffer',
+        L4ClientTCP, 'buffer',
         mock.PropertyMock(side_effect=[
             b'',
             True,
@@ -325,9 +363,9 @@ class TestSslClientHandshake(unittest.TestCase):
             L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
         self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
-    @mock.patch.object(L7ClientTlsBase, 'receive', side_effect=NotEnoughData(100))
+    @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
     @mock.patch.object(
-        L7ClientTlsBase, 'buffer',
+        L4ClientTCP, 'buffer',
         mock.PropertyMock(side_effect=[
             b'',
             True,
@@ -341,7 +379,7 @@ class TestSslClientHandshake(unittest.TestCase):
             L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
-    @mock.patch.object(L7ClientTlsBase, 'receive', return_value=b'')
+    @mock.patch.object(L4ClientTCP, 'receive', return_value=b'')
     @mock.patch.object(
         SslRecord, 'parse_exact_size', side_effect=[
             SslRecord(SslHandshakeServerHello(b'', SslCipherKind)),
