@@ -8,14 +8,14 @@ As the project name CryptoLyzer implies, it is a cryptographic protocol analyzer
 application is the fact, that cryptography protocol analysis differs in many aspect from establishing a connection
 using a cryptographic protocol. Analysis is mostly testing where we trigger special and corner cases of the protocol
 and we also trying to establish connection with hardly supported, experimental, obsoleted or even deprecated mechanisms
-or algorithms which are may or may not supported by the latest or any version of an implementation of the cryptographic 
+or algorithms which are may or may not supported by the latest or any version of an implementation of the cryptographic
 protocol.
 
-As follows, it is neither a comprehensive nor a secure client/server implementation of any cryptographic protocol. On 
-the one hand analyzer implements only the absolutely necessary parts of the protocol to interact with servers. On the 
+As follows, it is neither a comprehensive nor a secure client/server implementation of any cryptographic protocol. On
+the one hand analyzer implements only the absolutely necessary parts of the protocol to interact with servers. On the
 other it may use completely insecure algorithms and mechanisms. It is not designed and contraindicated to use these
-client/server implementations establishing secure connections. If you are searching for proper cryptographic protocol 
-implementations, there are several existing wrappers and native implementations for Python (eg: M2Crypto, pyOpenSSL, 
+client/server implementations establishing secure connections. If you are searching for proper cryptographic protocol
+implementations, there are several existing wrappers and native implementations for Python (eg: M2Crypto, pyOpenSSL,
 Paramiko, ...).
 
 Quick start
@@ -47,12 +47,11 @@ or via DNF on Fedora based systems
     rpm --import http://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer:/dev/Fedora_31/repodata/repomd.xml.key
     dnf install python3-urllib3 python3-cryptography cryptoparser cryptolyzer
 
-or can be used via docker
+or can be used via Docker
 
 .. code-block:: sh
 
-    docker pull coroner/cryptolyzer
-    docker run coroner/cryptolyzer tls ciphers www.example.com
+    docker run --rm coroner/cryptolyzer tls ciphers www.example.com
 
 Development environment
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -61,9 +60,12 @@ If you want to setup a development environment, you are in need of `pipenv <http
 
 .. code-block:: sh
 
+    $ git clone https://gitlab.com/coroner/cryptolyzer
     $ cd cryptolyzer
     $ pipenv install --dev
+    $ pipenv run python setup.py develop
     $ pipenv shell
+    $ cryptolyze -h
 
 Generic Features
 ----------------
@@ -77,12 +79,12 @@ SSL/TLS
 * transport layer
 
   * Secure Socket Layer (SSL)
-  
+
     * `SSL 2.0 <https://tools.ietf.org/html/draft-hickman-netscape-ssl-00>`_
     * `SSL 3.0 <https://tools.ietf.org/html/rfc6101>`_
-  
+
   * Transport Layer Security (TLS)
-  
+
     * `TLS 1.0 <https://tools.ietf.org/html/rfc2246>`_
     * `TLS 1.1 <https://tools.ietf.org/html/rfc4346>`_
     * `TLS 1.2 <https://tools.ietf.org/html/rfc5246>`_
