@@ -8,8 +8,6 @@ stages:
 before_script:
 - git submodule sync --recursive
 - git submodule update --init --recursive
-- curl -O https://bootstrap.pypa.io/get-pip.py
-- python get-pip.py
 - pip install -r dev-requirements.txt
 
 pylint:
