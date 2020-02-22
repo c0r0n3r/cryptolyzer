@@ -10,6 +10,8 @@ import os
 from cryptoparser.common.base import Serializable
 from cryptoparser.common.utils import get_leaf_classes
 
+from cryptolyzer.tls.client import L7ClientTlsBase
+
 
 class ProtocolHandlerBase(object):
     @classmethod
@@ -55,17 +57,7 @@ class ProtocolHandlerBase(object):
 
     @classmethod
     @abc.abstractmethod
-    def get_default_scheme(cls):
-        raise NotImplementedError()
-
-    @classmethod
-    @abc.abstractmethod
     def get_analyzers(cls):
-        raise NotImplementedError()
-
-    @classmethod
-    @abc.abstractmethod
-    def get_clients(cls):
         raise NotImplementedError()
 
     @classmethod
@@ -87,20 +79,20 @@ class ProtocolHandlerBase(object):
             else:
                 kwargs['ip'] = uri.fragment
 
-        for client_class in cls.get_clients():
-            if client_class.get_scheme() == uri.scheme:
-                return client_class.from_scheme(**kwargs)
+        for analyzer_class in cls.get_analyzers():
+            for client_class in analyzer_class.get_clients():
+                if client_class.get_scheme() == uri.scheme:
+                    return client_class.from_scheme(**kwargs)
 
         raise NotImplementedError()
 
     def analyze(self, analyzer, uri):
-        analyzer = self._analyzer_from_name(analyzer)
         l7_client = self._l7_client_from_uri(uri)
         args, kwargs = self._get_analyzer_args()
         return analyzer.analyze(l7_client, *args, **kwargs)
 
     @classmethod
-    def _analyzer_from_name(cls, name):
+    def analyzer_from_name(cls, name):
         analyzer_list = [
             analyzer_class
             for analyzer_class in cls.get_analyzers()
@@ -129,6 +121,14 @@ class AnalyzerResultBase(Serializable):
 
 
 class AnalyzerTlsBase(object):
+    @classmethod
+    def get_clients(cls):
+        return list(get_leaf_classes(L7ClientTlsBase))
+
+    @classmethod
+    def get_default_scheme(cls):
+        return 'tls'
+
     @abc.abstractmethod
     def analyze(self, analyzable, protocol_version):
         raise NotImplementedError()

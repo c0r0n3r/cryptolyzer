@@ -4,13 +4,13 @@ import abc
 from collections import OrderedDict
 
 from cryptoparser.common.utils import get_leaf_classes
+
 from cryptoparser.tls.version import TlsProtocolVersionFinal
 from cryptoparser.tls.version import TlsVersion
 from cryptoparser.tls.version import SslProtocolVersion
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.result import AnalyzerResultTls
-from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.curves import AnalyzerCurves
@@ -21,10 +21,6 @@ from cryptolyzer.tls.versions import AnalyzerVersions
 
 class ProtocolHandlerTlsBase(ProtocolHandlerBase):
     @classmethod
-    def get_clients(cls):
-        return list(get_leaf_classes(L7ClientTlsBase))
-
-    @classmethod
     @abc.abstractmethod
     def _get_protocol_version(cls):
         raise NotImplementedError()
@@ -32,10 +28,6 @@ class ProtocolHandlerTlsBase(ProtocolHandlerBase):
     @classmethod
     def get_protocol(cls):
         return repr(cls._get_protocol_version())
-
-    @classmethod
-    def get_default_scheme(cls):
-        return 'tls'
 
     @classmethod
     def _get_analyzer_args(cls):
@@ -52,10 +44,10 @@ class ProtocolHandlerTlsExactVersion(ProtocolHandlerTlsBase):
 class ProtocolHandlerSsl2(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
-        return [
+        return (
             AnalyzerPublicKeys,
             AnalyzerCipherSuites,
-        ]
+        )
 
     @classmethod
     def _get_protocol_version(cls):
@@ -75,10 +67,10 @@ class ProtocolHandlerSsl3(ProtocolHandlerTlsExactVersion):
 class ProtocolHandlerTls10(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
-        return ProtocolHandlerSsl3.get_analyzers() + [
+        return ProtocolHandlerSsl3.get_analyzers() + (
             AnalyzerCurves,
             AnalyzerDHParams,
-        ]
+        )
 
     @classmethod
     def _get_protocol_version(cls):
@@ -98,9 +90,9 @@ class ProtocolHandlerTls11(ProtocolHandlerTlsExactVersion):
 class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
-        return ProtocolHandlerTls11.get_analyzers() + [
+        return ProtocolHandlerTls11.get_analyzers() + (
             AnalyzerSigAlgos,
-        ]
+        )
 
     @classmethod
     def _get_protocol_version(cls):
@@ -127,9 +119,9 @@ class AnalyzerResultTlsAllSupportedVersions(AnalyzerResultTls):
 class ProtocolHandlerTlsAllSupportedVersions(ProtocolHandlerTlsBase):
     @classmethod
     def get_analyzers(cls):
-        return ProtocolHandlerTls12.get_analyzers() + [
+        return ProtocolHandlerTls12.get_analyzers() + (
             AnalyzerVersions,
-        ]
+        )
 
     @classmethod
     def get_protocol(cls):
@@ -141,14 +133,14 @@ class ProtocolHandlerTlsAllSupportedVersions(ProtocolHandlerTlsBase):
 
     def analyze(self, analyzer, uri):
         base_analyze = super(ProtocolHandlerTlsAllSupportedVersions, self).analyze
-        analyzer_result = base_analyze(AnalyzerVersions.get_name(), uri)
-        if analyzer == AnalyzerVersions.get_name():
+        analyzer_result = base_analyze(AnalyzerVersions(), uri)
+        if isinstance(analyzer, AnalyzerVersions):
             return analyzer_result
 
         results = []
         target = None
         for protocol_handler_class in get_leaf_classes(ProtocolHandlerTlsExactVersion):
-            if analyzer in [analyzer_class.get_name() for analyzer_class in protocol_handler_class.get_analyzers()]:
+            if isinstance(analyzer, protocol_handler_class.get_analyzers()):
                 result = protocol_handler_class().analyze(analyzer, uri)
                 target = result.target
 
