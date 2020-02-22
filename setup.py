@@ -44,7 +44,7 @@ setup(
     },
     install_requires=install_requirements,
     extras_require={
-        ":python_version < '3'": ["enum34", "Mock", ],
+        ":python_version < '3'": ["enum34==1.1.6", "Mock", ],
 
         "test": test_requirements,
         "pep8": ["flake8", ],
