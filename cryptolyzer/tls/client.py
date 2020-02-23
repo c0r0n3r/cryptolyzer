@@ -361,10 +361,10 @@ class IMAP4(imaplib.IMAP4, object):
         self._timeout = timeout
         super(IMAP4, self).__init__(host, port)
 
-    def open(self, host='', port=imaplib.IMAP4_PORT):
-        self.host = host
-        self.port = port
-        self.sock = socket.create_connection((host, port), self._timeout)
+    def open(self, *args, **kwargs):  # pylint: disable=arguments-differ,signature-differs,unused-argument
+        self.host = args[0]
+        self.port = args[1]
+        self.sock = socket.create_connection((self.host, self.port), self._timeout)
         self.file = self.sock.makefile('rb')
 
 
