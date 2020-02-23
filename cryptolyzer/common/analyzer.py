@@ -18,10 +18,11 @@ class ProtocolHandlerBase(object):
     def import_plugins(cls):
         plugin_root_dir_parts = __file__.split(os.path.sep)[:-2]  # remove common/analyzer.py
         plugin_module_dir_parts = set()
-        for path in glob.iglob(os.path.sep.join(plugin_root_dir_parts + ['*', 'analyzer.py'])):
-            if path == __file__:
-                continue
-
+        plugin_paths = filter(
+            lambda path: path != __file__,
+            glob.iglob(os.path.sep.join(plugin_root_dir_parts + ['*', 'analyzer.py']))
+        )
+        for path in plugin_paths:
             plugin_path_parts = path.split(os.path.sep)[-3:-1]  # split plugin dirs
             for index in range(len(plugin_path_parts)):
                 plugin_module_dir_parts.add('.'.join(plugin_path_parts[:index + 1]))
