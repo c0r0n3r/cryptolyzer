@@ -17,10 +17,10 @@ from cryptoparser.tls.subprotocol import SslMessageType, SslHandshakeClientHello
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsContentType, TlsHandshakeType
 from cryptoparser.tls.subprotocol import TlsAlertLevel, TlsAlertDescription
-from cryptoparser.tls.extension import TlsExtensionServerName
-from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithm
-from cryptoparser.tls.extension import TlsExtensionECPointFormats, TlsECPointFormat
-from cryptoparser.tls.extension import TlsExtensionEllipticCurves, TlsNamedCurve
+from cryptoparser.tls.extension import TlsExtensions, TlsExtensionServerName
+from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithm, TlsSignatureAndHashAlgorithmVector
+from cryptoparser.tls.extension import TlsExtensionECPointFormats, TlsECPointFormat, TlsECPointFormatVector
+from cryptoparser.tls.extension import TlsExtensionEllipticCurves, TlsNamedCurve, TlsEllipticCurveVector
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
@@ -35,12 +35,12 @@ class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(list(TlsECPointFormat)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-            ]
+                TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
+                TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
+                TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
+            ])
         )
 
 
@@ -56,9 +56,9 @@ class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(_cipher_suites),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-            ]
+            ])
         )
 
 
@@ -71,8 +71,8 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthentica
         )
 
         self.extensions.extend([
-            TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-            TlsExtensionEllipticCurves(list(TlsNamedCurve)),
+            TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
+            TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
         ])
 
 
@@ -94,9 +94,9 @@ class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenti
         )
 
         self.extensions.extend([
-            TlsExtensionECPointFormats(list(TlsECPointFormat)),
-            TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-            TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
+            TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
+            TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
+            TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
         ])
 
 
@@ -118,9 +118,9 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloAuthenticationRarelyUsed, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(_cipher_suites),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-            ]
+            ])
         )
 
 
@@ -135,9 +135,9 @@ class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-            ]
+            ])
         )
 
 
@@ -153,12 +153,12 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(list(TlsECPointFormat)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-            ]
+                TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
+                TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
+                TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
+            ])
         )
 
 
@@ -167,7 +167,7 @@ class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloBasic, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
-            extensions=[]
+            extensions=TlsExtensions([])
         )
 
 
