@@ -1,11 +1,22 @@
 # -*- coding: utf-8 -*-
 
+import attr
+
 from cryptoparser.common.algorithm import Authentication
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensions
-from cryptoparser.tls.extension import TlsExtensionServerName, TlsNamedCurve, TlsExtensionEllipticCurves, TlsECPointFormatVector
-from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm, TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithmVector
+from cryptoparser.tls.extension import (
+    TlsECPointFormatVector,
+    TlsExtensionEllipticCurves,
+    TlsExtensionServerName,
+    TlsNamedCurve,
+)
+from cryptoparser.tls.extension import (
+    TlsExtensionSignatureAlgorithms,
+    TlsSignatureAndHashAlgorithm,
+    TlsSignatureAndHashAlgorithmVector,
+)
 from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointFormats, TlsEllipticCurveVector
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription, TlsHandshakeClientHello
 
@@ -15,11 +26,9 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.exception import TlsAlert
 
 
+@attr.s
 class AnalyzerResultSigAlgos(AnalyzerResultTls):
-    def __init__(self, target, sig_algos):
-        super(AnalyzerResultSigAlgos, self).__init__(target)
-
-        self.sig_algos = sig_algos
+    sig_algos = attr.ib()
 
 
 class AnalyzerSigAlgos(AnalyzerTlsBase):

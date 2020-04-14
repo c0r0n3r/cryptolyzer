@@ -2,6 +2,7 @@
 
 import copy
 import time
+import attr
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
@@ -20,13 +21,13 @@ from cryptolyzer.tls.client import (
 from cryptolyzer.tls.exception import TlsAlert
 
 
+@attr.s
 class AnalyzerResultCipherSuites(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
-    def __init__(self, target, cipher_suites, cipher_suite_preference, long_cipher_suite_list_intolerance):
-        super(AnalyzerResultCipherSuites, self).__init__(target)
-
-        self.cipher_suites = cipher_suites
-        self.cipher_suite_preference = cipher_suite_preference
-        self.long_cipher_suite_list_intolerance = long_cipher_suite_list_intolerance
+    cipher_suites = attr.ib(
+        validator=attr.validators.deep_iterable(attr.validators.instance_of((TlsCipherSuite, SslCipherKind)))
+    )
+    cipher_suite_preference = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)))
+    long_cipher_suite_list_intolerance = attr.ib(validator=attr.validators.instance_of(bool))
 
 
 class AnalyzerCipherSuites(AnalyzerTlsBase):

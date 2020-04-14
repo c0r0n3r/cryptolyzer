@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import attr
+
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
@@ -10,11 +12,9 @@ from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE
 from cryptolyzer.tls.exception import TlsAlert
 
 
+@attr.s
 class AnalyzerResultDHParams(AnalyzerResultTls):
-    def __init__(self, target, dhparams):
-        super(AnalyzerResultDHParams, self).__init__(target)
-
-        self.dhparams = dhparams
+    dhparams = attr.ib()
 
 
 class AnalyzerDHParams(AnalyzerTlsBase):

@@ -233,7 +233,9 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
             fallback_to_ssl=False
         )
         threaded_server.start()
-        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.port).cipher_suites, [])
+        self.assertEqual(
+            self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).cipher_suites, []
+        )
 
     def test_json(self):
         result = self.get_result('mozill.old.badssl.com', 443)

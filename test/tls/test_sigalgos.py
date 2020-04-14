@@ -70,7 +70,10 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         )
         threaded_server.start()
         protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_0)
-        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.port, protocol_version).sig_algos, [])
+        self.assertEqual(
+            self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port, protocol_version).sig_algos,
+            []
+        )
 
     def test_json(self):
         result = self.get_result('ecc256.badssl.com', 443)

@@ -9,6 +9,7 @@ except ImportError:
 
 from test.common.classes import TestThreaderServer
 
+from cryptoparser.tls.record import TlsRecord
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
@@ -59,7 +60,7 @@ class L7ServerTlsTest(TestThreaderServer):
 
 class TlsServerPlainTextResponse(TlsServerHandshake):
     def _process_handshake_message(self, record, last_handshake_message_type):
-        self._l4_transfer.send(
+        self.l4_transfer.send(
             b'<!DOCTYPE html><html><body>Typical plain text response to TLS client hello message</body></html>'
         )
 
@@ -68,3 +69,18 @@ class L7ServerTlsPlainTextResponse(L7ServerTls):
     @staticmethod
     def _get_handshake_class(l4_transfer, fallback_to_ssl):
         return TlsServerPlainTextResponse
+
+
+class TlsServerAlert(TlsServerHandshake):
+    def _get_alert_message(self):
+        raise NotImplementedError()
+
+    def _process_handshake_message(self, record, last_handshake_message_type):
+        handshake_message = self._get_alert_message()
+        self.l4_transfer.send(TlsRecord([handshake_message, handshake_message]).compose())
+
+
+class L7ServerTlsAlert(L7ServerTls):
+    @staticmethod
+    def _get_handshake_class(l4_transfer, fallback_to_ssl):
+        return TlsServerAlert

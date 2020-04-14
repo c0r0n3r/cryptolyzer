@@ -57,7 +57,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         )
         threaded_server.start()
 
-        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.port).dhparams, [])
+        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).dhparams, [])
 
     def test_no_dhe_support(self):
         result = self.get_result('static-rsa.badssl.com', 443)

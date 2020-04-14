@@ -4,6 +4,7 @@ import abc
 import socket
 import string
 import six
+import attr
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.common.utils import get_leaf_classes
@@ -12,16 +13,24 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType, Securit
 from cryptolyzer.common.utils import resolve_address
 
 
-@six.add_metaclass(abc.ABCMeta)
+@attr.s
 class L4TransferBase(object):
-    def __init__(self, address, port, timeout=None, ip=None):
-        self._address = address
-        self._port = port
-        self._socket = None
-        self._timeout = self.get_default_timeout() if timeout is None else timeout
-        self._buffer = bytearray()
+    address = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    port = attr.ib(validator=attr.validators.instance_of(int))
+    timeout = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((int, float))))
+    ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(six.string_types)))
+    _socket = attr.ib(
+        init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(socket.socket))
+    )
+    _buffer = attr.ib(init=False, default=bytearray(), validator=attr.validators.instance_of(bytearray))
+    _family = attr.ib(init=False)
 
-        self._family, self._ip = resolve_address(address, port, ip)
+    def __attrs_post_init__(self):
+        if self.timeout is None:
+            self.timeout = self.get_default_timeout()
+        self._socket = None
+        self._buffer = bytearray()
+        self._family, self.ip = resolve_address(self.address, self.port, self.ip)
 
     def _close(self):
         try:
@@ -59,7 +68,7 @@ class L4TransferBase(object):
 
         if _socket:
             self._socket = _socket
-            self._ip, self._port = _socket.getsockname()[0:2]
+            self.ip, self.port = _socket.getsockname()[0:2]
         else:
             self._init_connection()
 
@@ -73,6 +82,7 @@ class L4TransferBase(object):
         raise NotImplementedError()
 
 
+@attr.s
 class L4TransferTCP(L4TransferBase):
     def send(self, sendable_bytes):
         total_sent_byte_num = 0
@@ -103,7 +113,7 @@ class L4TransferTCP(L4TransferBase):
 class L4ClientTCP(L4TransferTCP):
     def _init_connection(self):
         try:
-            self._socket = socket.create_connection((self._ip, self._port), self._timeout)
+            self._socket = socket.create_connection((self.ip, self.port), self.timeout)
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, (socket.error, socket.timeout)):
                 raise NetworkError(NetworkErrorType.NO_CONNECTION)
@@ -115,12 +125,11 @@ class L4ClientTCP(L4TransferTCP):
         return 5
 
 
+@attr.s
 class L4ServerTCP(L4TransferTCP):
-    def __init__(self, address, port, timeout=None, ip=None, backlog=1):  # pylint: disable=too-many-arguments
-        super(L4ServerTCP, self).__init__(address, port, timeout, ip)
-
-        self._server_socket = None
-        self.backlog = backlog
+    backlog = attr.ib(default=1, validator=attr.validators.instance_of(int))
+    _server_socket = attr.ib(init=False, default=None)
+    bind_port = attr.ib(init=False, default=None)
 
     def __del__(self):
         if self._server_socket is not None:
@@ -130,8 +139,8 @@ class L4ServerTCP(L4TransferTCP):
         try:
             self._server_socket = socket.socket(self._family, socket.SOCK_STREAM)
             self._server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self._server_socket.settimeout(self._timeout)
-            self._server_socket.bind((self._ip, self._port))
+            self._server_socket.settimeout(self.timeout)
+            self._server_socket.bind((self.ip, self.port))
             self._server_socket.listen(self.backlog)
         except KeyboardInterrupt:
             raise NetworkError(NetworkErrorType.NO_RESPONSE)
@@ -140,64 +149,50 @@ class L4ServerTCP(L4TransferTCP):
         except (OSError, socket.error):
             raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
+        self.bind_port = self._server_socket.getsockname()[1]
+
     def accept(self):
         self._socket, _ = self._server_socket.accept()
-
-    @property
-    def port(self):
-        if self._port:
-            return self._port
-
-        if not self._server_socket:
-            raise NotImplementedError()
-
-        return self._server_socket.getsockname()[1]
 
     @classmethod
     def get_default_timeout(cls):
         return None
 
 
+@attr.s
 class L7TransferBase(object):
-    def __init__(self, address, port=None, timeout=None, ip=None):
-        self._address = address
-        self._port = self.get_default_port() if port is None else port
-        self._family, self._ip = resolve_address(address, self._port, ip)
-        self._timeout = timeout
+    address = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    port = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
+    timeout = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((float, int))))
+    ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(six.string_types)))
+    _family = attr.ib(init=False)
+    l4_transfer = attr.ib(
+        init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(L4TransferBase))
+    )
 
-        self._l4_transfer = None
+    def __attrs_post_init__(self):
+        if self.port is None:
+            self.port = self.get_default_port()
 
-    @property
-    def address(self):
-        return self._address
-
-    @property
-    def ip(self):
-        return self._ip
-
-    @property
-    def port(self):
-        if self._port == 0:
-            return self._l4_transfer.port
-
-        return self._port
+        self._family, self.ip = resolve_address(self.address, self.port, self.ip)
+        self.l4_transfer = None
 
     def send(self, sendable_bytes):
-        return self._l4_transfer.send(sendable_bytes)
+        return self.l4_transfer.send(sendable_bytes)
 
     def receive(self, receivable_byte_num):
-        self._l4_transfer.receive(receivable_byte_num)
+        self.l4_transfer.receive(receivable_byte_num)
 
     def flush_buffer(self, byte_num=None):
-        self._l4_transfer.flush_buffer(byte_num)
+        self.l4_transfer.flush_buffer(byte_num)
 
     @property
     def buffer(self):
-        return self._l4_transfer.buffer
+        return self.l4_transfer.buffer
 
     @property
     def buffer_is_plain_text(self):
-        return self._l4_transfer.buffer_is_plain_text
+        return self.l4_transfer.buffer_is_plain_text
 
     @classmethod
     def get_supported_schemes(cls):
@@ -208,7 +203,7 @@ class L7TransferBase(object):
         for transfer_class in get_leaf_classes(cls):
             if transfer_class.get_scheme() == scheme:
                 port = transfer_class.get_default_port() if port is None else port
-                return transfer_class(address, port, timeout, ip)
+                return transfer_class(address=address, port=port, timeout=timeout, ip=ip)
 
         raise ValueError()
 
@@ -234,6 +229,6 @@ class L7TransferBase(object):
             raise
 
     def _close_connection(self):
-        if self._l4_transfer:
-            self._l4_transfer.close()
-            self._l4_transfer = None
+        if self.l4_transfer:
+            self.l4_transfer.close()
+            self.l4_transfer = None

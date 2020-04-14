@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import enum
+import six
+import attr
 
 from cryptography.hazmat.backends import default_backend as cryptography_default_backend
 import cryptography.exceptions
 import cryptography.hazmat.primitives.asymmetric.ec as cryptography_ec
 import cryptography.hazmat.primitives.asymmetric.dh as cryptography_dh
 import cryptography.hazmat.primitives.asymmetric.x25519 as cryptography_x25519
-from cryptography.hazmat.primitives.asymmetric.dh import DHParameterNumbers
 
 from cryptoparser.common.base import Vector, VectorParamNumeric, Serializable
 from cryptoparser.common.parse import ParserBinary
@@ -17,19 +18,31 @@ from cryptoparser.tls.subprotocol import TlsECCurveType
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 
 
+@attr.s(eq=False)
+class DHParamNumbers(object):
+    p = attr.ib(validator=attr.validators.instance_of(six.integer_types))  # pylint: disable=invalid-name
+    g = attr.ib(validator=attr.validators.instance_of(six.integer_types))  # pylint: disable=invalid-name
+    q = attr.ib(  # pylint: disable=invalid-name
+        default=None, validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+    )
+
+    def __eq__(self, other):
+        return self.p == other.p and self.g == other.g and self.q == other.q
+
+
+@attr.s(eq=False)
 class DHParamWellKnown(object):
-    def __init__(self, dh_param_numbers, name, source):
-        self.dh_param_numbers = dh_param_numbers
-        self.name = name
-        self.source = source
+    dh_param_numbers = attr.ib(validator=attr.validators.instance_of(DHParamNumbers))
+    name = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    source = attr.ib(validator=attr.validators.instance_of(six.string_types))
 
     def __eq__(self, other):
         return self.dh_param_numbers == other.dh_param_numbers
 
 
-class WellKnownDHParams(Serializable, enum.Enum):
+class WellKnownDHParams(enum.Enum):
     RFC3526_1536_BIT_MODP_GROUP = DHParamWellKnown(
-        dh_param_numbers=DHParameterNumbers(
+        dh_param_numbers=DHParamNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -46,7 +59,7 @@ class WellKnownDHParams(Serializable, enum.Enum):
         source='RFC3526',
     )
     RFC3526_2048_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParameterNumbers(
+        DHParamNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -66,7 +79,7 @@ class WellKnownDHParams(Serializable, enum.Enum):
         source='RFC3526',
     )
     RFC3526_3072_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParameterNumbers(
+        DHParamNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -91,7 +104,7 @@ class WellKnownDHParams(Serializable, enum.Enum):
         source='RFC3526',
     )
     RFC3526_4096_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParameterNumbers(
+        DHParamNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -122,7 +135,7 @@ class WellKnownDHParams(Serializable, enum.Enum):
         source='RFC3526',
     )
     RFC3526_6144_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParameterNumbers(
+        DHParamNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1 29024E08' +
                 '8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD EF9519B3 CD3A431B' +
@@ -159,7 +172,7 @@ class WellKnownDHParams(Serializable, enum.Enum):
         source='RFC3526',
     )
     RFC3526_8192_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParameterNumbers(
+        DHParamNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -211,7 +224,7 @@ class WellKnownDHParams(Serializable, enum.Enum):
         source='RFC3526',
     )
     RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP = DHParamWellKnown(  # pylint: disable=invalid-name
-        DHParameterNumbers(
+        DHParamNumbers(
             p=int((
                 'B10B8F96 A080E01D DE92DE5E AE5D54EC 52C99FBC FB06A3C6' +
                 '9A6A9DCA 52D23B61 6073E286 75A23D18 9838EF1E 2EE652C0' +
@@ -236,7 +249,7 @@ class WellKnownDHParams(Serializable, enum.Enum):
         source='RFC5114',
     )
     RFC5114_2048_BIT_MODP_GROUP_WITH_224_BIT_PRIME_ORDER_SUBGROUP = DHParamWellKnown(  # pylint: disable=invalid-name
-        DHParameterNumbers(
+        DHParamNumbers(
             p=int((
                 'AD107E1E 9123A9D0 D660FAA7 9559C51F A20D64E5 683B9FD1' +
                 'B54B1597 B61D0A75 E6FA141D F95A56DB AF9A3C40 7BA1DF15' +
@@ -272,7 +285,7 @@ class WellKnownDHParams(Serializable, enum.Enum):
         source='RFC5114',
     )
     RFC5114_2048_BIT_MODP_GROUP_WITH_256_BIT_PRIME_ORDER_SUBGROUP = DHParamWellKnown(  # pylint: disable=invalid-name
-        DHParameterNumbers(
+        DHParamNumbers(
             p=int((
                 '87A8E61D B4B6663C FFBBD19C 65195999 8CEEF608 660DD0F2' +
                 '5D2CEED4 435E3B00 E00DF8F1 D61957D4 FAF7DF45 61B2AA30' +
@@ -307,13 +320,6 @@ class WellKnownDHParams(Serializable, enum.Enum):
         name='2048-bit MODP Group with 256-bit Prime Order Subgroup',
         source='RFC5114',
     )
-
-    def _asdict(self):
-        result = {
-            'name': self.value.name,  # pylint: disable=no-member
-            'source': self.value.source,  # pylint: disable=no-member
-        }
-        return result
 
 
 class TlsDHParamVector(Vector):  # pylint: disable=too-many-ancestors
@@ -375,7 +381,14 @@ def parse_ecdh_params(param_bytes):
     return parser['named_curve'], public_key
 
 
+@attr.s
 class DHParameter(Serializable):
+    public_key = attr.ib(validator=attr.validators.instance_of(cryptography_dh.DHPublicKey))
+    reused = attr.ib(validator=attr.validators.instance_of(bool))
+    well_known = attr.ib(init=False, validator=attr.validators.instance_of(bool))
+    prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
+    safe_prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
+
     def _analyze_prime(self):
         codes = cryptography_default_backend()._ffi.new("int[]", 1)  # pylint: disable=protected-access
         dh_check_func = cryptography_default_backend()._lib.Cryptography_DH_check  # pylint: disable=protected-access
@@ -389,12 +402,9 @@ class DHParameter(Serializable):
             self.prime = None
             self.safe_prime = None
 
-    def __init__(self, public_key, reused):
-        self.public_key = public_key
-        self.reused = reused
-
+    def __attrs_post_init__(self):
         for well_know_public_number in WellKnownDHParams:
-            if well_know_public_number.value.dh_param_numbers == public_key.parameters().parameter_numbers():
+            if well_know_public_number.value.dh_param_numbers == self.public_key.parameters().parameter_numbers():
                 self.well_known = well_know_public_number
                 self.prime = True
                 self.safe_prime = True

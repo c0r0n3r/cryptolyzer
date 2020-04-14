@@ -115,4 +115,4 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
             fallback_to_ssl=False
         )
         threaded_server.start()
-        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.port).versions, [])
+        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions, [])

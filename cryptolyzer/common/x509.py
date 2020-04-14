@@ -8,6 +8,8 @@ import ssl
 from collections import OrderedDict
 from six import iteritems
 
+import attr
+
 import cryptography
 import cryptography.x509 as cryptography_x509  # pylint: disable=import-error
 import cryptography.hazmat.primitives.asymmetric.rsa as cryptography_rsa
@@ -77,6 +79,7 @@ class PublicKey(Serializable):
         raise NotImplementedError()
 
 
+@attr.s(eq=False)
 class PublicKeyX509(PublicKey):
     _EV_OIDS_BY_CA = {
         'A-Trust': ('1.2.40.0.17.1.22', ),
@@ -132,8 +135,7 @@ class PublicKeyX509(PublicKey):
         'WoSign': ('1.3.6.1.4.1.36305.2', ),
     }
 
-    def __init__(self, certificate):
-        self._certificate = certificate
+    _certificate = attr.ib()
 
     def __eq__(self, other):
         self_in_der_format = self._certificate.public_key().public_bytes(

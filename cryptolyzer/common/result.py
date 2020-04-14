@@ -1,41 +1,33 @@
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict
+import six
+import attr
 
 from cryptoparser.common.base import Serializable
 
 
+@attr.s
 class AnalyzerTarget(Serializable):
-    def __init__(self, scheme, address, ip, port):
-        self.scheme = scheme
-        self.address = address
-        self.ip = ip
-        self.port = port
-
-    def _asdict(self):
-        return OrderedDict([
-            ('scheme', self.scheme),
-            ('address', self.address),
-            ('ip', self.ip),
-            ('port', self.port),
-        ])
+    scheme = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    address = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    ip = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    port = attr.ib(validator=attr.validators.instance_of(int))
 
 
+@attr.s
 class AnalyzerTargetTls(AnalyzerTarget):
-    def __init__(self, scheme, address, ip, port, proto_version=None):  # pylint: disable=too-many-arguments
-        super(AnalyzerTargetTls, self).__init__(scheme, address, ip, port)
-
-        self.proto_version = proto_version
+    proto_version = attr.ib(default=None)
 
     @staticmethod
     def from_l7_client(l7_client, proto_version=None):
         return AnalyzerTargetTls(l7_client.get_scheme(), l7_client.address, l7_client.ip, l7_client.port, proto_version)
 
 
+@attr.s
 class AnalyzerResultBase(Serializable):
-    def __init__(self, target):
-        self.target = target
+    target = attr.ib()
 
 
+@attr.s
 class AnalyzerResultTls(AnalyzerResultBase):
     pass

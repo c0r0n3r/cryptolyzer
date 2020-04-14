@@ -7,11 +7,14 @@ from test.common.classes import TestThreaderServer
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsECPointFormat,
+    TlsECPointFormatVector,
+    TlsEllipticCurveVector,
+    TlsExtensions,
     TlsExtensionECPointFormats,
     TlsExtensionEllipticCurves,
     TlsNamedCurve,
 )
-from cryptoparser.tls.subprotocol import TlsHandshakeClientHello, TlsAlertDescription
+from cryptoparser.tls.subprotocol import TlsHandshakeClientHello, TlsCipherSuiteVector, TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.ja3.generate import AnalyzerGenerate
@@ -40,7 +43,7 @@ class TestJA3Generate(unittest.TestCase):
 
         l7_client = L7ClientTls(
             analyzer_thread.l7_server.address,
-            analyzer_thread.l7_server.port,
+            analyzer_thread.l7_server.l4_transfer.bind_port,
             ip=analyzer_thread.l7_server.ip
         )
         try:
@@ -55,7 +58,7 @@ class TestJA3Generate(unittest.TestCase):
         return analyzer_thread.result
 
     def test_tag_minimal(self):
-        hello_message = TlsHandshakeClientHello([TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5])
+        hello_message = TlsHandshakeClientHello(TlsCipherSuiteVector([TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5]))
         result = self.get_result(hello_message)
         self.assertEqual(result.target, '771,3,,,')
 
@@ -63,10 +66,14 @@ class TestJA3Generate(unittest.TestCase):
         hello_message = TlsHandshakeClientHello(
             protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2),
             cipher_suites=[TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5],
-            extensions=[
-                TlsExtensionECPointFormats([TlsECPointFormat.UNCOMPRESSED]),
-                TlsExtensionEllipticCurves([TlsNamedCurve.SECT163K1]),
-            ]
+            extensions=TlsExtensions([
+                TlsExtensionECPointFormats(TlsECPointFormatVector([
+                    TlsECPointFormat.UNCOMPRESSED,
+                ])),
+                TlsExtensionEllipticCurves(TlsEllipticCurveVector([
+                    TlsNamedCurve.SECT163K1,
+                ])),
+            ])
         )
         result = self.get_result(hello_message)
         self.assertEqual(result.target, '771,3,11-10,1,0')
@@ -74,14 +81,20 @@ class TestJA3Generate(unittest.TestCase):
     def test_tag_two_element_lists(self):
         hello_message = TlsHandshakeClientHello(
             protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2),
-            cipher_suites=[
+            cipher_suites=TlsCipherSuiteVector([
                 TlsCipherSuite.TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA,
                 TlsCipherSuite.TLS_DH_DSS_WITH_DES_CBC_SHA,
-            ],
-            extensions=[
-                TlsExtensionECPointFormats([TlsECPointFormat.ANSIX962_COMPRESSED_PRIME, TlsECPointFormat.UNCOMPRESSED]),
-                TlsExtensionEllipticCurves([TlsNamedCurve.SECT163R2, TlsNamedCurve.SECT163R1]),
-            ]
+            ]),
+            extensions=TlsExtensions([
+                TlsExtensionECPointFormats(TlsECPointFormatVector([
+                    TlsECPointFormat.ANSIX962_COMPRESSED_PRIME,
+                    TlsECPointFormat.UNCOMPRESSED,
+                ])),
+                TlsExtensionEllipticCurves(TlsEllipticCurveVector([
+                    TlsNamedCurve.SECT163R2,
+                    TlsNamedCurve.SECT163R1,
+                ])),
+            ])
         )
         result = self.get_result(hello_message)
         self.assertEqual(result.target, '771,13-12,11-10,3-2,1-0')

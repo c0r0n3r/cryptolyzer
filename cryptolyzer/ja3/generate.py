@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
+import six
+import attr
 
 from cryptoparser.common.utils import get_leaf_classes
 from cryptoparser.tls.subprotocol import TlsHandshakeType
@@ -11,12 +13,13 @@ from cryptolyzer.common.result import AnalyzerResultBase
 from cryptolyzer.tls.server import L7ServerTlsBase
 
 
+@attr.s
 class AnalyzerResultGenerate(AnalyzerResultBase):
-    def __init__(self, target):
-        super(AnalyzerResultGenerate, self).__init__(target)
+    target_hash = attr.ib(init=False, validator=attr.validators.instance_of(six.string_types))
 
+    def __attrs_post_init__(self):
         tag_hash = hashlib.md5()
-        tag_hash.update(target.encode('ascii'))
+        tag_hash.update(self.target.encode('ascii'))
         self.target_hash = tag_hash.hexdigest()
 
 

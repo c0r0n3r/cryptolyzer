@@ -38,7 +38,7 @@ class TestL7ServerBase(unittest.TestCase):
 
     @staticmethod
     def create_client(client_class, l7_server):
-        return client_class(l7_server.address, l7_server.port, ip=l7_server.ip)
+        return client_class(l7_server.address, l7_server.l4_transfer.bind_port, ip=l7_server.ip)
 
     def _assert_on_more_data(self, client):
         with self.assertRaises(NotEnoughData) as context_manager:

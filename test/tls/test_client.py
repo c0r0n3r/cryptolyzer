@@ -46,7 +46,7 @@ from cryptolyzer.tls.server import L7ServerTlsBase, L7ServerTls, TlsServerHandsh
 from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.versions import AnalyzerVersions
 
-from .classes import L7ServerTlsTest
+from .classes import L7ServerTlsTest, L7ServerTlsAlert, TlsServerAlert
 
 
 class L7ServerTlsFatalResponse(TlsServerHandshake):
@@ -57,7 +57,7 @@ class L7ServerTlsFatalResponse(TlsServerHandshake):
 
 class L7ServerSslPlainTextResponse(SslServerHandshake):
     def _process_handshake_message(self, record, last_handshake_message_type):
-        self._l4_transfer.send(b'\x00\x01\x00\xff\x00')
+        self.l4_transfer.send(b'\x00\x01\x00\xff\x00')
         raise StopIteration()
 
 
@@ -106,6 +106,10 @@ class TestL7ClientTlsBase(TestL7ClientBase):
     def test_error_unsupported_scheme(self):
         with self.assertRaises(ValueError):
             self.get_result('unsupported_scheme', 'badssl.com', 443)
+
+    def test_default_port(self):
+        l7_client = L7ClientTlsMock('badssl.com')
+        self.assertEqual(l7_client.port, 443)
 
     def test_error_connection_timeout_on_close(self):
         analyzer = AnalyzerVersions()
@@ -289,17 +293,19 @@ class TestClientDoH(TestL7ClientBase):
 
 class TestTlsClientHandshake(TestL7ClientBase):
     @mock.patch.object(
-        TlsRecord, 'messages', mock.PropertyMock(
-            return_value=[TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY)]
+        TlsServerAlert, '_get_alert_message', mock.PropertyMock(
+            return_value=TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.UNEXPECTED_MESSAGE)
         )
     )
-    @mock.patch.object(
-        TlsRecord, 'content_type', mock.PropertyMock(return_value=TlsContentType.ALERT)
-    )
     def test_error_always_alert_wargning(self):
-        with self.assertRaises(TlsAlert) as context_manager:
-            self.get_result('https', 'badssl.com', None)
-        self.assertEqual(context_manager.exception.description, TlsAlertDescription.CLOSE_NOTIFY)
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsAlert('localhost', 0, timeout=0.2),
+            fallback_to_ssl=False
+        )
+        threaded_server.start()
+
+        result = self.get_result('https', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(
         TlsRecord, 'content_type', mock.PropertyMock(return_value=TlsContentType.CHANGE_CIPHER_SPEC)
@@ -315,8 +321,8 @@ class TestTlsClientHandshake(TestL7ClientBase):
             L7ServerTls('localhost', 0, timeout=0.2),
             fallback_to_ssl=False
         )
-        threaded_server.start()
-        l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.port)
+        threaded_server.wait_for_server_listen()
+        l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         client_hello = TlsHandshakeClientHelloAnyAlgorithm(TlsProtocolVersionFinal(TlsVersion.TLS1_2), 'localhost')
         with self.assertRaises(NetworkError) as context_manager:
@@ -330,7 +336,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
             fallback_to_ssl=False
         )
         threaded_server.start()
-        l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.port)
+        l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         client_hello = SslHandshakeClientHelloAnyAlgorithm()
         with self.assertRaises(SecurityError) as context_manager:
