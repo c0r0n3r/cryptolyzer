@@ -15,6 +15,14 @@ from cryptoparser.common.algorithm import Authentication, KeyExchange
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
+from cryptoparser.tls.rdp import (
+    TPKT,
+    COTPConnectionConfirm,
+    COTPConnectionRequest,
+    RDPProtocol,
+    RDPNegotiationRequest,
+    RDPNegotiationResponse,
+)
 from cryptoparser.tls.subprotocol import SslMessageType, SslHandshakeClientHello
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsContentType, TlsHandshakeType
@@ -465,6 +473,38 @@ class ClientFTP(L7ClientStartTlsBase):
 
 
 @attr.s
+class ClientRDP(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'rdp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 3389
+
+    def _init_connection(self):
+        try:
+            super(ClientRDP, self)._init_connection()
+            neg_req = RDPNegotiationRequest([], [RDPProtocol.SSL, ])
+            cotp = COTPConnectionRequest(src_ref=0, user_data=neg_req.compose())
+            tpkt = TPKT(version=3, message=cotp.compose())
+            request_bytes = tpkt.compose()
+            self.l4_transfer.send(request_bytes)
+
+            self.l4_transfer.receive(len(request_bytes))
+            tpkt = TPKT.parse_exact_size(self.l4_transfer.buffer)
+            cotp = COTPConnectionConfirm.parse_exact_size(tpkt.message)
+            neg_rsp = RDPNegotiationResponse.parse_exact_size(cotp.user_data)
+            self.l4_transfer.flush_buffer(len(request_bytes))
+        except socket.timeout:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        except (InvalidValue, InvalidType):
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+        if RDPProtocol.SSL not in neg_rsp.protocol:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+
 class TlsClient(object):
     _last_processed_message_type = attr.ib(init=False, default=None)
     server_messages = attr.ib(init=False, default={})
