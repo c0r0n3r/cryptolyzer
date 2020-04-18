@@ -108,7 +108,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
         supported_protocols.extend(supported_tls_protocols)
 
         return AnalyzerResultVersions(
-            AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
+            AnalyzerTargetTls.from_l7_client(analyzable, None),
             supported_protocols,
             alerts_unsupported_tls_version
         )

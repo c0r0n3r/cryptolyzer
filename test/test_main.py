@@ -22,6 +22,8 @@ import test.tls.test_versions
 
 import six
 
+from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
+
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 
@@ -84,7 +86,9 @@ class TestMain(unittest.TestCase):
     def test_analyzer_output_tls(self):
         self.assertEqual(
             self._get_test_analyzer_result('tls1', 'ciphers', 'rc4-md5.badssl.com'),
-            test.tls.test_ciphers.TestTlsCiphers.get_result('rc4-md5.badssl.com', 443).as_json() + '\n'
+            test.tls.test_ciphers.TestTlsCiphers.get_result(
+                'rc4-md5.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)
+            ).as_json() + '\n'
         )
         simple_result = test.tls.test_ciphers.TestTlsCiphers.get_result('tls-v1-0.badssl.com', 1010)
         del simple_result.target
@@ -94,7 +98,9 @@ class TestMain(unittest.TestCase):
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'curves', 'ecc256.badssl.com:443'),
-            test.tls.test_curves.TestTlsCurves.get_result('ecc256.badssl.com', 443).as_json() + '\n',
+            test.tls.test_curves.TestTlsCurves.get_result(
+                'ecc256.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            ).as_json() + '\n',
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'dhparams', 'dh2048.badssl.com'),
