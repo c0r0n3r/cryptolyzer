@@ -100,10 +100,6 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertEqual(result.curves, [TlsNamedCurve.SECP256R1, ])
         self.assertTrue(result.extension_supported)
 
-        result = self.get_result('neptun.uni-obuda.hu', 443)
-        self.assertEqual(result.curves, [TlsNamedCurve.SECP256R1, ])
-        self.assertFalse(result.extension_supported)
-
     def test_no_ec_support(self):
         result = self.get_result('static-rsa.badssl.com', 443)
         self.assertEqual(len(result.curves), 0)

@@ -98,7 +98,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
     def test_long_cipher_suite_list_intolerance(self):
         self.assertEqual(
             self.get_result('secure.simplepay.hu', 443).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
         )
         self.assertEqual(
             self.get_result('www.aegon.hu', 443).versions,

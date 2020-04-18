@@ -43,7 +43,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparams[0].well_known, None)
 
     def test_weel_known_prime(self):
-        result = self.get_result('www.owasp.org', 443)
+        result = self.get_result('ubuntuforums.org', 443)
         self.assertEqual(len(result.dhparams), 1)
         self.assertEqual(result.dhparams[0].key_size, 2048)
         self.assertEqual(result.dhparams[0].prime, True)
