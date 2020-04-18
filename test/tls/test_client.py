@@ -312,10 +312,10 @@ class TestTlsClientHandshake(TestL7ClientBase):
     @mock.patch.object(L7ServerTlsBase, '_get_handshake_class', return_value=L7ServerTlsFatalResponse)
     def test_error_fatal_alert(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, timeout=1),
+            L7ServerTls('localhost', 0, timeout=0.2),
             fallback_to_ssl=False
         )
-        threaded_server.wait_for_server_listen()
+        threaded_server.start()
         l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.port)
 
         client_hello = TlsHandshakeClientHelloAnyAlgorithm(TlsProtocolVersionFinal(TlsVersion.TLS1_2), 'localhost')
@@ -326,10 +326,10 @@ class TestTlsClientHandshake(TestL7ClientBase):
     @mock.patch.object(L7ServerTlsBase, '_get_handshake_class', return_value=L7ServerSslPlainTextResponse)
     def test_error_plain_text_response(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, timeout=1),
+            L7ServerTls('localhost', 0, timeout=0.2),
             fallback_to_ssl=False
         )
-        threaded_server.wait_for_server_listen()
+        threaded_server.start()
         l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.port)
 
         client_hello = SslHandshakeClientHelloAnyAlgorithm()

@@ -32,7 +32,7 @@ class TestL7ServerBase(unittest.TestCase):
 
     @staticmethod
     def create_server(fallback_to_ssl):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=1), fallback_to_ssl)
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=0.2), fallback_to_ssl=fallback_to_ssl)
         threaded_server.wait_for_server_listen()
         return threaded_server
 
