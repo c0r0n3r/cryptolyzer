@@ -17,7 +17,7 @@ from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 
-from .classes import TestTlsCases
+from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
 class TestSslCiphers(unittest.TestCase):
@@ -227,8 +227,12 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         ]))
 
     def test_plain_text_response(self):
-        self.assertEqual(self.get_result('ptt.cc', 443).cipher_suites, [])
-        self.assertEqual(self.get_result('cplusplus.com', 443).cipher_suites, [])
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
+            fallback_to_ssl=False
+        )
+        threaded_server.start()
+        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.port).cipher_suites, [])
 
     def test_json(self):
         result = self.get_result('mozill.old.badssl.com', 443)

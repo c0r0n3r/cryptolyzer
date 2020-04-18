@@ -7,7 +7,7 @@ from cryptolyzer.common.dhparam import WellKnownDHParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 
-from .classes import TestTlsCases
+from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
 class TestTlsDHParams(TestTlsCases.TestTlsBase):
@@ -51,8 +51,13 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparams[0].well_known, WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP)
 
     def test_plain_text_response(self):
-        self.assertEqual(self.get_result('ptt.cc', 443).dhparams, [])
-        self.assertEqual(self.get_result('cplusplus.com', 443).dhparams, [])
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
+            fallback_to_ssl=False
+        )
+        threaded_server.start()
+
+        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.port).dhparams, [])
 
     def test_no_dhe_support(self):
         result = self.get_result('static-rsa.badssl.com', 443)

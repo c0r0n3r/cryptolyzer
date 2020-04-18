@@ -14,6 +14,7 @@ from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.server import L7ServerTls, TlsServerHandshake
 
 
 class TestTlsCases:
@@ -54,3 +55,16 @@ class L7ServerTlsTest(TestThreaderServer):
             self.l7_server.do_ssl_handshake()
         else:
             self.l7_server.do_tls_handshake(fallback_to_ssl=self.fallback_to_ssl)
+
+
+class TlsServerPlainTextResponse(TlsServerHandshake):
+    def _process_handshake_message(self, record, last_handshake_message_type):
+        self._l4_transfer.send(
+            b'<!DOCTYPE html><html><body>Typical plain text response to TLS client hello message</body></html>'
+        )
+
+
+class L7ServerTlsPlainTextResponse(L7ServerTls):
+    @staticmethod
+    def _get_handshake_class(l4_transfer, fallback_to_ssl):
+        return TlsServerPlainTextResponse

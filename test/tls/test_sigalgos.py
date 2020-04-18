@@ -14,7 +14,7 @@ from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos
 
-from .classes import TestTlsCases
+from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
 class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
@@ -64,9 +64,13 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         ])
 
     def test_plain_text_response(self):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
+            fallback_to_ssl=False
+        )
+        threaded_server.start()
         protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_0)
-        self.assertEqual(self.get_result('ptt.cc', 443, protocol_version).sig_algos, [])
-        self.assertEqual(self.get_result('cplusplus.com', 443, protocol_version).sig_algos, [])
+        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.port, protocol_version).sig_algos, [])
 
     def test_json(self):
         result = self.get_result('ecc256.badssl.com', 443)

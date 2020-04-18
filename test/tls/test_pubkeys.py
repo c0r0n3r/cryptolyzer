@@ -15,7 +15,7 @@ from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
-from .classes import TestTlsCases
+from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
 class TestTlsPubKeys(TestTlsCases.TestTlsBase):
@@ -145,8 +145,19 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self.assertEqual(trusted_root_chain.items[0], incomplete_chain.items[0])
 
     def test_plain_text_response(self):
-        self.assertEqual(self.get_result('ptt.cc', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)).pubkeys, [])
-        self.assertEqual(self.get_result('cplusplus.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)).pubkeys, [])
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
+            fallback_to_ssl=False
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result(
+                'localhost',
+                threaded_server.l7_server.port,
+                TlsProtocolVersionFinal(TlsVersion.TLS1_0)
+            ).pubkeys,
+            []
+        )
 
     def test_json(self):
         result = self.get_result('expired.badssl.com', 443)

@@ -24,7 +24,7 @@ from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.curves import AnalyzerCurves
 from cryptolyzer.tls.exception import TlsAlert
 
-from .classes import TestTlsCases
+from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
 ORIGINAL_GET_KEY_EXCHANGE_MESSAGE = AnalyzerCurves._get_key_exchange_message  # pylint: disable=protected-access
@@ -109,8 +109,12 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertEqual(len(result.curves), 0)
 
     def test_plain_text_response(self):
-        self.assertEqual(self.get_result('ptt.cc', 443).curves, [])
-        self.assertEqual(self.get_result('cplusplus.com', 443).curves, [])
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.5),
+            fallback_to_ssl=False
+        )
+        threaded_server.start()
+        self.assertEqual(self.get_result('localhost', threaded_server.l7_server.port).curves, [])
 
     @mock.patch.object(
         TlsRecord, 'messages', mock.PropertyMock(return_value=2 * [TlsHandshakeServerHelloDone()])
