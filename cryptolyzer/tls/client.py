@@ -2,19 +2,15 @@
 
 import abc
 
-import ipaddress
-
 import ftplib
 import imaplib
 import poplib
 import smtplib
 
 import socket
-import string
 
 from cryptoparser.common.algorithm import Authentication, KeyExchange
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
-from cryptoparser.common.utils import get_leaf_classes
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.subprotocol import SslMessageType, SslHandshakeClientHello
@@ -31,6 +27,7 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVer
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
 
 
 class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
@@ -174,33 +171,20 @@ class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
         )
 
 
-class L7ClientTlsBase(object):
-    _DEFAULT_TIMEOUT = 5
+class L7ClientTlsBase(L7TransferBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_scheme(cls):
+        raise NotImplementedError()
 
-    def __init__(self, address, port, timeout=None, ip=None):
-        self._address = address
-        self._port = port
-        self._socket = None
-        self._timeout = self._DEFAULT_TIMEOUT if timeout is None else timeout
-        self._buffer = bytearray()
+    @classmethod
+    @abc.abstractmethod
+    def get_default_port(cls):
+        raise NotImplementedError()
 
-        if ip:
-            try:
-                ipaddress.ip_address(ip)
-            except ValueError:
-                raise NetworkError(NetworkErrorType.NO_ADDRESS)
-        else:
-            try:
-                ip_addresses = [
-                    addrinfo[4][0]
-                    for addrinfo in socket.getaddrinfo(self._address, self._port, 0, socket.SOCK_STREAM)
-                ]
-            except socket.gaierror:
-                raise NetworkError(NetworkErrorType.NO_ADDRESS)
-            if not ip_addresses:
-                raise NetworkError(NetworkErrorType.NO_ADDRESS)
-            ip = ip_addresses[0]
-        self._ip = ip
+    def _init_connection(self):
+        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
+        self._l4_transfer.init_connection()
 
     def _do_handshake(
             self,
@@ -209,30 +193,18 @@ class L7ClientTlsBase(object):
             record_version,
             last_handshake_message_type
     ):
-        try:
-            self._setup_connection()
-        except BaseException as e:  # pylint: disable=broad-except
-            if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, (socket.error, socket.timeout)):
-                raise NetworkError(NetworkErrorType.NO_CONNECTION)
-
-            if self._socket:
-                self.close()
-
-            raise e
+        self.init_connection()
 
         try:
-            tls_client.do_handshake(hello_message, record_version, last_handshake_message_type)
+            tls_client.do_handshake(self, hello_message, record_version, last_handshake_message_type)
         finally:
-            try:
-                self.close()
-            except (socket.error, socket.timeout):
-                pass
+            self._close_connection()
 
         return tls_client.server_messages
 
     def do_ssl_handshake(self, hello_message, last_handshake_message_type=SslMessageType.SERVER_HELLO):
         return self._do_handshake(
-            SslClientHandshake(self),
+            SslClientHandshake(),
             hello_message,
             SslVersion.SSL2,
             last_handshake_message_type
@@ -245,91 +217,11 @@ class L7ClientTlsBase(object):
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
     ):
         return self._do_handshake(
-            TlsClientHandshake(self),
+            TlsClientHandshake(),
             hello_message,
             record_version,
             last_handshake_message_type
         )
-
-    def _close(self):
-        self._socket.close()
-
-    def close(self):
-        if self._socket is not None:
-            self._close()
-        self._socket = None
-
-    def _send(self, sendable_bytes):
-        return self._socket.send(sendable_bytes)
-
-    def send(self, sendable_bytes):
-        total_sent_byte_num = 0
-        while total_sent_byte_num < len(sendable_bytes):
-            actual_sent_byte_num = self._send(sendable_bytes[total_sent_byte_num:])
-            if actual_sent_byte_num == 0:
-                raise NetworkError(NetworkErrorType.NO_CONNECTION)
-            total_sent_byte_num = total_sent_byte_num + actual_sent_byte_num
-
-    def receive(self, receivable_byte_num):
-        total_received_byte_num = 0
-        while total_received_byte_num < receivable_byte_num:
-            try:
-                actual_received_bytes = self._socket.recv(min(receivable_byte_num - total_received_byte_num, 1024))
-                self._buffer += actual_received_bytes
-                total_received_byte_num += len(actual_received_bytes)
-            except socket.error:
-                actual_received_bytes = None
-
-            if not actual_received_bytes:
-                raise NotEnoughData(receivable_byte_num - total_received_byte_num)
-
-    @property
-    def address(self):
-        return self._address
-
-    @property
-    def ip(self):
-        return self._ip
-
-    @property
-    def port(self):
-        return self._port
-
-    @property
-    def buffer(self):
-        return bytearray(self._buffer)
-
-    def flush_buffer(self, byte_num=None):
-        if byte_num is None:
-            byte_num = len(self._buffer)
-
-        self._buffer = self._buffer[byte_num:]
-
-    @classmethod
-    def from_scheme(cls, scheme, address, port=None, timeout=None, ip=None):  # pylint: disable=too-many-arguments
-        for client_class in get_leaf_classes(L7ClientTlsBase):
-            if client_class.get_scheme() == scheme:
-                port = client_class.get_default_port() if port is None else port
-                return client_class(address, port, timeout, ip)
-
-        raise ValueError()
-
-    @classmethod
-    def get_supported_schemes(cls):
-        return {leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(L7ClientTlsBase)}
-
-    def _setup_connection(self):
-        self._socket = socket.create_connection((self._ip, self._port), self._timeout)
-
-    @classmethod
-    @abc.abstractmethod
-    def get_scheme(cls):
-        raise NotImplementedError()
-
-    @classmethod
-    @abc.abstractmethod
-    def get_default_port(cls):
-        raise NotImplementedError()
 
 
 class L7ClientTls(L7ClientTlsBase):
@@ -376,7 +268,7 @@ class ClientPOP3(L7ClientTlsBase):
     def __init__(self, address, port, timeout=None, ip=None):
         super(ClientPOP3, self).__init__(address, port, timeout, ip)
 
-        self.client = None
+        self._l7_client = None
 
     @classmethod
     def get_scheme(cls):
@@ -386,23 +278,24 @@ class ClientPOP3(L7ClientTlsBase):
     def get_default_port(cls):
         return 110
 
-    def _setup_connection(self):
+    def _init_connection(self):
+        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
         try:
-            self.client = poplib.POP3(self._ip, self._port, self._timeout)
-            self._socket = self.client.sock
+            self._l7_client = poplib.POP3(self._ip, self._port, self._timeout)
+            self._l4_transfer.init_connection(self._l7_client.sock)
 
-            response = self.client._shortcmd('STLS')  # pylint: disable=protected-access
+            response = self._l7_client._shortcmd('STLS')  # pylint: disable=protected-access
             if len(response) < 3 or response[:3] != b'+OK':
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except poplib.error_proto:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-    def _close(self):
-        if self.client is not None:
+    def _close_connection(self):
+        if self._l7_client is not None:
             try:
-                self.client.quit()
+                self._l7_client.quit()
             except poplib.error_proto:
-                self._socket.close()
+                self._l4_transfer.close()
 
 
 class L7ClientSMTPS(L7ClientTlsBase):
@@ -419,7 +312,7 @@ class ClientSMTP(L7ClientTlsBase):
     def __init__(self, address, port, timeout=None, ip=None):
         super(ClientSMTP, self).__init__(address, port, timeout, ip)
 
-        self.client = None
+        self._l7_client = None
 
     @classmethod
     def get_scheme(cls):
@@ -429,27 +322,28 @@ class ClientSMTP(L7ClientTlsBase):
     def get_default_port(cls):
         return 587
 
-    def _setup_connection(self):
+    def _init_connection(self):
+        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
         try:
-            self.client = smtplib.SMTP(timeout=self._timeout)
-            self.client.connect(self._ip, self._port)
-            self._socket = self.client.sock
+            self._l7_client = smtplib.SMTP(timeout=self._timeout)
+            self._l7_client.connect(self._ip, self._port)
+            self._l4_transfer.init_connection(self._l7_client.sock)
 
-            self.client.ehlo()
-            if not self.client.has_extn('STARTTLS'):
+            self._l7_client.ehlo()
+            if not self._l7_client.has_extn('STARTTLS'):
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-            response, _ = self.client.docmd('STARTTLS')
+            response, _ = self._l7_client.docmd('STARTTLS')
             if response != 220:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except smtplib.SMTPException:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-    def _close(self):
-        if self.client is not None:
+    def _close_connection(self):
+        if self._l7_client is not None:
             try:
-                self.client.quit()
+                self._l7_client.quit()
             except smtplib.SMTPServerDisconnected:
-                self._socket.close()
+                self._l4_transfer.close()
 
 
 class L7ClientIMAPS(L7ClientTlsBase):
@@ -478,7 +372,7 @@ class ClientIMAP(L7ClientTlsBase):
     def __init__(self, address, port, timeout=None, ip=None):
         super(ClientIMAP, self).__init__(address, port, timeout, ip)
 
-        self.client = None
+        self._l7_client = None
 
     @classmethod
     def get_scheme(cls):
@@ -490,24 +384,28 @@ class ClientIMAP(L7ClientTlsBase):
 
     @property
     def _capabilities(self):
-        return self.client.capabilities
+        return self._l7_client.capabilities
 
-    def _setup_connection(self):
+    def _init_connection(self):
+        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
         try:
-            self.client = IMAP4(self._ip, self._port, self._timeout)
-            self._socket = self.client.socket()
+            self._l7_client = IMAP4(self._ip, self._port, self._timeout)
+            self._l4_transfer.init_connection(self._l7_client.socket())
 
             if 'STARTTLS' not in self._capabilities:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-            response, _ = self.client.xatom('STARTTLS')
+            response, _ = self._l7_client.xatom('STARTTLS')
             if response != 'OK':
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except imaplib.IMAP4.error:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-    def _close(self):
-        if self.client:
-            self.client.shutdown()
+    def _close_connection(self):
+        if self._l7_client is not None:
+            try:
+                self._l7_client.shutdown()
+            except IMAP4.error:
+                self._l4_transfer.close()
 
 
 class L7ClientFTPS(L7ClientTlsBase):
@@ -524,7 +422,7 @@ class ClientFTP(L7ClientTlsBase):
     def __init__(self, address, port, timeout=None, ip=None):
         super(ClientFTP, self).__init__(address, port, timeout, ip)
 
-        self.client = None
+        self._l7_client = None
 
     @classmethod
     def get_scheme(cls):
@@ -534,44 +432,38 @@ class ClientFTP(L7ClientTlsBase):
     def get_default_port(cls):
         return 21
 
-    def _setup_connection(self):
+    def _init_connection(self):
+        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
         try:
-            self.client = ftplib.FTP()
-            response = self.client.connect(self._ip, self._port, self._timeout)
+            self._l7_client = ftplib.FTP()
+            response = self._l7_client.connect(self._address, self._port, self._timeout)
+            self._l4_transfer.init_connection(self._l7_client.sock)
             if not response.startswith('220'):
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-            self._socket = self.client.sock
 
-            response = self.client.sendcmd('AUTH TLS')
+            response = self._l7_client.sendcmd('AUTH TLS')
             if not response.startswith('234'):
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except ftplib.all_errors:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-    def _close(self):
-        if self.client is not None:
+    def _close_connection(self):
+        if self._l7_client is not None:
             try:
-                self.client.quit()
+                self._l7_client.quit()
             except ftplib.all_errors:
-                self._socket.close()
+                self._l4_transfer.close()
 
 
 class TlsClient(object):
-    def __init__(self, l4_client):
-        self._l4_client = l4_client
+    def __init__(self):
         self._last_processed_message_type = None
         self.server_messages = {}
 
-    @property
-    def _buffer_is_plain_text(self):
-        try:
-            return all([c in string.printable for c in self._l4_client.buffer.decode('utf-8')])
-        except UnicodeDecodeError:
-            return False
-
-    def raise_response_error(self):
-        response_is_plain_text = self._l4_client.buffer and self._buffer_is_plain_text
-        self._l4_client.flush_buffer()
+    @staticmethod
+    def raise_response_error(transfer):
+        response_is_plain_text = transfer.buffer and transfer.buffer_is_plain_text
+        transfer.flush_buffer()
 
         if response_is_plain_text:
             raise SecurityError(SecurityErrorType.PLAIN_TEXT_MESSAGE)
@@ -579,7 +471,7 @@ class TlsClient(object):
         raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
 
     @abc.abstractmethod
-    def do_handshake(self, hello_message, record_version, last_handshake_message_type):
+    def do_handshake(self, transfer, hello_message, record_version, last_handshake_message_type):
         raise NotImplementedError()
 
 
@@ -594,6 +486,7 @@ class TlsClientHandshake(TlsClient):
 
     def do_handshake(
             self,
+            transfer,
             hello_message,
             record_version=TlsProtocolVersionFinal(TlsVersion.SSL3),
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
@@ -602,17 +495,19 @@ class TlsClientHandshake(TlsClient):
         self._last_processed_message_type = None
 
         tls_record = TlsRecord([hello_message, ], record_version)
-        self._l4_client.send(tls_record.compose())
+        transfer.send(tls_record.compose())
 
         while True:
             try:
-                record = TlsRecord.parse_exact_size(self._l4_client.buffer)
-                self._l4_client.flush_buffer()
+                record = TlsRecord.parse_exact_size(transfer.buffer)
+                transfer.flush_buffer()
 
                 if record.content_type == TlsContentType.ALERT:
-                    if record.messages[0].level == TlsAlertLevel.FATAL:
+                    if (record.messages[0].level == TlsAlertLevel.FATAL or
+                            record.messages[0].description == TlsAlertDescription.CLOSE_NOTIFY):
                         raise TlsAlert(record.messages[0].description)
 
+                    transfer.flush_buffer()
                     continue
 
                 if record.content_type != TlsContentType.HANDSHAKE:
@@ -630,12 +525,12 @@ class TlsClientHandshake(TlsClient):
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
             except (InvalidType, InvalidValue):
-                self.raise_response_error()
+                self.raise_response_error(transfer)
 
             try:
-                self._l4_client.receive(receivable_byte_num)
+                transfer.receive(receivable_byte_num)
             except NotEnoughData:
-                if self._l4_client.buffer:
+                if transfer.buffer:
                     raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
                 raise NetworkError(NetworkErrorType.NO_RESPONSE)
@@ -658,18 +553,19 @@ class SslHandshakeClientHelloAnyAlgorithm(SslHandshakeClientHello):
 class SslClientHandshake(TlsClient):
     def do_handshake(
             self,
+            transfer,
             hello_message=None,
             record_version=SslVersion.SSL2,
             last_handshake_message_type=SslMessageType.SERVER_HELLO
     ):
         ssl_record = SslRecord(hello_message)
-        self._l4_client.send(ssl_record.compose())
+        transfer.send(ssl_record.compose())
 
         self.server_messages = {}
         while True:
             try:
-                record = SslRecord.parse_exact_size(self._l4_client.buffer)
-                self._l4_client.flush_buffer()
+                record = SslRecord.parse_exact_size(transfer.buffer)
+                transfer.flush_buffer()
                 if record.message.get_message_type() == SslMessageType.ERROR:
                     raise SslError(record.message.error_type)
 
@@ -682,17 +578,17 @@ class SslClientHandshake(TlsClient):
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
             except (InvalidType, InvalidValue):
-                self.raise_response_error()
+                self.raise_response_error(transfer)
 
             try:
-                self._l4_client.receive(receivable_byte_num)
+                transfer.receive(receivable_byte_num)
             except NotEnoughData:
-                if self._l4_client.buffer:
+                if transfer.buffer:
                     try:
-                        tls_record = TlsRecord.parse_exact_size(self._l4_client.buffer)
-                        self._l4_client.flush_buffer()
+                        tls_record = TlsRecord.parse_exact_size(transfer.buffer)
+                        transfer.flush_buffer()
                     except (InvalidType, InvalidValue):
-                        self.raise_response_error()
+                        self.raise_response_error(transfer)
                     else:
                         if (tls_record.content_type == TlsContentType.ALERT and
                                 (tls_record.messages[0].description in [

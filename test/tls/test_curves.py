@@ -19,6 +19,7 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.extension import TlsNamedCurve
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
+from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.curves import AnalyzerCurves
 from cryptolyzer.tls.exception import TlsAlert
@@ -122,8 +123,8 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
             self.get_result('badssl.com', 443)
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
 
-    @mock.patch.object(L7ClientTlsBase, 'receive', side_effect=NotEnoughData)
-    @mock.patch.object(L7ClientTlsBase, 'buffer', mock.PropertyMock(side_effect=[b'', b'some content', ]))
+    @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData)
+    @mock.patch.object(L4ClientTCP, 'buffer', mock.PropertyMock(side_effect=[b'', b'some content', ]))
     def test_error_connection_closed_during_the_handshake(self, _):
         with self.assertRaises(NetworkError) as context_manager:
             self.get_result('badssl.com', 443)

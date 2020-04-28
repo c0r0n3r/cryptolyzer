@@ -11,6 +11,7 @@ import sys
 import os
 
 import test.ja3.test_decode
+import test.ja3.test_generate
 
 import test.tls.test_ciphers
 import test.tls.test_curves
@@ -21,7 +22,11 @@ import test.tls.test_versions
 
 import six
 
-from cryptolyzer.__main__ import main
+from cryptoparser.tls.ciphersuite import TlsCipherSuite
+from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
+
+from cryptolyzer.__main__ import main, get_protocol_handler_analyzer_and_uris
+from cryptolyzer.ja3.generate import AnalyzerGenerate
 
 
 class TestMain(unittest.TestCase):
@@ -113,3 +118,18 @@ class TestMain(unittest.TestCase):
             self._get_test_analyzer_result('ja3', 'decode', '771,7-6,5-4,3-2,1-0'),
             test.ja3.test_decode.TestJA3Decode.get_result('771,7-6,5-4,3-2,1-0').as_json() + '\n',
         )
+
+    def test_analyzer_output_ja3_generate(self):
+        hello_message = TlsHandshakeClientHello([TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5])
+
+        self.assertEqual(
+            test.ja3.test_generate.TestJA3Generate.get_result(hello_message).target,
+            hello_message.ja3()
+        )
+
+    def test_arguments_ja3_generate(self):
+        with patch.object(sys, 'argv', ['cryptolyzer', 'ja3', 'generate', 'localhost']), \
+                patch.object(AnalyzerGenerate, 'analyze', return_value=None):
+            protocol_handler, analyzer, uris = get_protocol_handler_analyzer_and_uris()
+            self.assertEqual(list(map(lambda uri: uri.scheme, uris)), [analyzer.get_default_scheme()])
+            protocol_handler.analyze(analyzer, uris[0])

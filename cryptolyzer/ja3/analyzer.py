@@ -3,6 +3,7 @@
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 
 from cryptolyzer.ja3.decode import AnalyzerDecode
+from cryptolyzer.ja3.generate import AnalyzerGenerate
 
 
 class ProtocolHandlerJA3Base(ProtocolHandlerBase):
@@ -14,6 +15,7 @@ class ProtocolHandlerJA3Base(ProtocolHandlerBase):
     def get_analyzers(cls):
         return (
             AnalyzerDecode,
+            AnalyzerGenerate,
         )
 
     @classmethod
