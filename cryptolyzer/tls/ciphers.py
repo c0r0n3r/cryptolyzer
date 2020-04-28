@@ -8,16 +8,16 @@ from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType,
 from cryptoparser.tls.version import SslProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import (
     SslHandshakeClientHelloAnyAlgorithm,
-    TlsAlert,
     TlsHandshakeClientHelloAnyAlgorithm,
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationRarelyUsed,
 )
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class AnalyzerResultCipherSuites(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
@@ -100,7 +100,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                     break
 
                 raise e
-            except ResponseError:
+            except SecurityError:
                 if accepted_cipher_suites:
                     break
 
@@ -135,7 +135,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
         return accepted_cipher_suites
 
-    def analyze(self, l7_client, protocol_version):
+    def analyze(self, analyzable, protocol_version):
         if isinstance(protocol_version, SslProtocolVersion):
             checkable_cipher_suites = list(SslCipherKind)
         else:
@@ -143,15 +143,15 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
         long_cipher_suite_list_intolerance = False
         accepted_cipher_suites, remaining_cipher_suites = self._get_accepted_cipher_suites_all(
-            l7_client, protocol_version, checkable_cipher_suites
+            analyzable, protocol_version, checkable_cipher_suites
         )
         if len(checkable_cipher_suites) == len(remaining_cipher_suites):
-            accepted_cipher_suites = self._get_accepted_cipher_suites_fallback(l7_client, protocol_version)
+            accepted_cipher_suites = self._get_accepted_cipher_suites_fallback(analyzable, protocol_version)
             long_cipher_suite_list_intolerance = bool(accepted_cipher_suites)
         if len(accepted_cipher_suites) > 1:
             checkable_cipher_suites = [accepted_cipher_suites[-1], accepted_cipher_suites[0]]
             cipher_suite_preference = self._get_accepted_cipher_suites(
-                l7_client,
+                analyzable,
                 protocol_version,
                 checkable_cipher_suites
             )[0] != checkable_cipher_suites
@@ -159,7 +159,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             cipher_suite_preference = None
 
         return AnalyzerResultCipherSuites(
-            AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),
+            AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
             accepted_cipher_suites,
             cipher_suite_preference,
             long_cipher_suite_list_intolerance

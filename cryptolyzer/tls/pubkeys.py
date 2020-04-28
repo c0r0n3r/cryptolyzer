@@ -12,13 +12,15 @@ from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
-from cryptolyzer.tls.client import TlsAlert, \
-    TlsHandshakeClientHelloBasic, \
-    TlsHandshakeClientHelloAuthenticationDSS, \
-    TlsHandshakeClientHelloAuthenticationRSA, \
+from cryptolyzer.tls.client import (
+    TlsHandshakeClientHelloBasic,
+    TlsHandshakeClientHelloAuthenticationDSS,
+    TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationECDSA
+)
+from cryptolyzer.tls.exception import TlsAlert
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 import cryptolyzer.common.x509
 
@@ -151,25 +153,25 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         except NetworkError as e:
             if e.error != NetworkErrorType.NO_RESPONSE:
                 raise e
-        except ResponseError:
+        except SecurityError:
             if client_hello == client_hello_messages[0]:
                 raise StopIteration
 
         return server_messages
 
-    def analyze(self, l7_client, protocol_version):
+    def analyze(self, analyzable, protocol_version):
         results = []
         client_hello_messages = [
             TlsHandshakeClientHelloBasic(protocol_version),
-            TlsHandshakeClientHelloAuthenticationDSS(protocol_version, l7_client.address),
-            TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
-            TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, l7_client.address),
+            TlsHandshakeClientHelloAuthenticationDSS(protocol_version, analyzable.address),
+            TlsHandshakeClientHelloAuthenticationRSA(protocol_version, analyzable.address),
+            TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, analyzable.address),
         ]
 
         for client_hello in client_hello_messages:
             sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
             try:
-                server_messages = self._get_server_messages(l7_client, client_hello, sni_sent, client_hello_messages)
+                server_messages = self._get_server_messages(analyzable, client_hello, sni_sent, client_hello_messages)
             except StopIteration:
                 break
 
@@ -185,13 +187,13 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 subject_matches = cryptolyzer.common.x509.is_subject_matches(
                     leaf_certificate.common_names,
                     leaf_certificate.subject_alternative_names,
-                    l7_client.address
+                    analyzable.address
                 )
                 if ((sni_sent or subject_matches) and
                         certificate_chain not in [result.certificate_chain for result in results]):
                     results.append(TlsPublicKey(sni_sent, subject_matches, certificate_chain))
 
         return AnalyzerResultPublicKeys(
-            AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),
+            AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
             results
         )

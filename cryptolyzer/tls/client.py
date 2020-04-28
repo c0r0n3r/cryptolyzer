@@ -29,7 +29,8 @@ from cryptoparser.tls.extension import TlsExtensionEllipticCurves, TlsNamedCurve
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError, ResponseErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
@@ -392,9 +393,9 @@ class ClientPOP3(L7ClientTlsBase):
 
             response = self.client._shortcmd('STLS')  # pylint: disable=protected-access
             if len(response) < 3 or response[:3] != b'+OK':
-                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except poplib.error_proto:
-            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
     def _close(self):
         if self.client is not None:
@@ -436,12 +437,12 @@ class ClientSMTP(L7ClientTlsBase):
 
             self.client.ehlo()
             if not self.client.has_extn('STARTTLS'):
-                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
             response, _ = self.client.docmd('STARTTLS')
             if response != 220:
-                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except smtplib.SMTPException:
-            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
     def _close(self):
         if self.client is not None:
@@ -497,12 +498,12 @@ class ClientIMAP(L7ClientTlsBase):
             self._socket = self.client.socket()
 
             if 'STARTTLS' not in self._capabilities:
-                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
             response, _ = self.client.xatom('STARTTLS')
             if response != 'OK':
-                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except imaplib.IMAP4.error:
-            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
     def _close(self):
         if self.client:
@@ -538,14 +539,14 @@ class ClientFTP(L7ClientTlsBase):
             self.client = ftplib.FTP()
             response = self.client.connect(self._ip, self._port, self._timeout)
             if not response.startswith('220'):
-                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
             self._socket = self.client.sock
 
             response = self.client.sendcmd('AUTH TLS')
             if not response.startswith('234'):
-                raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except ftplib.all_errors:
-            raise ResponseError(ResponseErrorType.UNSUPPORTED_SECURITY)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
     def _close(self):
         if self.client is not None:
@@ -553,19 +554,6 @@ class ClientFTP(L7ClientTlsBase):
                 self.client.quit()
             except ftplib.all_errors:
                 self._socket.close()
-
-
-class TlsAlert(ValueError):
-    def __init__(self, description):
-        super(TlsAlert, self).__init__()
-
-        self.description = description
-
-    def __str__(self):
-        return self.__repr__()
-
-    def __repr__(self):
-        return 'TlsAlert(TlsAlertDescription.{})'.format(self.description.name)
 
 
 class TlsClient(object):
@@ -586,9 +574,9 @@ class TlsClient(object):
         self._l4_client.flush_buffer()
 
         if response_is_plain_text:
-            raise ResponseError(ResponseErrorType.PLAIN_TEXT_RESPONSE)
+            raise SecurityError(SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
-        raise ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE)
+        raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
 
     @abc.abstractmethod
     def do_handshake(self, hello_message, record_version, last_handshake_message_type):

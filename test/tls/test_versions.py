@@ -9,7 +9,8 @@ except ImportError:
 from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
 
-from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert, SslError
+from cryptolyzer.tls.client import L7ClientTlsBase, SslError
+from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 from .classes import TestTlsCases

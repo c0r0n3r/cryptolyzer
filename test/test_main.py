@@ -10,6 +10,8 @@ import unittest
 import sys
 import os
 
+import test.ja3.test_decode
+
 import test.tls.test_ciphers
 import test.tls.test_curves
 import test.tls.test_dhparams
@@ -53,6 +55,10 @@ class TestMain(unittest.TestCase):
             ['cryptolyzer', 'tls', 'versions', 'unsupportedprotocol://localhost'],
             'error: unsupported protocol: unsupportedprotocol'
         )
+        self._test_argument_error(
+            ['cryptolyzer', 'ja3', 'decode', 'unsupportedformat://tag'],
+            'error: unsupported protocol: unsupportedformat'
+        )
 
     @staticmethod
     def _get_test_analyzer_result(protocol, analyzer, address):
@@ -70,7 +76,7 @@ class TestMain(unittest.TestCase):
             self._get_test_analyzer_result('tls', 'versions', 'dns.google#8.8.8.8')
         )
 
-    def test_analyzer_output(self):
+    def test_analyzer_output_tls(self):
         self.assertEqual(
             self._get_test_analyzer_result('tls1', 'ciphers', 'rc4-md5.badssl.com'),
             test.tls.test_ciphers.TestTlsCiphers.get_result('rc4-md5.badssl.com', 443).as_json() + '\n'
@@ -100,4 +106,10 @@ class TestMain(unittest.TestCase):
         self.assertEqual(
             self._get_test_analyzer_result('tls', 'versions', 'tls-v1-0.badssl.com:1010'),
             test.tls.test_versions.TestTlsVersions.get_result('tls-v1-0.badssl.com', 1010).as_json() + '\n',
+        )
+
+    def test_analyzer_output_ja3_decode(self):
+        self.assertEqual(
+            self._get_test_analyzer_result('ja3', 'decode', '771,7-6,5-4,3-2,1-0'),
+            test.ja3.test_decode.TestJA3Decode.get_result('771,7-6,5-4,3-2,1-0').as_json() + '\n',
         )

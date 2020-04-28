@@ -4,9 +4,10 @@ from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_dh_params, DHParameter
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE, TlsAlert
+from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class AnalyzerResultDHParams(AnalyzerResultTls):
@@ -25,14 +26,14 @@ class AnalyzerDHParams(AnalyzerTlsBase):
     def get_help(cls):
         return 'Check DH parameters offered by the server(s)'
 
-    def analyze(self, l7_client, protocol_version):
-        client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, l7_client.address)
+    def analyze(self, analyzable, protocol_version):
+        client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, analyzable.address)
 
         dhparams = []
         dh_public_keys = []
         for _ in (1, 2):
             try:
-                server_messages = l7_client.do_tls_handshake(
+                server_messages = analyzable.do_tls_handshake(
                     client_hello,
                     last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE
                 )
@@ -48,7 +49,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
-            except ResponseError:
+            except SecurityError:
                 break
             else:
                 server_key_exchange_message = server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
@@ -62,6 +63,6 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                     ))
 
         return AnalyzerResultDHParams(
-            AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),
+            AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
             dhparams
         )

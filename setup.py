@@ -54,6 +54,7 @@ setup(
     packages=[
         'cryptolyzer',
         'cryptolyzer.common',
+        'cryptolyzer.ja3',
         'cryptolyzer.tls',
     ],
 

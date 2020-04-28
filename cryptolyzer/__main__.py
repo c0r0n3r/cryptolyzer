@@ -7,16 +7,20 @@ import urllib3
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 
 
-def get_handler_and_uris(parser, arguments):
+def get_protocol_handler_analyzer_and_uris():
     def to_uri(value, default):
         if u'://' not in value:
             value = default + u'://' + value
 
         return urllib3.util.parse_url(value)
 
+    parser = get_argument_parser()
+    arguments = parser.parse_args()
+
     protocol_handler = ProtocolHandlerBase.from_protocol(arguments.protocol)
-    protocol = protocol_handler.get_default_scheme()
-    clients = protocol_handler.get_clients()
+    analyzer = protocol_handler.analyzer_from_name(arguments.analyzer)
+    protocol = analyzer.get_default_scheme()
+    clients = analyzer.get_clients()
 
     supported_schemes = set().union(*[client.get_supported_schemes() for client in clients])
     uris = [to_uri(argument_uri, protocol) for argument_uri in arguments.uris]
@@ -29,7 +33,7 @@ def get_handler_and_uris(parser, arguments):
     if unsupported_schemes:
         parser.error('unsupported protocol: {}'.format(', '.join(unsupported_schemes)))
 
-    return protocol_handler, uris
+    return protocol_handler, analyzer, uris
 
 
 def get_argument_parser():
@@ -46,7 +50,7 @@ def get_argument_parser():
         parsers_plugin.required = True
         for analyzer_class in analyzers:
             parser_plugin = parsers_plugin.add_parser(analyzer_class.get_name(), help=analyzer_class.get_help())
-            schemes = [client.get_scheme() for client in protocol_handler.get_clients()]
+            schemes = [client.get_scheme() for client in analyzer_class.get_clients()]
             parser_plugin.add_argument(
                 'uris', metavar='URI', nargs='+',
                 help='[{{{}}}://]f.q.d.n[:port][#ip]'.format(','.join(schemes))
@@ -56,12 +60,10 @@ def get_argument_parser():
 
 
 def main():
-    argument_parser = get_argument_parser()
-    arguments = argument_parser.parse_args()
-    protocol_handler, argument_uris = get_handler_and_uris(argument_parser, arguments)
+    protocol_handler, analyzer, argument_uris = get_protocol_handler_analyzer_and_uris()
 
     for uri in argument_uris:
-        analyzer_result = protocol_handler.analyze(arguments.analyzer, uri)
+        analyzer_result = protocol_handler.analyze(analyzer, uri)
         print(analyzer_result.as_json())
 
 

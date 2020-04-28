@@ -29,7 +29,7 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.tls.client import L7ClientTlsBase, L7ClientTls, ClientIMAP, TlsAlert, SslError
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError, ResponseErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
@@ -321,9 +321,9 @@ class TestSslClientHandshake(unittest.TestCase):
         ])
     )
     def test_error_unparsable_response(self, _):
-        with self.assertRaises(ResponseError) as context_manager:
+        with self.assertRaises(SecurityError) as context_manager:
             L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
-        self.assertEqual(context_manager.exception.error, ResponseErrorType.PLAIN_TEXT_RESPONSE)
+        self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
     @mock.patch.object(L7ClientTlsBase, 'receive', side_effect=NotEnoughData(100))
     @mock.patch.object(

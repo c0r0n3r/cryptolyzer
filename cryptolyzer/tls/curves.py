@@ -7,9 +7,10 @@ from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve, TlsExten
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, ResponseError
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx, TlsAlert
+from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class AnalyzerResultCurves(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
@@ -67,13 +68,13 @@ class AnalyzerCurves(AnalyzerTlsBase):
                 break
         return client_hello
 
-    def analyze(self, l7_client, protocol_version):
-        client_hello = self._get_client_hello(l7_client, protocol_version)
+    def analyze(self, analyzable, protocol_version):
+        client_hello = self._get_client_hello(analyzable, protocol_version)
         supported_curves = OrderedDict()
         extension_supported = True
         for curve in TlsNamedCurve:
             try:
-                server_key_exchange = self._get_key_exchange_message(l7_client, client_hello, curve)
+                server_key_exchange = self._get_key_exchange_message(analyzable, client_hello, curve)
             except TlsAlert as e:
                 if curve == next(iter(TlsNamedCurve)):
                     acceptable_alerts = [
@@ -92,7 +93,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
                     raise e
 
                 continue
-            except ResponseError:
+            except SecurityError:
                 if curve == next(iter(TlsNamedCurve)):
                     extension_supported = None
                     break
@@ -110,7 +111,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
                         break
 
         return AnalyzerResultCurves(
-            AnalyzerTargetTls.from_l7_client(l7_client, protocol_version),
+            AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
             list(supported_curves.values()),
             extension_supported
         )

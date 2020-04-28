@@ -9,8 +9,9 @@ from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm
 
-from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
-from cryptolyzer.common.exception import ResponseError, ResponseErrorType
+from cryptolyzer.common.exception import SecurityError, SecurityErrorType
+from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos
 
 from .classes import TestTlsCases
@@ -36,14 +37,14 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=[
             mock.DEFAULT,
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
-            ResponseError(ResponseErrorType.UNPARSABLE_RESPONSE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
+            SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE),
         ]
     )
     def test_error_response_error_no_response(self, _):

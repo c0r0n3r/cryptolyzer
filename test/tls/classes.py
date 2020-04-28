@@ -10,7 +10,8 @@ except ImportError:
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
-from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert
+from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.exception import TlsAlert
 
 
 class TestTlsCases:
