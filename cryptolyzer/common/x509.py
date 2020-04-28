@@ -298,8 +298,9 @@ class PublicKeyX509(PublicKey):
             'signature': public_key._certificate.signature,  # pylint: disable=protected-access
             'data': public_key._certificate.tbs_certificate_bytes,  # pylint: disable=protected-access
         }
-        public_key_signature_hash_algorithm = \
+        public_key_signature_hash_algorithm = (  # pylint: disable=protected-access
             public_key._certificate.signature_hash_algorithm  # pylint: disable=protected-access
+        )
         if isinstance(self._certificate.public_key(), cryptography_rsa.RSAPublicKey):
             verify_args['padding'] = cryptography_padding.PKCS1v15()
             verify_args['algorithm'] = public_key_signature_hash_algorithm

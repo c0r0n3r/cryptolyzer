@@ -45,8 +45,9 @@ class TestSslCiphers(unittest.TestCase):
         self.assertTrue(result)
 
 
-ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES = \
+ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES = (  # pylint: disable=protected-access
     AnalyzerCipherSuites._next_accepted_cipher_suites  # pylint: disable=protected-access
+)
 
 INTERNAL_ERROR_ALREADY_RAISED = False
 
