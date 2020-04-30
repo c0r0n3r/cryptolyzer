@@ -53,6 +53,11 @@ or can be used via Docker
 
     docker run --rm coroner/cryptolyzer tls ciphers www.example.com
 
+.. code-block:: sh
+
+    docker run -ti --rm -p 127.0.0.1:4433:4433 coroner/cryptolyzer ja3 generate 127.0.0.1:4433
+    openssl s_client -connect 127.0.0.1:4433
+
 Development environment
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -96,6 +101,7 @@ SSL/TLS
     * `FTP <https://en.wikipedia.org/wiki/File_Transfer_Protocol>`_
     * `IMAP <https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol>`_
     * `POP3 <https://en.wikipedia.org/wiki/Post_Office_Protocol>`_
+    * `RDP <https://en.wikipedia.org/wiki/Remote_Desktop_Protocol>`_
     * `SMTP <https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol>`_
 
 Analyzers
@@ -148,6 +154,14 @@ Cipher Suites
 """""""""""""
 
 #. supports each cipher suites discussed on `ciphersuite.info <https://ciphersuite.info>`_
+
+Fingerprinting
+""""""""""""""
+
+#. generates `JA3 tag <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_ of any
+   connecting TLS client independently from its type (graphical/cli, browser/email client/...)
+#. decodes existing `JA3 tags <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_
+   by showing human-readable format of the TLS parameters represented by the tag
 
 Social Media
 ------------
