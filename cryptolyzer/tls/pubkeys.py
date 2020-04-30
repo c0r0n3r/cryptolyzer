@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import copy
-
 from collections import OrderedDict
+import attr
 
 import cryptography.x509 as cryptography_x509
 
@@ -25,13 +25,17 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 import cryptolyzer.common.x509
 
 
+@attr.s(hash=False, eq=False)
 class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-methods
-    def __init__(self, certificate_bytes, certificate_chain):
-        self._certificate_bytes = certificate_bytes
-        self.items = certificate_chain
+    certificate_bytes = attr.ib()
+    items = attr.ib()
+    ordered = attr.ib(init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(bool)))
+    verified = attr.ib(init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(bool)))
+
+    def __attrs_post_init__(self):
         self.verified = None
 
-        original_certificate_chain = copy.copy(certificate_chain)
+        original_certificate_chain = copy.copy(self.items)
         ordered_certificate_chain = [cert for cert in original_certificate_chain if not cert.is_ca]
 
         while original_certificate_chain:
@@ -75,7 +79,7 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
         return any([cert.is_self_signed for cert in self.items])
 
     def __hash__(self):
-        return hash(tuple([bytes(certificate_byte) for certificate_byte in self._certificate_bytes]))
+        return hash(tuple([bytes(certificate_byte) for certificate_byte in self.certificate_bytes]))
 
     def __eq__(self, other):
         return hash(self) == hash(other)
@@ -89,18 +93,16 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
         ])
 
 
+@attr.s
 class TlsPublicKey(Serializable):
-    def __init__(self, sni_sent, subject_matches, tls_certificate_chain):
-        self.sni_sent = sni_sent
-        self.subject_matches = subject_matches
-        self.certificate_chain = tls_certificate_chain
+    sni_sent = attr.ib(validator=attr.validators.instance_of(bool))
+    subject_matches = attr.ib(validator=attr.validators.instance_of(bool))
+    tls_certificate_chain = attr.ib(validator=attr.validators.instance_of(TlsCertificateChain))
 
 
+@attr.s
 class AnalyzerResultPublicKeys(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
-    def __init__(self, target, tls_public_keys):
-        super(AnalyzerResultPublicKeys, self).__init__(target)
-
-        self.pubkeys = tls_public_keys
+    pubkeys = attr.ib()
 
 
 class AnalyzerPublicKeys(AnalyzerTlsBase):
@@ -127,7 +129,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
 
         return TlsCertificateChain(
             certificate_bytes=certificate_bytes,
-            certificate_chain=certificate_chain,
+            items=certificate_chain,
         )
 
     @staticmethod

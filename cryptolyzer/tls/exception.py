@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import attr
 
+from cryptoparser.tls.subprotocol import TlsAlertDescription
+
+
+@attr.s
 class TlsAlert(ValueError):
-    def __init__(self, description):
-        super(TlsAlert, self).__init__()
-
-        self.description = description
+    description = attr.ib(validator=attr.validators.in_(TlsAlertDescription))
 
     def __str__(self):
         return self.__repr__()
-
-    def __repr__(self):
-        return 'TlsAlert(TlsAlertDescription.{})'.format(self.description.name)

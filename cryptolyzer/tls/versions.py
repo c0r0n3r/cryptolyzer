@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import attr
+
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
@@ -17,12 +19,10 @@ from cryptolyzer.tls.client import (
 from cryptolyzer.tls.exception import TlsAlert
 
 
+@attr.s
 class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
-    def __init__(self, target, versions, alerts_unsupported_tls_version):
-        super(AnalyzerResultVersions, self).__init__(target)
-
-        self.versions = versions
-        self.alerts_unsupported_tls_version = alerts_unsupported_tls_version
+    versions = attr.ib()
+    alerts_unsupported_tls_version = attr.ib()
 
 
 class AnalyzerVersions(AnalyzerTlsBase):

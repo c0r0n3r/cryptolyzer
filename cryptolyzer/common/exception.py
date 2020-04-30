@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import enum
+import attr
 
 
 class NetworkErrorType(enum.IntEnum):
@@ -9,11 +10,9 @@ class NetworkErrorType(enum.IntEnum):
     NO_ADDRESS = 2
 
 
+@attr.s
 class NetworkError(IOError):
-    def __init__(self, error):
-        super(NetworkError, self).__init__()
-
-        self.error = error
+    error = attr.ib()
 
 
 class SecurityErrorType(enum.IntEnum):
@@ -22,8 +21,11 @@ class SecurityErrorType(enum.IntEnum):
     UNSUPPORTED_SECURITY = 3
 
 
+@attr.s
 class SecurityError(ValueError):
-    def __init__(self, error):
-        super(SecurityError, self).__init__()
+    error = attr.ib()
 
-        self.error = error
+
+@attr.s
+class ResponseError(ValueError):
+    error = attr.ib()

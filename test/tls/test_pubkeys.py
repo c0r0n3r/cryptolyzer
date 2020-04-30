@@ -27,17 +27,6 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         return result
 
     @mock.patch.object(
-        AnalyzerPublicKeys, '_get_tls_certificate_chain',
-        side_effect=[
-            ValueError,
-            mock.DEFAULT,
-        ]
-    )
-    def test_error_response_error_no_response(self, _):
-        result = self.get_result('badssl.com', 443)
-        self.assertEqual(len(result.pubkeys), 1)
-
-    @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=[
             [],
@@ -71,8 +60,8 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result_badssl_com = self.get_result('badssl.com', 443)
         result_wrong_host_badssl_com = self.get_result('wrong.host.badssl.com', 443)
         self.assertEqual(
-            result_badssl_com.pubkeys[0].certificate_chain,
-            result_wrong_host_badssl_com.pubkeys[0].certificate_chain
+            result_badssl_com.pubkeys[0].tls_certificate_chain,
+            result_wrong_host_badssl_com.pubkeys[0].tls_certificate_chain
         )
 
         result_expired_badssl_com = self.get_result('expired.badssl.com', 443)
@@ -80,16 +69,16 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result_untrusted_root_badssl_com = self.get_result('untrusted-root.badssl.com', 443)
         result_revoked_badssl_com = self.get_result('revoked.badssl.com', 443)
         self.assertNotEqual(
-            result_expired_badssl_com.pubkeys[0].certificate_chain,
-            result_self_signed_badssl_com.pubkeys[0].certificate_chain
+            result_expired_badssl_com.pubkeys[0].tls_certificate_chain,
+            result_self_signed_badssl_com.pubkeys[0].tls_certificate_chain
         )
         self.assertNotEqual(
-            result_expired_badssl_com.pubkeys[0].certificate_chain,
-            result_untrusted_root_badssl_com.pubkeys[0].certificate_chain
+            result_expired_badssl_com.pubkeys[0].tls_certificate_chain,
+            result_untrusted_root_badssl_com.pubkeys[0].tls_certificate_chain
         )
         self.assertNotEqual(
-            result_expired_badssl_com.pubkeys[0].certificate_chain,
-            result_revoked_badssl_com.pubkeys[0].certificate_chain
+            result_expired_badssl_com.pubkeys[0].tls_certificate_chain,
+            result_revoked_badssl_com.pubkeys[0].tls_certificate_chain
         )
 
     def test_subject_match(self):
@@ -107,7 +96,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
 
-        trusted_root_chain = result.pubkeys[0].certificate_chain
+        trusted_root_chain = result.pubkeys[0].tls_certificate_chain
         self.assertEqual(len(trusted_root_chain.items), 2)
         self.assertFalse(trusted_root_chain.contains_anchor)
         self.assertTrue(trusted_root_chain.ordered)
@@ -116,7 +105,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('self-signed.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
 
-        self_signed_chain = result.pubkeys[0].certificate_chain
+        self_signed_chain = result.pubkeys[0].tls_certificate_chain
         self.assertEqual(len(self_signed_chain.items), 1)
         self.assertTrue(self_signed_chain.contains_anchor)
         self.assertEqual(self_signed_chain.ordered, None)
@@ -125,7 +114,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('untrusted-root.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
 
-        untrusted_root_chain = result.pubkeys[0].certificate_chain
+        untrusted_root_chain = result.pubkeys[0].tls_certificate_chain
         self.assertEqual(len(untrusted_root_chain.items), 2)
         self.assertTrue(untrusted_root_chain.contains_anchor)
         self.assertTrue(untrusted_root_chain.ordered)
@@ -136,7 +125,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('incomplete-chain.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
 
-        incomplete_chain = result.pubkeys[0].certificate_chain
+        incomplete_chain = result.pubkeys[0].tls_certificate_chain
         self.assertEqual(len(incomplete_chain.items), 1)
         self.assertFalse(incomplete_chain.contains_anchor)
         self.assertEqual(incomplete_chain.ordered, None)
@@ -153,7 +142,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self.assertEqual(
             self.get_result(
                 'localhost',
-                threaded_server.l7_server.port,
+                threaded_server.l7_server.l4_transfer.bind_port,
                 TlsProtocolVersionFinal(TlsVersion.TLS1_0)
             ).pubkeys,
             []

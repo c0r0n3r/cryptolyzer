@@ -2,8 +2,15 @@
 
 from collections import OrderedDict
 
+import attr
+
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType, TlsECCurveType
-from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve, TlsExtensionEllipticCurves
+from cryptoparser.tls.extension import (
+    TlsEllipticCurveVector,
+    TlsExtensionEllipticCurves,
+    TlsExtensionType,
+    TlsNamedCurve,
+)
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
@@ -13,12 +20,10 @@ from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx
 from cryptolyzer.tls.exception import TlsAlert
 
 
+@attr.s
 class AnalyzerResultCurves(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
-    def __init__(self, target, curves, extension_supported):
-        super(AnalyzerResultCurves, self).__init__(target)
-
-        self.curves = curves
-        self.extension_supported = extension_supported
+    curves = attr.ib()
+    extension_supported = attr.ib()
 
 
 class AnalyzerCurves(AnalyzerTlsBase):
@@ -33,7 +38,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
     @staticmethod
     def _get_key_exchange_message(l7_client, client_hello, curve):
         try:
-            client_hello.extensions.append(TlsExtensionEllipticCurves([curve, ]))
+            client_hello.extensions.append(TlsExtensionEllipticCurves(TlsEllipticCurveVector([curve, ])))
             server_messages = l7_client.do_tls_handshake(
                 hello_message=client_hello,
                 last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE

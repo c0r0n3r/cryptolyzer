@@ -3,6 +3,8 @@
 import abc
 from collections import OrderedDict
 
+import attr
+
 from cryptoparser.common.utils import get_leaf_classes
 
 from cryptoparser.tls.version import TlsProtocolVersionFinal
@@ -27,7 +29,7 @@ class ProtocolHandlerTlsBase(ProtocolHandlerBase):
 
     @classmethod
     def get_protocol(cls):
-        return repr(cls._get_protocol_version())
+        return cls._get_protocol_version().identifier
 
     @classmethod
     def _get_analyzer_args(cls):
@@ -99,11 +101,9 @@ class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
         return TlsProtocolVersionFinal(TlsVersion.TLS1_2)
 
 
+@attr.s
 class AnalyzerResultTlsAllSupportedVersions(AnalyzerResultTls):
-    def __init__(self, target, results):
-        super(AnalyzerResultTlsAllSupportedVersions, self).__init__(target)
-
-        self.results = results
+    results = attr.ib(validator=attr.validators.instance_of(OrderedDict))
 
     def _asdict(self):
         results = []
@@ -111,7 +111,7 @@ class AnalyzerResultTlsAllSupportedVersions(AnalyzerResultTls):
             result_as_dict = result._asdict()
             del result_as_dict['target']
 
-            results.append((repr(protocol_version), result_as_dict))
+            results.append((protocol_version.identifier, result_as_dict))
 
         return OrderedDict([('target', self.target)] + results)
 

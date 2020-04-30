@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-import json
+import attr
 
 import cryptography.hazmat.primitives.asymmetric.dh as cryptography_dh
 from cryptography.hazmat.backends import default_backend as cryptography_default_backend
@@ -18,7 +18,7 @@ class TestParse(unittest.TestCase):
     def _generate_dh_param(parameter_numbers, reused):
         public_numbers = cryptography_dh.DHPublicNumbers(
             0x012345678abcdef,
-            parameter_numbers
+            cryptography_dh.DHParameterNumbers(parameter_numbers.p, parameter_numbers.g, parameter_numbers.q),
         )
         public_key = public_numbers.public_key(cryptography_default_backend())
 
@@ -31,8 +31,11 @@ class TestParse(unittest.TestCase):
         self.assertEqual(dh_parameter.key_size, 2048)
         self.assertEqual(dh_parameter.well_known, WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP)
         self.assertEqual(
-            dh_parameter.well_known.as_json(),
-            json.dumps({"name": "2048-bit MODP Group", "source": "RFC3526"})
+            attr.asdict(
+                dh_parameter.well_known.value,
+                filter=lambda attribute, value: attribute.name != 'dh_param_numbers'
+            ),
+            {"name": "2048-bit MODP Group", "source": "RFC3526"}
         )
 
     def test_all_well_known_dhparam(self):

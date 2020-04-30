@@ -2,20 +2,28 @@
 
 import hashlib
 import six
+import attr
 
 from cryptoparser.common.parse import ComposerBinary
 
-from cryptoparser.tls.extension import TlsExtensionTypeFactory, TlsNamedCurveFactory, TlsECPointFormatFactory
-from cryptoparser.tls.subprotocol import TlsCipherSuiteVector
-from cryptoparser.tls.version import TlsProtocolVersionBase
+from cryptoparser.tls.extension import (
+    TlsECPointFormat,
+    TlsECPointFormatFactory,
+    TlsExtensionType,
+    TlsExtensionTypeFactory,
+    TlsNamedCurve,
+    TlsNamedCurveFactory,
+)
+from cryptoparser.tls.subprotocol import TlsCipherSuite, TlsCipherSuiteVector
+from cryptoparser.tls.version import TlsProtocolVersionBase, SslProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerBase
 from cryptolyzer.common.result import AnalyzerResultBase
 
 
+@attr.s
 class JA3ClientTag(object):
-    def __init__(self, tag):
-        self.tag = tag
+    tag = attr.ib(validator=attr.validators.instance_of(six.string_types))
 
     @classmethod
     def get_supported_schemes(cls):
@@ -32,26 +40,28 @@ class JA3ClientTag(object):
         return JA3ClientTag(address)
 
 
+@attr.s
 class AnalyzerResultDecode(AnalyzerResultBase):
-    def __init__(
-            self,
-            target,
-            tls_protocol_version,
-            cipher_suites,
-            extension_types,
-            named_curves,
-            ec_point_formats
-    ):  # pylint: disable=too-many-arguments
-        super(AnalyzerResultDecode, self).__init__(six.text_type(target))
+    tls_protocol_version = attr.ib(
+        validator=attr.validators.instance_of((TlsProtocolVersionBase, SslProtocolVersion)),
+    )
+    cipher_suites = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsCipherSuite))
+    )
+    extension_types = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsExtensionType))
+    )
+    named_curves = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsNamedCurve))
+    )
+    ec_point_formats = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsECPointFormat))
+    )
+    target_hash = attr.ib(init=False)
 
-        self.tls_protocol_version = tls_protocol_version
-        self.cipher_suites = cipher_suites
-        self.extension_types = extension_types
-        self.named_curves = named_curves
-        self.ec_point_formats = ec_point_formats
-
+    def __attrs_post_init__(self):
         tag_hash = hashlib.md5()
-        tag_hash.update(target.encode('ascii'))
+        tag_hash.update(self.target.encode('ascii'))
         self.target_hash = tag_hash.hexdigest()
 
 

@@ -9,6 +9,8 @@ import smtplib
 
 import socket
 
+import attr
+
 from cryptoparser.common.algorithm import Authentication, KeyExchange
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 
@@ -17,10 +19,18 @@ from cryptoparser.tls.subprotocol import SslMessageType, SslHandshakeClientHello
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsContentType, TlsHandshakeType
 from cryptoparser.tls.subprotocol import TlsAlertLevel, TlsAlertDescription
-from cryptoparser.tls.extension import TlsExtensionServerName
-from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithm
-from cryptoparser.tls.extension import TlsExtensionECPointFormats, TlsECPointFormat
-from cryptoparser.tls.extension import TlsExtensionEllipticCurves, TlsNamedCurve
+from cryptoparser.tls.extension import TlsExtensions, TlsExtensionServerName
+from cryptoparser.tls.extension import (
+    TlsECPointFormat,
+    TlsECPointFormatVector,
+    TlsEllipticCurveVector,
+    TlsExtensionECPointFormats,
+    TlsExtensionEllipticCurves,
+    TlsExtensionSignatureAlgorithms,
+    TlsNamedCurve,
+    TlsSignatureAndHashAlgorithm,
+    TlsSignatureAndHashAlgorithmVector,
+)
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
@@ -35,12 +45,12 @@ class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(list(TlsECPointFormat)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-            ]
+                TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
+                TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
+                TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
+            ])
         )
 
 
@@ -56,9 +66,9 @@ class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(_cipher_suites),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-            ]
+            ])
         )
 
 
@@ -71,8 +81,8 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthentica
         )
 
         self.extensions.extend([
-            TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-            TlsExtensionEllipticCurves(list(TlsNamedCurve)),
+            TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
+            TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
         ])
 
 
@@ -94,9 +104,9 @@ class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenti
         )
 
         self.extensions.extend([
-            TlsExtensionECPointFormats(list(TlsECPointFormat)),
-            TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-            TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
+            TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
+            TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
+            TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
         ])
 
 
@@ -118,9 +128,9 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloAuthenticationRarelyUsed, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(_cipher_suites),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-            ]
+            ])
         )
 
 
@@ -135,9 +145,9 @@ class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-            ]
+            ])
         )
 
 
@@ -153,12 +163,12 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
-            extensions=[
+            extensions=TlsExtensions([
                 TlsExtensionServerName(hostname),
-                TlsExtensionECPointFormats(list(TlsECPointFormat)),
-                TlsExtensionEllipticCurves(list(TlsNamedCurve)),
-                TlsExtensionSignatureAlgorithms(list(TlsSignatureAndHashAlgorithm)),
-            ]
+                TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
+                TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
+                TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector(list(TlsSignatureAndHashAlgorithm))),
+            ])
         )
 
 
@@ -167,11 +177,14 @@ class TlsHandshakeClientHelloBasic(TlsHandshakeClientHello):
         super(TlsHandshakeClientHelloBasic, self).__init__(
             protocol_version=protocol_version,
             cipher_suites=TlsCipherSuiteVector(list(TlsCipherSuite)),
-            extensions=[]
+            extensions=TlsExtensions([])
         )
 
 
+@attr.s
 class L7ClientTlsBase(L7TransferBase):
+    l4_transfer = attr.ib(init=False, default=None)
+
     @classmethod
     @abc.abstractmethod
     def get_scheme(cls):
@@ -183,8 +196,8 @@ class L7ClientTlsBase(L7TransferBase):
         raise NotImplementedError()
 
     def _init_connection(self):
-        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
-        self._l4_transfer.init_connection()
+        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+        self.l4_transfer.init_connection()
 
     def _do_handshake(
             self,
@@ -222,6 +235,21 @@ class L7ClientTlsBase(L7TransferBase):
             record_version,
             last_handshake_message_type
         )
+
+
+@attr.s
+class L7ClientStartTlsBase(L7ClientTlsBase):
+    _l7_client = attr.ib(init=False, default=None)
+
+    @classmethod
+    @abc.abstractmethod
+    def get_scheme(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_default_port(cls):
+        raise NotImplementedError()
 
 
 class L7ClientTls(L7ClientTlsBase):
@@ -264,12 +292,8 @@ class L7ClientPOP3S(L7ClientTlsBase):
         return 995
 
 
-class ClientPOP3(L7ClientTlsBase):
-    def __init__(self, address, port, timeout=None, ip=None):
-        super(ClientPOP3, self).__init__(address, port, timeout, ip)
-
-        self._l7_client = None
-
+@attr.s
+class ClientPOP3(L7ClientStartTlsBase):
     @classmethod
     def get_scheme(cls):
         return 'pop3'
@@ -279,10 +303,10 @@ class ClientPOP3(L7ClientTlsBase):
         return 110
 
     def _init_connection(self):
-        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
+        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
         try:
-            self._l7_client = poplib.POP3(self._ip, self._port, self._timeout)
-            self._l4_transfer.init_connection(self._l7_client.sock)
+            self._l7_client = poplib.POP3(self.ip, self.port, self.timeout)
+            self.l4_transfer.init_connection(self._l7_client.sock)
 
             response = self._l7_client._shortcmd('STLS')  # pylint: disable=protected-access
             if len(response) < 3 or response[:3] != b'+OK':
@@ -295,7 +319,7 @@ class ClientPOP3(L7ClientTlsBase):
             try:
                 self._l7_client.quit()
             except poplib.error_proto:
-                self._l4_transfer.close()
+                self.l4_transfer.close()
 
 
 class L7ClientSMTPS(L7ClientTlsBase):
@@ -308,12 +332,7 @@ class L7ClientSMTPS(L7ClientTlsBase):
         return 465
 
 
-class ClientSMTP(L7ClientTlsBase):
-    def __init__(self, address, port, timeout=None, ip=None):
-        super(ClientSMTP, self).__init__(address, port, timeout, ip)
-
-        self._l7_client = None
-
+class ClientSMTP(L7ClientStartTlsBase):
     @classmethod
     def get_scheme(cls):
         return 'smtp'
@@ -323,11 +342,11 @@ class ClientSMTP(L7ClientTlsBase):
         return 587
 
     def _init_connection(self):
-        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
+        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
         try:
-            self._l7_client = smtplib.SMTP(timeout=self._timeout)
-            self._l7_client.connect(self._ip, self._port)
-            self._l4_transfer.init_connection(self._l7_client.sock)
+            self._l7_client = smtplib.SMTP(timeout=self.timeout)
+            self._l7_client.connect(self.ip, self.port)
+            self.l4_transfer.init_connection(self._l7_client.sock)
 
             self._l7_client.ehlo()
             if not self._l7_client.has_extn('STARTTLS'):
@@ -343,7 +362,7 @@ class ClientSMTP(L7ClientTlsBase):
             try:
                 self._l7_client.quit()
             except smtplib.SMTPServerDisconnected:
-                self._l4_transfer.close()
+                self.l4_transfer.close()
 
 
 class L7ClientIMAPS(L7ClientTlsBase):
@@ -358,22 +377,17 @@ class L7ClientIMAPS(L7ClientTlsBase):
 
 class IMAP4(imaplib.IMAP4, object):
     def __init__(self, host, port, timeout):
-        self._timeout = timeout
+        self.timeout = timeout
         super(IMAP4, self).__init__(host, port)
 
     def open(self, *args, **kwargs):  # pylint: disable=arguments-differ,signature-differs,unused-argument
         self.host = args[0]
         self.port = args[1]
-        self.sock = socket.create_connection((self.host, self.port), self._timeout)
+        self.sock = socket.create_connection((self.host, self.port), self.timeout)
         self.file = self.sock.makefile('rb')
 
 
-class ClientIMAP(L7ClientTlsBase):
-    def __init__(self, address, port, timeout=None, ip=None):
-        super(ClientIMAP, self).__init__(address, port, timeout, ip)
-
-        self._l7_client = None
-
+class ClientIMAP(L7ClientStartTlsBase):
     @classmethod
     def get_scheme(cls):
         return 'imap'
@@ -387,10 +401,10 @@ class ClientIMAP(L7ClientTlsBase):
         return self._l7_client.capabilities
 
     def _init_connection(self):
-        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
+        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
         try:
-            self._l7_client = IMAP4(self._ip, self._port, self._timeout)
-            self._l4_transfer.init_connection(self._l7_client.socket())
+            self._l7_client = IMAP4(self.ip, self.port, self.timeout)
+            self.l4_transfer.init_connection(self._l7_client.socket())
 
             if 'STARTTLS' not in self._capabilities:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
@@ -405,7 +419,7 @@ class ClientIMAP(L7ClientTlsBase):
             try:
                 self._l7_client.shutdown()
             except IMAP4.error:
-                self._l4_transfer.close()
+                self.l4_transfer.close()
 
 
 class L7ClientFTPS(L7ClientTlsBase):
@@ -418,12 +432,7 @@ class L7ClientFTPS(L7ClientTlsBase):
         return 990
 
 
-class ClientFTP(L7ClientTlsBase):
-    def __init__(self, address, port, timeout=None, ip=None):
-        super(ClientFTP, self).__init__(address, port, timeout, ip)
-
-        self._l7_client = None
-
+class ClientFTP(L7ClientStartTlsBase):
     @classmethod
     def get_scheme(cls):
         return 'ftp'
@@ -433,11 +442,11 @@ class ClientFTP(L7ClientTlsBase):
         return 21
 
     def _init_connection(self):
-        self._l4_transfer = L4ClientTCP(self._address, self._port, self._timeout, self._ip)
+        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
         try:
             self._l7_client = ftplib.FTP()
-            response = self._l7_client.connect(self._address, self._port, self._timeout)
-            self._l4_transfer.init_connection(self._l7_client.sock)
+            response = self._l7_client.connect(self.address, self.port, self.timeout)
+            self.l4_transfer.init_connection(self._l7_client.sock)
             if not response.startswith('220'):
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
@@ -452,13 +461,13 @@ class ClientFTP(L7ClientTlsBase):
             try:
                 self._l7_client.quit()
             except ftplib.all_errors:
-                self._l4_transfer.close()
+                self.l4_transfer.close()
 
 
+@attr.s
 class TlsClient(object):
-    def __init__(self):
-        self._last_processed_message_type = None
-        self.server_messages = {}
+    _last_processed_message_type = attr.ib(init=False, default=None)
+    server_messages = attr.ib(init=False, default={})
 
     @staticmethod
     def raise_response_error(transfer):
@@ -512,7 +521,6 @@ class TlsClientHandshake(TlsClient):
 
                 if record.content_type != TlsContentType.HANDSHAKE:
                     raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
-
                 for handshake_message in record.messages:
                     self._process_message(handshake_message, hello_message.protocol_version)
                     self._last_processed_message_type = handshake_message.get_handshake_type()
@@ -536,11 +544,9 @@ class TlsClientHandshake(TlsClient):
                 raise NetworkError(NetworkErrorType.NO_RESPONSE)
 
 
+@attr.s
 class SslError(ValueError):
-    def __init__(self, error):
-        super(SslError, self).__init__()
-
-        self.error = error
+    error = attr.ib()
 
 
 class SslHandshakeClientHelloAnyAlgorithm(SslHandshakeClientHello):

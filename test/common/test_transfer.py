@@ -135,6 +135,7 @@ class TestL4ServerTCP(unittest.TestCase):
         threaded_server = L4ServerTCPEcho(l4_server)
         threaded_server.wait_for_server_listen()
 
-        self.assertNotEqual(l4_server.port, 0)
+        self.assertEqual(l4_server.port, 0)
+        self.assertNotEqual(l4_server.bind_port, 0)
         threaded_server.kill()
         threaded_server.join()
