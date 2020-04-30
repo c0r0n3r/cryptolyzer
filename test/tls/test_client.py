@@ -11,8 +11,11 @@ try:
 except ImportError:
     import mock
 
-from cryptoparser.common.exception import NotEnoughData
+from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 from cryptoparser.tls.ciphersuite import SslCipherKind
+from cryptoparser.tls.rdp import RDPNegotiationResponse
+
+from cryptoparser.tls.record import ParsableBase
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.subprotocol import (
     SslErrorMessage,
@@ -279,6 +282,36 @@ class TestClientFTP(TestL7ClientBase):
     def test_ftps_client(self):
         self.assertEqual(
             self.get_result('ftps', 'ftp.mrxs.de', None).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+
+
+RDP_NEGOTIATION_RESPONSE_LENGTH = 19
+
+
+class TestClientRDP(TestL7ClientBase):
+    @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
+    def test_error_send_timeout(self, _):
+        self.assertEqual(self.get_result('rdp', '139.138.153.205', None).versions, [])
+
+    @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidType)
+    def test_error_parse_invalid_type(self, _):
+        self.assertEqual(self.get_result('rdp', '139.138.153.205', None).versions, [])
+
+    @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidValue('x', int))
+    def test_error_parse_invalid_value(self, _):
+        self.assertEqual(self.get_result('rdp', '139.138.153.205', None).versions, [])
+
+    @mock.patch.object(
+        RDPNegotiationResponse, '_parse',
+        return_value=(RDPNegotiationResponse([], []), RDP_NEGOTIATION_RESPONSE_LENGTH)
+    )
+    def test_error_no_ssl_support(self, _):
+        self.assertEqual(self.get_result('rdp', '139.138.153.205', None).versions, [])
+
+    def test_rdp_client(self):
+        self.assertEqual(
+            self.get_result('rdp', '139.138.153.205', None).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
