@@ -248,6 +248,7 @@ class L7ClientTlsBase(L7TransferBase):
 @attr.s
 class L7ClientStartTlsBase(L7ClientTlsBase):
     _l7_client = attr.ib(init=False, default=None)
+    _tls_inititalized = attr.ib(init=False, default=False)
 
     @classmethod
     @abc.abstractmethod
@@ -258,6 +259,25 @@ class L7ClientStartTlsBase(L7ClientTlsBase):
     @abc.abstractmethod
     def get_default_port(cls):
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _init_l7(self):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _deinit_l7(self):
+        raise NotImplementedError()
+
+    def _init_connection(self):
+        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+
+        self._init_l7()
+        self._tls_inititalized = True
+
+    def _close_connection(self):
+        if self._l7_client is not None and not self._tls_inititalized:
+            self._deinit_l7()
+        self.l4_transfer.close()
 
 
 class L7ClientTls(L7ClientTlsBase):
@@ -310,8 +330,7 @@ class ClientPOP3(L7ClientStartTlsBase):
     def get_default_port(cls):
         return 110
 
-    def _init_connection(self):
-        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+    def _init_l7(self):
         try:
             self._l7_client = poplib.POP3(self.ip, self.port, self.timeout)
             self.l4_transfer.init_connection(self._l7_client.sock)
@@ -322,12 +341,11 @@ class ClientPOP3(L7ClientStartTlsBase):
         except poplib.error_proto:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-    def _close_connection(self):
-        if self._l7_client is not None:
-            try:
-                self._l7_client.quit()
-            except poplib.error_proto:
-                self.l4_transfer.close()
+    def _deinit_l7(self):
+        try:
+            self._l7_client.quit()
+        except poplib.error_proto:
+            self.l4_transfer.close()
 
 
 class L7ClientSMTPS(L7ClientTlsBase):
@@ -349,8 +367,7 @@ class ClientSMTP(L7ClientStartTlsBase):
     def get_default_port(cls):
         return 587
 
-    def _init_connection(self):
-        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+    def _init_l7(self):
         try:
             self._l7_client = smtplib.SMTP(timeout=self.timeout)
             self._l7_client.connect(self.ip, self.port)
@@ -365,12 +382,11 @@ class ClientSMTP(L7ClientStartTlsBase):
         except smtplib.SMTPException:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-    def _close_connection(self):
-        if self._l7_client is not None:
-            try:
-                self._l7_client.quit()
-            except smtplib.SMTPServerDisconnected:
-                self.l4_transfer.close()
+    def _deinit_l7(self):
+        try:
+            self._l7_client.quit()
+        except smtplib.SMTPServerDisconnected:
+            pass
 
 
 class L7ClientIMAPS(L7ClientTlsBase):
@@ -408,8 +424,7 @@ class ClientIMAP(L7ClientStartTlsBase):
     def _capabilities(self):
         return self._l7_client.capabilities
 
-    def _init_connection(self):
-        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+    def _init_l7(self):
         try:
             self._l7_client = IMAP4(self.ip, self.port, self.timeout)
             self.l4_transfer.init_connection(self._l7_client.socket())
@@ -422,12 +437,11 @@ class ClientIMAP(L7ClientStartTlsBase):
         except imaplib.IMAP4.error:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-    def _close_connection(self):
-        if self._l7_client is not None:
-            try:
-                self._l7_client.shutdown()
-            except IMAP4.error:
-                self.l4_transfer.close()
+    def _deinit_l7(self):
+        try:
+            self._l7_client.shutdown()
+        except IMAP4.error:
+            pass
 
 
 class L7ClientFTPS(L7ClientTlsBase):
@@ -449,8 +463,7 @@ class ClientFTP(L7ClientStartTlsBase):
     def get_default_port(cls):
         return 21
 
-    def _init_connection(self):
-        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+    def _init_l7(self):
         try:
             self._l7_client = ftplib.FTP()
             response = self._l7_client.connect(self.address, self.port, self.timeout)
@@ -464,16 +477,15 @@ class ClientFTP(L7ClientStartTlsBase):
         except ftplib.all_errors:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-    def _close_connection(self):
-        if self._l7_client is not None:
-            try:
-                self._l7_client.quit()
-            except ftplib.all_errors:
-                self.l4_transfer.close()
+    def _deinit_l7(self):
+        try:
+            self._l7_client.quit()
+        except ftplib.all_errors:
+            pass
 
 
 @attr.s
-class ClientRDP(L7ClientTlsBase):
+class ClientRDP(L7ClientStartTlsBase):
     @classmethod
     def get_scheme(cls):
         return 'rdp'
@@ -482,9 +494,12 @@ class ClientRDP(L7ClientTlsBase):
     def get_default_port(cls):
         return 3389
 
-    def _init_connection(self):
+    def _init_l7(self):
         try:
-            super(ClientRDP, self)._init_connection()
+            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client.init_connection()
+            self.l4_transfer = self._l7_client.l4_transfer
+
             neg_req = RDPNegotiationRequest([], [RDPProtocol.SSL, ])
             cotp = COTPConnectionRequest(src_ref=0, user_data=neg_req.compose())
             tpkt = TPKT(version=3, message=cotp.compose())
@@ -503,6 +518,9 @@ class ClientRDP(L7ClientTlsBase):
 
         if RDPProtocol.SSL not in neg_rsp.protocol:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+    def _deinit_l7(self):
+        pass
 
 
 class TlsClient(object):
