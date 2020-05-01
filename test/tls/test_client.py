@@ -156,12 +156,10 @@ class TestClientPOP3(TestL7ClientBase):
     def test_error_pop3_error_on_connect(self, _):
         self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, 10).versions, [])
 
+    @mock.patch.object(poplib.POP3, '_shortcmd', return_value=b'-ERR')
     @mock.patch.object(poplib.POP3, 'quit', side_effect=poplib.error_proto)
-    def test_error_pop3_error_on_quit(self, _):
-        self.assertEqual(
-            self.get_result('pop3', 'pop3.comcast.net', None, 10).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
-        )
+    def test_error_pop3_error_on_quit(self, _, __):
+        self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, 10).versions, [])
 
     def test_pop3_client(self):
         self.assertEqual(
