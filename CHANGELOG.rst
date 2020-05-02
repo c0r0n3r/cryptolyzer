@@ -1,6 +1,30 @@
 Changelog
 =========
 
+.. _v0-3-0:
+
+0.3.0 - 2020-04-30
+------------------
+
+Features
+^^^^^^^^
+
+* RDP support for TLS checkers (#21)
+* `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_ decoding
+  support (#22)
+* `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_  generatoin
+  support (#23)
+
+Bugs
+^^^^
+
+* FTP server check cause Python traceback on connection close (#27)
+
+Refactor
+^^^^^^^^
+
+* use attrs to avoid boilerplates (#24)
+
 .. _v0-2-0:
 
 0.2.0 - 2019-12-05

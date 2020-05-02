@@ -1,5 +1,5 @@
 attrs>=19.1
-cryptoparser>=0.2.0
+cryptoparser>=0.3.0
 cryptography>=2.5
 enum34==1.1.6;python_version<"3.4"
 urllib3
