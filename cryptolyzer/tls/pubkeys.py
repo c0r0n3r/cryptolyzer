@@ -192,7 +192,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                     analyzable.address
                 )
                 if ((sni_sent or subject_matches) and
-                        certificate_chain not in [result.certificate_chain for result in results]):
+                        certificate_chain not in [result.tls_certificate_chain for result in results]):
                     results.append(TlsPublicKey(sni_sent, subject_matches, certificate_chain))
 
         return AnalyzerResultPublicKeys(
