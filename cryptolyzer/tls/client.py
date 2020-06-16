@@ -120,6 +120,15 @@ class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenti
         ])
 
 
+class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthenticationBase):
+    def __init__(self, protocol_version, hostname):
+        super(TlsHandshakeClientHelloAuthenticationGOST, self).__init__(
+            protocol_version=protocol_version,
+            hostname=hostname,
+            authentication=Authentication.GOST_R3410_94
+        )
+
+
 class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHello):
     def __init__(self, protocol_version, hostname):
         _cipher_suites = TlsCipherSuiteVector([

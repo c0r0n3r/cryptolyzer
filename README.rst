@@ -154,6 +154,8 @@ Cipher Suites
 """""""""""""
 
 #. supports each cipher suites discussed on `ciphersuite.info <https://ciphersuite.info>`_
+#. supports `GOST <https://en.wikipedia.org/wiki/GOST>`_ (national standards of the Russian Federation and CIS
+   countries) cipher suites
 
 Fingerprinting
 """"""""""""""
