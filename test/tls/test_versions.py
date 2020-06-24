@@ -95,20 +95,6 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
-    def test_long_cipher_suite_list_intolerance(self):
-        self.assertEqual(
-            self.get_result('secure.simplepay.hu', 443).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
-        )
-        self.assertEqual(
-            self.get_result('www.aegon.hu', 443).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
-        )
-        self.assertEqual(
-            self.get_result('direkt.nn.hu', 443).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
-        )
-
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),

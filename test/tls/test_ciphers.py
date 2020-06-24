@@ -163,6 +163,10 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         ]))
         self.assertTrue(result.long_cipher_suite_list_intolerance)
 
+        self.assertTrue(self.get_result('secure.simplepay.hu', 443))
+        self.assertTrue(self.get_result('www.aegon.hu', 443))
+        self.assertTrue(self.get_result('direkt.nn.hu', 443))
+
     def test_cbc(self):
         result = self.get_result('cbc.badssl.com', 443)
 
