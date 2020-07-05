@@ -372,7 +372,7 @@ def parse_ecdh_params(param_bytes):
     parser.parse_parsable('named_curve', TlsNamedCurveFactory)
 
     parser.parse_numeric('public_key_length', 1)
-    parser.parse_bytes('public_key', parser['public_key_length'])
+    parser.parse_raw('public_key', parser['public_key_length'])
 
     return parser['named_curve'], parser['public_key']
 
