@@ -7,6 +7,7 @@ import six
 
 from cryptoparser.common.exception import NotEnoughData, InvalidValue
 
+from cryptoparser.tls.extension import TlsExtensionSupportedVersionsServer
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.subprotocol import (
     SslErrorMessage,
@@ -18,7 +19,6 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertLevel,
     TlsAlertMessage,
     TlsContentType,
-    TlsExtensions,
     TlsHandshakeServerHello,
     TlsHandshakeType,
 )
@@ -147,7 +147,7 @@ class TlsServerHandshake(TlsServer):
             server_hello = TlsHandshakeServerHello(
                 protocol_version=protocol_version,
                 cipher_suite=handshake_message.cipher_suites[0],
-                extensions=TlsExtensions([]),
+                extensions=TlsExtensionsServer([]),
             )
             self.l4_transfer.send(TlsRecord([server_hello]).compose())
 

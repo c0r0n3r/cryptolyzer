@@ -5,9 +5,9 @@ try:
 except ImportError:
     import mock
 
+from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
-from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase

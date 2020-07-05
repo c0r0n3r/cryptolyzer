@@ -5,19 +5,17 @@ import attr
 from cryptoparser.common.algorithm import Authentication
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
-from cryptoparser.tls.extension import TlsExtensions
+from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.extension import (
     TlsECPointFormatVector,
     TlsExtensionEllipticCurves,
     TlsExtensionServerName,
-    TlsNamedCurve,
-)
-from cryptoparser.tls.extension import (
     TlsExtensionSignatureAlgorithms,
-    TlsSignatureAndHashAlgorithm,
+    TlsExtensionsClient,
+    TlsNamedCurve,
     TlsSignatureAndHashAlgorithmVector,
 )
-from cryptoparser.tls.extension import TlsECPointFormat, TlsExtensionECPointFormats, TlsEllipticCurveVector
+from cryptoparser.tls.extension import TlsExtensionECPointFormats, TlsEllipticCurveVector
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription, TlsHandshakeClientHello
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
@@ -50,7 +48,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
             client_hello = TlsHandshakeClientHello(
                 protocol_version=protocol_version,
                 cipher_suites=cipher_suites,
-                extensions=TlsExtensions([
+                extensions=TlsExtensionsClient([
                     TlsExtensionServerName(l7_client.address),
                     TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
                     TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),

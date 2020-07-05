@@ -14,7 +14,7 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertDescription,
     TlsAlertLevel,
     TlsAlertMessage,
-    TlsExtensions,
+    TlsExtensionsClient,
     TlsHandshakeType,
     TlsHandshakeServerHello,
 )
@@ -150,7 +150,7 @@ class TestL7ServerTls(TestL7ServerBase):
         hello_message = TlsHandshakeServerHello(
             protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2),
             cipher_suite=TlsCipherSuite.TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-            extensions=TlsExtensions([]),
+            extensions=TlsExtensionsClient([]),
         )
         with self.assertRaises(TlsAlert) as context_manager:
             l7_client.do_tls_handshake(hello_message=hello_message)

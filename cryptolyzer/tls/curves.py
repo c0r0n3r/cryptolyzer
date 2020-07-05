@@ -6,7 +6,6 @@ import attr
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.extension import (
-    TlsEllipticCurveVector,
     TlsExtensionEllipticCurves,
     TlsExtensionType,
     TlsNamedCurve,

@@ -16,6 +16,7 @@ import six
 from cryptoparser.common.algorithm import Authentication, KeyExchange, NamedGroupType
 from cryptoparser.common.exception import NotEnoughData, TooMuchData, InvalidType, InvalidValue
 
+from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.ldap import (
     LDAPResultCode,
@@ -30,16 +31,21 @@ from cryptoparser.tls.rdp import (
     RDPNegotiationRequest,
     RDPNegotiationResponse,
 )
-from cryptoparser.tls.subprotocol import SslMessageType, SslHandshakeClientHello
-from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
-from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsContentType, TlsHandshakeType
-from cryptoparser.tls.subprotocol import TlsAlertLevel, TlsAlertDescription
-from cryptoparser.tls.extension import TlsExtensionServerName
+from cryptoparser.tls.subprotocol import (
+    SslHandshakeClientHello,
+    SslMessageType,
+    TlsAlertDescription,
+    TlsAlertLevel,
+    TlsContentType,
+    TlsHandshakeClientHello,
+    TlsHandshakeType,
+)
 from cryptoparser.tls.extension import (
     TlsExtensionEllipticCurves,
+    TlsExtensionServerName,
     TlsExtensionSignatureAlgorithms,
+    TlsExtensionsClient,
     TlsNamedCurve,
-    TlsSignatureAndHashAlgorithm,
 )
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
@@ -111,17 +117,17 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             elliptic_curves=(),
             signature_algorithms=()
     ):  # pylint: disable=too-many-arguments
-        _cipher_suites = TlsCipherSuiteVector([
+        _cipher_suites = [
             cipher_suite
             for cipher_suite in TlsCipherSuite
             if (cipher_suite.value.authentication and
                 cipher_suite.value.authentication == authentication)
-        ])
+        ]
 
         super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
-            cipher_suites=TlsCipherSuiteVector(_cipher_suites),
+            cipher_suites=_cipher_suites,
             elliptic_curves=elliptic_curves,
             signature_algorithms=signature_algorithms,
             extensions=[]
@@ -178,7 +184,7 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(  # pylint: disable=too-ma
             TlsHandshakeClientHelloSpecalization
         ):
     def __init__(self, protocol_version, hostname):
-        _cipher_suites = TlsCipherSuiteVector([
+        _cipher_suites = [
             cipher_suite
             for cipher_suite in TlsCipherSuite
             if (cipher_suite.value.authentication and
@@ -189,12 +195,12 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(  # pylint: disable=too-ma
                     Authentication.SRP,
                     Authentication.anon,
                 ])
-        ])
+        ]
 
         super(TlsHandshakeClientHelloAuthenticationRarelyUsed, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
-            cipher_suites=TlsCipherSuiteVector(_cipher_suites),
+            cipher_suites=_cipher_suites,
             elliptic_curves=[],
             signature_algorithms=[],
             extensions=[]
@@ -204,17 +210,17 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(  # pylint: disable=too-ma
 class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancestors
             TlsHandshakeClientHelloSpecalization
         ):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
+    _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if cipher_suite.value.key_exchange == KeyExchange.DHE
-    ])
+    ]
 
     def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
+            cipher_suites=self._CIPHER_SUITES,
             elliptic_curves=[
                 named_group
                 for named_group in TlsNamedCurve
@@ -229,18 +235,18 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
 class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ancestors
             TlsHandshakeClientHelloSpecalization
         ):
-    _CIPHER_SUITES = TlsCipherSuiteVector([
+    _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.key_exchange and
             cipher_suite.value.key_exchange in [KeyExchange.ECDH, KeyExchange.ECDHE])
-    ])
+    ]
 
     def __init__(self, protocol_version, hostname):
         super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
-            cipher_suites=TlsCipherSuiteVector(self._CIPHER_SUITES),
+            cipher_suites=self._CIPHER_SUITES,
             elliptic_curves=None,
             signature_algorithms=None,
             extensions=[]
