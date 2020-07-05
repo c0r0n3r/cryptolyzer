@@ -116,6 +116,12 @@ class PublicKeyX509(PublicKey):
         'WoSign': ('1.3.6.1.4.1.36305.2', ),
     }
 
+    _MAC_NAME_TO_CRYPTOPARSER_MAC_MAP = {
+        'sha256': MAC.SHA2_256,
+        'sha384': MAC.SHA2_384,
+        'sha512': MAC.SHA2_512,
+    }
+
     certificate = attr.ib(validator=attr.validators.instance_of(asn1crypto.x509.Certificate))
 
     def __eq__(self, other):
@@ -152,7 +158,7 @@ class PublicKeyX509(PublicKey):
 
     @property
     def signature_hash_algorithm(self):
-        return MAC[self.certificate.hash_algo.upper()]
+        return self._MAC_NAME_TO_CRYPTOPARSER_MAC_MAP.get(self.certificate.hash_algo, None)
 
     @property
     def fingerprints(self):
@@ -164,7 +170,7 @@ class PublicKeyX509(PublicKey):
             MAC.SHA1: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
                 hashlib.sha1(certificyte_bytes).digest()
             ),
-            MAC.SHA256: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
+            MAC.SHA2_256: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
                 hashlib.sha256(certificyte_bytes).digest()
             ),
         }
@@ -262,7 +268,7 @@ class PublicKeyX509(PublicKey):
                 ('crl_distribution_points', self.crl_distribution_points),
                 ('ocsp_responders', self.ocsp_responders),
             ])),
-            ('fingerprints', {mac.name: fingerprint for (mac, fingerprint) in six.iteritems(self.fingerprints)}),
+            ('fingerprints', {mac.value.name: fingerprint for (mac, fingerprint) in six.iteritems(self.fingerprints)}),
             ('public_key_pin', self.public_key_pin),
             ('version', self.certificate['tbs_certificate']['version'].native),
         ])
