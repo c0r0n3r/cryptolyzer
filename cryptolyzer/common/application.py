@@ -10,8 +10,16 @@ from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidVal
 from cryptolyzer.common.transfer import L7TransferBase, L4TransferBase, L4ServerTCP
 
 
+class L7ServerConfigurationBase(object):
+    pass
+
+
 @attr.s
 class L7ServerBase(L7TransferBase):
+    configuration = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(L7ServerConfigurationBase))
+    )
     max_handshake_count = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
     l4_transfer = attr.ib(
         init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(L4TransferBase))
@@ -65,6 +73,7 @@ class L7ServerBase(L7TransferBase):
 @attr.s
 class L7ServerHandshakeBase(object):
     l4_transfer = attr.ib(validator=attr.validators.instance_of(L4TransferBase))
+    configuration = attr.ib(validator=attr.validators.instance_of(L7ServerConfigurationBase))
     _last_processed_message_type = attr.ib(init=False, default=None)
     client_messages = attr.ib(init=False, default={})
 

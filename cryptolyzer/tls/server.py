@@ -21,11 +21,19 @@ from cryptoparser.tls.subprotocol import (
 )
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
-from cryptolyzer.common.application import L7ServerBase, L7ServerHandshakeBase
+from cryptolyzer.common.application import L7ServerBase, L7ServerHandshakeBase, L7ServerConfigurationBase
+
+
+@attr.s
+class TlsServerConfiguration(L7ServerConfigurationBase):
+    pass
 
 
 @attr.s
 class L7ServerTlsBase(L7ServerBase):
+    def __attrs_post_init__(self):
+        if self.configuration is None:
+            self.configuration = TlsServerConfiguration()
 
     @classmethod
     @abc.abstractmethod
@@ -60,7 +68,7 @@ class L7ServerTlsBase(L7ServerBase):
     def _do_handshake(self, last_handshake_message_type, fallback_to_ssl):
         try:
             handshake_class = self._get_handshake_class(self.l4_transfer, fallback_to_ssl)
-            handshake_object = handshake_class(self.l4_transfer)
+            handshake_object = handshake_class(self.l4_transfer, self.configuration)
         except NetworkError:
             self.l4_transfer.close()
             return {}
