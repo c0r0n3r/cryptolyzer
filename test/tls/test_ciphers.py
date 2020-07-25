@@ -16,11 +16,23 @@ from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
 class TestSslCiphers(unittest.TestCase):
+    def setUp(self):
+        self.threaded_server = self.create_server()
+
+    @staticmethod
+    def create_server():
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, timeout=0.5, configuration=TlsServerConfiguration(fallback_to_ssl=True))
+        )
+        threaded_server.wait_for_server_listen()
+        return threaded_server
+
     @staticmethod
     def get_result(host, port):
         analyzer = AnalyzerCipherSuites()
@@ -29,19 +41,13 @@ class TestSslCiphers(unittest.TestCase):
         return result
 
     def test_ciphers(self):
-        result = self.get_result('164.100.148.73', 443)
+        result = self.get_result('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
 
         self.assertEqual(result.cipher_suite_preference, True)
-        self.assertEqual(
-            result.cipher_suites,
-            [
-                SslCipherKind.RC4_128_WITH_MD5,
-                SslCipherKind.DES_192_EDE3_CBC_WITH_MD5,
-            ]
-        )
+        self.assertEqual(result.cipher_suites, list(SslCipherKind))
 
     def test_json(self):
-        result = self.get_result('164.100.148.73', 443)
+        result = self.get_result('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result)
 
 
