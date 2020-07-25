@@ -153,10 +153,11 @@ class L4ServerTCP(L4TransferTCP):
 
     def accept(self):
         self._socket, _ = self._server_socket.accept()
+        self._socket.settimeout(self.get_default_timeout())
 
     @classmethod
     def get_default_timeout(cls):
-        return None
+        return 1
 
 
 @attr.s
