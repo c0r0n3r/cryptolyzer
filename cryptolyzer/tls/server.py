@@ -162,25 +162,25 @@ class TlsServerHandshake(TlsServer):
             self.client_messages[self._last_processed_message_type] = handshake_message
 
             if self._last_processed_message_type == last_handshake_message_type:
-                self._send_alert(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY)
+                self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY)
                 raise StopIteration()
 
     def _process_non_handshake_message(self, record):
-        self._send_alert(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE)
+        self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE)
         raise StopIteration()
 
     def _process_plain_text_message(self):
         if self._is_message_plain_text():
-            self._send_alert(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR)
+            self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR)
             raise StopIteration()
 
     def _process_invalid_message(self):
         self._process_plain_text_message()
 
-        self._send_alert(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR)
+        self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR)
         raise StopIteration()
 
-    def _send_alert(self, alert_level, alert_description):
+    def _handle_error(self, alert_level, alert_description):
         self.l4_transfer.send(TlsRecord([
             TlsAlertMessage(alert_level, alert_description),
         ]).compose())
@@ -228,25 +228,25 @@ class SslServerHandshake(TlsServer):
         self.client_messages[self._last_processed_message_type] = record.message
 
         if self._last_processed_message_type == last_handshake_message_type:
-            self._send_alert(SslErrorType.NO_CIPHER_ERROR)
+            self._handle_error(SslErrorType.NO_CIPHER_ERROR)
             raise StopIteration()
 
     def _process_non_handshake_message(self, record):
-        self._send_alert(SslErrorType.NO_CIPHER_ERROR)
+        self._handle_error(SslErrorType.NO_CIPHER_ERROR)
         raise StopIteration()
 
     def _process_plain_text_message(self):
         if self._is_message_plain_text():
-            self._send_alert(SslErrorType.NO_CIPHER_ERROR)
+            self._handle_error(SslErrorType.NO_CIPHER_ERROR)
             raise StopIteration()
 
     def _process_invalid_message(self):
         self._process_plain_text_message()
 
-        self._send_alert(SslErrorType.NO_CIPHER_ERROR)
+        self._handle_error(SslErrorType.NO_CIPHER_ERROR)
         raise StopIteration()
 
-    def _send_alert(self, error_type):
+    def _handle_error(self, error_type):
         self.l4_transfer.send(SslRecord(SslErrorMessage(error_type)).compose())
 
     def do_handshake(self, last_handshake_message_type=SslMessageType.CLIENT_HELLO):

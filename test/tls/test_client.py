@@ -54,7 +54,7 @@ from .classes import L7ServerTlsTest, L7ServerTlsAlert, TlsServerAlert
 
 class L7ServerTlsFatalResponse(TlsServerHandshake):
     def _process_handshake_message(self, record, last_handshake_message_type):
-        self._send_alert(TlsAlertLevel.WARNING, TlsAlertDescription.USER_CANCELED)
+        self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.USER_CANCELED)
         raise StopIteration()
 
 
