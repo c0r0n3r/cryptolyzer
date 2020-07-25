@@ -39,16 +39,14 @@ class L7ServerBase(L7TransferBase):
         self.l4_transfer = L4ServerTCP(self.address, self.port, self.timeout, self.ip)
         self.l4_transfer.init_connection()
 
-    @staticmethod
-    @abc.abstractmethod
-    def _get_handshake_class(l4_transfer, fallback_to_ssl):
+    def _get_handshake_class(self, l4_transfer):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _do_handshake(self, last_handshake_message_type, fallback_to_ssl):
+    def _do_handshake(self, last_handshake_message_type):
         raise NotImplementedError()
 
-    def _do_handshakes(self, last_handshake_message_type, fallback_to_ssl):
+    def _do_handshakes(self, last_handshake_message_type):
         client_messages = []
         actual_handshake_count = 0
         while True:
@@ -63,7 +61,7 @@ class L7ServerBase(L7TransferBase):
                 break
 
             actual_handshake_count += 1
-            client_messages.append(self._do_handshake(last_handshake_message_type, fallback_to_ssl))
+            client_messages.append(self._do_handshake(last_handshake_message_type))
 
         self._close_connection()
 

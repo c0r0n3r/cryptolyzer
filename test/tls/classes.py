@@ -45,17 +45,12 @@ class TestTlsCases:
 
 
 class L7ServerTlsTest(TestThreaderServer):
-    def __init__(self, l7_server, fallback_to_ssl):
+    def __init__(self, l7_server):
         self.l7_server = l7_server
         super(L7ServerTlsTest, self).__init__(self.l7_server)
 
-        self.fallback_to_ssl = fallback_to_ssl
-
     def run(self):
-        if self.fallback_to_ssl is None:
-            self.l7_server.do_ssl_handshake()
-        else:
-            self.l7_server.do_tls_handshake(fallback_to_ssl=self.fallback_to_ssl)
+        self.l7_server.do_handshake()
 
 
 class TlsServerPlainTextResponse(TlsServerHandshake):
@@ -67,7 +62,7 @@ class TlsServerPlainTextResponse(TlsServerHandshake):
 
 class L7ServerTlsPlainTextResponse(L7ServerTls):
     @staticmethod
-    def _get_handshake_class(l4_transfer, fallback_to_ssl):
+    def _get_handshake_class(l4_transfer):
         return TlsServerPlainTextResponse
 
 
@@ -82,5 +77,5 @@ class TlsServerAlert(TlsServerHandshake):
 
 class L7ServerTlsAlert(L7ServerTls):
     @staticmethod
-    def _get_handshake_class(l4_transfer, fallback_to_ssl):
+    def _get_handshake_class(l4_transfer):
         return TlsServerAlert

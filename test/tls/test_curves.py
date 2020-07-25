@@ -100,7 +100,6 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
     def test_error_repeated_message_in_server_reply(self, _):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsAlert('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
         )
         threaded_server.wait_for_server_listen()
 
@@ -120,7 +119,6 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.5),
-            fallback_to_ssl=False
         )
         threaded_server.start()
         self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).curves, [])

@@ -45,11 +45,17 @@ from cryptolyzer.common.exception import (
     SecurityError,
     SecurityErrorType
 )
-from cryptolyzer.tls.server import L7ServerTlsBase, L7ServerTls, TlsServerHandshake, SslServerHandshake
+from cryptolyzer.tls.server import (
+    L7ServerTls,
+    L7ServerTlsBase,
+    SslServerHandshake,
+    TlsServerConfiguration,
+    TlsServerHandshake,
+)
 from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.versions import AnalyzerVersions
 
-from .classes import L7ServerTlsTest, L7ServerTlsAlert, TlsServerAlert
+from .classes import L7ServerTlsTest
 
 
 class L7ServerTlsFatalResponse(TlsServerHandshake):
@@ -323,15 +329,9 @@ class TestClientDoH(TestL7ClientBase):
 
 
 class TestTlsClientHandshake(TestL7ClientBase):
-    @mock.patch.object(
-        TlsServerAlert, '_get_alert_message', mock.PropertyMock(
-            return_value=TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.UNEXPECTED_MESSAGE)
-        )
-    )
     def test_error_always_alert_wargning(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsAlert('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
+            L7ServerTls('localhost', 0, timeout=0.2, configuration=TlsServerConfiguration(protocol_versions=[])),
         )
         threaded_server.start()
 
@@ -350,7 +350,6 @@ class TestTlsClientHandshake(TestL7ClientBase):
     def test_error_fatal_alert(self, _):
         threaded_server = L7ServerTlsTest(
             L7ServerTls('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
         )
         threaded_server.wait_for_server_listen()
         l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
@@ -364,7 +363,6 @@ class TestTlsClientHandshake(TestL7ClientBase):
     def test_error_plain_text_response(self, _):
         threaded_server = L7ServerTlsTest(
             L7ServerTls('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
         )
         threaded_server.start()
         l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.l4_transfer.bind_port)

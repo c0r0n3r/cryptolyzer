@@ -234,7 +234,6 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
         )
         threaded_server.start()
         self.assertEqual(
