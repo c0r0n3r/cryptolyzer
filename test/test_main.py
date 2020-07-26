@@ -84,7 +84,7 @@ class TestMain(unittest.TestCase):
         self.assertEqual(
             self._get_test_analyzer_result('tls1', 'ciphers', 'rc4-md5.badssl.com'),
             test.tls.test_ciphers.TestTlsCiphers.get_result(
-                six.u('rc4-md5.badssl.com'), 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)
+                'rc4-md5.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0)
             ).as_json() + '\n'
         )
         simple_result = test.tls.test_ciphers.TestTlsCiphers.get_result('tls-v1-0.badssl.com', 1010)
@@ -96,31 +96,31 @@ class TestMain(unittest.TestCase):
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'curves', 'ecc256.badssl.com:443'),
             test.tls.test_curves.TestTlsCurves.get_result(
-                six.u('ecc256.badssl.com'), 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+                'ecc256.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2)
             ).as_json() + '\n',
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'dhparams', 'dh2048.badssl.com'),
-            test.tls.test_dhparams.TestTlsDHParams.get_result(six.u('dh2048.badssl.com'), 443).as_json() + '\n'
+            test.tls.test_dhparams.TestTlsDHParams.get_result('dh2048.badssl.com', 443).as_json() + '\n'
         )
-        result = test.tls.test_pubkeys.TestTlsPubKeys.get_result(six.u('www.cloudflare.com'), 443)
+        result = test.tls.test_pubkeys.TestTlsPubKeys.get_result('www.cloudflare.com', 443)
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'pubkeys', '#'.join(['www.cloudflare.com', result.target.ip])),
             result.as_json() + '\n'
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'sigalgos', 'ecc256.badssl.com:443'),
-            test.tls.test_sigalgos.TestTlsSigAlgos.get_result(six.u('ecc256.badssl.com'), 443).as_json() + '\n',
+            test.tls.test_sigalgos.TestTlsSigAlgos.get_result('ecc256.badssl.com', 443).as_json() + '\n',
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls', 'versions', 'tls-v1-0.badssl.com:1010'),
-            test.tls.test_versions.TestTlsVersions.get_result(six.u('tls-v1-0.badssl.com'), 1010).as_json() + '\n',
+            test.tls.test_versions.TestTlsVersions.get_result('tls-v1-0.badssl.com', 1010).as_json() + '\n',
         )
 
     def test_analyzer_output_ja3_decode(self):
         self.assertEqual(
             self._get_test_analyzer_result('ja3', 'decode', '771,7-6,5-4,3-2,1-0'),
-            test.ja3.test_decode.TestJA3Decode.get_result(six.u('771,7-6,5-4,3-2,1-0')).as_json() + '\n',
+            test.ja3.test_decode.TestJA3Decode.get_result('771,7-6,5-4,3-2,1-0').as_json() + '\n',
         )
 
     def test_analyzer_output_ja3_generate(self):
