@@ -103,6 +103,7 @@ SSL/TLS
     * `POP3 <https://en.wikipedia.org/wiki/Post_Office_Protocol>`_
     * `RDP <https://en.wikipedia.org/wiki/Remote_Desktop_Protocol>`_
     * `SMTP <https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol>`_
+    * `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`_
 
 Analyzers
 ^^^^^^^^^

@@ -9,6 +9,8 @@ except ImportError:
 
 from test.common.classes import TestThreadedServer
 
+import attr
+
 from cryptoparser.tls.record import TlsRecord
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 
@@ -51,6 +53,27 @@ class L7ServerTlsTest(TestThreadedServer):
 
     def run(self):
         self.l7_server.do_handshake()
+
+
+@attr.s
+class TlsServerMockResponse(TlsServerHandshake):
+    _message_count = attr.ib(init=False, default=0)
+
+    def _get_mock_responses(self):
+        raise NotImplementedError()
+
+    def _init_connection(self, last_handshake_message_type):
+        mock_responses = self._get_mock_responses()
+        self.l4_transfer.send(b''.join(mock_responses))
+
+    def _process_invalid_message(self):
+        pass
+
+
+class L7ServerTlsMockResponse(L7ServerTls):
+    @staticmethod
+    def _get_handshake_class(l4_transfer):
+        return TlsServerMockResponse
 
 
 class TlsServerPlainTextResponse(TlsServerHandshake):

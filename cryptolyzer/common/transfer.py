@@ -236,7 +236,7 @@ class L7TransferBase(object):
     def init_connection(self):
         try:
             self._init_connection()
-        except SecurityError:
+        except (SecurityError, NetworkError):
             self._close_connection()
             raise
 
