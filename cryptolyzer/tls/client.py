@@ -11,6 +11,8 @@ import socket
 
 import attr
 
+import six
+
 from cryptoparser.common.algorithm import Authentication, KeyExchange
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 
@@ -338,8 +340,8 @@ class ClientPOP3(L7ClientStartTlsBase):
             response = self._l7_client._shortcmd('STLS')  # pylint: disable=protected-access
             if len(response) < 3 or response[:3] != b'+OK':
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        except poplib.error_proto:
-            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        except poplib.error_proto as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
     def _deinit_l7(self):
         try:
@@ -379,8 +381,8 @@ class ClientSMTP(L7ClientStartTlsBase):
             response, _ = self._l7_client.docmd('STARTTLS')
             if response != 220:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        except smtplib.SMTPException:
-            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        except smtplib.SMTPException as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
     def _deinit_l7(self):
         try:
@@ -434,8 +436,8 @@ class ClientIMAP(L7ClientStartTlsBase):
             response, _ = self._l7_client.xatom('STARTTLS')
             if response != 'OK':
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        except imaplib.IMAP4.error:
-            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        except imaplib.IMAP4.error as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
     def _deinit_l7(self):
         try:
@@ -474,8 +476,8 @@ class ClientFTP(L7ClientStartTlsBase):
             response = self._l7_client.sendcmd('AUTH TLS')
             if not response.startswith('234'):
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        except ftplib.all_errors:
-            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        except ftplib.all_errors as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
     def _deinit_l7(self):
         try:
@@ -511,10 +513,10 @@ class ClientRDP(L7ClientStartTlsBase):
             cotp = COTPConnectionConfirm.parse_exact_size(tpkt.message)
             neg_rsp = RDPNegotiationResponse.parse_exact_size(cotp.user_data)
             self.l4_transfer.flush_buffer(len(request_bytes))
-        except socket.timeout:
-            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        except (InvalidValue, InvalidType):
-            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        except socket.timeout as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+        except (InvalidValue, InvalidType) as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
         if RDPProtocol.SSL not in neg_rsp.protocol:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
@@ -595,11 +597,11 @@ class TlsClientHandshake(TlsClient):
 
             try:
                 transfer.receive(receivable_byte_num)
-            except NotEnoughData:
+            except NotEnoughData as e:
                 if transfer.buffer:
-                    raise NetworkError(NetworkErrorType.NO_CONNECTION)
+                    six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
 
-                raise NetworkError(NetworkErrorType.NO_RESPONSE)
+                six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
 
 
 @attr.s
@@ -646,7 +648,7 @@ class SslClientHandshake(TlsClient):
 
             try:
                 transfer.receive(receivable_byte_num)
-            except NotEnoughData:
+            except NotEnoughData as e:
                 if transfer.buffer:
                     try:
                         tls_record = TlsRecord.parse_exact_size(transfer.buffer)
@@ -660,8 +662,8 @@ class SslClientHandshake(TlsClient):
                                     TlsAlertDescription.HANDSHAKE_FAILURE,
                                     TlsAlertDescription.INTERNAL_ERROR,
                                 ])):
-                            raise NetworkError(NetworkErrorType.NO_RESPONSE)
+                            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
 
-                        raise NetworkError(NetworkErrorType.NO_CONNECTION)
+                        six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
                 else:
-                    raise NetworkError(NetworkErrorType.NO_RESPONSE)
+                    six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)

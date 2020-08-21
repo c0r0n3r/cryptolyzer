@@ -362,21 +362,21 @@ def parse_ecdh_params(param_bytes):
     if named_curve == TlsNamedCurve.X25519:
         try:
             public_key = cryptography_x25519.X25519PublicKey.from_public_bytes(bytes(parser['point']))
-        except cryptography.exceptions.UnsupportedAlgorithm:  # pragma: no cover
-            raise NotImplementedError(named_curve)
+        except cryptography.exceptions.UnsupportedAlgorithm as e:  # pragma: no cover
+            six.raise_from(NotImplementedError(named_curve), e)
     else:
         try:
             cryptography_curve = getattr(cryptography_ec, named_curve.name)()
-        except AttributeError:  # pragma: no cover
-            raise NotImplementedError(named_curve)
+        except AttributeError as e:  # pragma: no cover
+            six.raise_from(NotImplementedError(named_curve), e)
 
         try:
             public_key = cryptography_ec.EllipticCurvePublicKey.from_encoded_point(
                 cryptography_curve,
                 bytes(parser['point'])
             )
-        except ValueError:
-            raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
+        except ValueError as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE), e)
 
     return parser['named_curve'], public_key
 

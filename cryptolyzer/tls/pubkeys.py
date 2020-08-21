@@ -4,6 +4,8 @@ import copy
 from collections import OrderedDict
 import attr
 
+import six
+
 import cryptography.x509 as cryptography_x509
 
 from cryptography.hazmat.backends import default_backend as cryptography_default_backend
@@ -144,7 +146,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         except TlsAlert as e:
             if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
                 if sni_sent:
-                    raise StopIteration
+                    six.raise_from(StopIteration, e)
             elif e.description not in [
                     TlsAlertDescription.HANDSHAKE_FAILURE,
                     TlsAlertDescription.INTERNAL_ERROR,
@@ -155,9 +157,9 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         except NetworkError as e:
             if e.error != NetworkErrorType.NO_RESPONSE:
                 raise e
-        except SecurityError:
+        except SecurityError as e:
             if client_hello == client_hello_messages[0]:
-                raise StopIteration
+                six.raise_from(StopIteration, e)
 
         return server_messages
 

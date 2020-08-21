@@ -4,6 +4,8 @@ import unittest
 
 from test.common.classes import TestThreaderServer
 
+import six
+
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsECPointFormat,
@@ -50,7 +52,7 @@ class TestJA3Generate(unittest.TestCase):
             l7_client.do_tls_handshake(hello_message=hello_message)
         except TlsAlert as e:
             if e.description != TlsAlertDescription.CLOSE_NOTIFY:
-                raise ValueError
+                six.raise_from(ValueError, e)
         else:
             raise ValueError
 

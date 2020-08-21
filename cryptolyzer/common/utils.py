@@ -16,16 +16,16 @@ def resolve_address(address, port, ip=None):
     if ip:
         try:
             family = socket.AF_INET if ipaddress.ip_address(six.text_type(ip)).version == 4 else socket.AF_INET6
-        except ValueError:
-            raise NetworkError(NetworkErrorType.NO_ADDRESS)
+        except ValueError as e:
+            six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
 
     try:
         addresses = [
             (addrinfo[0], addrinfo[4][0])
             for addrinfo in socket.getaddrinfo(address, port, 0, socket.SOCK_STREAM)
         ]
-    except socket.gaierror:
-        raise NetworkError(NetworkErrorType.NO_ADDRESS)
+    except socket.gaierror as e:
+        six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
     if not addresses:
         raise NetworkError(NetworkErrorType.NO_ADDRESS)
 

@@ -4,6 +4,8 @@ import abc
 import socket
 import attr
 
+import six
+
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
@@ -52,8 +54,8 @@ class L7ServerTlsBase(L7TransferBase):
         elif fallback_to_ssl:
             try:
                 l4_transfer.receive(TlsRecord.HEADER_SIZE)
-            except NotEnoughData:
-                raise NetworkError(NetworkErrorType.NO_CONNECTION)
+            except NotEnoughData as e:
+                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
 
             try:
                 TlsRecord.parse_header(l4_transfer.buffer)

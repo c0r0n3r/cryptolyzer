@@ -116,7 +116,7 @@ class L4ClientTCP(L4TransferTCP):
             self._socket = socket.create_connection((self.ip, self.port), self.timeout)
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, (socket.error, socket.timeout)):
-                raise NetworkError(NetworkErrorType.NO_CONNECTION)
+                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
 
             raise e
 
@@ -142,12 +142,12 @@ class L4ServerTCP(L4TransferTCP):
             self._server_socket.settimeout(self.timeout)
             self._server_socket.bind((self.ip, self.port))
             self._server_socket.listen(self.backlog)
-        except KeyboardInterrupt:
-            raise NetworkError(NetworkErrorType.NO_RESPONSE)
-        except OverflowError:
-            raise NetworkError(NetworkErrorType.NO_ADDRESS)
-        except (OSError, socket.error):
-            raise NetworkError(NetworkErrorType.NO_CONNECTION)
+        except KeyboardInterrupt as e:
+            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+        except OverflowError as e:
+            six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
+        except (OSError, socket.error) as e:
+            six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
 
         self.bind_port = self._server_socket.getsockname()[1]
 
