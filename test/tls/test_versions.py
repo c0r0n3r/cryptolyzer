@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import unittest
 try:
     from unittest import mock
 except ImportError:
@@ -11,18 +10,25 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslPro
 
 from cryptolyzer.tls.client import L7ClientTlsBase, SslError
 from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
-class TestSslVersions(unittest.TestCase):
+class TestSslVersions(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port):
+    def get_result(host, port, protocol_version=None, timeout=None):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, SslProtocolVersion())
         return result
+
+    @staticmethod
+    def create_server(configuration=None):
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=0.2, configuration=configuration))
+        threaded_server.wait_for_server_listen()
+        return threaded_server
 
     @mock.patch.object(
         L7ClientTlsBase, 'do_ssl_handshake',
@@ -33,13 +39,33 @@ class TestSslVersions(unittest.TestCase):
             self.get_result('badssl.com', 443)
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CERTIFICATE_ERROR)
 
+    def test_ssl_2(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            protocol_versions=[TlsProtocolVersionFinal(TlsVersion.SSL3), ],
+            fallback_to_ssl=True
+        ))
+        self.assertEqual(
+            self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions,
+            [SslProtocolVersion(), TlsProtocolVersionFinal(TlsVersion.SSL3), ]
+        )
+
     def test_versions(self):
-        result = self.get_result('164.100.148.73', 443)
-        self.assertEqual(result.versions, [
-            SslProtocolVersion(),
-            TlsProtocolVersionFinal(TlsVersion.SSL3),
-            TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-        ])
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, timeout=0.2),
+        )
+        threaded_server.start()
+
+        server_port = threaded_server.l7_server.l4_transfer.bind_port
+
+        self.assertEqual(
+            self.get_result('localhost', server_port).versions,
+            [
+                TlsProtocolVersionFinal(TlsVersion.SSL3),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            ]
+        )
 
     def test_tls_alert_response_to_ssl_handshake(self):
         result = self.get_result('www.google.com', 443)
@@ -95,24 +121,9 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
-    def test_long_cipher_suite_list_intolerance(self):
-        self.assertEqual(
-            self.get_result('secure.simplepay.hu', 443).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
-        )
-        self.assertEqual(
-            self.get_result('www.aegon.hu', 443).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
-        )
-        self.assertEqual(
-            self.get_result('direkt.nn.hu', 443).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
-        )
-
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
         )
         threaded_server.start()
         self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions, [])

@@ -22,12 +22,12 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptolyzer.ja3.generate import AnalyzerGenerate
 
 from cryptolyzer.tls.client import L7ClientTls, TlsAlert
-from cryptolyzer.tls.server import L7ServerTls
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 
 class AnalyzerThread(TestThreaderServer):
-    def __init__(self):
-        self.l7_server = L7ServerTls('localhost', 0)
+    def __init__(self, configuration=None):
+        self.l7_server = L7ServerTls('localhost', 0, configuration=configuration)
         super(AnalyzerThread, self).__init__(self.l7_server)
 
         self.analyzer = AnalyzerGenerate()
@@ -40,7 +40,7 @@ class AnalyzerThread(TestThreaderServer):
 class TestJA3Generate(unittest.TestCase):
     @staticmethod
     def get_result(hello_message):
-        analyzer_thread = AnalyzerThread()
+        analyzer_thread = AnalyzerThread(TlsServerConfiguration(protocol_versions=[]))
         analyzer_thread.wait_for_server_listen()
 
         l7_client = L7ClientTls(
@@ -51,7 +51,7 @@ class TestJA3Generate(unittest.TestCase):
         try:
             l7_client.do_tls_handshake(hello_message=hello_message)
         except TlsAlert as e:
-            if e.description != TlsAlertDescription.CLOSE_NOTIFY:
+            if e.description != TlsAlertDescription.PROTOCOL_VERSION:
                 six.raise_from(ValueError, e)
         else:
             raise ValueError

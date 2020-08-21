@@ -43,7 +43,7 @@ class AnalyzerGenerate(AnalyzerBase):
     def analyze(self, analyzable):
         analyzable.max_handshake_count = 1
         analyzable.init_connection()
-        client_messages = analyzable.do_tls_handshake()
+        client_messages = analyzable.do_handshake()
         tag = client_messages[0][TlsHandshakeType.CLIENT_HELLO].ja3()
 
         return AnalyzerResultGenerate(

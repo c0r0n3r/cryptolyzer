@@ -103,9 +103,10 @@ class TestMain(unittest.TestCase):
             self._get_test_analyzer_result('tls1_2', 'dhparams', 'dh2048.badssl.com'),
             test.tls.test_dhparams.TestTlsDHParams.get_result(six.u('dh2048.badssl.com'), 443).as_json() + '\n'
         )
+        result = test.tls.test_pubkeys.TestTlsPubKeys.get_result(six.u('www.cloudflare.com'), 443)
         self.assertEqual(
-            self._get_test_analyzer_result('tls1_2', 'pubkeys', 'www.cloudflare.com'),
-            test.tls.test_pubkeys.TestTlsPubKeys.get_result(six.u('www.cloudflare.com'), 443).as_json() + '\n'
+            self._get_test_analyzer_result('tls1_2', 'pubkeys', '#'.join(['www.cloudflare.com', result.target.ip])),
+            result.as_json() + '\n'
         )
         self.assertEqual(
             self._get_test_analyzer_result('tls1_2', 'sigalgos', 'ecc256.badssl.com:443'),

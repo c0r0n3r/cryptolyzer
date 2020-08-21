@@ -45,16 +45,22 @@ from cryptolyzer.common.exception import (
     SecurityError,
     SecurityErrorType
 )
-from cryptolyzer.tls.server import L7ServerTlsBase, L7ServerTls, TlsServerHandshake, SslServerHandshake
+from cryptolyzer.tls.server import (
+    L7ServerTls,
+    L7ServerTlsBase,
+    SslServerHandshake,
+    TlsServerConfiguration,
+    TlsServerHandshake,
+)
 from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.versions import AnalyzerVersions
 
-from .classes import L7ServerTlsTest, L7ServerTlsAlert, TlsServerAlert
+from .classes import L7ServerTlsTest
 
 
 class L7ServerTlsFatalResponse(TlsServerHandshake):
     def _process_handshake_message(self, record, last_handshake_message_type):
-        self._send_alert(TlsAlertLevel.WARNING, TlsAlertDescription.USER_CANCELED)
+        self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.USER_CANCELED)
         raise StopIteration()
 
 
@@ -290,27 +296,27 @@ RDP_NEGOTIATION_RESPONSE_LENGTH = 19
 class TestClientRDP(TestL7ClientBase):
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
     def test_error_send_timeout(self, _):
-        self.assertEqual(self.get_result('rdp', '139.138.153.205', None).versions, [])
+        self.assertEqual(self.get_result('rdp', '139.138.153.204', None).versions, [])
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
-        self.assertEqual(self.get_result('rdp', '139.138.153.205', None).versions, [])
+        self.assertEqual(self.get_result('rdp', '139.138.153.204', None).versions, [])
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidValue('x', int))
     def test_error_parse_invalid_value(self, _):
-        self.assertEqual(self.get_result('rdp', '139.138.153.205', None).versions, [])
+        self.assertEqual(self.get_result('rdp', '139.138.153.204', None).versions, [])
 
     @mock.patch.object(
         RDPNegotiationResponse, '_parse',
         return_value=(RDPNegotiationResponse([], []), RDP_NEGOTIATION_RESPONSE_LENGTH)
     )
     def test_error_no_ssl_support(self, _):
-        self.assertEqual(self.get_result('rdp', '139.138.153.205', None).versions, [])
+        self.assertEqual(self.get_result('rdp', '139.138.153.204', None).versions, [])
 
     def test_rdp_client(self):
         self.assertEqual(
-            self.get_result('rdp', '139.138.153.205', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            self.get_result('rdp', '139.138.153.204', None).versions,
+            [TlsProtocolVersionFinal(TlsVersion.TLS1_0)]
         )
 
 
@@ -323,15 +329,9 @@ class TestClientDoH(TestL7ClientBase):
 
 
 class TestTlsClientHandshake(TestL7ClientBase):
-    @mock.patch.object(
-        TlsServerAlert, '_get_alert_message', mock.PropertyMock(
-            return_value=TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.UNEXPECTED_MESSAGE)
-        )
-    )
     def test_error_always_alert_wargning(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsAlert('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
+            L7ServerTls('localhost', 0, timeout=0.2, configuration=TlsServerConfiguration(protocol_versions=[])),
         )
         threaded_server.start()
 
@@ -350,7 +350,6 @@ class TestTlsClientHandshake(TestL7ClientBase):
     def test_error_fatal_alert(self, _):
         threaded_server = L7ServerTlsTest(
             L7ServerTls('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
         )
         threaded_server.wait_for_server_listen()
         l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
@@ -364,7 +363,6 @@ class TestTlsClientHandshake(TestL7ClientBase):
     def test_error_plain_text_response(self, _):
         threaded_server = L7ServerTlsTest(
             L7ServerTls('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
         )
         threaded_server.start()
         l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.l4_transfer.bind_port)

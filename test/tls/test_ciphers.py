@@ -16,11 +16,23 @@ from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
 class TestSslCiphers(unittest.TestCase):
+    def setUp(self):
+        self.threaded_server = self.create_server()
+
+    @staticmethod
+    def create_server():
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, timeout=0.5, configuration=TlsServerConfiguration(fallback_to_ssl=True))
+        )
+        threaded_server.wait_for_server_listen()
+        return threaded_server
+
     @staticmethod
     def get_result(host, port):
         analyzer = AnalyzerCipherSuites()
@@ -29,19 +41,13 @@ class TestSslCiphers(unittest.TestCase):
         return result
 
     def test_ciphers(self):
-        result = self.get_result('164.100.148.73', 443)
+        result = self.get_result('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
 
         self.assertEqual(result.cipher_suite_preference, True)
-        self.assertEqual(
-            result.cipher_suites,
-            [
-                SslCipherKind.RC4_128_WITH_MD5,
-                SslCipherKind.DES_192_EDE3_CBC_WITH_MD5,
-            ]
-        )
+        self.assertEqual(result.cipher_suites, list(SslCipherKind))
 
     def test_json(self):
-        result = self.get_result('164.100.148.73', 443)
+        result = self.get_result('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result)
 
 
@@ -163,6 +169,10 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         ]))
         self.assertTrue(result.long_cipher_suite_list_intolerance)
 
+        self.assertTrue(self.get_result('secure.simplepay.hu', 443))
+        self.assertTrue(self.get_result('www.aegon.hu', 443))
+        self.assertTrue(self.get_result('direkt.nn.hu', 443))
+
     def test_cbc(self):
         result = self.get_result('cbc.badssl.com', 443)
 
@@ -230,7 +240,6 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
-            fallback_to_ssl=False
         )
         threaded_server.start()
         self.assertEqual(
