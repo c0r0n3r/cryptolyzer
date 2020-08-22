@@ -7,15 +7,12 @@ import urllib3
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 
 
-def get_protocol_handler_analyzer_and_uris():
+def get_protocol_handler_analyzer_and_uris(parser, arguments):
     def to_uri(value, default):
         if '://' not in value:
             value = default + '://' + value
 
         return urllib3.util.parse_url(value)
-
-    parser = get_argument_parser()
-    arguments = parser.parse_args()
 
     protocol_handler = ProtocolHandlerBase.from_protocol(arguments.protocol)
     analyzer = protocol_handler.analyzer_from_name(arguments.analyzer)
@@ -38,6 +35,12 @@ def get_protocol_handler_analyzer_and_uris():
 
 def get_argument_parser():
     parser = argparse.ArgumentParser(prog='cryptolyze')
+    parser.add_argument(
+        '--output-format',
+        choices=['json', 'markdown'],
+        default='markdown',
+        help='format of the anlysis result (default: %(default)s)'
+    )
 
     parsers_analyzer = parser.add_subparsers(title='protocol', dest='protocol')
     parsers_analyzer.required = True
@@ -60,11 +63,19 @@ def get_argument_parser():
 
 
 def main():
-    protocol_handler, analyzer, argument_uris = get_protocol_handler_analyzer_and_uris()
+    parser = get_argument_parser()
+    arguments = parser.parse_args()
+    protocol_handler, analyzer, argument_uris = get_protocol_handler_analyzer_and_uris(parser, arguments)
 
     for uri in argument_uris:
         analyzer_result = protocol_handler.analyze(analyzer, uri)
-        print(analyzer_result.as_json())
+
+        if arguments.output_format == 'json':
+            print(analyzer_result.as_json())
+        elif arguments.output_format == 'markdown':
+            print(analyzer_result.as_markdown())
+        else:
+            raise NotImplementedError()
 
 
 if __name__ == '__main__':
