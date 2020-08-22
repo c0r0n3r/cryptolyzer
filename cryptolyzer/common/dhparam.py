@@ -4,22 +4,16 @@ import enum
 import six
 import attr
 
-from cryptography.hazmat.backends import default_backend as cryptography_default_backend
-import cryptography.exceptions
-import cryptography.hazmat.primitives.asymmetric.ec as cryptography_ec
-import cryptography.hazmat.primitives.asymmetric.dh as cryptography_dh
-import cryptography.hazmat.primitives.asymmetric.x25519 as cryptography_x25519
-
 from cryptoparser.common.base import Vector, VectorParamNumeric, Serializable
 from cryptoparser.common.parse import ParserBinary
-from cryptoparser.tls.extension import TlsNamedCurve, TlsNamedCurveFactory
+from cryptoparser.tls.extension import TlsNamedCurveFactory
 from cryptoparser.tls.subprotocol import TlsECCurveType
 
-from cryptolyzer.common.exception import SecurityError, SecurityErrorType
+from .math import is_prime, prime_precheck
 
 
 @attr.s(eq=False)
-class DHParamNumbers(object):
+class DHParameterNumbers(object):
     p = attr.ib(validator=attr.validators.instance_of(six.integer_types))  # pylint: disable=invalid-name
     g = attr.ib(validator=attr.validators.instance_of(six.integer_types))  # pylint: disable=invalid-name
     q = attr.ib(  # pylint: disable=invalid-name
@@ -30,11 +24,24 @@ class DHParamNumbers(object):
         return self.p == other.p and self.g == other.g and self.q == other.q
 
 
+@attr.s
+class DHPublicNumbers(object):
+    y = attr.ib(validator=attr.validators.instance_of(six.integer_types))  # pylint: disable=invalid-name
+    parameter_numbers = attr.ib(validator=attr.validators.instance_of(DHParameterNumbers))
+
+
+@attr.s
+class DHPublicKey(object):
+    public_numbers = attr.ib(validator=attr.validators.instance_of(DHPublicNumbers))
+    key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
+
+
 @attr.s(eq=False)
 class DHParamWellKnown(object):
-    dh_param_numbers = attr.ib(validator=attr.validators.instance_of(DHParamNumbers))
+    dh_param_numbers = attr.ib(validator=attr.validators.instance_of(DHParameterNumbers))
     name = attr.ib(validator=attr.validators.instance_of(six.string_types))
     source = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
 
     def __eq__(self, other):
         return self.dh_param_numbers == other.dh_param_numbers
@@ -42,7 +49,7 @@ class DHParamWellKnown(object):
 
 class WellKnownDHParams(enum.Enum):
     RFC3526_1536_BIT_MODP_GROUP = DHParamWellKnown(
-        dh_param_numbers=DHParamNumbers(
+        dh_param_numbers=DHParameterNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -57,9 +64,10 @@ class WellKnownDHParams(enum.Enum):
         ),
         name='1536-bit MODP Group',
         source='RFC3526',
+        key_size=1536,
     )
     RFC3526_2048_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParamNumbers(
+        DHParameterNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -77,9 +85,10 @@ class WellKnownDHParams(enum.Enum):
         ),
         name='2048-bit MODP Group',
         source='RFC3526',
+        key_size=2048,
     )
     RFC3526_3072_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParamNumbers(
+        DHParameterNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -102,9 +111,10 @@ class WellKnownDHParams(enum.Enum):
         ),
         name='3072-bit MODP Group',
         source='RFC3526',
+        key_size=3072,
     )
     RFC3526_4096_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParamNumbers(
+        DHParameterNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -133,9 +143,10 @@ class WellKnownDHParams(enum.Enum):
         ),
         name='4096-bit MODP Group',
         source='RFC3526',
+        key_size=4096,
     )
     RFC3526_6144_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParamNumbers(
+        DHParameterNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1 29024E08' +
                 '8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD EF9519B3 CD3A431B' +
@@ -170,9 +181,10 @@ class WellKnownDHParams(enum.Enum):
         ),
         name='6144-bit MODP Group',
         source='RFC3526',
+        key_size=6144,
     )
     RFC3526_8192_BIT_MODP_GROUP = DHParamWellKnown(
-        DHParamNumbers(
+        DHParameterNumbers(
             p=int((
                 'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
                 '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
@@ -222,9 +234,10 @@ class WellKnownDHParams(enum.Enum):
         ),
         name='8192-bit MODP Group',
         source='RFC3526',
+        key_size=8192,
     )
     RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP = DHParamWellKnown(  # pylint: disable=invalid-name
-        DHParamNumbers(
+        DHParameterNumbers(
             p=int((
                 'B10B8F96 A080E01D DE92DE5E AE5D54EC 52C99FBC FB06A3C6' +
                 '9A6A9DCA 52D23B61 6073E286 75A23D18 9838EF1E 2EE652C0' +
@@ -247,9 +260,10 @@ class WellKnownDHParams(enum.Enum):
         ),
         name='1024-bit MODP Group with 160-bit Prime Order Subgroup',
         source='RFC5114',
+        key_size=1024,
     )
     RFC5114_2048_BIT_MODP_GROUP_WITH_224_BIT_PRIME_ORDER_SUBGROUP = DHParamWellKnown(  # pylint: disable=invalid-name
-        DHParamNumbers(
+        DHParameterNumbers(
             p=int((
                 'AD107E1E 9123A9D0 D660FAA7 9559C51F A20D64E5 683B9FD1' +
                 'B54B1597 B61D0A75 E6FA141D F95A56DB AF9A3C40 7BA1DF15' +
@@ -283,9 +297,10 @@ class WellKnownDHParams(enum.Enum):
         ),
         name='2048-bit MODP Group with 224-bit Prime Order Subgroup',
         source='RFC5114',
+        key_size=2048,
     )
     RFC5114_2048_BIT_MODP_GROUP_WITH_256_BIT_PRIME_ORDER_SUBGROUP = DHParamWellKnown(  # pylint: disable=invalid-name
-        DHParamNumbers(
+        DHParameterNumbers(
             p=int((
                 '87A8E61D B4B6663C FFBBD19C 65195999 8CEEF608 660DD0F2' +
                 '5D2CEED4 435E3B00 E00DF8F1 D61957D4 FAF7DF45 61B2AA30' +
@@ -319,6 +334,7 @@ class WellKnownDHParams(enum.Enum):
         ),
         name='2048-bit MODP Group with 256-bit Prime Order Subgroup',
         source='RFC5114',
+        key_size=2048,
     )
 
 
@@ -339,10 +355,10 @@ def parse_dh_params(param_bytes):
     g = int(''.join(map('{:02x}'.format, parser['g'])), 16)  # pylint: disable=invalid-name
     y = int(''.join(map('{:02x}'.format, parser['y'])), 16)  # pylint: disable=invalid-name
 
-    parameter_numbers = cryptography_dh.DHParameterNumbers(p, g)
-    public_numbers = cryptography_dh.DHPublicNumbers(y, parameter_numbers)
+    parameter_numbers = DHParameterNumbers(p, g)
+    public_numbers = DHPublicNumbers(y, parameter_numbers)
 
-    return public_numbers.public_key(cryptography_default_backend())
+    return DHPublicKey(public_numbers, len(parser['p']) * 8)
 
 
 def parse_ecdh_params(param_bytes):
@@ -354,64 +370,43 @@ def parse_ecdh_params(param_bytes):
         raise NotImplementedError(parser['curve_type'])
 
     parser.parse_parsable('named_curve', TlsNamedCurveFactory)
-    named_curve = parser['named_curve']
 
-    parser.parse_numeric('point_length', 1)
-    parser.parse_bytes('point', parser['point_length'])
+    parser.parse_numeric('public_key_length', 1)
+    parser.parse_bytes('public_key', parser['public_key_length'])
 
-    if named_curve == TlsNamedCurve.X25519:
-        try:
-            public_key = cryptography_x25519.X25519PublicKey.from_public_bytes(bytes(parser['point']))
-        except cryptography.exceptions.UnsupportedAlgorithm as e:  # pragma: no cover
-            six.raise_from(NotImplementedError(named_curve), e)
-    else:
-        try:
-            cryptography_curve = getattr(cryptography_ec, named_curve.name)()
-        except AttributeError as e:  # pragma: no cover
-            six.raise_from(NotImplementedError(named_curve), e)
-
-        try:
-            public_key = cryptography_ec.EllipticCurvePublicKey.from_encoded_point(
-                cryptography_curve,
-                bytes(parser['point'])
-            )
-        except ValueError as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE), e)
-
-    return parser['named_curve'], public_key
+    return parser['named_curve'], parser['public_key']
 
 
 @attr.s
 class DHParameter(Serializable):
-    public_key = attr.ib(validator=attr.validators.instance_of(cryptography_dh.DHPublicKey))
+    public_key = attr.ib(validator=attr.validators.instance_of(DHPublicKey))
     reused = attr.ib(validator=attr.validators.instance_of(bool))
     well_known = attr.ib(init=False, validator=attr.validators.instance_of(bool))
     prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
     safe_prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
 
-    def _analyze_prime(self):
-        codes = cryptography_default_backend()._ffi.new("int[]", 1)  # pylint: disable=protected-access
-        dh_check_func = cryptography_default_backend()._lib.Cryptography_DH_check  # pylint: disable=protected-access
-        if dh_check_func(self.public_key._dh_cdata, codes) == 1:  # pylint: disable=protected-access
-            self.prime = (codes[0] & 0x01) == 0  # DH_CHECK_P_NOT_PRIME
-            if self.prime:
-                self.safe_prime = (codes[0] & 0x02) == 0  # DH_CHECK_P_NOT_SAFE_PRIME
-            else:
-                self.safe_prime = False
-        else:  # pragma: no cover
-            self.prime = None
-            self.safe_prime = None
+    def _check_prime(self):
+        param_num_p = self.public_key.public_numbers.parameter_numbers.p
+        param_num_g = self.public_key.public_numbers.parameter_numbers.g
+
+        self.prime, self.safe_prime = prime_precheck(param_num_p, param_num_g)
+
+        # If the number is not divisible by any of the small primes, then
+        # move on to the full Miller-Rabin test.
+        self.prime = is_prime(self.key_size, param_num_p)
+        if self.prime:
+            self.safe_prime = is_prime(self.key_size, param_num_p // 2)
 
     def __attrs_post_init__(self):
         for well_know_public_number in WellKnownDHParams:
-            if well_know_public_number.value.dh_param_numbers == self.public_key.parameters().parameter_numbers():
+            if well_know_public_number.value.dh_param_numbers == self.public_key.public_numbers.parameter_numbers:
                 self.well_known = well_know_public_number
                 self.prime = True
                 self.safe_prime = True
                 break
         else:
             self.well_known = None
-            self._analyze_prime()
+            self._check_prime()
 
     @property
     def key_size(self):

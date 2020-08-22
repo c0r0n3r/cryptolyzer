@@ -5,8 +5,6 @@ try:
 except ImportError:
     import mock
 
-import cryptography.x509 as cryptography_x509
-
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
@@ -25,6 +23,14 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
+
+    @mock.patch.object(
+        AnalyzerPublicKeys, '_get_tls_certificate_chain',
+        side_effect=[ValueError, ValueError, ValueError]
+    )
+    def test_error_unparsable_pubkey(self, _):
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertEqual(len(result.pubkeys), 0)
 
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
@@ -47,14 +53,6 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(len(result.pubkeys), 0)
         self.assertEqual(mocked_do_tls_handshake.call_count, 2)
-
-    @mock.patch.object(
-        cryptography_x509, 'load_der_x509_certificate',
-        side_effect=ValueError
-    )
-    def test_error_load_certificate(self, _):
-        result = self.get_result('badssl.com', 443)
-        self.assertEqual(result.pubkeys, [])
 
     def test_eq(self):
         result_badssl_com = self.get_result('badssl.com', 443)
@@ -99,8 +97,8 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         trusted_root_chain = result.pubkeys[0].tls_certificate_chain
         self.assertEqual(len(trusted_root_chain.items), 2)
         self.assertFalse(trusted_root_chain.contains_anchor)
-        self.assertTrue(trusted_root_chain.ordered)
         self.assertTrue(trusted_root_chain.verified)
+        self.assertTrue(trusted_root_chain.ordered)
 
         result = self.get_result('self-signed.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
@@ -116,9 +114,9 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
 
         untrusted_root_chain = result.pubkeys[0].tls_certificate_chain
         self.assertEqual(len(untrusted_root_chain.items), 2)
-        self.assertTrue(untrusted_root_chain.contains_anchor)
-        self.assertTrue(untrusted_root_chain.ordered)
-        self.assertTrue(untrusted_root_chain.verified)
+        self.assertEqual(untrusted_root_chain.contains_anchor, None)
+        self.assertEqual(untrusted_root_chain.ordered, None)
+        self.assertEqual(untrusted_root_chain.verified, None)
 
         self.assertNotEqual(self_signed_chain.items[0], untrusted_root_chain.items[1])
 

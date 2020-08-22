@@ -59,7 +59,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                 if len(dh_public_keys) == 2:
                     dhparams.append(DHParameter(
                         dh_public_keys[0],
-                        dh_public_keys[0].public_numbers().y == dh_public_keys[1].public_numbers(),
+                        dh_public_keys[0].public_numbers.y == dh_public_keys[1].public_numbers.y,
                     ))
 
         return AnalyzerResultDHParams(

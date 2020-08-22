@@ -29,7 +29,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
     def test_prime(self):
         result = self.get_result('dh-composite.badssl.com', 443)
         self.assertEqual(len(result.dhparams), 1)
-        self.assertEqual(result.dhparams[0].key_size, 2047)
+        self.assertEqual(result.dhparams[0].key_size, 2048)
         self.assertEqual(result.dhparams[0].prime, False)
         self.assertEqual(result.dhparams[0].safe_prime, False)
         self.assertEqual(result.dhparams[0].well_known, None)

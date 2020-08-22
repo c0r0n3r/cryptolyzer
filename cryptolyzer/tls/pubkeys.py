@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import copy
 from collections import OrderedDict
-import attr
 
+import attr
 import six
 
-import cryptography.x509 as cryptography_x509
-
-from cryptography.hazmat.backends import default_backend as cryptography_default_backend
+import asn1crypto.x509
+import certvalidator
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
@@ -27,64 +25,44 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 import cryptolyzer.common.x509
 
 
-@attr.s(hash=False, eq=False)
+@attr.s
 class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-methods
-    certificate_bytes = attr.ib()
-    items = attr.ib()
-    ordered = attr.ib(init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(bool)))
-    verified = attr.ib(init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(bool)))
+    items = attr.ib(
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(cryptolyzer.common.x509.PublicKeyX509))
+    )
+    ordered = attr.ib(
+        init=False,
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(bool))
+    )
+    verified = attr.ib(
+        init=False,
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(bool))
+    )
+    contains_anchor = attr.ib(
+        init=False,
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(bool))
+    )
 
     def __attrs_post_init__(self):
-        self.verified = None
-
-        original_certificate_chain = copy.copy(self.items)
-        ordered_certificate_chain = [cert for cert in original_certificate_chain if not cert.is_ca]
-
-        while original_certificate_chain:
-            try:
-                issuer_certificate = self._get_issuer(original_certificate_chain, ordered_certificate_chain[-1])
-                ordered_certificate_chain.append(issuer_certificate)
-                original_certificate_chain.remove(issuer_certificate)
-            except (StopIteration, IndexError):
-                break
-
-        if len(ordered_certificate_chain) > 1:
-            self.ordered = self.items == ordered_certificate_chain
-            self.items = ordered_certificate_chain
-
-            for chain_index in range(len(self.items) - 1):
-                issuer_public_key = self.items[chain_index + 1]
-                cert_to_check = self.items[chain_index]
-
-                if not issuer_public_key.verify(cert_to_check):
-                    break
-            else:
-                self.verified = True
+        cert_validator = certvalidator.CertificateValidator(
+            self.items[0].certificate,
+            [item.certificate for item in self.items[1:]]
+        )
+        try:
+            build_path = cert_validator.validate_usage(set())
+        except certvalidator.errors.PathBuildingError:
+            pass
+        except (certvalidator.errors.InvalidCertificateError, certvalidator.errors.PathValidationError):
+            if self.items[-1].is_self_signed:
+                self.contains_anchor = True
         else:
-            self.ordered = None
-            self.verified = None
-
-    @staticmethod
-    def _get_issuer(certificates, certificate):
-        issuer_certificates = [
-            issuer_certificate
-            for issuer_certificate in certificates
-            if issuer_certificate.is_ca and issuer_certificate.subject == certificate.issuer
-        ]
-        if len(issuer_certificates) == 1:
-            return issuer_certificates[0]
-
-        raise StopIteration()
-
-    @property
-    def contains_anchor(self):
-        return any([cert.is_self_signed for cert in self.items])
-
-    def __hash__(self):
-        return hash(tuple([bytes(certificate_byte) for certificate_byte in self.certificate_bytes]))
-
-    def __eq__(self, other):
-        return hash(self) == hash(other)
+            self.verified = True
+            validated_items = [cryptolyzer.common.x509.PublicKeyX509(item) for item in reversed(build_path)]
+            self.ordered = validated_items[:len(self.items)] == self.items
+            self.contains_anchor = len(self.items) == len(validated_items)
 
     def _asdict(self):
         return OrderedDict([
@@ -119,20 +97,12 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
     @staticmethod
     def _get_tls_certificate_chain(server_messages):
         certificate_chain = []
-        certificate_bytes = []
 
         for tls_certificate in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain:
-            certificate = cryptography_x509.load_der_x509_certificate(
-                bytes(tls_certificate.certificate),
-                cryptography_default_backend()
-            )
-            certificate_bytes.append(tls_certificate.certificate)
+            certificate = asn1crypto.x509.Certificate.load(tls_certificate.certificate)
             certificate_chain.append(cryptolyzer.common.x509.PublicKeyX509(certificate))
 
-        return TlsCertificateChain(
-            certificate_bytes=certificate_bytes,
-            items=certificate_chain,
-        )
+        return TlsCertificateChain(items=certificate_chain)
 
     @staticmethod
     def _get_server_messages(l7_client, client_hello, sni_sent, client_hello_messages):
@@ -188,11 +158,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 continue
             else:
                 leaf_certificate = certificate_chain.items[0]
-                subject_matches = cryptolyzer.common.x509.is_subject_matches(
-                    leaf_certificate.common_names,
-                    leaf_certificate.subject_alternative_names,
-                    analyzable.address
-                )
+                subject_matches = leaf_certificate.is_subject_matches(six.u(analyzable.address))
                 if ((sni_sent or subject_matches) and
                         certificate_chain not in [result.tls_certificate_chain for result in results]):
                     results.append(TlsPublicKey(sni_sent, subject_matches, certificate_chain))

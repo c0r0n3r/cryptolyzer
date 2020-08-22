@@ -1,5 +1,6 @@
 [run]
 source = cryptolyzer
+omit = cryptolyzer/common/math.py
 
 [report]
 exclude_lines =
