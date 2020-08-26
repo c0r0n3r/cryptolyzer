@@ -4,7 +4,12 @@ import attr
 
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
+from cryptoparser.tls.version import (
+    SslProtocolVersion,
+    TlsProtocolVersionBase,
+    TlsProtocolVersionFinal,
+    TlsVersion,
+)
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
@@ -21,8 +26,16 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
-    versions = attr.ib()
-    alerts_unsupported_tls_version = attr.ib()
+    versions = attr.ib(
+        validator=attr.validators.deep_iterable(
+            attr.validators.instance_of((SslProtocolVersion, TlsProtocolVersionBase))
+        ),
+        metadata={'human_readable_name': 'Protocol Versions'},
+    )
+    alerts_unsupported_tls_version = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(bool)),
+        metadata={'human_readable_name': 'Alerts Unsupported TLS Version'},
+    )
 
 
 class AnalyzerVersions(AnalyzerTlsBase):

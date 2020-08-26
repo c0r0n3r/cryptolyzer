@@ -22,8 +22,14 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultCurves(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
-    curves = attr.ib()
-    extension_supported = attr.ib()
+    curves = attr.ib(
+        validator=attr.validators.deep_iterable(attr.validators.in_(TlsNamedCurve)),
+        metadata={'human_readable_name': 'Named Curves'},
+    )
+    extension_supported = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(bool)),
+        metadata={'human_readable_name': 'Named Curve Extension Supported'},
+    )
 
 
 class AnalyzerCurves(AnalyzerTlsBase):

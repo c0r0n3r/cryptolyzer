@@ -14,7 +14,10 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultDHParams(AnalyzerResultTls):
-    dhparams = attr.ib()
+    dhparams = attr.ib(
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(DHParameter)),
+        metadata={'human_readable_name': 'Diffie-Hellman Parameters'}
+    )
 
 
 class AnalyzerDHParams(AnalyzerTlsBase):
