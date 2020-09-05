@@ -2,16 +2,15 @@
 
 import datetime
 import unittest
-import six
+
+from collections import OrderedDict
 
 try:
     from unittest import mock
 except ImportError:
     import mock
 
-import cryptography
-import cryptography.x509 as cryptography_x509
-import cryptography.hazmat.backends.openssl
+import asn1crypto
 
 from cryptoparser.common.algorithm import MAC
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
@@ -32,41 +31,66 @@ class TestPublicKeyX509(unittest.TestCase):
         result = self._get_result('no-common-name.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
         self.assertEqual(len(result.pubkeys[0].tls_certificate_chain.items), 3)
-        self.assertNotEqual(result.pubkeys[0].tls_certificate_chain.items[0].subject, [])
-        self.assertFalse('commonName' in result.pubkeys[0].tls_certificate_chain.items[0].subject)
+        self.assertNotEqual(result.pubkeys[0].tls_certificate_chain.items[0].subject, OrderedDict([]))
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].subject_alternative_names,
+            ['no-common-name.badssl.com', ]
+        )
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].valid_domains,
+            ['no-common-name.badssl.com', ]
+        )
 
         result = self._get_result('long-extended-subdomain-name-containing-many-letters-and-dashes.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].common_names, ['*.badssl.com', ])
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].valid_domains, ['*.badssl.com', 'badssl.com'])
 
     def test_subject_alternative_names(self):
         result = self._get_result('no-subject.badssl.com', 443)
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].subject, OrderedDict([]))
         self.assertEqual(
             result.pubkeys[0].tls_certificate_chain.items[0].subject_alternative_names,
             ['no-subject.badssl.com']
         )
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].valid_domains,
+            ['no-subject.badssl.com']
+        )
 
         result = self._get_result('badssl.com', 443)
+        self.assertNotEqual(result.pubkeys[0].tls_certificate_chain.items[0].subject, OrderedDict([]))
         self.assertEqual(
-            result.pubkeys[0].tls_certificate_chain.items[1].subject_alternative_names,
-            []
+            result.pubkeys[0].tls_certificate_chain.items[0].subject_alternative_names,
+            ['*.badssl.com', 'badssl.com']
+        )
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].valid_domains,
+            ['*.badssl.com', 'badssl.com']
         )
 
     def test_no_subject(self):
         result = self._get_result('no-subject.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].subject, [])
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].subject, OrderedDict([]))
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].subject_alternative_names,
+            ['no-subject.badssl.com', ]
+        )
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].valid_domains,
+            ['no-subject.badssl.com', ]
+        )
 
     def test_issuer(self):
         result = self._get_result('expired.badssl.com', 443)
         self.assertEqual(
-            [attr.rfc4514_string() for attr in result.pubkeys[0].tls_certificate_chain.items[0].issuer],
-            [
-                'C=GB',
-                'ST=Greater Manchester',
-                'L=Salford',
-                'O=COMODO CA Limited',
-                'CN=COMODO RSA Domain Validation Secure Server CA',
-            ]
+            result.pubkeys[0].tls_certificate_chain.items[0].issuer,
+            OrderedDict([
+                ('country_name', 'GB'),
+                ('state_or_province_name', 'Greater Manchester'),
+                ('locality_name', 'Salford'),
+                ('organization_name', 'COMODO CA Limited'),
+                ('common_name', 'COMODO RSA Domain Validation Secure Server CA')
+            ])
         )
 
     def test_crl_distribution_points(self):
@@ -82,28 +106,11 @@ class TestPublicKeyX509(unittest.TestCase):
             []
         )
 
-    @mock.patch.object(
-        cryptography_x509.DistributionPoint, 'full_name',
-        mock.PropertyMock(return_value=[]),
-        create=True
-    )
-    @mock.patch.object(
-        cryptography_x509.DistributionPoint, 'relative_name',
-        mock.PropertyMock(
-            return_value=cryptography_x509.RelativeDistinguishedName([
-                cryptography_x509.NameAttribute(
-                    cryptography_x509.oid.NameOID.COMMON_NAME,
-                    six.u('mocked CRL Distribution Point')
-                )
-            ])
-        ),
-        create=True
-    )
     def test_crl_distribution_points_relative_name(self):
-        result = self._get_result('badssl.com', 443)
+        result = self._get_result('expired.badssl.com', 443)
         self.assertEqual(
             result.pubkeys[0].tls_certificate_chain.items[0].crl_distribution_points,
-            ['mocked CRL Distribution Point', 'mocked CRL Distribution Point']
+            ['http://crl.comodoca.com/COMODORSADomainValidationSecureServerCA.crl', ]
         )
 
     def test_ocsp_responders(self):
@@ -114,8 +121,8 @@ class TestPublicKeyX509(unittest.TestCase):
         )
 
     @mock.patch.object(
-        cryptography_x509.extensions.Extensions, 'get_extension_for_class',
-        side_effect=cryptography_x509.ExtensionNotFound(None, cryptography_x509.AuthorityInformationAccess)
+        asn1crypto.x509.Certificate, 'authority_information_access_value',
+        return_value=None
     )
     def test_ocsp_responders_no_extension(self, _):
         result = self._get_result('expired.badssl.com', 443)
@@ -134,11 +141,11 @@ class TestPublicKeyX509(unittest.TestCase):
         self.assertTrue(result.pubkeys[0].tls_certificate_chain.items[0].expired)
         self.assertEqual(
             result.pubkeys[0].tls_certificate_chain.items[0].valid_not_before,
-            datetime.datetime(2015, 4, 9, 0, 0)
+            datetime.datetime(2015, 4, 9, 0, 0, tzinfo=asn1crypto.util.timezone.utc)
         )
         self.assertEqual(
             result.pubkeys[0].tls_certificate_chain.items[0].valid_not_after,
-            datetime.datetime(2015, 4, 12, 23, 59, 59)
+            datetime.datetime(2015, 4, 12, 23, 59, 59, tzinfo=asn1crypto.util.timezone.utc)
         )
         self.assertEqual(
             result.pubkeys[0].tls_certificate_chain.items[0].validity_period,
@@ -181,20 +188,12 @@ class TestPublicKeyX509(unittest.TestCase):
         result = self._get_result('badssl.com', 443)
         self.assertFalse(result.pubkeys[0].tls_certificate_chain.items[0].extended_validation)
 
-    @mock.patch.object(
-        cryptography_x509.extensions.Extensions, 'get_extension_for_class',
-        side_effect=cryptography_x509.ExtensionNotFound(None, cryptography_x509.CertificatePolicies)
-    )
-    def test_extended_validation_no_extension(self, _):
-        result = self._get_result('badssl.com', 443)
-        self.assertFalse(result.pubkeys[0].tls_certificate_chain.items[0].extended_validation)
-
     def test_key_type_and_size(self):
         result = self._get_result('ecc256.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, 'EllipticCurve')
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, 'EC')
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_size, 256)
         result = self._get_result('ecc384.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, 'EllipticCurve')
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, 'EC')
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_size, 384)
 
         result = self._get_result('rsa2048.badssl.com', 443)
@@ -217,12 +216,3 @@ class TestPublicKeyX509(unittest.TestCase):
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA384)
         result = self._get_result('sha512.badssl.com', 443)
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA512)
-
-    @mock.patch.object(
-        cryptography.hazmat.backends.openssl.rsa, '_rsa_sig_verify',
-        side_effect=cryptography.exceptions.InvalidSignature
-    )
-    def test_verified(self, _):
-        result = self._get_result('badssl.com', 443)
-        trusted_root_chain = result.pubkeys[0].tls_certificate_chain
-        self.assertFalse(trusted_root_chain.verified)

@@ -3,38 +3,19 @@
 import abc
 import base64
 import datetime
-import ssl
+import hashlib
 
 from collections import OrderedDict
-from six import iteritems
+import six
 
+
+import asn1crypto
 import attr
-
-import cryptography
-import cryptography.x509 as cryptography_x509  # pylint: disable=import-error
-import cryptography.hazmat.primitives.asymmetric.rsa as cryptography_rsa
-import cryptography.hazmat.primitives.asymmetric.ec as cryptography_ec
-from cryptography.hazmat.primitives.asymmetric import padding as cryptography_padding
-from cryptography.hazmat.primitives import hashes as cryptography_hashes  # pylint: disable=import-error
-from cryptography.hazmat.primitives import serialization as cryptography_serialization  # pylint: disable=import-error
-from cryptography.hazmat.backends import default_backend as cryptography_default_backend  # pylint: disable=import-error
 
 from cryptoparser.common.algorithm import MAC
 from cryptoparser.common.base import Serializable
 
 import cryptolyzer.common.utils
-
-
-def is_subject_matches(common_names, subject_alternative_names, host_name):
-    try:
-        ssl.match_hostname({
-            'subject': (tuple([('commonName', name) for name in common_names]),),
-            'subjectAltName': tuple([('DNS', name) for name in subject_alternative_names]),
-        }, host_name)
-    except ssl.CertificateError:
-        return False
-
-    return True
 
 
 class PublicKey(Serializable):
@@ -135,207 +116,127 @@ class PublicKeyX509(PublicKey):
         'WoSign': ('1.3.6.1.4.1.36305.2', ),
     }
 
-    _certificate = attr.ib()
+    certificate = attr.ib(validator=attr.validators.instance_of(asn1crypto.x509.Certificate))
 
     def __eq__(self, other):
-        self_in_der_format = self._certificate.public_key().public_bytes(
-            encoding=cryptography_serialization.Encoding.DER,
-            format=cryptography_serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-        other_in_der_format = other._certificate.public_key().public_bytes(  # pylint: disable=protected-access
-            encoding=cryptography_serialization.Encoding.DER,
-            format=cryptography_serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-
-        return self_in_der_format == other_in_der_format
+        return self.certificate.dump() == other.certificate.dump()
 
     @property
     def valid_not_before(self):
-        return self._certificate.not_valid_before
+        return self.certificate.not_valid_before
 
     @property
     def valid_not_after(self):
-        return self._certificate.not_valid_after
+        return self.certificate.not_valid_after
 
     @property
     def expired(self):
-        return datetime.datetime.now() > self._certificate.not_valid_after
+        return datetime.datetime.now(asn1crypto.util.timezone.utc) > self.certificate.not_valid_after
 
     @property
     def validity_period(self):
-        return self._certificate.not_valid_after - self._certificate.not_valid_before
+        return self.certificate.not_valid_after - self.certificate.not_valid_before
 
     @property
     def validity_remaining_time(self):
-        now = datetime.datetime.now()
-        return self._certificate.not_valid_after - now if now < self._certificate.not_valid_after else None
+        now = datetime.datetime.now(asn1crypto.util.timezone.utc)
+        return self.certificate.not_valid_after - now if now < self.certificate.not_valid_after else None
 
     @property
     def key_type(self):
-        return type(self._certificate.public_key()).__name__[1:-len('PublicKey')]
+        return self.certificate.public_key.algorithm.upper()
 
     @property
     def key_size(self):
-        return self._certificate.public_key().key_size
+        return int(self.certificate['tbs_certificate']['subject_public_key_info'].bit_size)
 
     @property
     def signature_hash_algorithm(self):
-        return MAC[self._certificate.signature_hash_algorithm.name.upper()]
+        return MAC[self.certificate.hash_algo.upper()]
 
     @property
     def fingerprints(self):
+        certificyte_bytes = self.certificate.dump()
         return {
-            mac: cryptolyzer.common.utils.bytes_to_colon_separated_hex(self._certificate.fingerprint(hash_algo()))
-            for mac, hash_algo in (
-                (MAC.SHA256, cryptography_hashes.SHA256),
-                (MAC.SHA1, cryptography_hashes.SHA1),
-                (MAC.MD5, cryptography_hashes.MD5),
-            )
+            MAC.MD5: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
+                hashlib.md5(certificyte_bytes).digest()
+            ),
+            MAC.SHA1: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
+                hashlib.sha1(certificyte_bytes).digest()
+            ),
+            MAC.SHA256: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
+                hashlib.sha256(certificyte_bytes).digest()
+            ),
         }
 
     @property
     def public_key_pin(self):
-        public_key_in_der_format = self._certificate.public_key().public_bytes(
-            encoding=cryptography_serialization.Encoding.DER,
-            format=cryptography_serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-
-        digest = cryptography_hashes.Hash(cryptography_hashes.SHA256(), backend=cryptography_default_backend())
-        digest.update(public_key_in_der_format)
-
-        return base64.b64encode(digest.finalize()).decode('ascii')
+        return base64.b64encode(
+            hashlib.sha256(self.certificate.public_key.dump()).digest()
+        ).decode('ascii')
 
     @property
     def extended_validation(self):
-        try:
-            extension = self._certificate.extensions.get_extension_for_class(
-                cryptography_x509.CertificatePolicies
-            )
-            for policy_information in extension.value:
-                for ca_ev_oid_list in self._EV_OIDS_BY_CA.values():
-                    if policy_information.policy_identifier.dotted_string in ca_ev_oid_list:
-                        return True
-        except cryptography_x509.ExtensionNotFound:
+        if self.certificate.certificate_policies_value is None:
             return False
+
+        for policy_information in self.certificate.certificate_policies_value:
+            for ca_ev_oid_list in self._EV_OIDS_BY_CA.values():
+                if policy_information['policy_identifier'].dotted in ca_ev_oid_list:
+                    return True
 
         return False
 
     @property
     def subject(self):
-        return list(self._certificate.subject)
+        return self.certificate.subject.native
 
     @property
     def issuer(self):
-        return list(self._certificate.issuer)
+        return self.certificate.issuer.native
 
     @property
-    def common_names(self):
-        return [
-            attr.value
-            for attr in self._certificate.subject.get_attributes_for_oid(cryptography_x509.oid.NameOID.COMMON_NAME)
-        ]
+    def valid_domains(self):
+        return self.certificate.valid_domains
+
+    def is_subject_matches(self, host_name):
+        return self.certificate.is_valid_domain_ip(host_name)
 
     @property
     def subject_alternative_names(self):
-        try:
-            extension = self._certificate.extensions.get_extension_for_class(
-                cryptography_x509.SubjectAlternativeName
-            )
-        except cryptography_x509.ExtensionNotFound:
+        if self.certificate.subject_alt_name_value is None:
             return []
-        else:
-            return extension.value.get_values_for_type(cryptography_x509.DNSName)
+
+        return self.certificate.subject_alt_name_value.native
 
     @property
     def crl_distribution_points(self):
-        try:
-            extension = self._certificate.extensions.get_extension_for_class(
-                cryptography_x509.CRLDistributionPoints
-            )
-        except cryptography_x509.ExtensionNotFound:
+        if self.certificate.crl_distribution_points_value is None:
             return []
-        else:
-            crl_distribution_points = []
-            for distribution_point in extension.value:
-                if distribution_point.full_name:
-                    for full_name in distribution_point.full_name:
-                        crl_distribution_points.append(full_name.value)
-                elif distribution_point.relative_name:
-                    attributes = distribution_point.relative_name.get_attributes_for_oid(
-                        cryptography_x509.oid.NameOID.COMMON_NAME
-                    )
-                    for relative_name in attributes:
-                        crl_distribution_points.append(relative_name.value)
 
-            return crl_distribution_points
+        return [
+            crl_distribution_point.url
+            for crl_distribution_point in self.certificate.crl_distribution_points_value
+        ]
 
     @property
     def ocsp_responders(self):
-        try:
-            extension = self._certificate.extensions.get_extension_for_class(
-                cryptography_x509.AuthorityInformationAccess
-            )
-        except cryptography_x509.ExtensionNotFound:
-            return []
-        else:
-            return [
-                access_description.access_location.value
-                for access_description in extension.value
-                if access_description.access_method == cryptography_x509.AuthorityInformationAccessOID.OCSP
-            ]
+        return self.certificate.ocsp_urls
 
     @property
     def is_ca(self):
-        ca_type = cryptography_default_backend()._lib.X509_check_ca(  # pylint: disable=protected-access
-            self._certificate._x509  # pylint: disable=protected-access
-        )
-        return ca_type > 0
+        return self.certificate.ca
 
     @property
     def is_self_signed(self):
-        return self._certificate.subject and self._certificate.subject == self._certificate.issuer
-
-    def verify(self, public_key):
-        verify_args = {
-            'signature': public_key._certificate.signature,  # pylint: disable=protected-access
-            'data': public_key._certificate.tbs_certificate_bytes,  # pylint: disable=protected-access
-        }
-        public_key_signature_hash_algorithm = (  # pylint: disable=protected-access
-            public_key._certificate.signature_hash_algorithm  # pylint: disable=protected-access
-        )
-        if isinstance(self._certificate.public_key(), cryptography_rsa.RSAPublicKey):
-            verify_args['padding'] = cryptography_padding.PKCS1v15()
-            verify_args['algorithm'] = public_key_signature_hash_algorithm
-        if isinstance(self._certificate.public_key(), cryptography_ec.EllipticCurvePublicKey):
-            verify_args['signature_algorithm'] = cryptography_ec.ECDSA(
-                public_key_signature_hash_algorithm
-            )
-        else:
-            verify_args['algorithm'] = public_key_signature_hash_algorithm
-
-        try:
-            self._certificate.public_key().verify(**verify_args)
-        except cryptography.exceptions.InvalidSignature:
-            return False
-
-        return True
+        return self.certificate.self_issued
 
     def _asdict(self):
         return OrderedDict([
-            ('serial_number', str(self._certificate.serial_number)),
-            ('subject', OrderedDict(
-                [
-                    (attribute.oid._name, attribute.value)  # pylint: disable=protected-access
-                    for attribute in self.subject
-                ]
-            )),
+            ('serial_number', str(self.certificate.serial_number)),
+            ('subject', self.subject),
             ('subject_alternative_names', sorted(self.subject_alternative_names)),
-            ('issuer', OrderedDict(
-                [
-                    (attribute.oid._name, attribute.value)  # pylint: disable=protected-access
-                    for attribute in self.issuer
-                ]
-            )),
+            ('issuer', self.issuer),
             ('key_type', self.key_type),
             ('key_size', self.key_size),
             ('signature_hash_algorithm', self.signature_hash_algorithm),
@@ -350,7 +251,7 @@ class PublicKeyX509(PublicKey):
                 ('crl_distribution_points', self.crl_distribution_points),
                 ('ocsp_responders', self.ocsp_responders),
             ])),
-            ('fingerprints', {mac.name: fingerprint for (mac, fingerprint) in iteritems(self.fingerprints)}),
+            ('fingerprints', {mac.name: fingerprint for (mac, fingerprint) in six.iteritems(self.fingerprints)}),
             ('public_key_pin', self.public_key_pin),
-            ('version', self._certificate.version.name),
+            ('version', self.certificate['tbs_certificate']['version'].native),
         ])

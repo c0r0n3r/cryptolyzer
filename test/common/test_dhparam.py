@@ -3,75 +3,50 @@
 import unittest
 import attr
 
-import cryptography.hazmat.primitives.asymmetric.dh as cryptography_dh
-from cryptography.hazmat.backends import default_backend as cryptography_default_backend
-from cryptography.hazmat.primitives import serialization as cryptography_serialization
-
 from cryptoparser.tls.extension import TlsNamedCurve
 
-from cryptolyzer.common.dhparam import parse_ecdh_params, DHParameter, WellKnownDHParams
-from cryptolyzer.common.exception import SecurityError, SecurityErrorType
+from cryptolyzer.common.dhparam import (
+    DHParameter,
+    DHParameterNumbers,
+    DHPublicKey,
+    DHPublicNumbers,
+    WellKnownDHParams,
+    parse_ecdh_params,
+)
 
 
 class TestParse(unittest.TestCase):
     @staticmethod
-    def _generate_dh_param(parameter_numbers, reused):
-        public_numbers = cryptography_dh.DHPublicNumbers(
+    def _generate_dh_param(parameter_numbers, reused, key_size):
+        public_numbers = DHPublicNumbers(
             0x012345678abcdef,
-            cryptography_dh.DHParameterNumbers(parameter_numbers.p, parameter_numbers.g, parameter_numbers.q),
+            DHParameterNumbers(parameter_numbers.p, parameter_numbers.g, parameter_numbers.q),
         )
-        public_key = public_numbers.public_key(cryptography_default_backend())
+        public_key = DHPublicKey(public_numbers, key_size)
 
         return DHParameter(public_key, reused)
 
     def test_parse_dh_param(self):
         dh_parameter = self._generate_dh_param(
-            WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP.value.dh_param_numbers, False
+            WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP.value.dh_param_numbers, False, 2048
         )
-        self.assertEqual(dh_parameter.key_size, 2048)
         self.assertEqual(dh_parameter.well_known, WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP)
         self.assertEqual(
             attr.asdict(
                 dh_parameter.well_known.value,
                 filter=lambda attribute, value: attribute.name != 'dh_param_numbers'
             ),
-            {"name": "2048-bit MODP Group", "source": "RFC3526"}
+            {"key_size": 2048, "name": "2048-bit MODP Group", "source": "RFC3526"}
         )
 
     def test_all_well_known_dhparam(self):
         dh_params = [
-            self._generate_dh_param(well_known_dh_param.value.dh_param_numbers, False)
+            self._generate_dh_param(
+                well_known_dh_param.value.dh_param_numbers, False, well_known_dh_param.value.key_size
+            )
             for well_known_dh_param in WellKnownDHParams
         ]
         self.assertTrue(all([dh_param.well_known for dh_param in dh_params]))
-
-    def test_parse_ecdh_param_x25519(self):
-        point_data = bytes(
-            b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f' +
-            b'\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f' +
-            b''
-        )
-        param_bytes = bytes(
-            b'\x03' +      # curve type: TlsECCurveType.NAMED_CURVE
-            b'\x00\x1d' +  # named curve: TlsNamedCurve.X25519
-            b'\x20' +      # point length: 32
-            point_data +   # point data
-            b''
-        )
-
-        try:
-            supported_curve, public_key = parse_ecdh_params(param_bytes)
-        except NotImplementedError as e:
-            if (hasattr(cryptography_default_backend, 'x25519_supported') and
-                    cryptography_default_backend.x25519_supported()):  # pylint: disable=no-member
-                raise e
-        else:
-            self.assertEqual(supported_curve, TlsNamedCurve.X25519)
-            public_key_in_der_format = public_key.public_bytes(
-                encoding=cryptography_serialization.Encoding.Raw,
-                format=cryptography_serialization.PublicFormat.Raw
-            )
-            self.assertEqual(public_key_in_der_format, point_data)
 
     def test_parse_ecdh_param_secp256r1(self):
         point_data = bytes(
@@ -91,20 +66,4 @@ class TestParse(unittest.TestCase):
 
         supported_curve, public_key = parse_ecdh_params(param_bytes)
         self.assertEqual(supported_curve, TlsNamedCurve.SECP256R1)
-        public_key_in_der_format = public_key.public_bytes(
-            encoding=cryptography_serialization.Encoding.X962,
-            format=cryptography_serialization.PublicFormat.UncompressedPoint,
-        )
-        self.assertEqual(public_key_in_der_format, point_data)
-
-    def test_parse_ecdh_param_invalid(self):
-        param_bytes = bytes(
-            b'\x03' +      # curve type: TlsECCurveType.NAMED_CURVE
-            b'\x00\x17' +  # named curve: TlsNamedCurve.SECP256R1
-            b'\x00' +      # point length: 0
-            b''
-        )
-
-        with self.assertRaises(SecurityError) as context_manager:
-            parse_ecdh_params(param_bytes)
-        self.assertEqual(context_manager.exception.error, SecurityErrorType.UNPARSABLE_MESSAGE)
+        self.assertEqual(public_key, point_data)

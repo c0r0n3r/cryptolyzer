@@ -9,8 +9,8 @@ from cryptolyzer.common.analyzer import ProtocolHandlerBase
 
 def get_protocol_handler_analyzer_and_uris():
     def to_uri(value, default):
-        if u'://' not in value:
-            value = default + u'://' + value
+        if '://' not in value:
+            value = default + '://' + value
 
         return urllib3.util.parse_url(value)
 
