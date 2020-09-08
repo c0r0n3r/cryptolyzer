@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
+from cryptoparser.tls.extension import TlsExtensionsBase
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.common.dhparam import WellKnownDHParams
@@ -17,6 +23,10 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
+
+    @mock.patch.object(TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError)
+    def test_error_missing_key_share_extension(self, _):
+        self.assertEqual(self.get_result('www.mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).dhparams, [])
 
     def test_size(self):
         result = self.get_result('dh480.badssl.com', 443)
@@ -42,7 +52,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparams[0].safe_prime, False)
         self.assertEqual(result.dhparams[0].well_known, None)
 
-    def test_weel_known_prime(self):
+    def test_well_known_prime(self):
         result = self.get_result('ubuntuforums.org', 443)
         self.assertEqual(len(result.dhparams), 1)
         self.assertEqual(result.dhparams[0].key_size, 2048)
@@ -61,6 +71,20 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
     def test_no_dhe_support(self):
         result = self.get_result('static-rsa.badssl.com', 443)
         self.assertEqual(len(result.dhparams), 0)
+
+    def test_tls_1_3(self):
+        self.assertEqual(
+            self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).dhparams,
+            []
+        )
+
+        result = self.get_result('www.mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        self.assertEqual(
+            [dhparam.public_key.public_numbers.parameter_numbers for dhparam in result.dhparams],
+            [
+                WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.dh_param_numbers,
+            ]
+        )
 
     def test_json(self):
         result = self.get_result('dh480.badssl.com', 443)
