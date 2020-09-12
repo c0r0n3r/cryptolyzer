@@ -5,7 +5,7 @@ import socket
 import sys
 import unittest
 
-from test.common.classes import TestThreaderServer
+from test.common.classes import TestThreadedServer
 
 try:
     from unittest import mock
@@ -70,7 +70,7 @@ class TestL4ClientTCP(unittest.TestCase):
         self.assertEqual(result, '220 ' + address)
 
 
-class L4ServerTCPEcho(TestThreaderServer):
+class L4ServerTCPEcho(TestThreadedServer):
     def __init__(self, l4_server):
         super(L4ServerTCPEcho, self).__init__(l4_server)
 
