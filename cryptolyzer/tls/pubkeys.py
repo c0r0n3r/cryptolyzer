@@ -15,7 +15,8 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloBasic,
     TlsHandshakeClientHelloAuthenticationDSS,
     TlsHandshakeClientHelloAuthenticationRSA,
-    TlsHandshakeClientHelloAuthenticationECDSA
+    TlsHandshakeClientHelloAuthenticationECDSA,
+    TlsHandshakeClientHelloAuthenticationGOST,
 )
 from cryptolyzer.tls.exception import TlsAlert
 
@@ -141,6 +142,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             TlsHandshakeClientHelloAuthenticationDSS(protocol_version, analyzable.address),
             TlsHandshakeClientHelloAuthenticationRSA(protocol_version, analyzable.address),
             TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, analyzable.address),
+            TlsHandshakeClientHelloAuthenticationGOST(protocol_version, analyzable.address),
         ]
 
         for client_hello in client_hello_messages:

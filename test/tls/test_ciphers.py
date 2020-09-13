@@ -237,6 +237,23 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
             for cipher_suite in result.cipher_suites
         ]))
 
+    def test_gost(self):
+        result = self.get_result('cryptopro.ru', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self.assertEqual(result.cipher_suites, [
+            TlsCipherSuite.OLD_TLS_GOSTR341112_256_WITH_28147_CNT_IMIT,
+            TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
+            TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+            TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+            TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+            TlsCipherSuite.TLS_RSA_WITH_AES_256_GCM_SHA384,
+            TlsCipherSuite.TLS_RSA_WITH_AES_128_GCM_SHA256,
+            TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA256,
+            TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA256,
+            TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA,
+            TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
+            TlsCipherSuite.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+        ])
+
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
