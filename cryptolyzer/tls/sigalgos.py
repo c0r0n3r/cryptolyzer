@@ -28,7 +28,10 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultSigAlgos(AnalyzerResultTls):
-    sig_algos = attr.ib()
+    sig_algos = attr.ib(
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsSignatureAndHashAlgorithm)),
+        metadata={'human_readable_name': 'Signature Algorithms'}
+    )
 
 
 class AnalyzerSigAlgos(AnalyzerTlsBase):

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict
-
 import attr
+
 import six
 
 import asn1crypto.x509
@@ -28,7 +27,8 @@ import cryptolyzer.common.x509
 @attr.s
 class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-methods
     items = attr.ib(
-        validator=attr.validators.deep_iterable(attr.validators.instance_of(cryptolyzer.common.x509.PublicKeyX509))
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(cryptolyzer.common.x509.PublicKeyX509)),
+        metadata={'human_readable_name': 'Certificates in Chain'},
     )
     ordered = attr.ib(
         init=False,
@@ -64,25 +64,26 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
             self.ordered = validated_items[:len(self.items)] == self.items
             self.contains_anchor = len(self.items) == len(validated_items)
 
-    def _asdict(self):
-        return OrderedDict([
-            ('items_chain', self.items),
-            ('ordered', self.ordered),
-            ('verified', self.verified),
-            ('contains_anchor', self.contains_anchor),
-        ])
-
 
 @attr.s
 class TlsPublicKey(Serializable):
-    sni_sent = attr.ib(validator=attr.validators.instance_of(bool))
+    sni_sent = attr.ib(
+        validator=attr.validators.instance_of(bool),
+        metadata={'human_readable_name': 'Server Name Indication (SNI)'}
+    )
     subject_matches = attr.ib(validator=attr.validators.instance_of(bool))
-    tls_certificate_chain = attr.ib(validator=attr.validators.instance_of(TlsCertificateChain))
+    tls_certificate_chain = attr.ib(
+        validator=attr.validators.instance_of(TlsCertificateChain),
+        metadata={'human_readable_name': 'Certificate Chain'}
+    )
 
 
 @attr.s
 class AnalyzerResultPublicKeys(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
-    pubkeys = attr.ib()
+    pubkeys = attr.ib(
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsPublicKey)),
+        metadata={'human_readable_name': 'TLS Certificates'},
+    )
 
 
 class AnalyzerPublicKeys(AnalyzerTlsBase):

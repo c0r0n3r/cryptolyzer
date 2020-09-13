@@ -231,6 +231,17 @@ class PublicKeyX509(PublicKey):
     def is_self_signed(self):
         return self.certificate.self_issued
 
+    @classmethod
+    def _markdown_human_readable_names(cls, obj, dict_value):
+        name_dict = super(PublicKeyX509, cls)._markdown_human_readable_names(obj, dict_value)
+
+        if 'crl_distribution_points' in name_dict:
+            name_dict['crl_distribution_points'] = 'CRL Distribution Point'
+        if 'ocsp_responders' in name_dict:
+            name_dict['ocsp_responders'] = 'OCSP Responders'
+
+        return name_dict
+
     def _asdict(self):
         return OrderedDict([
             ('serial_number', str(self.certificate.serial_number)),
