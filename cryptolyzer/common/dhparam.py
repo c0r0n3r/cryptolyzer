@@ -48,6 +48,36 @@ class DHParamWellKnown(object):
 
 
 class WellKnownDHParams(enum.Enum):
+    RFC2539_768_BIT_MODP_GROUP = DHParamWellKnown(
+        dh_param_numbers=DHParameterNumbers(
+            p=int((
+                'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
+                '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
+                'EF9519B3 CD3A431B 302B0A6D F25F1437 4FE1356D 6D51C245' +
+                'E485B576 625E7EC6 F44C42E9 A63A3620 FFFFFFFF FFFFFFFF'
+            ).replace(' ', ''), 16),
+            g=0x2,
+        ),
+        key_size=768,
+        name='768-bit MODP Group',
+        source='RFC2539',
+    )
+    RFC2539_1024_BIT_MODP_GROUP = DHParamWellKnown(
+        dh_param_numbers=DHParameterNumbers(
+            p=int((
+                'FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1' +
+                '29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD' +
+                'EF9519B3 CD3A431B 302B0A6D F25F1437 4FE1356D 6D51C245' +
+                'E485B576 625E7EC6 F44C42E9 A637ED6B 0BFF5CB6 F406B7ED' +
+                'EE386BFB 5A899FA5 AE9F2411 7C4B1FE6 49286651 ECE65381' +
+                'FFFFFFFF FFFFFFFF'
+            ).replace(' ', ''), 16),
+            g=0x2,
+        ),
+        key_size=1024,
+        name='1024-bit MODP Group',
+        source='RFC2539',
+    )
     RFC3526_1536_BIT_MODP_GROUP = DHParamWellKnown(
         dh_param_numbers=DHParameterNumbers(
             p=int((
