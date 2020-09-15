@@ -105,6 +105,16 @@ class L4TransferTCP(L4TransferBase):
             if not actual_received_bytes:
                 raise NotEnoughData(receivable_byte_num - total_received_byte_num)
 
+    def receive_until(self, terminator):
+        terminator_len = len(terminator)
+        self.receive(terminator_len)
+
+        while True:
+            if self._buffer[-terminator_len:] == terminator:
+                break
+
+            self._buffer += self._socket.recv(1)
+
     @abc.abstractmethod
     def _init_connection(self):
         raise NotImplementedError()
@@ -226,7 +236,7 @@ class L7TransferBase(object):
     def init_connection(self):
         try:
             self._init_connection()
-        except SecurityError:
+        except (SecurityError, NetworkError):
             self._close_connection()
             raise
 

@@ -534,6 +534,66 @@ class ClientRDP(L7ClientStartTlsBase):
         pass
 
 
+@attr.s
+class ClientXMPP(L7ClientStartTlsBase):
+    _STREAM_OPEN = (
+        '<stream:stream xmlns=\'jabber:client\' xmlns:stream=\'http://etherx.jabber.org/streams\' '
+        'xmlns:tls=\'http://www.ietf.org/rfc/rfc2595.txt\' to=\'{}\' xml:lang=\'en\' version=\'1.0\'>'
+    )
+    _STARTTLS = b'<starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>'
+
+    @classmethod
+    def get_scheme(cls):
+        return 'xmpp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 5222
+
+    @staticmethod
+    def _init_xmpp(l4_transfer, address):
+        stream_open_message = ClientXMPP._STREAM_OPEN.format(address).encode("utf-8")
+        l4_transfer.send(stream_open_message)
+
+        l4_transfer.receive_until(b'<stream:')
+        l4_transfer.receive_until(b'>')
+
+        if b'stream:error' in l4_transfer.buffer:
+            raise NetworkError(NetworkErrorType.NO_RESPONSE)
+
+        if b'stream:features' not in l4_transfer.buffer:
+            l4_transfer.receive_until(b'</stream:features>')
+
+        if b'<starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'>' not in l4_transfer.buffer:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+        l4_transfer.flush_buffer()
+
+        l4_transfer.send(ClientXMPP._STARTTLS)
+        l4_transfer.receive_until(b'>')
+
+        if b'stream:error' in l4_transfer.buffer:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+        if l4_transfer.buffer != b'<proceed xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>':
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+        l4_transfer.flush_buffer()
+
+    def _init_l7(self):
+        self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+        self._l7_client.init_connection()
+        self.l4_transfer = self._l7_client.l4_transfer
+
+        try:
+            self._init_xmpp(self.l4_transfer, self.address)
+        except NotEnoughData as e:
+            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+
+    def _deinit_l7(self):
+        pass
+
+
 class TlsClient(object):
     _last_processed_message_type = attr.ib(init=False, default=None)
     server_messages = attr.ib(init=False, default={})

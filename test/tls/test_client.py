@@ -55,7 +55,7 @@ from cryptolyzer.tls.server import (
 from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.versions import AnalyzerVersions
 
-from .classes import L7ServerTlsTest
+from .classes import L7ServerTlsTest, L7ServerTlsMockResponse, TlsServerMockResponse
 
 
 class L7ServerTlsFatalResponse(TlsServerHandshake):
@@ -316,6 +316,88 @@ class TestClientRDP(TestL7ClientBase):
     def test_rdp_client(self):
         self.assertEqual(
             self.get_result('rdp', '109.168.97.222', None).versions,
+            [
+                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            ]
+        )
+
+
+class TestClientXMPP(TestL7ClientBase):
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'<stream:error>', ))
+    def test_error_stream_error(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port).versions,
+            []
+        )
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'<stream:stream>', ))
+    def test_error_no_features(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2).versions,
+            []
+        )
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b'<stream:stream>',
+        b'<stream:features></stream:features>',
+    ))
+    def test_error_no_tls_feature(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2).versions,
+            []
+        )
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b'<stream:stream>' +
+        b'  <stream:features>' +
+        b'    <starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'></starttls>' +
+        b'  </stream:features>',
+        b'<failure xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>'
+    ))
+    def test_error_starttls_failure(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2).versions,
+            []
+        )
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b'<stream:stream>' +
+        b'  <stream:features>' +
+        b'    <starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'></starttls>' +
+        b'  </stream:features>',
+        b'<stream:error><host-unknown/></stream:error>'
+    ))
+    def test_error_host_unknown(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2).versions,
+            []
+        )
+
+    def test_xmpp_client(self):
+        self.assertEqual(
+            self.get_result('xmpp', 'xmpp.zone', None).versions,
             [
                 TlsProtocolVersionFinal(TlsVersion.TLS1_0),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_1),

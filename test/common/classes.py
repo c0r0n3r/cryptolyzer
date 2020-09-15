@@ -4,9 +4,9 @@ import threading
 import time
 
 
-class TestThreaderServer(threading.Thread):
+class TestThreadedServer(threading.Thread):
     def __init__(self, server):
-        super(TestThreaderServer, self).__init__()
+        super(TestThreadedServer, self).__init__()
 
         self._server = server
         self._server.init_connection()

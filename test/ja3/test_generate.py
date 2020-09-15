@@ -2,7 +2,7 @@
 
 import unittest
 
-from test.common.classes import TestThreaderServer
+from test.common.classes import TestThreadedServer
 
 import six
 
@@ -25,7 +25,7 @@ from cryptolyzer.tls.client import L7ClientTls, TlsAlert
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 
-class AnalyzerThread(TestThreaderServer):
+class AnalyzerThread(TestThreadedServer):
     def __init__(self, configuration=None):
         self.l7_server = L7ServerTls('localhost', 0, configuration=configuration)
         super(AnalyzerThread, self).__init__(self.l7_server)
