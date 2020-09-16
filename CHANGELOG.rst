@@ -9,14 +9,19 @@ Changelog
 Features
 ^^^^^^^^
 
-* RDP support for TLS checkers (#21)
-* `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_ decoding
-  support (#22)
-* `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_  generatoin
-  support (#23)
+* TLS (``tls``)
 
-Bugs
-^^^^
+  * RDP support (#21)
+
+* JA3 (``ja3``)
+
+  * `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_ decoding
+    support (#22)
+  * `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_  generatoin
+    support (#23)
+
+Notable fixes
+^^^^^^^^^^^^^
 
 * FTP server check cause Python traceback on connection close (#27)
 
@@ -61,7 +66,7 @@ Notable Fixes
   * Public Keys (``pubkeys``)
 
     * handle cross signed key in the certificate chain
-    * fixed JSON output in case of expired certificates (#15)
+    * fix JSON output in case of expired certificates (#15)
     * handle the case when only a self-singed CA is served as certificate (#17)
     * handle the case when CA with no basic constraint is served (#20)
 
