@@ -1,6 +1,41 @@
 Changelog
 =========
 
+.. _v0-3-1:
+
+0.3.1 - 2020-09-15
+------------------
+
+Features
+^^^^^^^^
+
+* Generic
+
+  * `Markdown <https://en.wikipedia.org/wiki/Markdown>`_ output format (#30)
+
+* TLS (``tls``)
+
+  * `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`_ support (#26)
+
+  * Cipher Suites (``ciphers``)
+
+    * `GOST <https://en.wikipedia.org/wiki/GOST>`_ (national standards of the Russian Federation and CIS countries)
+      support for TLS cipher suite checker (#32)
+
+Notable fixes
+^^^^^^^^^^^^^
+
+* TLS (``tls``)
+
+  * fix several uncertain test cases (#28)
+
+Refactor
+^^^^^^^^
+
+* remove unnecessary unicode conversions (#29)
+* switch from `cryptography <https://cryptography.io>`_ to `certvalidator <https://github.com/wbond/certvalidator>`_
+
+
 .. _v0-3-0:
 
 0.3.0 - 2020-04-30
