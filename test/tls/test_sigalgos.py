@@ -50,7 +50,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
     def test_error_response_error_no_response(self, _):
         result = self.get_result('ecc256.badssl.com', 443)
         self.assertEqual(result.sig_algos, [
-            TlsSignatureAndHashAlgorithm.DSA_NONE,
+            TlsSignatureAndHashAlgorithm.RSA_NONE,
         ])
 
     def test_sigalgos(self):

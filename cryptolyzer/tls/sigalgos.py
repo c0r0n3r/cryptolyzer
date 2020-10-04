@@ -2,25 +2,20 @@
 
 import attr
 
-from cryptoparser.common.algorithm import Authentication
-
-from cryptoparser.tls.ciphersuite import TlsCipherSuite
+from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithmVector
 from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
-from cryptoparser.tls.extension import (
-    TlsECPointFormatVector,
-    TlsExtensionEllipticCurves,
-    TlsExtensionServerName,
-    TlsExtensionSignatureAlgorithms,
-    TlsExtensionsClient,
-    TlsNamedCurve,
-    TlsSignatureAndHashAlgorithmVector,
-)
-from cryptoparser.tls.extension import TlsExtensionECPointFormats, TlsEllipticCurveVector
-from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsAlertDescription, TlsHandshakeClientHello
+from cryptoparser.tls.subprotocol import TlsAlertDescription
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+
+from cryptolyzer.tls.client import (
+    TlsHandshakeClientHelloAuthenticationDSS,
+    TlsHandshakeClientHelloAuthenticationECDSA,
+    TlsHandshakeClientHelloAuthenticationGOST,
+    TlsHandshakeClientHelloAuthenticationRSA,
+)
 from cryptolyzer.tls.exception import TlsAlert
 
 
@@ -42,61 +37,49 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
         return 'Check which signature and hash algorithm combinations supported by the server(s)'
 
     @staticmethod
-    def _analyze_algorithms(l7_client, protocol_version, cipher_suites, matching_algorithms):
+    def _analyze_algorithms(l7_client, client_hello):
         supported_algorithms = []
-        for algorithm in matching_algorithms:
-            client_hello = TlsHandshakeClientHello(
-                protocol_version=protocol_version,
-                cipher_suites=cipher_suites,
-                extensions=TlsExtensionsClient([
-                    TlsExtensionServerName(l7_client.address),
-                    TlsExtensionECPointFormats(TlsECPointFormatVector(list(TlsECPointFormat))),
-                    TlsExtensionEllipticCurves(TlsEllipticCurveVector(list(TlsNamedCurve))),
-                    TlsExtensionSignatureAlgorithms(TlsSignatureAndHashAlgorithmVector([algorithm, ])),
-                ])
-            )
-
+        extension = client_hello.extensions.get_item_by_type(
+            TlsExtensionSignatureAlgorithms.get_extension_type()
+        )
+        for algorithm in extension.hash_and_signature_algorithms:
+            extension.hash_and_signature_algorithms = TlsSignatureAndHashAlgorithmVector([algorithm, ])
             try:
                 l7_client.do_tls_handshake(client_hello)
             except TlsAlert as e:
-                if (algorithm == matching_algorithms[0] and
-                        e.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]):
-                    break
+                if algorithm == extension.hash_and_signature_algorithms[0]:
+                    if e.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]:
+                        break
 
-                if e.description not in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
+                acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                    TlsAlertDescription.INTERNAL_ERROR,
+                ]
+                if e.description not in acceptable_alerts:
                     raise e
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
             except SecurityError:
-                if algorithm == matching_algorithms[0]:
-                    break
-
-                continue
+                break
             else:
                 supported_algorithms.append(algorithm)
-            finally:
-                del client_hello.extensions[-1]
 
         return supported_algorithms
 
     def analyze(self, analyzable, protocol_version):
         supported_algorithms = []
-        for authentication in [Authentication.DSS, Authentication.RSA, Authentication.ECDSA]:
-            cipher_suites = TlsCipherSuiteVector([
-                cipher_suite
-                for cipher_suite in TlsCipherSuite
-                if (cipher_suite.value.key_exchange and cipher_suite.value.key_exchange.value.forward_secret and
-                    cipher_suite.value.authentication and cipher_suite.value.authentication == authentication)
-            ])
-
-            matching_algorithms = [
-                algorithm
-                for algorithm in TlsSignatureAndHashAlgorithm
-                if algorithm.value.signature_algorithm == authentication
-            ]
+        for client_hello_class in [
+                    TlsHandshakeClientHelloAuthenticationRSA,
+                    TlsHandshakeClientHelloAuthenticationECDSA,
+                    TlsHandshakeClientHelloAuthenticationDSS,
+                    TlsHandshakeClientHelloAuthenticationGOST,
+                ]:
+            client_hello = client_hello_class(
+                protocol_version=protocol_version,
+                hostname=analyzable.address,
+            )
             supported_algorithms.extend(
-                self._analyze_algorithms(analyzable, protocol_version, cipher_suites, matching_algorithms)
+                self._analyze_algorithms(analyzable, client_hello)
             )
 
         return AnalyzerResultSigAlgos(
