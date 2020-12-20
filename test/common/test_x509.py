@@ -31,7 +31,8 @@ class TestPublicKeyX509(unittest.TestCase):
         result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         return result
 
-    def _get_public_key_x509(self, relative_file_path):
+    @staticmethod
+    def _get_public_key_x509(relative_file_path):
         test_dir = os.path.dirname(__file__)
         with open(os.path.join(test_dir, relative_file_path), 'rb') as pem_file:
             _, _, der_bytes = asn1crypto.pem.unarmor(pem_file.read())
@@ -234,11 +235,23 @@ class TestPublicKeyX509(unittest.TestCase):
 
     def test_signature_algorithm(self):
         result = self._get_result('sha1-intermediate.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, Signature.RSA_WITH_SHA2_256)
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[1].signature_hash_algorithm,
+            Signature.RSA_WITH_SHA1
+        )
 
         result = self._get_result('sha256.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, Signature.RSA_WITH_SHA2_256)
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm,
+            Signature.RSA_WITH_SHA2_256
+        )
         result = self._get_result('sha384.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, Signature.RSA_WITH_SHA2_384)
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm,
+            Signature.RSA_WITH_SHA2_384
+        )
         result = self._get_result('sha512.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, Signature.RSA_WITH_SHA2_512)
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm,
+            Signature.RSA_WITH_SHA2_512
+        )
