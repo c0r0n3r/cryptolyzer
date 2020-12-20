@@ -9,10 +9,10 @@ from collections import OrderedDict
 import six
 
 
-import asn1crypto
+import asn1crypto.x509
 import attr
 
-from cryptoparser.common.algorithm import Hash
+from cryptoparser.common.algorithm import Authentication, Hash, Signature
 from cryptoparser.common.base import Serializable
 
 import cryptolyzer.common.utils
@@ -116,12 +116,6 @@ class PublicKeyX509(PublicKey):
         'WoSign': ('1.3.6.1.4.1.36305.2', ),
     }
 
-    _HASH_NAME_TO_CRYPTOPARSER_HASH_MAP = {
-        'sha256': Hash.SHA2_256,
-        'sha384': Hash.SHA2_384,
-        'sha512': Hash.SHA2_512,
-    }
-
     certificate = attr.ib(validator=attr.validators.instance_of(asn1crypto.x509.Certificate))
 
     def __eq__(self, other):
@@ -150,15 +144,33 @@ class PublicKeyX509(PublicKey):
 
     @property
     def key_type(self):
-        return self.certificate.public_key.algorithm.upper()
+        try:
+            subject_public_key_info = self.certificate['tbs_certificate']['subject_public_key_info']
+            key_type_oid = subject_public_key_info['algorithm']['algorithm'].dotted
+        except KeyError as e:
+            key_type_oid = e.args[0]
+
+        return Authentication.from_oid(key_type_oid)
 
     @property
     def key_size(self):
+        if self.key_type == Authentication.GOST_R3410_12_256:
+            return 256
+        if self.key_type == Authentication.GOST_R3410_12_512:
+            return 512
+        if self.key_type == Authentication.GOST_R3410_01:
+            return 256
+
         return int(self.certificate['tbs_certificate']['subject_public_key_info'].bit_size)
 
     @property
     def signature_hash_algorithm(self):
-        return self._HASH_NAME_TO_CRYPTOPARSER_HASH_MAP.get(self.certificate.hash_algo, None)
+        try:
+            signature_oid = self.certificate['signature_algorithm']['algorithm'].dotted
+        except KeyError as e:
+            signature_oid = e.args[0]
+
+        return Signature.from_oid(signature_oid)
 
     @property
     def fingerprints(self):
@@ -268,7 +280,10 @@ class PublicKeyX509(PublicKey):
                 ('crl_distribution_points', self.crl_distribution_points),
                 ('ocsp_responders', self.ocsp_responders),
             ])),
-            ('fingerprints', {mac.value.name: fingerprint for (mac, fingerprint) in six.iteritems(self.fingerprints)}),
+            ('fingerprints', {
+                hash_algo.name: fingerprint
+                for (hash_algo, fingerprint) in six.iteritems(self.fingerprints)
+            }),
             ('public_key_pin', self.public_key_pin),
             ('version', self.certificate['tbs_certificate']['version'].native),
         ])
