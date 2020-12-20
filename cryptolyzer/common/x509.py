@@ -12,7 +12,7 @@ import six
 import asn1crypto
 import attr
 
-from cryptoparser.common.algorithm import MAC
+from cryptoparser.common.algorithm import Hash
 from cryptoparser.common.base import Serializable
 
 import cryptolyzer.common.utils
@@ -116,10 +116,10 @@ class PublicKeyX509(PublicKey):
         'WoSign': ('1.3.6.1.4.1.36305.2', ),
     }
 
-    _MAC_NAME_TO_CRYPTOPARSER_MAC_MAP = {
-        'sha256': MAC.SHA2_256,
-        'sha384': MAC.SHA2_384,
-        'sha512': MAC.SHA2_512,
+    _HASH_NAME_TO_CRYPTOPARSER_HASH_MAP = {
+        'sha256': Hash.SHA2_256,
+        'sha384': Hash.SHA2_384,
+        'sha512': Hash.SHA2_512,
     }
 
     certificate = attr.ib(validator=attr.validators.instance_of(asn1crypto.x509.Certificate))
@@ -158,19 +158,19 @@ class PublicKeyX509(PublicKey):
 
     @property
     def signature_hash_algorithm(self):
-        return self._MAC_NAME_TO_CRYPTOPARSER_MAC_MAP.get(self.certificate.hash_algo, None)
+        return self._HASH_NAME_TO_CRYPTOPARSER_HASH_MAP.get(self.certificate.hash_algo, None)
 
     @property
     def fingerprints(self):
         certificyte_bytes = self.certificate.dump()
         return {
-            MAC.MD5: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
+            Hash.MD5: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
                 hashlib.md5(certificyte_bytes).digest()
             ),
-            MAC.SHA1: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
+            Hash.SHA1: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
                 hashlib.sha1(certificyte_bytes).digest()
             ),
-            MAC.SHA2_256: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
+            Hash.SHA2_256: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
                 hashlib.sha256(certificyte_bytes).digest()
             ),
         }

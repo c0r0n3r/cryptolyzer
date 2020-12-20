@@ -12,7 +12,7 @@ except ImportError:
 
 import asn1crypto
 
-from cryptoparser.common.algorithm import MAC
+from cryptoparser.common.algorithm import Hash
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -164,11 +164,11 @@ class TestPublicKeyX509(unittest.TestCase):
         self.assertEqual(
             result.pubkeys[0].tls_certificate_chain.items[0].fingerprints,
             {
-                MAC.MD5:
+                Hash.MD5:
                     '67:34:4E:61:C0:43:1C:F1:F7:25:7C:1D:6D:E7:A7:85',
-                MAC.SHA1:
+                Hash.SHA1:
                     '40:4B:BD:2F:1F:4C:C2:FD:EE:F1:3A:AB:DD:52:3E:F6:1F:1C:71:F3',
-                MAC.SHA2_256:
+                Hash.SHA2_256:
                     'BA:10:5C:E0:2B:AC:76:88:8E:CE:E4:7C:D4:EB:79:41:' +
                     '65:3E:9A:C9:93:B6:1B:2E:B3:DC:C8:20:14:D2:1B:4F',
             }
@@ -208,11 +208,11 @@ class TestPublicKeyX509(unittest.TestCase):
 
     def test_signature_algorithm(self):
         result = self._get_result('sha1-intermediate.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA2_256)
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, Hash.SHA2_256)
 
         result = self._get_result('sha256.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA2_256)
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, Hash.SHA2_256)
         result = self._get_result('sha384.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA2_384)
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, Hash.SHA2_384)
         result = self._get_result('sha512.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA2_512)
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, Hash.SHA2_512)
