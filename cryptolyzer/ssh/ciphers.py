@@ -10,6 +10,7 @@ from cryptoparser.ssh.ciphersuite import (
     SshMacAlgorithm,
 )
 from cryptoparser.ssh.subprotocol import SshMessageCode, SshKeyExchangeInit
+from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
 from cryptolyzer.common.analyzer import AnalyzerSshBase
 from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
@@ -79,7 +80,7 @@ class AnalyzerCiphers(AnalyzerSshBase):
         server_messages = analyzable.do_handshake(last_message_type=SshMessageCode.KEXINIT)
         key_exchange_init_message = server_messages[SshKeyExchangeInit]
         return AnalyzerResultCiphers(
-            AnalyzerTargetSsh.from_l7_client(analyzable),
+            AnalyzerTargetSsh.from_l7_client(analyzable, SshProtocolVersion(SshVersion.SSH2)),
             list(key_exchange_init_message.kex_algorithms),
             list(key_exchange_init_message.host_key_algorithms),
             list(key_exchange_init_message.encryption_algorithms_client_to_server),

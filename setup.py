@@ -57,6 +57,7 @@ setup(
     packages=[
         'cryptolyzer',
         'cryptolyzer.common',
+        'cryptolyzer.httpx',
         'cryptolyzer.ja3',
         'cryptolyzer.ssh',
         'cryptolyzer.tls',

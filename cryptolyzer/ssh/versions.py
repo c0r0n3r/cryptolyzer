@@ -6,7 +6,7 @@ from cryptoparser.ssh.subprotocol import SshProtocolMessage
 from cryptoparser.ssh.version import SshProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerSshBase
-from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTarget
+from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
 
 
 @attr.s
@@ -29,6 +29,6 @@ class AnalyzerVersions(AnalyzerSshBase):
         server_messages = analyzable.do_handshake(last_message_type=SshProtocolMessage)
         supported_protocols = server_messages[SshProtocolMessage].protocol_version.supported_versions
         return AnalyzerResultVersions(
-            AnalyzerTarget.from_l7_client(analyzable),
+            AnalyzerTargetSsh.from_l7_client(analyzable),
             [SshProtocolVersion(supported_protocol) for supported_protocol in supported_protocols]
         )
