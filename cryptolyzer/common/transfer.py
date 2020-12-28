@@ -217,7 +217,7 @@ class L7TransferBase(object):
                 port = transfer_class.get_default_port() if port is None else port
                 return transfer_class(address=address, port=port, timeout=timeout, ip=ip)
 
-        raise ValueError()
+        raise ValueError(scheme)
 
     @classmethod
     @abc.abstractmethod
