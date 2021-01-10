@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import attr
 
-from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType, TlsECCurveType
+from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.extension import (
     TlsEllipticCurveVector,
     TlsExtensionEllipticCurves,
@@ -42,9 +42,9 @@ class AnalyzerCurves(AnalyzerTlsBase):
         return 'Check which curve suites supported by the server(s)'
 
     @staticmethod
-    def _get_key_exchange_message(l7_client, client_hello, curve):
+    def _get_key_exchange_message(l7_client, client_hello, curves):
         try:
-            client_hello.extensions.append(TlsExtensionEllipticCurves(TlsEllipticCurveVector([curve, ])))
+            client_hello.extensions.append(TlsExtensionEllipticCurves(TlsEllipticCurveVector(curves)))
             server_messages = l7_client.do_tls_handshake(
                 hello_message=client_hello,
                 last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE
@@ -61,9 +61,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
         try:
             supported_curve, _ = parse_ecdh_params(server_key_exchange.param_bytes)
         except NotImplementedError as e:
-            if isinstance(e.args[0], TlsECCurveType):
-                supported_curve = None
-            elif isinstance(e.args[0], TlsNamedCurve):
+            if isinstance(e.args[0], TlsNamedCurve):
                 supported_curve = TlsNamedCurve(e.args[0])
             else:
                 raise e
@@ -83,11 +81,12 @@ class AnalyzerCurves(AnalyzerTlsBase):
         client_hello = self._get_client_hello(analyzable, protocol_version)
         supported_curves = OrderedDict()
         extension_supported = True
-        for curve in TlsNamedCurve:
+        checkable_curves = list(TlsNamedCurve)
+        while checkable_curves:
             try:
-                server_key_exchange = self._get_key_exchange_message(analyzable, client_hello, curve)
+                server_key_exchange = self._get_key_exchange_message(analyzable, client_hello, checkable_curves)
             except TlsAlert as e:
-                if curve == next(iter(TlsNamedCurve)):
+                if len(TlsNamedCurve) == len(checkable_curves):
                     acceptable_alerts = [
                         TlsAlertDescription.PROTOCOL_VERSION,
                         TlsAlertDescription.UNRECOGNIZED_NAME,
@@ -103,23 +102,28 @@ class AnalyzerCurves(AnalyzerTlsBase):
                         TlsAlertDescription.INSUFFICIENT_SECURITY]):
                     raise e
 
-                continue
+                break
             except SecurityError:
-                if curve == next(iter(TlsNamedCurve)):
+                if len(TlsNamedCurve) == len(checkable_curves):
                     extension_supported = None
-                    break
 
-                continue
+                break
             finally:
                 del client_hello.extensions[-1]
 
-            if server_key_exchange is not None:
-                supported_curve = self._get_supported_curve(server_key_exchange)
-                if supported_curve is not None:
-                    supported_curves.update([(supported_curve.name, supported_curve), ])
-                    if supported_curve != curve:
-                        extension_supported = False
-                        break
+            if server_key_exchange is None:
+                break
+
+            supported_curve = self._get_supported_curve(server_key_exchange)
+
+            try:
+                checkable_curves.remove(supported_curve)
+            except ValueError:
+                # choosen curve is an already checked one
+                extension_supported = False
+                break
+
+            supported_curves.update([(supported_curve.name, supported_curve), ])
 
         return AnalyzerResultCurves(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
