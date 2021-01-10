@@ -42,7 +42,7 @@ class ProtocolHandlerBase(object):
         for handler_class in get_leaf_classes(cls):
             if handler_class.get_protocol() == protocol:
                 return handler_class()
-        raise KeyError()
+        raise KeyError(protocol)
 
     @classmethod
     def get_protocols(cls):

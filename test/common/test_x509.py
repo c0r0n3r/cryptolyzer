@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import os
+
 import datetime
 import unittest
 
@@ -10,12 +12,14 @@ try:
 except ImportError:
     import mock
 
-import asn1crypto
+import asn1crypto.pem
+import asn1crypto.x509
 
-from cryptoparser.common.algorithm import MAC
+from cryptoparser.common.algorithm import Authentication, Hash, Signature
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.common.x509 import PublicKeyX509
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
 
@@ -26,6 +30,13 @@ class TestPublicKeyX509(unittest.TestCase):
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         return result
+
+    @staticmethod
+    def _get_public_key_x509(relative_file_path):
+        test_dir = os.path.dirname(__file__)
+        with open(os.path.join(test_dir, relative_file_path), 'rb') as pem_file:
+            _, _, der_bytes = asn1crypto.pem.unarmor(pem_file.read())
+            return PublicKeyX509(asn1crypto.x509.Certificate.load(der_bytes))
 
     def test_common_name(self):
         result = self._get_result('no-common-name.badssl.com', 443)
@@ -164,11 +175,11 @@ class TestPublicKeyX509(unittest.TestCase):
         self.assertEqual(
             result.pubkeys[0].tls_certificate_chain.items[0].fingerprints,
             {
-                MAC.MD5:
+                Hash.MD5:
                     '67:34:4E:61:C0:43:1C:F1:F7:25:7C:1D:6D:E7:A7:85',
-                MAC.SHA1:
+                Hash.SHA1:
                     '40:4B:BD:2F:1F:4C:C2:FD:EE:F1:3A:AB:DD:52:3E:F6:1F:1C:71:F3',
-                MAC.SHA2_256:
+                Hash.SHA2_256:
                     'BA:10:5C:E0:2B:AC:76:88:8E:CE:E4:7C:D4:EB:79:41:' +
                     '65:3E:9A:C9:93:B6:1B:2E:B3:DC:C8:20:14:D2:1B:4F',
             }
@@ -190,29 +201,57 @@ class TestPublicKeyX509(unittest.TestCase):
 
     def test_key_type_and_size(self):
         result = self._get_result('ecc256.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, 'EC')
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, Authentication.ECDSA)
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_size, 256)
         result = self._get_result('ecc384.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, 'EC')
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, Authentication.ECDSA)
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_size, 384)
 
         result = self._get_result('rsa2048.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, 'RSA')
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, Authentication.RSA)
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_size, 2048)
         result = self._get_result('rsa4096.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, 'RSA')
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, Authentication.RSA)
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_size, 4096)
         result = self._get_result('rsa8192.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, 'RSA')
+        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, Authentication.RSA)
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_size, 8192)
+
+        public_key_x509 = self._get_public_key_x509('certs/gost_2001_cert.pem')
+        self.assertEqual(public_key_x509.key_size, 256)
+        public_key_x509 = self._get_public_key_x509('certs/gost_2012_256_cert.pem')
+        self.assertEqual(public_key_x509.key_size, 256)
+        public_key_x509 = self._get_public_key_x509('certs/gost_2012_512_cert.pem')
+        self.assertEqual(public_key_x509.key_size, 512)
+
+    def test_signature_algorithm_unknown(self):
+        result = self._get_result('sha1-intermediate.badssl.com', 443)
+        with mock.patch('asn1crypto.algos.SignedDigestAlgorithmId.dotted', new_callable=mock.PropertyMock) as prop_mock:
+            prop_mock.side_effect = KeyError('1.2.840.113549.1.1.2')
+            self.assertEqual(
+                result.pubkeys[0].tls_certificate_chain.items[1].signature_hash_algorithm,
+                Signature.RSA_WITH_MD2
+            )
 
     def test_signature_algorithm(self):
         result = self._get_result('sha1-intermediate.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA2_256)
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[1].signature_hash_algorithm,
+            Signature.RSA_WITH_SHA1
+        )
 
         result = self._get_result('sha256.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA2_256)
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm,
+            Signature.RSA_WITH_SHA2_256
+        )
         result = self._get_result('sha384.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA2_384)
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm,
+            Signature.RSA_WITH_SHA2_384
+        )
         result = self._get_result('sha512.badssl.com', 443)
-        self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm, MAC.SHA2_512)
+        self.assertEqual(
+            result.pubkeys[0].tls_certificate_chain.items[0].signature_hash_algorithm,
+            Signature.RSA_WITH_SHA2_512
+        )
