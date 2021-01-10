@@ -17,6 +17,7 @@ import test.tls.test_ciphers
 import test.tls.test_curves
 import test.tls.test_dhparams
 import test.tls.test_pubkeys
+import test.tls.test_pubkeyreq
 import test.tls.test_sigalgos
 import test.tls.test_versions
 
@@ -112,6 +113,19 @@ class TestMain(unittest.TestCase):
         self.assertTrue(
             simple_result.as_markdown() in
             self._get_test_analyzer_result_markdown('tls1', 'ciphers', 'tls-v1-0.badssl.com:1010')
+        )
+
+    def test_analyzer_output_tls_pubkeyreq(self):
+        result = test.tls.test_pubkeyreq.TestTlsPublicKeyRequest.get_result(
+            'client.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result_json('tls1_2', 'pubkeyreq', 'client.badssl.com:443'),
+            result.as_json() + '\n',
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result_markdown('tls1_2', 'pubkeyreq', 'client.badssl.com:443'),
+            result.as_markdown() + '\n',
         )
 
     def test_analyzer_output_tls_curves(self):
