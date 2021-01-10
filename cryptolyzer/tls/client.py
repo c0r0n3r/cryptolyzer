@@ -17,6 +17,11 @@ from cryptoparser.common.algorithm import Authentication, KeyExchange
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
+from cryptoparser.tls.ldap import (
+    LDAPResultCode,
+    LDAPExtendedRequestStartTLS,
+    LDAPExtendedResponseStartTLS,
+)
 from cryptoparser.tls.rdp import (
     TPKT,
     COTPConnectionConfirm,
@@ -589,6 +594,61 @@ class ClientXMPP(L7ClientStartTlsBase):
             self._init_xmpp(self.l4_transfer, self.address)
         except NotEnoughData as e:
             six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+
+    def _deinit_l7(self):
+        pass
+
+
+class L7ClientLDAPS(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'ldaps'
+
+    @classmethod
+    def get_default_port(cls):
+        return 636
+
+
+@attr.s
+class ClientLDAP(L7ClientStartTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'ldap'
+
+    @classmethod
+    def get_default_port(cls):
+        return 389
+
+    def _init_l7(self):
+        try:
+            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client.init_connection()
+            self.l4_transfer = self._l7_client.l4_transfer
+
+            request_bytes = LDAPExtendedRequestStartTLS().compose()
+            self.l4_transfer.send(request_bytes)
+
+            try:
+                self.l4_transfer.receive(LDAPExtendedResponseStartTLS.HEADER_SIZE)
+                LDAPExtendedResponseStartTLS.parse_immutable(self.l4_transfer.buffer)
+            except NotEnoughData as e:
+                header_size = LDAPExtendedResponseStartTLS.HEADER_SIZE
+                header_not_received = header_size - len(self.l4_transfer.buffer) == e.bytes_needed
+                if header_not_received:
+                    self._close_connection()
+                    raise e
+
+                self.l4_transfer.receive(e.bytes_needed)
+
+            ext_response, parsed_length = LDAPExtendedResponseStartTLS.parse_immutable(self.l4_transfer.buffer)
+            self.l4_transfer.flush_buffer(parsed_length)
+        except socket.timeout as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+        except (InvalidValue, InvalidType) as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+
+        if ext_response.result_code != LDAPResultCode.SUCCESS:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
     def _deinit_l7(self):
         pass

@@ -13,6 +13,7 @@ except ImportError:
 
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 from cryptoparser.tls.ciphersuite import SslCipherKind
+from cryptoparser.tls.ldap import LDAPMessageParsableBase, LDAPExtendedResponseStartTLS, LDAPResultCode
 from cryptoparser.tls.rdp import RDPNegotiationResponse
 
 from cryptoparser.tls.record import ParsableBase
@@ -321,6 +322,55 @@ class TestClientRDP(TestL7ClientBase):
                 TlsProtocolVersionFinal(TlsVersion.TLS1_1),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_2),
             ]
+        )
+
+
+class TestClientLDAP(TestL7ClientBase):
+    @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
+    def test_error_send_timeout(self, _):
+        self.assertEqual(self.get_result('ldap', 'lc.nasa.gov', None).versions, [])
+
+    @mock.patch.object(LDAPMessageParsableBase, '_parse_asn1', side_effect=InvalidType)
+    def test_error_parse_invalid_type(self, _):
+        self.assertEqual(self.get_result('ldap', 'lc.nasa.gov', None).versions, [])
+
+    @mock.patch.object(
+        TlsServerMockResponse,
+        '_get_mock_responses',
+        return_value=(LDAPExtendedResponseStartTLS(LDAPResultCode.AUTH_METHOD_NOT_SUPPORTED).compose(), )
+    )
+    def test_ldap_header_not_received(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result('ldap', 'localhost', threaded_server.l7_server.l4_transfer.bind_port).versions,
+            []
+        )
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'\x30\x03\x02\x01\x01', ))
+    def test_ldap_no_starttls_support(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        with self.assertRaises(NotEnoughData) as context_manager:
+            self.get_result(  # pylint: disable = expression-not-assigned
+                'ldap', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+            ).versions
+        self.assertEqual(context_manager.exception.bytes_needed, 1)
+
+    def test_ldap_client(self):
+        self.assertEqual(
+            self.get_result('ldap', 'lc.nasa.gov', None).versions,
+            [TlsProtocolVersionFinal(TlsVersion.TLS1_2), ]
+        )
+
+    def test_ldaps_client(self):
+        self.assertEqual(
+            self.get_result('ldaps', 'lc.nasa.gov', None).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, ]]
         )
 
 
