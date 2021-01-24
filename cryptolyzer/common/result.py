@@ -46,6 +46,17 @@ class AnalyzerTargetSsh(AnalyzerTarget):
 class AnalyzerResultBase(Serializable):
     target = attr.ib()
 
+    def _as_markdown_without_target(self, value, level):
+        multiline, attr_result = self._markdown_result(value, level)
+        if not multiline:
+            attr_result += '\n'
+
+        if value is not None and isinstance(value, AnalyzerResultBase):
+            target_result_line_count = len(self._markdown_result(value.target, level)[1].split('\n'))
+            attr_result = '\n'.join(attr_result.split('\n')[target_result_line_count:])
+
+        return attr_result
+
 
 @attr.s
 class AnalyzerResultAllSupportedVersions(AnalyzerResultBase):

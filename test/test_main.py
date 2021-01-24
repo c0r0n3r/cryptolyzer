@@ -20,9 +20,9 @@ import test.tls.test_pubkeys
 import test.tls.test_pubkeyreq
 import test.tls.test_sigalgos
 import test.tls.test_versions
+import test.tls.test_all
 
 import six
-import urllib3
 
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
 
@@ -31,8 +31,6 @@ from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 
 from cryptolyzer.__main__ import main, get_argument_parser, get_protocol_handler_analyzer_and_uris
 from cryptolyzer.ja3.generate import AnalyzerGenerate
-from cryptolyzer.tls.analyzer import ProtocolHandlerTlsAllSupportedVersions
-from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 
 
 class TestMain(TestMainBase):
@@ -97,19 +95,13 @@ class TestMain(TestMainBase):
 
         func_arguments, cli_arguments = self._get_arguments(
             'tls',
-            'ciphers',
-            'tls-v1-0.badssl.com',
-            1010,
+            'all',
+            'rc4-md5.badssl.com',
+            443,
         )
-        url = urllib3.util.parse_url('tls://' + cli_arguments['address'])
-        self.assertEqual(
-            self._get_test_analyzer_result_json(**cli_arguments),
-            ProtocolHandlerTlsAllSupportedVersions().analyze(AnalyzerCipherSuites(), url).as_json() + '\n'
-        )
-        self.assertEqual(
-            self._get_test_analyzer_result_markdown(**cli_arguments),
-            ProtocolHandlerTlsAllSupportedVersions().analyze(AnalyzerCipherSuites(), url).as_markdown() + '\n'
-        )
+        all_result = test.tls.test_all.TestTlsAll.get_result(**func_arguments)
+        result_markdown = result._as_markdown_without_target(result, 0)  # pylint: disable=protected-access
+        self.assertTrue(result_markdown in all_result.as_markdown())
 
     def test_analyzer_output_tls_pubkeyreq(self):
         result = test.tls.test_pubkeyreq.TestTlsPublicKeyRequest.get_result(
@@ -206,6 +198,18 @@ class TestMain(TestMainBase):
         )
         self.assertEqual(
             self._get_test_analyzer_result_markdown(**cli_arguments),
+            result.as_markdown() + '\n',
+        )
+
+    def test_analyzer_output_tlsall_(self):
+        result = test.tls.test_all.TestTlsAll.get_result('one.one.one.one', 443, protocol_version=None, ip='1.1.1.1')
+        self.assertEqual(
+            self._get_test_analyzer_result_json('tls', 'all', 'one.one.one.one:443#1.1.1.1'),
+            result.as_json() + '\n',
+        )
+
+        self.assertEqual(
+            self._get_test_analyzer_result_markdown('tls', 'all', 'one.one.one.one:443#1.1.1.1'),
             result.as_markdown() + '\n',
         )
 

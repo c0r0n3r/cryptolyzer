@@ -39,7 +39,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
 
     @classmethod
     def get_help(cls):
-        return 'Check which curve suites supported by the server(s)'
+        return 'Check which elliptic curves supported by the server(s)'
 
     @staticmethod
     def _get_key_exchange_message(l7_client, client_hello, curves):
