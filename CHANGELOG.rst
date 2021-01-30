@@ -1,6 +1,42 @@
 Changelog
 =========
 
+.. _v0-4-0:
+
+0.4.0 - 2021-01-30
+------------------
+
+Features
+^^^^^^^^
+
+* TLS (``tls``)
+
+  * add analyzer for checking whether TLS server requires client certificate for authentication (#36)
+  * `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`_ support (#25)
+
+Notable fixes
+^^^^^^^^^^^^^
+
+* TLS (``tls``)
+
+  * Generic
+
+    * handle that a server indicates handshake failure by sending close notify alert (#44)
+    * handle that a server does not respect lack of the signature algorithms extension (#43)
+
+  * Versions (``versions``)
+
+    * handle that a server supports only non-RSA public keys (#41)
+
+Perforamce
+^^^^^^^^^^
+
+* TLS (``tls``)
+
+  * Cipher Suites (``ciphers``)
+
+    * speed up TLS supported curve check (#39)
+
 .. _v0-3-1:
 
 0.3.1 - 2020-09-15
