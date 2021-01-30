@@ -115,6 +115,12 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
+    def test_ecdsa_only(self):
+        self.assertEqual(
+            self.get_result('ecc256.badssl.com', 443).versions,
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+
     def test_with_client_auth(self):
         self.assertEqual(
             self.get_result('client.badssl.com', 443).versions,
