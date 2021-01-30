@@ -14,7 +14,7 @@ import attr
 import six
 
 from cryptoparser.common.algorithm import Authentication, KeyExchange
-from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
+from cryptoparser.common.exception import NotEnoughData, TooMuchData, InvalidType, InvalidValue
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.ldap import (
@@ -772,7 +772,7 @@ class SslClientHandshake(TlsClient):
                 receivable_byte_num = 0
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
-            except (InvalidType, InvalidValue):
+            except (InvalidType, InvalidValue, TooMuchData):
                 self.raise_response_error(transfer)
 
             try:
