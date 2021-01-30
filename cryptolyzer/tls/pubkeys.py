@@ -20,7 +20,7 @@ from cryptolyzer.tls.client import (
 )
 from cryptolyzer.tls.exception import TlsAlert
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 import cryptolyzer.common.x509
 
@@ -130,7 +130,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             if e.error != NetworkErrorType.NO_RESPONSE:
                 raise e
         except SecurityError as e:
-            if client_hello == client_hello_messages[0]:
+            if e.error != SecurityErrorType.UNPARSABLE_MESSAGE and client_hello == client_hello_messages[0]:
                 six.raise_from(StopIteration, e)
 
         return server_messages
