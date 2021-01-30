@@ -68,7 +68,7 @@ class AnalyzerPublicKeyRequest(AnalyzerTlsBase):
             except TlsAlert as e:
                 if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
                     break
-                if e.description in [TlsAlertDescription.HANDSHAKE_FAILURE, TlsAlertDescription.INTERNAL_ERROR]:
+                if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
                     break
 
                 raise e

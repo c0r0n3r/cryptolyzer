@@ -88,11 +88,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                     time.sleep(5)
                     continue
 
-                if e.description in [
-                        TlsAlertDescription.HANDSHAKE_FAILURE,  # no match in remaining cipher suites
-                        TlsAlertDescription.INSUFFICIENT_SECURITY,  # not enough secure cipher suites remained
-                        TlsAlertDescription.ILLEGAL_PARAMETER  # unimplemented cipher suites remained
-                ]:
+                if e.description in AnalyzerCipherSuites._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
                     break
 
                 raise e

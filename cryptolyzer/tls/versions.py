@@ -90,7 +90,9 @@ class AnalyzerVersions(AnalyzerTlsBase):
                     if e.description == TlsAlertDescription.PROTOCOL_VERSION:
                         alerts_unsupported_tls_version = True
                         break
-                    if e.description in [TlsAlertDescription.HANDSHAKE_FAILURE, TlsAlertDescription.INTERNAL_ERROR]:
+                    if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                            TlsAlertDescription.INTERNAL_ERROR
+                    ]:
                         alerts_unsupported_tls_version = False
                         continue
                     if tls_version == TlsVersion.SSL3:

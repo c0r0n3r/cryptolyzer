@@ -541,7 +541,7 @@ class TestSslClientHandshake(unittest.TestCase):
             b'',
             True,
             TlsRecord([
-                TlsAlertMessage(TlsAlertLevel.FATAL, TlsAlertDescription.CLOSE_NOTIFY)
+                TlsAlertMessage(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE)
             ]).compose()
         ])
     )
