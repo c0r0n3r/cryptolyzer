@@ -297,28 +297,27 @@ RDP_NEGOTIATION_RESPONSE_LENGTH = 19
 class TestClientRDP(TestL7ClientBase):
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
     def test_error_send_timeout(self, _):
-        self.assertEqual(self.get_result('rdp', '109.168.97.222', None).versions, [])
+        self.assertEqual(self.get_result('rdp', 'xactdemo.com', None).versions, [])
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
-        self.assertEqual(self.get_result('rdp', '109.168.97.222', None).versions, [])
+        self.assertEqual(self.get_result('rdp', 'xactdemo.com', None).versions, [])
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidValue('x', int))
     def test_error_parse_invalid_value(self, _):
-        self.assertEqual(self.get_result('rdp', '109.168.97.222', None).versions, [])
+        self.assertEqual(self.get_result('rdp', 'xactdemo.com', None).versions, [])
 
     @mock.patch.object(
         RDPNegotiationResponse, '_parse',
         return_value=(RDPNegotiationResponse([], []), RDP_NEGOTIATION_RESPONSE_LENGTH)
     )
     def test_error_no_ssl_support(self, _):
-        self.assertEqual(self.get_result('rdp', '109.168.97.222', None).versions, [])
+        self.assertEqual(self.get_result('rdp', 'xactdemo.com', None).versions, [])
 
     def test_rdp_client(self):
         self.assertEqual(
-            self.get_result('rdp', '109.168.97.222', None).versions,
+            self.get_result('rdp', 'xactdemo.com', None).versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_1),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_2),
             ]
