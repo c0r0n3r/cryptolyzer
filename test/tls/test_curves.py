@@ -63,7 +63,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
 
     @mock.patch.object(
         TlsServerAlert, '_get_alert_message', return_value=TlsHandshakeClientHelloAnyAlgorithm(
-            TlsProtocolVersionFinal(TlsVersion.TLS1_2), 'localhost'
+            [TlsProtocolVersionFinal(TlsVersion.TLS1_2), ], 'localhost'
         )
     )
     def test_error_repeated_message_in_server_reply(self, _):
