@@ -275,13 +275,13 @@ class TestClientFTP(TestL7ClientBase):
     def test_error_ftp_error_on_quit(self, _):
         self.assertEqual(
             self.get_result('ftp', 'ftp.cert.dfn.de', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, ]]
         )
 
     def test_ftp_client(self):
         self.assertEqual(
             self.get_result('ftp', 'ftp.cert.dfn.de', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, ]]
         )
 
     def test_ftps_client(self):
