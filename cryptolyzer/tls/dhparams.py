@@ -41,13 +41,8 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                     last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE
                 )
             except TlsAlert as e:
-                acceptable_alerts = [
-                    TlsAlertDescription.HANDSHAKE_FAILURE,
-                    TlsAlertDescription.INTERNAL_ERROR,
-                    TlsAlertDescription.INSUFFICIENT_SECURITY,
-                    TlsAlertDescription.UNRECOGNIZED_NAME
-                ]
-                if e.description not in acceptable_alerts:
+                if (e.description not in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                       TlsAlertDescription.UNRECOGNIZED_NAME, ]):
                     raise e
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:

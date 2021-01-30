@@ -87,22 +87,18 @@ class AnalyzerCurves(AnalyzerTlsBase):
                 server_key_exchange = self._get_key_exchange_message(analyzable, client_hello, checkable_curves)
             except TlsAlert as e:
                 if len(TlsNamedCurve) == len(checkable_curves):
-                    acceptable_alerts = [
+                    acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
                         TlsAlertDescription.PROTOCOL_VERSION,
                         TlsAlertDescription.UNRECOGNIZED_NAME,
-                        TlsAlertDescription.INSUFFICIENT_SECURITY,
                     ]
                     if e.description in acceptable_alerts:
                         extension_supported = None
                         break
 
-                if (e.description not in [
-                        TlsAlertDescription.HANDSHAKE_FAILURE,
-                        TlsAlertDescription.INTERNAL_ERROR,
-                        TlsAlertDescription.INSUFFICIENT_SECURITY]):
-                    raise e
+                if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
+                    break
 
-                break
+                raise e
             except SecurityError:
                 if len(TlsNamedCurve) == len(checkable_curves):
                     extension_supported = None

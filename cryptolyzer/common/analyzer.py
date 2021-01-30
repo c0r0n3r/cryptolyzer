@@ -10,6 +10,8 @@ import os
 from cryptoparser.common.base import Serializable
 from cryptoparser.common.utils import get_leaf_classes
 
+from cryptoparser.tls.subprotocol import TlsAlertDescription
+
 from cryptolyzer.tls.client import L7ClientTlsBase
 
 
@@ -122,6 +124,13 @@ class AnalyzerResultBase(Serializable):
 
 
 class AnalyzerTlsBase(object):
+    _ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS = [
+        TlsAlertDescription.HANDSHAKE_FAILURE,  # no matching algorithms
+        TlsAlertDescription.CLOSE_NOTIFY,  # no matching algorithms
+        TlsAlertDescription.INSUFFICIENT_SECURITY,  # not enough secure matching algorithms
+        TlsAlertDescription.ILLEGAL_PARAMETER  # unimplemented matching algorithms
+    ]
+
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientTlsBase))

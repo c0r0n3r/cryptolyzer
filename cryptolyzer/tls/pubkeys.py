@@ -119,11 +119,8 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
                 if sni_sent:
                     six.raise_from(StopIteration, e)
-            elif e.description not in [
-                    TlsAlertDescription.HANDSHAKE_FAILURE,
-                    TlsAlertDescription.INTERNAL_ERROR,
-                    TlsAlertDescription.ILLEGAL_PARAMETER,
-                    TlsAlertDescription.INSUFFICIENT_SECURITY
+            elif e.description not in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                    TlsAlertDescription.INTERNAL_ERROR
             ]:
                 raise e
         except NetworkError as e:

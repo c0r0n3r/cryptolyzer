@@ -65,12 +65,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                         e.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]):
                     break
 
-                acceptable_alerts = [
-                    TlsAlertDescription.HANDSHAKE_FAILURE,
-                    TlsAlertDescription.ILLEGAL_PARAMETER,
-                    TlsAlertDescription.INTERNAL_ERROR
-                ]
-                if e.description not in acceptable_alerts:
+                if e.description not in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
                     raise e
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:

@@ -833,6 +833,7 @@ class SslClientHandshake(TlsClient):
                                 (tls_record.messages[0].description in [
                                     TlsAlertDescription.PROTOCOL_VERSION,
                                     TlsAlertDescription.HANDSHAKE_FAILURE,
+                                    TlsAlertDescription.CLOSE_NOTIFY,
                                     TlsAlertDescription.INTERNAL_ERROR,
                                 ])):
                             six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
