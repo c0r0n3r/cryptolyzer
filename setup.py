@@ -7,6 +7,9 @@ import unittest
 
 from setuptools import setup
 
+from cryptolyzer import __setup__
+
+
 this_directory = os.getenv('REQUIREMENTS_DIR', '')
 with open(os.path.join(this_directory, 'requirements.txt')) as f:
     install_requirements = f.read().splitlines()
@@ -29,16 +32,16 @@ def test_discover():
 
 
 setup(
-    name='cryptolyzer',
-    version='0.4.0',
-    description='Fast and flexible cryptographic protocol analyzer',
+    name=__setup__.__title__,
+    version=__setup__.__version__,
+    description=__setup__.__description__,
     long_description=long_description,
-    author='Szilárd Pfeiffer',
-    author_email='coroner@pfeifferszilard.hu',
-    maintainer='Szilárd Pfeiffer',
-    maintainer_email='coroner@pfeifferszilard.hu',
-    license='MPL-2.0',
-    url='https://gitlab.com/coroner/cryptolyzer',
+    author=__setup__.__author__,
+    author_email=__setup__.__author_email__,
+    maintainer=__setup__.__author__,
+    maintainer_email=__setup__.__author_email__,
+    license=__setup__.__license__,
+    url=__setup__.__url__,
     entry_points={
         'console_scripts': ['cryptolyze = cryptolyzer.__main__:main']
     },

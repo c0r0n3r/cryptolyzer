@@ -6,6 +6,8 @@ import urllib3
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 
+from cryptolyzer import __setup__
+
 
 def get_protocol_handler_analyzer_and_uris(parser, arguments):
     def to_uri(value, default):
@@ -35,6 +37,7 @@ def get_protocol_handler_analyzer_and_uris(parser, arguments):
 
 def get_argument_parser():
     parser = argparse.ArgumentParser(prog='cryptolyze')
+    parser.add_argument('--version', '-v', action='version', version='%(prog)s ' + __setup__.__version__)
     parser.add_argument(
         '--output-format',
         choices=['json', 'markdown'],
