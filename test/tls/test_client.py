@@ -11,6 +11,8 @@ try:
 except ImportError:
     import mock
 
+import six
+
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 from cryptoparser.tls.ciphersuite import SslCipherKind
 from cryptoparser.tls.ldap import LDAPMessageParsableBase, LDAPExtendedResponseStartTLS, LDAPResultCode
@@ -295,9 +297,19 @@ RDP_NEGOTIATION_RESPONSE_LENGTH = 19
 
 
 class TestClientRDP(TestL7ClientBase):
+    @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
-    def test_error_send_timeout(self, _):
-        self.assertEqual(self.get_result('rdp', 'xactdemo.com', None).versions, [])
+    def test_error_send_socket_timeout(self, _):
+        with self.assertRaises(NetworkError) as context_manager:
+            self.get_result('rdp', 'xactdemo.com', None)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    @unittest.skipIf(six.PY2, 'TimeoutError is raised instead of socket.error in Python >= 3.0')
+    def test_error_send_timeout_error(self):
+        with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
+                self.assertRaises(NetworkError) as context_manager:
+            self.get_result('rdp', 'xactdemo.com', None)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
@@ -325,9 +337,19 @@ class TestClientRDP(TestL7ClientBase):
 
 
 class TestClientLDAP(TestL7ClientBase):
+    @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
-    def test_error_send_timeout(self, _):
-        self.assertEqual(self.get_result('ldap', 'lc.nasa.gov', None).versions, [])
+    def test_error_send_socket_timeout(self, _):
+        with self.assertRaises(NetworkError) as context_manager:
+            self.get_result('ldap', 'lc.nasa.gov', None)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    @unittest.skipIf(six.PY2, 'There is no TimeoutError in Python < 3.0')
+    def test_error_send_timeout_error(self):
+        with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
+                self.assertRaises(NetworkError) as context_manager:
+            self.get_result('ldap', 'lc.nasa.gov', None)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @mock.patch.object(LDAPMessageParsableBase, '_parse_asn1', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
@@ -385,7 +407,9 @@ class TestClientXMPP(TestL7ClientBase):
             []
         )
 
-    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'<stream:stream>', ))
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b'<stream:stream>',
+    ))
     def test_error_no_features(self, _):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),

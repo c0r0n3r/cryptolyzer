@@ -343,7 +343,14 @@ class L7ClientStartTlsBase(L7ClientTlsBase):
     def _init_connection(self):
         self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
 
-        self._init_l7()
+        try:
+            self._init_l7()
+        except BaseException as e:  # pylint: disable=broad-except
+            if e.__class__.__name__ == 'TimeoutError' or isinstance(e, socket.timeout):
+                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+
+            raise e
+
         self._tls_inititalized = True
 
     def _close_connection(self):
@@ -441,7 +448,7 @@ class ClientSMTP(L7ClientStartTlsBase):
 
     def _init_l7(self):
         try:
-            self._l7_client = smtplib.SMTP(timeout=self.timeout)
+            self._l7_client = smtplib.SMTP(timeout=self.l4_transfer.timeout)
             self._l7_client.connect(self.ip, self.port)
             self.l4_transfer.init_connection(self._l7_client.sock)
 
@@ -583,8 +590,6 @@ class ClientRDP(L7ClientStartTlsBase):
             cotp = COTPConnectionConfirm.parse_exact_size(tpkt.message)
             neg_rsp = RDPNegotiationResponse.parse_exact_size(cotp.user_data)
             self.l4_transfer.flush_buffer(len(request_bytes))
-        except socket.timeout as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
         except (InvalidValue, InvalidType) as e:
             six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
@@ -620,7 +625,7 @@ class ClientXMPP(L7ClientStartTlsBase):
         l4_transfer.receive_until(b'>')
 
         if b'stream:error' in l4_transfer.buffer:
-            raise NetworkError(NetworkErrorType.NO_RESPONSE)
+            raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
 
         if b'stream:features' not in l4_transfer.buffer:
             l4_transfer.receive_until(b'</stream:features>')
@@ -649,7 +654,7 @@ class ClientXMPP(L7ClientStartTlsBase):
         try:
             self._init_xmpp(self.l4_transfer, self.address)
         except NotEnoughData as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
     def _deinit_l7(self):
         pass
@@ -698,8 +703,6 @@ class ClientLDAP(L7ClientStartTlsBase):
 
             ext_response, parsed_length = LDAPExtendedResponseStartTLS.parse_immutable(self.l4_transfer.buffer)
             self.l4_transfer.flush_buffer(parsed_length)
-        except socket.timeout as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
         except (InvalidValue, InvalidType) as e:
             six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
