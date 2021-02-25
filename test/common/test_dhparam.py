@@ -46,7 +46,7 @@ class TestParse(unittest.TestCase):
             )
             for well_known_dh_param in WellKnownDHParams
         ]
-        self.assertTrue(all([dh_param.well_known for dh_param in dh_params]))
+        self.assertTrue(all(dh_param.well_known for dh_param in dh_params))
 
     def test_parse_ecdh_param_secp256r1(self):
         point_data = bytes(

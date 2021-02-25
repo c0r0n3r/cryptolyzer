@@ -163,10 +163,10 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
             BlockCipher.RC4_128,
         ]
 
-        self.assertTrue(all([
+        self.assertTrue(all(
             cipher_suite.value.bulk_cipher in rc4_block_ciphers
             for cipher_suite in result.cipher_suites
-        ]))
+        ))
         self.assertTrue(result.long_cipher_suite_list_intolerance)
 
         self.assertTrue(self.get_result('secure.simplepay.hu', 443))
@@ -197,10 +197,10 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
             BlockCipher.RC4_128,
         ]
 
-        self.assertTrue(all([
+        self.assertTrue(all(
             cipher_suite.value.bulk_cipher in rc4_block_ciphers
             for cipher_suite in result.cipher_suites
-        ]))
+        ))
 
     def test_rc4_md5(self):
         result = self.get_result('rc4-md5.badssl.com', 443)
@@ -216,26 +216,26 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
             BlockCipher.TRIPLE_DES_EDE,
         ]
 
-        self.assertTrue(all([
+        self.assertTrue(all(
             cipher_suite.value.bulk_cipher in triple_des_block_ciphers
             for cipher_suite in result.cipher_suites
-        ]))
+        ))
 
     def test_anon(self):
         result = self.get_result('null.badssl.com', 443)
 
-        self.assertTrue(all([
+        self.assertTrue(all(
             'NULL' in cipher_suite.name or 'anon' in cipher_suite.name
             for cipher_suite in result.cipher_suites
-        ]))
+        ))
 
     def test_rsa(self):
         result = self.get_result('static-rsa.badssl.com', 443)
 
-        self.assertTrue(all([
+        self.assertTrue(all(
             cipher_suite.value.authentication == Authentication.RSA
             for cipher_suite in result.cipher_suites
-        ]))
+        ))
 
     def test_gost(self):
         result = self.get_result('cryptopro.ru', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))

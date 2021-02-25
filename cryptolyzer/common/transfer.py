@@ -59,7 +59,7 @@ class L4TransferBase(object):
     @property
     def buffer_is_plain_text(self):
         try:
-            return all([c in string.printable for c in self._buffer.decode('utf-8')])
+            return all(c in string.printable for c in self._buffer.decode('utf-8'))
         except UnicodeDecodeError:
             return False
 
