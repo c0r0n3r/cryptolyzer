@@ -54,7 +54,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
             self.get_result('ecc256.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
 
     @mock.patch.object(
-        AnalyzerCurves, '_get_key_exchange_message',
+        AnalyzerCurves, '_get_response_message',
         side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
     )
     def test_error_tls_alert_for_first_time(self, _):
@@ -81,9 +81,27 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertEqual(result.curves, [TlsNamedCurve.SECP256R1, ])
         self.assertTrue(result.extension_supported)
 
+        result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        self.assertEqual(
+            result.curves,
+            [TlsNamedCurve.X25519, TlsNamedCurve.SECP256R1, TlsNamedCurve.SECP384R1, TlsNamedCurve.SECP521R1, ]
+        )
+        self.assertTrue(result.extension_supported)
+
     def test_no_ec_support(self):
         result = self.get_result('static-rsa.badssl.com', 443)
         self.assertEqual(len(result.curves), 0)
+
+    def test_tls_1_3(self):
+        self.assertEqual(
+            self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).curves,
+            [
+                TlsNamedCurve.X25519,
+                TlsNamedCurve.SECP256R1,
+                TlsNamedCurve.SECP384R1,
+                TlsNamedCurve.SECP521R1,
+            ]
+        )
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
