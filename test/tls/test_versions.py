@@ -8,6 +8,8 @@ except ImportError:
 from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionDraft, TlsProtocolVersionFinal, SslProtocolVersion
 
+from cryptolyzer.common.exception import SecurityError, SecurityErrorType
+
 from cryptolyzer.tls.client import L7ClientTlsBase, SslError
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
@@ -38,6 +40,20 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
         with self.assertRaises(SslError) as context_manager:
             self.get_result('badssl.com', 443)
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CERTIFICATE_ERROR)
+
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_ssl_handshake',
+        side_effect=SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
+    )
+    def test_error_security_error(self, _):
+        self.assertEqual(
+            self.get_result('badssl.com', 443).versions,
+            [
+                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            ]
+        )
 
     def test_ssl_2(self):
         threaded_server = self.create_server(TlsServerConfiguration(
