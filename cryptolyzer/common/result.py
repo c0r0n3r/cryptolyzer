@@ -59,6 +59,11 @@ class AnalyzerResultBase(Serializable):
 
 
 @attr.s
+class AnalyzerResultError(AnalyzerResultBase):
+    error = attr.ib(validator=attr.validators.instance_of(six.string_types))
+
+
+@attr.s
 class AnalyzerResultAllSupportedVersions(AnalyzerResultBase):
     results = attr.ib(validator=attr.validators.instance_of(OrderedDict))
 

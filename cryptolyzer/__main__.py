@@ -4,7 +4,11 @@
 import argparse
 import urllib3
 
+from cryptoparser.common.exception import InvalidDataLength, InvalidType, InvalidValue
+
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
+from cryptolyzer.common.exception import NetworkError, SecurityError
+from cryptolyzer.common.result import AnalyzerResultError
 
 from cryptolyzer import __setup__
 
@@ -58,7 +62,7 @@ def get_argument_parser():
             parser_plugin = parsers_plugin.add_parser(analyzer_class.get_name(), help=analyzer_class.get_help())
             schemes = [client.get_scheme() for client in analyzer_class.get_clients()]
             parser_plugin.add_argument(
-                'uris', metavar='URI', nargs='+',
+                'targets', metavar='URI', nargs='+',
                 help='[{{{}}}://]f.q.d.n[:port][#ip]'.format(','.join(schemes))
             )
 
@@ -71,7 +75,10 @@ def main():
     protocol_handler, analyzer, targets = get_protocol_handler_analyzer_and_uris(parser, arguments)
 
     for target in targets:
-        analyzer_result = protocol_handler.analyze(analyzer, target)
+        try:
+            analyzer_result = protocol_handler.analyze(analyzer, target)
+        except (NetworkError, SecurityError, InvalidDataLength, InvalidType, InvalidValue) as e:
+            analyzer_result = AnalyzerResultError(str(target), str(e))
 
         if arguments.output_format == 'json':
             print(analyzer_result.as_json())

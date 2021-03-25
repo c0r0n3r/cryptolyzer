@@ -43,6 +43,13 @@ class TestMain(TestMainBase):
             self.assertEqual(context_manager.exception.args[0], 2)
             six.assertRegex(self, stderr.getvalue(), stderr_regexp)
 
+    def _test_runtime_error(self, argv, error_msg):
+        with patch.object(sys, 'stdout', new_callable=six.StringIO) as stdout, \
+                patch.object(sys, 'argv', argv):
+
+            main()
+            self.assertEqual(stdout.getvalue().split(os.linesep)[1], '* Error: ' + error_msg)
+
     def test_argument_parsing(self):
         with open(os.devnull, 'w') as devnull, \
                 patch.object(sys, 'stdout', devnull), \
@@ -67,6 +74,12 @@ class TestMain(TestMainBase):
         self._test_argument_error(
             ['cryptolyzer', 'ja3', 'decode', 'unsupportedformat://tag'],
             'error: unsupported protocol: unsupportedformat'
+        )
+
+    def test_runtime_error(self):
+        self._test_runtime_error(
+            ['cryptolyzer', 'tls', 'versions', 'unresolvable.hostname'],
+            'address of the target cannot be resolved'
         )
 
     def test_analyzer_uris_non_ip(self):
