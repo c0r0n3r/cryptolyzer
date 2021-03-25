@@ -22,17 +22,17 @@ def get_protocol_handler_analyzer_and_uris(parser, arguments):
     clients = analyzer.get_clients()
 
     supported_schemes = set().union(*[client.get_supported_schemes() for client in clients])
-    uris = [to_uri(argument_uri, protocol) for argument_uri in arguments.uris]
+    targets = [to_uri(argument_uri, protocol) for argument_uri in arguments.targets]
 
     unsupported_schemes = [
         analyzable_uri.scheme
-        for analyzable_uri in uris
+        for analyzable_uri in targets
         if analyzable_uri.scheme not in supported_schemes
     ]
     if unsupported_schemes:
         parser.error('unsupported protocol: {}'.format(', '.join(unsupported_schemes)))
 
-    return protocol_handler, analyzer, uris
+    return protocol_handler, analyzer, targets
 
 
 def get_argument_parser():
@@ -68,10 +68,10 @@ def get_argument_parser():
 def main():
     parser = get_argument_parser()
     arguments = parser.parse_args()
-    protocol_handler, analyzer, argument_uris = get_protocol_handler_analyzer_and_uris(parser, arguments)
+    protocol_handler, analyzer, targets = get_protocol_handler_analyzer_and_uris(parser, arguments)
 
-    for uri in argument_uris:
-        analyzer_result = protocol_handler.analyze(analyzer, uri)
+    for target in targets:
+        analyzer_result = protocol_handler.analyze(analyzer, target)
 
         if arguments.output_format == 'json':
             print(analyzer_result.as_json())
