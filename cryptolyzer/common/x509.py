@@ -6,8 +6,6 @@ import datetime
 import hashlib
 
 from collections import OrderedDict
-import six
-
 
 import asn1crypto.x509
 import attr
@@ -280,10 +278,7 @@ class PublicKeyX509(PublicKey):
                 ('crl_distribution_points', self.crl_distribution_points),
                 ('ocsp_responders', self.ocsp_responders),
             ])),
-            ('fingerprints', {
-                hash_algo.name: fingerprint
-                for (hash_algo, fingerprint) in six.iteritems(self.fingerprints)
-            }),
+            ('fingerprints', self.fingerprints),
             ('public_key_pin', self.public_key_pin),
             ('version', self.certificate['tbs_certificate']['version'].native),
         ])
