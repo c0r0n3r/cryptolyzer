@@ -58,6 +58,7 @@ setup(
         'cryptolyzer',
         'cryptolyzer.common',
         'cryptolyzer.ja3',
+        'cryptolyzer.ssh',
         'cryptolyzer.tls',
     ],
 

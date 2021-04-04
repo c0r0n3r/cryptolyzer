@@ -12,6 +12,7 @@ from cryptoparser.common.utils import get_leaf_classes
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 
+from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.tls.client import L7ClientTlsBase
 
 
@@ -141,4 +142,18 @@ class AnalyzerTlsBase(object):
 
     @abc.abstractmethod
     def analyze(self, analyzable, protocol_version):
+        raise NotImplementedError()
+
+
+class AnalyzerSshBase(object):
+    @classmethod
+    def get_clients(cls):
+        return list(get_leaf_classes(L7ClientSsh))
+
+    @classmethod
+    def get_default_scheme(cls):
+        return 'ssh'
+
+    @abc.abstractmethod
+    def analyze(self, analyzable):
         raise NotImplementedError()

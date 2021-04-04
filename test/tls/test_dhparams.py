@@ -11,10 +11,10 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
 class TestTlsDHParams(TestTlsCases.TestTlsBase):
-    @classmethod
-    def get_result(cls, host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2), timeout=None):
+    @staticmethod
+    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2), timeout=None, ip=None):
         analyzer = AnalyzerDHParams()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 

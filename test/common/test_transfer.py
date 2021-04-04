@@ -69,6 +69,20 @@ class TestL4ClientTCP(unittest.TestCase):
         _, result = self._create_client_and_receive_text(address, 587, 4 + len(address))
         self.assertEqual(result, '220 ' + address)
 
+    def test_receive_unit(self):
+        address = 'smtp.gmail.com'
+
+        l4_client = L4ClientTCP(address, 587)
+        l4_client.init_connection()
+        with self.assertRaises(StopIteration):
+            l4_client.receive_until(terminator=b'\r\n', max_line_length=3)
+        self.assertEqual(b'220', l4_client.buffer)
+        l4_client.receive_until(terminator=b'\r\n')
+        self.assertEqual(l4_client.buffer[-2:], b'\r\n')
+        self.assertTrue(l4_client.buffer.decode('ascii').startswith('220 ' + address))
+
+        l4_client.close()
+
 
 class L4ServerTCPEcho(TestThreadedServer):
     def __init__(self, l4_server):

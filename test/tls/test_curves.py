@@ -23,9 +23,9 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 class TestTlsCurves(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), timeout=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), timeout=None, ip=None):
         analyzer = AnalyzerCurves()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 

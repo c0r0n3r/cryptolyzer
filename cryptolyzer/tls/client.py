@@ -85,7 +85,9 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
         )
 
 
-class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHelloSpecalization):
+class TlsHandshakeClientHelloAnyAlgorithm(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
     def __init__(self, protocol_versions, hostname):
         super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
             hostname=hostname,
@@ -97,7 +99,9 @@ class TlsHandshakeClientHelloAnyAlgorithm(TlsHandshakeClientHelloSpecalization):
         )
 
 
-class TlsHandshakeClientHelloAuthenticationBase(TlsHandshakeClientHelloSpecalization):
+class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
     # pylint: disable=too-many-ancestors
     def __init__(
             self,
@@ -170,7 +174,9 @@ class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthentic
         )
 
 
-class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHelloSpecalization):
+class TlsHandshakeClientHelloAuthenticationRarelyUsed(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
     def __init__(self, protocol_version, hostname):
         _cipher_suites = TlsCipherSuiteVector([
             cipher_suite
@@ -195,7 +201,9 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(TlsHandshakeClientHelloSpe
         )
 
 
-class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHelloSpecalization):
+class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
     _CIPHER_SUITES = TlsCipherSuiteVector([
         cipher_suite
         for cipher_suite in TlsCipherSuite
@@ -218,7 +226,9 @@ class TlsHandshakeClientHelloKeyExchangeDHE(TlsHandshakeClientHelloSpecalization
         )
 
 
-class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHelloSpecalization):
+class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
     _CIPHER_SUITES = TlsCipherSuiteVector([
         cipher_suite
         for cipher_suite in TlsCipherSuite
@@ -237,7 +247,9 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(TlsHandshakeClientHelloSpecalizati
         )
 
 
-class TlsHandshakeClientHelloBasic(TlsHandshakeClientHelloSpecalization):
+class TlsHandshakeClientHelloBasic(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
     def __init__(self, protocol_version):
         super(TlsHandshakeClientHelloBasic, self).__init__(
             hostname=None,

@@ -18,9 +18,9 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 class TestSslVersions(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=None, timeout=None):
+    def get_result(host, port, protocol_version=None, timeout=None, ip=None):
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, SslProtocolVersion())
         return result
 
@@ -84,9 +84,9 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         self.assertEqual(self.get_result('badssl.com', 443).versions, [])
 
     @staticmethod
-    def get_result(host, port, protocol_version=None, timeout=None):
+    def get_result(host, port, protocol_version=None, timeout=None, ip=None):
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         analyzer_result = analyzer.analyze(l7_client, protocol_version)
 
         return analyzer_result
