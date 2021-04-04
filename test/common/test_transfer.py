@@ -2,10 +2,11 @@
 
 import select
 import socket
-import sys
 import unittest
 
 from test.common.classes import TestThreadedServer
+
+import six
 
 try:
     from unittest import mock
@@ -36,10 +37,7 @@ class TestL4ClientTCP(unittest.TestCase):
             l4_client.close()
         sock.close()
 
-    @unittest.skipIf(
-        sys.version_info < (3, 0),
-        'There is no ConnectionRefusedError in Python < 3.0'
-    )
+    @unittest.skipIf(six.PY2, 'There is no ConnectionRefusedError in Python < 3.0')
     def test_error_connection_refused(self):
         with mock.patch.object(socket, 'create_connection', side_effect=ConnectionRefusedError), \
                 self.assertRaises(NetworkError) as context_manager:
@@ -48,10 +46,7 @@ class TestL4ClientTCP(unittest.TestCase):
         l4_client.close()
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
-    @unittest.skipIf(
-        sys.version_info >= (3, 0),
-        'ConnectionRefusedError is raised instead of socket.error in Python >= 3.0'
-    )
+    @unittest.skipIf(six.PY3, 'ConnectionRefusedError is raised instead of socket.error in Python >= 3.0')
     def test_error_connection_refused_socket_error(self):
         with mock.patch.object(socket, 'create_connection', side_effect=socket.error), \
                 self.assertRaises(NetworkError) as context_manager:
