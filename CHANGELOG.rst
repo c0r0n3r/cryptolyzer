@@ -1,6 +1,31 @@
 Changelog
 =========
 
+.. _v0-5-0:
+
+0.5.0 - 2021-04-08
+------------------
+
+Features
+^^^^^^^^
+
+* TLS (``tls``)
+
+   * add analyzer (``all``) for running all TLS analysis at once (#40)
+
+* SSH (``ssh2``)
+
+  * add analyzer for checking SSH servers against 
+  `negotiated algorithms <https://tools.ietf.org/html/rfc4253#section-7.1>`_ (#33)
+
+Usability
+^^^^^^^^^
+
+* Generic
+
+  * use human readable algorithms names in Markdown output (#48)
+  * command line interface gives error output instead of traceback on exception (#49)
+
 .. _v0-4-0:
 
 0.4.0 - 2021-01-30
