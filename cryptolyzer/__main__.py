@@ -4,7 +4,11 @@
 import argparse
 import urllib3
 
+from cryptoparser.common.exception import InvalidDataLength, InvalidType, InvalidValue
+
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
+from cryptolyzer.common.exception import NetworkError, SecurityError
+from cryptolyzer.common.result import AnalyzerResultError
 
 from cryptolyzer import __setup__
 
@@ -22,17 +26,17 @@ def get_protocol_handler_analyzer_and_uris(parser, arguments):
     clients = analyzer.get_clients()
 
     supported_schemes = set().union(*[client.get_supported_schemes() for client in clients])
-    uris = [to_uri(argument_uri, protocol) for argument_uri in arguments.uris]
+    targets = [to_uri(argument_uri, protocol) for argument_uri in arguments.targets]
 
     unsupported_schemes = [
         analyzable_uri.scheme
-        for analyzable_uri in uris
+        for analyzable_uri in targets
         if analyzable_uri.scheme not in supported_schemes
     ]
     if unsupported_schemes:
         parser.error('unsupported protocol: {}'.format(', '.join(unsupported_schemes)))
 
-    return protocol_handler, analyzer, uris
+    return protocol_handler, analyzer, targets
 
 
 def get_argument_parser():
@@ -58,7 +62,7 @@ def get_argument_parser():
             parser_plugin = parsers_plugin.add_parser(analyzer_class.get_name(), help=analyzer_class.get_help())
             schemes = [client.get_scheme() for client in analyzer_class.get_clients()]
             parser_plugin.add_argument(
-                'uris', metavar='URI', nargs='+',
+                'targets', metavar='URI', nargs='+',
                 help='[{{{}}}://]f.q.d.n[:port][#ip]'.format(','.join(schemes))
             )
 
@@ -68,10 +72,13 @@ def get_argument_parser():
 def main():
     parser = get_argument_parser()
     arguments = parser.parse_args()
-    protocol_handler, analyzer, argument_uris = get_protocol_handler_analyzer_and_uris(parser, arguments)
+    protocol_handler, analyzer, targets = get_protocol_handler_analyzer_and_uris(parser, arguments)
 
-    for uri in argument_uris:
-        analyzer_result = protocol_handler.analyze(analyzer, uri)
+    for target in targets:
+        try:
+            analyzer_result = protocol_handler.analyze(analyzer, target)
+        except (NetworkError, SecurityError, InvalidDataLength, InvalidType, InvalidValue) as e:
+            analyzer_result = AnalyzerResultError(str(target), str(e))
 
         if arguments.output_format == 'json':
             print(analyzer_result.as_json())
