@@ -28,8 +28,8 @@ Notable fixes
 
     * handle that a server supports only non-RSA public keys (#41)
 
-Perforamce
-^^^^^^^^^^
+Performance
+^^^^^^^^^^^
 
 * TLS (``tls``)
 
