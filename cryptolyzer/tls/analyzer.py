@@ -77,7 +77,13 @@ class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
 class ProtocolHandlerTls13(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
-        return ProtocolHandlerTls12.get_analyzers()
+        analyzers = ProtocolHandlerTls12.get_analyzers()
+
+        # Temporarily remove analyzers need encrypted packets
+        return tuple(filter(
+            lambda analyzer: analyzer not in [AnalyzerPublicKeys, AnalyzerPublicKeyRequest, ],
+            analyzers
+        ))
 
     @classmethod
     def get_protocol_version(cls):
