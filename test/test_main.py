@@ -214,7 +214,7 @@ class TestMain(TestMainBase):
             result.as_markdown() + '\n',
         )
 
-    def test_analyzer_output_tlsall_(self):
+    def test_analyzer_output_tls_all(self):
         result = test.tls.test_all.TestTlsAll.get_result('one.one.one.one', 443, protocol_version=None, ip='1.1.1.1')
         self.assertEqual(
             self._get_test_analyzer_result_json('tls', 'all', 'one.one.one.one:443#1.1.1.1'),

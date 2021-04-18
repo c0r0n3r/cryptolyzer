@@ -147,6 +147,28 @@ class AnalyzerTlsBase(object):
         raise NotImplementedError()
 
 
+class ProtocolHandlerTlsBase(ProtocolHandlerBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_protocol_version(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def get_protocol(cls):
+        return cls.get_protocol_version().identifier
+
+    @classmethod
+    def _get_analyzer_args(cls):
+        return ([], {'protocol_version': cls.get_protocol_version()})
+
+
+class ProtocolHandlerTlsExactVersion(ProtocolHandlerTlsBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_protocol_version(cls):
+        raise NotImplementedError()
+
+
 class AnalyzerSshBase(object):
     @classmethod
     def get_clients(cls):

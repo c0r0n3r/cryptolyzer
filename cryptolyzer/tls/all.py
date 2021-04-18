@@ -5,9 +5,10 @@ from collections import OrderedDict
 import attr
 
 from cryptoparser.common.algorithm import Authentication, KeyExchange
+from cryptoparser.common.utils import get_leaf_classes
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
 
-from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.analyzer import AnalyzerTlsBase, ProtocolHandlerTlsExactVersion
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites, AnalyzerResultCipherSuites
@@ -84,6 +85,13 @@ class AnalyzerAll(AnalyzerTlsBase):
 
     @staticmethod
     def _get_result(analyzer_class, analyzable, protocol_version):
+        for protocol_handler_class in get_leaf_classes(ProtocolHandlerTlsExactVersion):
+            if (analyzer_class in protocol_handler_class.get_analyzers() and
+                    protocol_handler_class.get_protocol_version() == protocol_version):
+                break
+        else:
+            protocol_version = None
+
         analyzer_name = analyzer_class.get_name()
         if protocol_version is None:
             return {analyzer_name: None}
