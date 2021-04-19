@@ -29,4 +29,5 @@ class TestSshCiphers(TestSshCases.TestSshClientBase):
         self.assertEqual(result.mac_algorithms_server_to_client, list(SshMacAlgorithm))
 
     def test_real(self):
-        self.get_result('ssh.blinkenshell.org', 2222, timeout=5)
+        self.get_result('github.com')
+        self.get_result('gitlab.com')
