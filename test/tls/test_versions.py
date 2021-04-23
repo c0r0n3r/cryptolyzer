@@ -67,7 +67,7 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
 
     def test_versions(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, timeout=0.2),
+            L7ServerTls('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
 

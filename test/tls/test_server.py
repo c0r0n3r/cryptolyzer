@@ -38,7 +38,7 @@ class TestL7ServerBase(unittest.TestCase):
 
     @staticmethod
     def create_server(configuration=None):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=0.2, configuration=configuration))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=2, configuration=configuration))
         threaded_server.wait_for_server_listen()
         return threaded_server
 
