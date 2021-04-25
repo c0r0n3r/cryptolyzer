@@ -578,6 +578,24 @@ class TestSslClientHandshake(unittest.TestCase):
     @mock.patch.object(
         L4ClientTCP, 'buffer',
         mock.PropertyMock(side_effect=[
+            TlsRecord([TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY), ]).compose() +
+            TlsRecord([TlsAlertMessage(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE), ]).compose(),
+            True,
+            b'some text content',
+            b'some text content',
+            b'some text content'
+        ])
+    )
+    def test_error_multiple_record_resonse(self, _):
+        print(TlsRecord([TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY), ]).compose())
+        with self.assertRaises(SecurityError) as context_manager:
+            L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
+        self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
+
+    @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
+    @mock.patch.object(
+        L4ClientTCP, 'buffer',
+        mock.PropertyMock(side_effect=[
             b'',
             True,
             TlsRecord([
