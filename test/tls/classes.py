@@ -14,7 +14,7 @@ import attr
 from cryptoparser.tls.record import TlsRecord
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.server import L7ServerTls, TlsServerHandshake
@@ -29,12 +29,26 @@ class TestTlsCases:
 
         @mock.patch.object(
             L7ClientTlsBase, 'do_tls_handshake',
+            side_effect=SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
+        )
+        def test_error_security_error_unparsable_message(self, _):
+            self.get_result('badssl.com', 443)
+
+        @mock.patch.object(
+            L7ClientTlsBase, 'do_tls_handshake',
             side_effect=NetworkError(NetworkErrorType.NO_CONNECTION)
         )
-        def test_error_network_error_no_response(self, _):
+        def test_error_network_error_no_connection(self, _):
             with self.assertRaises(NetworkError) as context_manager:
                 self.get_result('badssl.com', 443)
             self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+        @mock.patch.object(
+            L7ClientTlsBase, 'do_tls_handshake',
+            side_effect=NetworkError(NetworkErrorType.NO_RESPONSE)
+        )
+        def test_error_network_error_no_response(self, _):
+            self.get_result('badssl.com', 443)
 
         @mock.patch.object(
             L7ClientTlsBase, 'do_tls_handshake',

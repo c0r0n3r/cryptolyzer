@@ -1,6 +1,36 @@
 Changelog
 =========
 
+.. _v0-6-0:
+
+0.6.0 - 2021-04-19
+------------------
+
+Improvements
+^^^^^^^^^^^^
+
+* TLS (``tls``)
+
+  * Ciphers (``ciphers``)
+
+    * add TLS 1.3 support (#35)
+
+  * Elliptic Curves (``curves``)
+
+    * add TLS 1.3 support (#35)
+
+  * Diffie-Hellman (``dhparams``)
+
+    * add TLS 1.3 support (#35)
+
+  * Signature Algorithms (``sigalgos``)
+
+    * add TLS 1.3 support (#35)
+
+  * Versions (``versions``)
+
+    * add TLS 1.3 support (#35)
+
 .. _v0-5-0:
 
 0.5.0 - 2021-04-08

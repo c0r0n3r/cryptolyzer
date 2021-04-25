@@ -51,8 +51,10 @@ class ProtocolHandlerBase(object):
     def get_protocols(cls):
         cls.import_plugins()
 
-        for handler_class in get_leaf_classes(cls):
-            yield handler_class.get_protocol()
+        return sorted([
+            handler_class.get_protocol()
+            for handler_class in get_leaf_classes(cls)
+        ])
 
     @classmethod
     @abc.abstractmethod
@@ -142,6 +144,28 @@ class AnalyzerTlsBase(object):
 
     @abc.abstractmethod
     def analyze(self, analyzable, protocol_version):
+        raise NotImplementedError()
+
+
+class ProtocolHandlerTlsBase(ProtocolHandlerBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_protocol_version(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def get_protocol(cls):
+        return cls.get_protocol_version().identifier
+
+    @classmethod
+    def _get_analyzer_args(cls):
+        return ([], {'protocol_version': cls.get_protocol_version()})
+
+
+class ProtocolHandlerTlsExactVersion(ProtocolHandlerTlsBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_protocol_version(cls):
         raise NotImplementedError()
 
 

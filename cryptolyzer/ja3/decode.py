@@ -6,8 +6,8 @@ import attr
 
 from cryptoparser.common.parse import ComposerBinary
 
+from cryptoparser.tls.algorithm import TlsECPointFormat
 from cryptoparser.tls.extension import (
-    TlsECPointFormat,
     TlsECPointFormatFactory,
     TlsExtensionType,
     TlsExtensionTypeFactory,

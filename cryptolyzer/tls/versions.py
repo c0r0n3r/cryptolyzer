@@ -2,11 +2,13 @@
 
 import attr
 
+from cryptoparser.tls.extension import TlsExtensionType
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
 from cryptoparser.tls.version import (
     SslProtocolVersion,
     TlsProtocolVersionBase,
+    TlsProtocolVersionDraft,
     TlsProtocolVersionFinal,
     TlsVersion,
 )
@@ -17,6 +19,7 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import (
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
+    TlsHandshakeClientHelloAnyAlgorithm,
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationRarelyUsed,
@@ -66,7 +69,21 @@ class AnalyzerVersions(AnalyzerTlsBase):
         return False
 
     @staticmethod
-    def _analyze_supported_tls_versions(analyzable):
+    def _handle_tls_early_versions_alerts(alert_description, tls_version):
+        if alert_description == TlsAlertDescription.UNRECOGNIZED_NAME:
+            raise StopIteration(None)
+        acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                TlsAlertDescription.INTERNAL_ERROR,
+        ]
+        if alert_description in acceptable_alerts:
+            raise StopIteration(False)
+        if alert_description == TlsAlertDescription.PROTOCOL_VERSION:
+            raise StopIteration(True)
+        if tls_version == TlsVersion.SSL3:
+            raise StopIteration(None)
+
+    @staticmethod
+    def _analyze_supported_tls_early_versions(analyzable):
         alerts_unsupported_tls_version = None
         supported_protocols = []
         for tls_version in (TlsVersion.SSL3, TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2):
@@ -82,36 +99,83 @@ class AnalyzerVersions(AnalyzerTlsBase):
                         hello_message=client_hello,
                     )
                     server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
-                    supported_protocols.append(server_hello.protocol_version)
-                    break
                 except TlsAlert as e:
-                    if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
-                        return [], alerts_unsupported_tls_version
-                    if e.description == TlsAlertDescription.PROTOCOL_VERSION:
-                        alerts_unsupported_tls_version = True
-                        break
-                    if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
-                            TlsAlertDescription.INTERNAL_ERROR
-                    ]:
-                        alerts_unsupported_tls_version = False
+                    try:
+                        AnalyzerVersions._handle_tls_early_versions_alerts(
+                            e.description, tls_version
+                        )
+                    except StopIteration as e:
+                        alerts_unsupported_tls_version = e.args[0]
                         continue
-                    if tls_version == TlsVersion.SSL3:
-                        break
 
                     raise e
                 except NetworkError as e:
+                    alerts_unsupported_tls_version = False
+
                     if e.error != NetworkErrorType.NO_RESPONSE:
                         raise e
                     if tls_version == TlsVersion.SSL3:
                         break
                 except SecurityError:
                     break
+                else:
+                    if protocol_version == server_hello.protocol_version:
+                        supported_protocols.append(server_hello.protocol_version)
 
-        if (alerts_unsupported_tls_version is None and
-                supported_protocols and TlsProtocolVersionFinal(TlsVersion.TLS1_0) < supported_protocols[0]):
-            alerts_unsupported_tls_version = False
+                    break
 
         return supported_protocols, alerts_unsupported_tls_version
+
+    @staticmethod
+    def _handle_tls_1_3_alerts(alert_description, checkable_protocols):
+        AnalyzerVersions._handle_tls_early_versions_alerts(alert_description, checkable_protocols[0])
+
+    @staticmethod
+    def _update_tls_1_3_protocol_lists(server_messages, checkable_protocols, supported_protocols):
+        selected_version = server_messages[TlsHandshakeType.SERVER_HELLO].extensions.get_item_by_type(
+            TlsExtensionType.SUPPORTED_VERSIONS
+        ).selected_version
+        supported_protocols.append(selected_version)
+        while checkable_protocols and checkable_protocols[0] >= selected_version:
+            del checkable_protocols[0]
+
+    @staticmethod
+    def _analyze_supported_tls_1_3_versions(analyzable):
+        alerts_unsupported_tls_version = None
+        supported_protocols = []
+        checkable_protocols = [TlsProtocolVersionFinal(TlsVersion.TLS1_3), ]
+        checkable_protocols.extend([TlsProtocolVersionDraft(draft_version) for draft_version in range(28, 0, -1)])
+        while checkable_protocols:
+            client_hello = TlsHandshakeClientHelloAnyAlgorithm(checkable_protocols, analyzable.address)
+
+            try:
+                server_messages = analyzable.do_tls_handshake(
+                    hello_message=client_hello,
+                )
+            except TlsAlert as e:
+                try:
+                    AnalyzerVersions._handle_tls_1_3_alerts(e.description, checkable_protocols)
+                except StopIteration as e:
+                    alerts_unsupported_tls_version = e.args[0]
+                    break
+            except NetworkError as e:
+                if e.error != NetworkErrorType.NO_RESPONSE:
+                    #  handled in case of early TLS versions
+                    pass  # pragma: no cover
+
+                break
+            except SecurityError:
+                break
+            else:
+                AnalyzerVersions._update_tls_1_3_protocol_lists(
+                    server_messages,
+                    checkable_protocols,
+                    supported_protocols,
+                )
+
+            del client_hello.extensions[-1]
+
+        return reversed(supported_protocols), alerts_unsupported_tls_version
 
     def analyze(self, analyzable, protocol_version):
         supported_protocols = []
@@ -119,11 +183,16 @@ class AnalyzerVersions(AnalyzerTlsBase):
         if self._is_ssl2_supported(analyzable):
             supported_protocols.append(SslProtocolVersion())
 
-        supported_tls_protocols, alerts_unsupported_tls_version = self._analyze_supported_tls_versions(analyzable)
+        supported_tls_protocols, alerts_unsupported_tls_version = \
+            self._analyze_supported_tls_early_versions(analyzable)
+        supported_protocols.extend(supported_tls_protocols)
+
+        supported_tls_protocols, alerts_unsupported_tls_1_3_version = \
+            self._analyze_supported_tls_1_3_versions(analyzable)
         supported_protocols.extend(supported_tls_protocols)
 
         return AnalyzerResultVersions(
             AnalyzerTargetTls.from_l7_client(analyzable, None),
             supported_protocols,
-            alerts_unsupported_tls_version
+            alerts_unsupported_tls_version and alerts_unsupported_tls_1_3_version,
         )

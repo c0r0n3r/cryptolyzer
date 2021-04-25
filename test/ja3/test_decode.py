@@ -3,8 +3,9 @@
 import unittest
 
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.algorithm import TlsECPointFormat
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
-from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve, TlsECPointFormat
+from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve
 
 from cryptolyzer.ja3.decode import AnalyzerDecode, JA3ClientTag
 

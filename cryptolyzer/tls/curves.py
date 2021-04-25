@@ -2,15 +2,16 @@
 
 from collections import OrderedDict
 
+import six
+
 import attr
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.extension import (
-    TlsEllipticCurveVector,
-    TlsExtensionEllipticCurves,
     TlsExtensionType,
     TlsNamedCurve,
 )
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
@@ -42,14 +43,18 @@ class AnalyzerCurves(AnalyzerTlsBase):
         return 'Check which elliptic curves supported by the server(s)'
 
     @staticmethod
-    def _get_key_exchange_message(l7_client, client_hello, curves):
+    def _get_response_message(l7_client, client_hello, protocol_version):
         try:
-            client_hello.extensions.append(TlsExtensionEllipticCurves(TlsEllipticCurveVector(curves)))
+            if protocol_version <= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+                last_handshake_message_type = TlsHandshakeType.SERVER_KEY_EXCHANGE
+            else:
+                last_handshake_message_type = TlsHandshakeType.SERVER_HELLO
+
             server_messages = l7_client.do_tls_handshake(
                 hello_message=client_hello,
-                last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE
+                last_handshake_message_type=last_handshake_message_type
             )
-            return server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
+            return server_messages[last_handshake_message_type]
         except NetworkError as e:
             if e.error != NetworkErrorType.NO_RESPONSE:
                 raise e
@@ -57,9 +62,12 @@ class AnalyzerCurves(AnalyzerTlsBase):
         return None
 
     @staticmethod
-    def _get_supported_curve(server_key_exchange):
+    def _get_supported_curve(protocol_version, response_message):
+        if protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+            return response_message.extensions.get_item_by_type(TlsExtensionType.KEY_SHARE).selected_group
+
         try:
-            supported_curve, _ = parse_ecdh_params(server_key_exchange.param_bytes)
+            supported_curve, _ = parse_ecdh_params(response_message.param_bytes)
         except NotImplementedError as e:
             if isinstance(e.args[0], TlsNamedCurve):
                 supported_curve = TlsNamedCurve(e.args[0])
@@ -69,48 +77,61 @@ class AnalyzerCurves(AnalyzerTlsBase):
         return supported_curve
 
     @staticmethod
-    def _get_client_hello(l7_client, protocol_version):
-        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(protocol_version, l7_client.address)
-        for index, extension in enumerate(client_hello.extensions):
-            if extension.get_extension_type() == TlsExtensionType.SUPPORTED_GROUPS:
-                del client_hello.extensions[index]
-                break
-        return client_hello
+    def _get_server_key_exchange(analyzable, client_hello, protocol_version, checkable_curves, extension_supported):
+        try:
+            return AnalyzerCurves._get_response_message(analyzable, client_hello, protocol_version)
+        except TlsAlert as e:
+            if checkable_curves is None:
+                acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                    TlsAlertDescription.PROTOCOL_VERSION,
+                    TlsAlertDescription.UNRECOGNIZED_NAME,
+                ]
+                if e.description in acceptable_alerts:
+                    extension_supported = None
+                    six.raise_from(StopIteration(extension_supported), e)
+
+            if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
+                six.raise_from(StopIteration(extension_supported), e)
+
+            raise e
+        except SecurityError as e:
+            if checkable_curves is None:
+                extension_supported = None
+
+            six.raise_from(StopIteration(extension_supported), e)
+        finally:
+            del client_hello.extensions[-1]
+
+        # cannot be reached as exception has been raised, just a pylint bug workaround
+        raise NotImplementedError()
 
     def analyze(self, analyzable, protocol_version):
-        client_hello = self._get_client_hello(analyzable, protocol_version)
         supported_curves = OrderedDict()
+        checkable_curves = None
         extension_supported = True
-        checkable_curves = list(TlsNamedCurve)
-        while checkable_curves:
+
+        while True:
+            client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(
+                protocol_version, analyzable.address, named_curves=checkable_curves,
+            )
             try:
-                server_key_exchange = self._get_key_exchange_message(analyzable, client_hello, checkable_curves)
-            except TlsAlert as e:
-                if len(TlsNamedCurve) == len(checkable_curves):
-                    acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
-                        TlsAlertDescription.PROTOCOL_VERSION,
-                        TlsAlertDescription.UNRECOGNIZED_NAME,
-                    ]
-                    if e.description in acceptable_alerts:
-                        extension_supported = None
-                        break
-
-                if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
-                    break
-
-                raise e
-            except SecurityError:
-                if len(TlsNamedCurve) == len(checkable_curves):
-                    extension_supported = None
-
+                server_key_exchange = self._get_server_key_exchange(
+                    analyzable, client_hello, protocol_version, checkable_curves, extension_supported
+                )
+            except StopIteration as e:
+                extension_supported = e.args[0]
                 break
-            finally:
-                del client_hello.extensions[-1]
 
             if server_key_exchange is None:
                 break
 
-            supported_curve = self._get_supported_curve(server_key_exchange)
+            if checkable_curves is None:
+                # initial curve list comes from the generated client hello
+                checkable_curves = client_hello.extensions.get_item_by_type(
+                    TlsExtensionType.SUPPORTED_GROUPS
+                ).elliptic_curves
+
+            supported_curve = self._get_supported_curve(protocol_version, server_key_exchange)
 
             try:
                 checkable_curves.remove(supported_curve)

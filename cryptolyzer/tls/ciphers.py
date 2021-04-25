@@ -6,7 +6,7 @@ import attr
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
-from cryptoparser.tls.version import SslProtocolVersion
+from cryptoparser.tls.version import SslProtocolVersion, TlsVersion, TlsProtocolVersionDraft, TlsProtocolVersionFinal
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
@@ -15,6 +15,7 @@ from cryptolyzer.tls.client import (
     SslHandshakeClientHelloAnyAlgorithm,
     TlsHandshakeClientHelloAnyAlgorithm,
     TlsHandshakeClientHelloAuthenticationECDSA,
+    TlsHandshakeClientHelloAuthenticationGOST,
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationRarelyUsed,
 )
@@ -52,7 +53,10 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         client_hello = TlsHandshakeClientHelloAnyAlgorithm([protocol_version, ], l7_client.address)
         client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
 
-        server_messages = l7_client.do_tls_handshake(client_hello)
+        server_messages = l7_client.do_tls_handshake(
+            client_hello,
+            record_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        )
         server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
         for index, cipher_suite in enumerate(remaining_cipher_suites):
             if cipher_suite == server_hello.cipher_suite:
@@ -118,6 +122,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
             TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, l7_client.address),
             TlsHandshakeClientHelloAuthenticationRarelyUsed(protocol_version, l7_client.address),
+            TlsHandshakeClientHelloAuthenticationGOST(protocol_version, l7_client.address),
         )
         for client_hello in client_hello_messsages_in_order_of_probability:
             accepted_cipher_suites.extend(
@@ -136,7 +141,15 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         if isinstance(protocol_version, SslProtocolVersion):
             checkable_cipher_suites = list(SslCipherKind)
         else:
-            checkable_cipher_suites = list(TlsCipherSuite)
+            if protocol_version <= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+                min_version = protocol_version
+            else:
+                min_version = TlsProtocolVersionDraft(0)
+            checkable_cipher_suites = [
+                cipher_suite
+                for cipher_suite in TlsCipherSuite
+                if cipher_suite.value.min_version >= min_version
+            ]
 
         long_cipher_suite_list_intolerance = False
         accepted_cipher_suites, remaining_cipher_suites = self._get_accepted_cipher_suites_all(

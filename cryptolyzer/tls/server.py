@@ -7,6 +7,7 @@ import six
 
 from cryptoparser.common.exception import NotEnoughData, InvalidValue
 
+from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionSupportedVersionsServer
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.subprotocol import (
     SslErrorMessage,
@@ -18,7 +19,7 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertLevel,
     TlsAlertMessage,
     TlsContentType,
-    TlsExtensions,
+    TlsHandshakeHelloRetryRequest,
     TlsHandshakeServerHello,
     TlsHandshakeType,
 )
@@ -134,21 +135,37 @@ class TlsServerHandshake(TlsServer):
                     raise StopIteration()
 
             if handshake_message.get_handshake_type() == TlsHandshakeType.CLIENT_HELLO:
-                if (not self.configuration.protocol_versions or
-                        handshake_message.protocol_version > self.configuration.protocol_versions[-1]):
+                try:
+                    supported_versions = handshake_message.extensions.get_item_by_type(
+                        TlsExtensionType.SUPPORTED_VERSIONS
+                    ).supported_versions
+                except KeyError:
+                    supported_versions = [handshake_message.protocol_version, ]
+
+                for supported_version in supported_versions:
+                    if supported_version in self.configuration.protocol_versions:
+                        protocol_version = supported_version
+                        break
+                else:
                     self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.PROTOCOL_VERSION)
                     raise StopIteration()
 
-            for supported_protocol_version in reversed(self.configuration.protocol_versions):
-                if supported_protocol_version == handshake_message.protocol_version:
-                    protocol_version = supported_protocol_version
-                    break
+            extensions = []
+            if protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+                extensions.append(TlsExtensionSupportedVersionsServer(protocol_version))
 
-            server_hello = TlsHandshakeServerHello(
-                protocol_version=protocol_version,
-                cipher_suite=handshake_message.cipher_suites[0],
-                extensions=TlsExtensions([]),
-            )
+            if protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+                server_hello = TlsHandshakeHelloRetryRequest(
+                    protocol_version=protocol_version,
+                    cipher_suite=handshake_message.cipher_suites[0],
+                    extensions=extensions,
+                )
+            else:
+                server_hello = TlsHandshakeServerHello(
+                    protocol_version=protocol_version,
+                    cipher_suite=handshake_message.cipher_suites[0],
+                    extensions=extensions,
+                )
             self.l4_transfer.send(TlsRecord([server_hello]).compose())
 
             if self._last_processed_message_type == last_handshake_message_type:

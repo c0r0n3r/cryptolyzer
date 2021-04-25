@@ -5,9 +5,9 @@ try:
 except ImportError:
     import mock
 
+from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
-from cryptoparser.tls.extension import TlsSignatureAndHashAlgorithm
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -50,7 +50,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
     def test_error_response_error_no_response(self, _):
         result = self.get_result('ecc256.badssl.com', 443)
         self.assertEqual(result.sig_algos, [
-            TlsSignatureAndHashAlgorithm.DSA_NONE,
+            TlsSignatureAndHashAlgorithm.RSA_NONE,
         ])
 
     def test_sigalgos(self):
