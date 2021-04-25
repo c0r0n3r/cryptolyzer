@@ -941,9 +941,9 @@ class SslClientHandshake(TlsClient):
             except NotEnoughData as e:
                 if transfer.buffer:
                     try:
-                        tls_record = TlsRecord.parse_exact_size(transfer.buffer)
-                        transfer.flush_buffer()
-                    except (InvalidType, InvalidValue):
+                        tls_record, parsed_length = TlsRecord.parse_immutable(transfer.buffer)
+                        transfer.flush_buffer(parsed_length)
+                    except (InvalidType, InvalidValue, NotEnoughData, TooMuchData):
                         self.raise_response_error(transfer)
                     else:
                         if (tls_record.content_type == TlsContentType.ALERT and
