@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 
+from collections import OrderedDict
+
 import attr
 
 import six
 
+import asn1crypto.ocsp
 import asn1crypto.x509
 import certvalidator
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
+from cryptoparser.tls.extension import TlsExtensionCertificateStatusRequest, TlsCertificateStatusType
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.tls.client import (
@@ -22,7 +26,84 @@ from cryptolyzer.tls.exception import TlsAlert
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+import cryptolyzer.common.utils
 import cryptolyzer.common.x509
+
+
+@attr.s
+class CertificateStatus(Serializable):
+    ocsp_response = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(asn1crypto.ocsp.OCSPResponse))
+    )
+
+    @property
+    def _response_data(self):
+        return self.ocsp_response.basic_ocsp_response['tbs_response_data']
+
+    @property
+    def _response(self):
+        return self._response_data['responses'][0]
+
+    @property
+    def status(self):
+        cert_status = self._response['cert_status']
+        return cert_status.name.lower()
+
+    @property
+    def responder(self):
+        if self._response_data['responder_id'].name == 'by_name':
+            return self._response_data['responder_id'].chosen.native
+
+        return cryptolyzer.common.utils.bytes_to_colon_separated_hex(
+            bytes(self._response_data['responder_id'].chosen)
+        )
+
+    @property
+    def produced_at(self):
+        return self._response_data['produced_at'].native
+
+    @property
+    def this_update(self):
+        return self._response['this_update'].native
+
+    @property
+    def next_update(self):
+        return self._response['next_update'].native
+
+    @property
+    def update_interval(self):
+        return self.next_update - self.this_update
+
+    @property
+    def revocation_time(self):
+        cert_status = self._response['cert_status']
+        if cert_status.name != 'revoked':
+            return None
+
+        return cert_status.chosen['revocation_time'].native
+
+    @property
+    def revocation_reason(self):
+        cert_status = self._response['cert_status']
+        if cert_status.name != 'revoked':
+            return None
+
+        return cert_status.chosen['revocation_reason'].native
+
+    def _asdict(self):
+        if self.ocsp_response is None:
+            return OrderedDict()
+
+        return OrderedDict([
+           ('status', self.status),
+           ('responder', self.responder),
+           ('produced_at', str(self.produced_at)),
+           ('this_update', str(self.this_update)),
+           ('next_update', str(self.next_update)),
+           ('update_interval', str(self.update_interval)),
+           ('revocation_time', str(self.revocation_time)),
+           ('revocation_time', self.revocation_reason),
+        ])
 
 
 @attr.s
@@ -77,6 +158,10 @@ class TlsPublicKey(Serializable):
         validator=attr.validators.instance_of(TlsCertificateChain),
         metadata={'human_readable_name': 'Certificate Chain'}
     )
+    certificate_status = attr.ib(
+        default=None, eq=False,
+        validator=attr.validators.optional(attr.validators.instance_of(CertificateStatus))
+    )
 
 
 @attr.s
@@ -113,7 +198,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         try:
             server_messages = l7_client.do_tls_handshake(
                 client_hello,
-                last_handshake_message_type=TlsHandshakeType.CERTIFICATE
+                last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
             )
         except TlsAlert as e:
             if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
@@ -144,6 +229,9 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
 
         for client_hello in client_hello_messages:
             sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
+            client_hello.extensions.extend([
+                TlsExtensionCertificateStatusRequest(),
+            ])
             try:
                 server_messages = self._get_server_messages(analyzable, client_hello, sni_sent, client_hello_messages)
             except StopIteration:
@@ -161,7 +249,21 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 subject_matches = leaf_certificate.is_subject_matches(six.u(analyzable.address))
                 if ((sni_sent or subject_matches) and
                         certificate_chain not in [result.tls_certificate_chain for result in results]):
-                    results.append(TlsPublicKey(sni_sent, subject_matches, certificate_chain))
+                    tls_public_key_params = {
+                        'sni_sent': sni_sent,
+                        'subject_matches': subject_matches,
+                        'tls_certificate_chain': certificate_chain,
+                    }
+
+                    if TlsHandshakeType.CERTIFICATE_STATUS in server_messages:
+                        status_message = server_messages[TlsHandshakeType.CERTIFICATE_STATUS]
+                        if status_message.status_type == TlsCertificateStatusType.OCSP:
+                            certificate_status = CertificateStatus(
+                                asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
+                            )
+                            tls_public_key_params['certificate_status'] = certificate_status
+
+                    results.append(TlsPublicKey(**tls_public_key_params))
 
         return AnalyzerResultPublicKeys(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
