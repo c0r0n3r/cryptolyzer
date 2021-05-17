@@ -6,6 +6,8 @@ import six
 import attr
 
 from cryptoparser.common.base import Serializable
+from cryptoparser.httpx.version import HttpVersion
+from cryptoparser.ssh.version import SshProtocolVersion
 from cryptoparser.tls.version import SslProtocolVersion, TlsProtocolVersionBase
 
 
@@ -19,9 +21,35 @@ class AnalyzerTarget(Serializable):
     )
     port = attr.ib(validator=attr.validators.instance_of(int))
 
-    @staticmethod
-    def from_l7_client(l7_client, proto_version=None):
-        return AnalyzerTargetTls(l7_client.get_scheme(), l7_client.address, l7_client.ip, l7_client.port, proto_version)
+    @classmethod
+    def _from_l7_client(cls, l7_client, **kwargs):
+        return cls(l7_client.get_scheme(), l7_client.address, l7_client.ip, l7_client.port, **kwargs)
+
+    @classmethod
+    def from_l7_client(cls, l7_client, proto_version=None):
+        return cls._from_l7_client(l7_client, proto_version=proto_version)
+
+
+@attr.s
+class AnalyzerTargetHttp(AnalyzerTarget):
+    path = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(six.string_types)),
+    )
+    proto_version = attr.ib(
+        default=HttpVersion.HTTP1_1,
+        validator=attr.validators.optional(attr.validators.in_(HttpVersion)),
+        metadata={'human_readable_name': 'Protocol Version'}
+    )
+
+    @classmethod
+    def _from_l7_client(cls, l7_client, **kwargs):
+        if l7_client.uri.port is None:
+            port = l7_client.get_default_port()
+        else:
+            port = int(l7_client.uri.port)
+
+        return cls(l7_client.get_scheme(), l7_client.uri.host, '', port, path=l7_client.uri.path)
 
 
 @attr.s
@@ -32,14 +60,14 @@ class AnalyzerTargetTls(AnalyzerTarget):
         metadata={'human_readable_name': 'Protocol Version'}
     )
 
-    @staticmethod
-    def from_l7_client(l7_client, proto_version=None):
-        return AnalyzerTargetTls(l7_client.get_scheme(), l7_client.address, l7_client.ip, l7_client.port, proto_version)
-
 
 @attr.s
 class AnalyzerTargetSsh(AnalyzerTarget):
-    pass
+    proto_version = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(SshProtocolVersion)),
+        metadata={'human_readable_name': 'Protocol Version'}
+    )
 
 
 @attr.s
@@ -82,5 +110,11 @@ class AnalyzerResultTls(AnalyzerResultBase):
     pass
 
 
+@attr.s
 class AnalyzerResultSsh(AnalyzerResultBase):
+    pass
+
+
+@attr.s
+class AnalyzerResultHttp(AnalyzerResultBase):
     pass
