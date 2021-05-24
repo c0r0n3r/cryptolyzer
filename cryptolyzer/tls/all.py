@@ -14,14 +14,15 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites, AnalyzerResultCipherSuites
 from cryptolyzer.tls.curves import AnalyzerCurves, AnalyzerResultCurves
 from cryptolyzer.tls.dhparams import AnalyzerDHParams, AnalyzerResultDHParams
+from cryptolyzer.tls.extensions import AnalyzerExtensions, AnalyzerResultExtensions
 from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest, AnalyzerResultPublicKeyRequest
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys, AnalyzerResultPublicKeys
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos, AnalyzerResultSigAlgos
 from cryptolyzer.tls.versions import AnalyzerVersions, AnalyzerResultVersions
 
 
-@attr.s
-class AnalyzerResultAll(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
+@attr.s  # pylint: disable=too-few-public-methods,too-many-instance-attributes
+class AnalyzerResultAll(AnalyzerResultTls):
     versions = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultVersions)),
         metadata={'human_readable_name': 'Supported Protocol Versions'}
@@ -51,6 +52,10 @@ class AnalyzerResultAll(AnalyzerResultTls):  # pylint: disable=too-few-public-me
     sigalgos = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultSigAlgos)),
         metadata={'human_readable_name': 'Supported Signature Algorithms'}
+    )
+    extensions = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultExtensions)),
+        metadata={'human_readable_name': 'Supported Extensions'}
     )
 
     def _as_markdown(self, level):
@@ -163,6 +168,17 @@ class AnalyzerAll(AnalyzerTlsBase):
 
         return AnalyzerAll._get_result(AnalyzerSigAlgos, analyzable, protocol_version)
 
+    @staticmethod
+    def get_extensions_result(analyzable, versions):
+        for version in reversed(versions):
+            if version <= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+                protocol_version = version
+                break
+        else:
+            protocol_version = None
+
+        return AnalyzerAll._get_result(AnalyzerExtensions, analyzable, protocol_version)
+
     def analyze(self, analyzable, protocol_version):
         results = {
             'target': AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
@@ -181,6 +197,7 @@ class AnalyzerAll(AnalyzerTlsBase):
         results.update(self.get_dhparams_result(analyzable, cipher_suite_results))
         results.update(self.get_curves_result(analyzable, cipher_suite_results))
         results.update(self.get_sigalgos_result(analyzable, versions))
+        results.update(self.get_extensions_result(analyzable, versions))
         results.update({AnalyzerCipherSuites.get_name(): list(cipher_suite_results.values())})
 
         return AnalyzerResultAll(**results)
