@@ -1,8 +1,9 @@
+===========
 CryptoLyzer
 ===========
 
 What is it and what is it not?
-------------------------------
+==============================
 
 As the project name CryptoLyzer implies, it is a cryptographic protocol analyzer. The main purpose of creating this
 application is the fact, that cryptography protocol analysis differs in many aspect from establishing a connection
@@ -19,7 +20,7 @@ implementations, there are several existing wrappers and native implementations 
 Paramiko, ...).
 
 Quick start
------------
+===========
 
 CryptoLyzer can be installed directly via pip
 
@@ -65,7 +66,7 @@ or can be used via Docker
     openssl s_client -connect 127.0.0.1:4433
 
 Development environment
-^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------
 
 If you want to setup a development environment, you are in need of `pipenv <https://docs.pipenv.org/>`__.
 
@@ -79,18 +80,18 @@ If you want to setup a development environment, you are in need of `pipenv <http
     $ cryptolyze -h
 
 Generic Features
-----------------
+================
 
 Protocols
-^^^^^^^^^
+---------
 
 SSH
-"""
+^^^
 
 * `SSH 2.0 <https://tools.ietf.org/html/rfc4253>`_
 
 Analyzers
-^^^^^^^^^
+---------
 
 .. table:: Supported analyzers by cryptographic protocol versions
 
@@ -105,7 +106,7 @@ Analyzers
     +------------------------------------------+--------------+
 
 SSL/TLS
-"""""""
+^^^^^^^
 
 * transport layer
 
@@ -134,7 +135,7 @@ SSL/TLS
     * `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`_
 
 Analyzers
-^^^^^^^^^
+---------
 
 .. table:: Supported analyzers by cryptographic protocol versions
 
@@ -159,42 +160,42 @@ Analyzers
     +------------------------------------------+-------+-------+-------+-------+-------+-------+
 
 Python implementation
-^^^^^^^^^^^^^^^^^^^^^
+---------------------
 
 * CPython (2.7, >=3.3)
 * PyPy (2.7, 3.5)
 
 Operating systems
-^^^^^^^^^^^^^^^^^
+-----------------
 
 * Linux
 * macOS
 * Windows
 
 Protocol Specific Features
---------------------------
+==========================
 
 Transport Layer Security (TLS)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------
 
 Only features that cannot be or difficultly implemented by the most popular SSL/TLS implementations (eg:
 `GnuTls <https://www.gnutls.org/>`_, `LibreSSL <https://www.libressl.org/>`_, `OpenSSL <https://www.openssl.org/>`_,
 `wolfSSL <https://www.wolfssl.com/>`_, ...) are listed.
 
 Protocol Versions
-"""""""""""""""""
+^^^^^^^^^^^^^^^^^
 
 #. support not only the final, but also draft versions
 
 Cipher Suites
-"""""""""""""
+^^^^^^^^^^^^^
 
 #. supports each cipher suites discussed on `ciphersuite.info <https://ciphersuite.info>`_
 #. supports `GOST <https://en.wikipedia.org/wiki/GOST>`_ (national standards of the Russian Federation and CIS
    countries) cipher suites
 
 Fingerprinting
-""""""""""""""
+^^^^^^^^^^^^^^
 
 #. generates `JA3 tag <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_ of any
    connecting TLS client independently from its type (graphical/cli, browser/email client/...)
@@ -202,18 +203,18 @@ Fingerprinting
    by showing human-readable format of the TLS parameters represented by the tag
 
 Social Media
-------------
+============
 
 * `Twitter <https://twitter.com/CryptoLyzer>`_
 * `Facebook <https://www.facebook.com/cryptolyzer>`_
 
 Credits
--------
+=======
 
 Icons made by `Freepik <https://www.flaticon.com/authors/freepik>`_ from `Flaticon <https://www.flaticon.com/>`_.
 
 License
--------
+=======
 
 The code is available under the terms of Mozilla Public License Version 2.0 (MPL 2.0).
 

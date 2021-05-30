@@ -1,13 +1,14 @@
+=========
 Changelog
 =========
 
 .. _v0-6-0:
 
 0.6.0 - 2021-04-19
-------------------
+==================
 
 Improvements
-^^^^^^^^^^^^
+------------
 
 * TLS (``tls``)
 
@@ -34,10 +35,10 @@ Improvements
 .. _v0-5-0:
 
 0.5.0 - 2021-04-08
-------------------
+==================
 
 Features
-^^^^^^^^
+--------
 
 * TLS (``tls``)
 
@@ -49,7 +50,7 @@ Features
   `negotiated algorithms <https://tools.ietf.org/html/rfc4253#section-7.1>`_ (#33)
 
 Usability
-^^^^^^^^^
+---------
 
 * Generic
 
@@ -59,10 +60,10 @@ Usability
 .. _v0-4-0:
 
 0.4.0 - 2021-01-30
-------------------
+==================
 
 Features
-^^^^^^^^
+--------
 
 * TLS (``tls``)
 
@@ -70,7 +71,7 @@ Features
   * `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`_ support (#25)
 
 Notable fixes
-^^^^^^^^^^^^^
+-------------
 
 * TLS (``tls``)
 
@@ -84,7 +85,7 @@ Notable fixes
     * handle that a server supports only non-RSA public keys (#41)
 
 Performance
-^^^^^^^^^^^
+-----------
 
 * TLS (``tls``)
 
@@ -95,10 +96,10 @@ Performance
 .. _v0-3-1:
 
 0.3.1 - 2020-09-15
-------------------
+==================
 
 Features
-^^^^^^^^
+--------
 
 * Generic
 
@@ -114,14 +115,14 @@ Features
       support for TLS cipher suite checker (#32)
 
 Notable fixes
-^^^^^^^^^^^^^
+-------------
 
 * TLS (``tls``)
 
   * fix several uncertain test cases (#28)
 
 Refactor
-^^^^^^^^
+--------
 
 * remove unnecessary unicode conversions (#29)
 * switch from `cryptography <https://cryptography.io>`_ to `certvalidator <https://github.com/wbond/certvalidator>`_
@@ -130,10 +131,10 @@ Refactor
 .. _v0-3-0:
 
 0.3.0 - 2020-04-30
-------------------
+==================
 
 Features
-^^^^^^^^
+--------
 
 * TLS (``tls``)
 
@@ -147,22 +148,22 @@ Features
     support (#23)
 
 Notable fixes
-^^^^^^^^^^^^^
+-------------
 
 * FTP server check cause Python traceback on connection close (#27)
 
 Refactor
-^^^^^^^^
+--------
 
 * use attrs to avoid boilerplates (#24)
 
 .. _v0-2-0:
 
 0.2.0 - 2019-12-05
-------------------
+==================
 
 Features
-^^^^^^^^
+--------
 
 * TLS (``tls``)
 
@@ -176,7 +177,7 @@ Features
   * FTP opportunistic TLS (``STARTTLS``) support (#8)
 
 Notable Fixes
-^^^^^^^^^^^^^
+-------------
 
 * TLS (``tls``)
 
@@ -223,10 +224,10 @@ Other
 .. _v0-1-0:
 
 0.1.0 - 2019-03-20
-------------------
+==================
 
 Features
-^^^^^^^^
+--------
 
 * add analyzer for checking TLS server against supported
   `protocol versions <https://en.wikipedia.org/wiki/Transport_Layer_Security#History_and_development>`_
@@ -241,7 +242,7 @@ Features
   `public key certificates <https://en.wikipedia.org/wiki/Public_key_certificate>`_
 
 Improvements
-^^^^^^^^^^^^
+------------
 
 * check TLS server against used fallback (handshake without
   `SNI <https://en.wikipedia.org/wiki/Server_Name_Indication>`_) certificates
