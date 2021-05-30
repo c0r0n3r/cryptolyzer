@@ -85,6 +85,38 @@ Generic Features
 Protocols
 ---------
 
+Hypertext Transfer Protocol (HTTP)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Analyzers
+^^^^^^^^^
+
+* Headers (``headers``)
+
+  * generic headers
+
+    * `Content-Type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`_
+    * `Server <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server>`_
+
+  * caching headers
+
+    * `Age <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age>`_
+    * `Cache-Control <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control>`_
+    * `Date <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date>`_
+    * `ETag <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag>`_
+    * `Expires <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires>`_
+    * `Last-Modified <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified>`_
+    * `Pragma <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Pragma>`_
+
+  * security headers
+
+    * `Expect-CT <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect-CT>`_
+    * `Expect-Staple <https://scotthelme.co.uk/designing-a-new-security-header-expect-staple>`_
+    * `Referrer-Policy <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy>`_
+    * `Strict-Transport-Security <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security>`_
+    * `X-Content-Type-Options <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options>`_
+    * `X-Frame-Options <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options>`_
+
 SSH
 ^^^
 
