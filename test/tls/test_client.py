@@ -305,7 +305,7 @@ class TestClientFTP(TestL7ClientBase):
 
     def test_ftps_client(self):
         self.assertEqual(
-            self.get_result('ftps', 'ftp.mrxs.de', None).versions,
+            self.get_result('ftps', 'ftps.tceq.texas.gov', None).versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
