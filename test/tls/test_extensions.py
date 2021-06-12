@@ -13,6 +13,7 @@ from cryptoparser.tls.extension import (
     TlsExtensionApplicationLayerProtocolNegotiation,
 )
 from cryptoparser.tls.subprotocol import (
+    TlsCompressionMethod,
     TlsHandshakeServerHello,
     TlsHandshakeType,
 )
@@ -57,6 +58,61 @@ class TestTlsExtensions(unittest.TestCase):
         self.assertEqual(
             set(result.application_layer_protocols),
             set([TlsProtocolName.HTTP_1_0, TlsProtocolName.H2, TlsProtocolName.HTTP_1_1])
+        )
+
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_tls_handshake',
+        side_effect=[
+            {
+                TlsHandshakeType.SERVER_HELLO:
+                TlsHandshakeServerHello(
+                    cipher_suite=TlsCipherSuite.TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256,
+                    compression_method=TlsCompressionMethod.NULL,
+                    extensions=[
+                        TlsExtensionApplicationLayerProtocolNegotiation([TlsProtocolName.HTTP_1_1, ])
+                    ]
+                )
+            },
+            {
+                TlsHandshakeType.SERVER_HELLO:
+                TlsHandshakeServerHello(
+                    cipher_suite=TlsCipherSuite.TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256,
+                    compression_method=TlsCompressionMethod.DEFLATE,
+                    extensions=[
+                        TlsExtensionApplicationLayerProtocolNegotiation([TlsProtocolName.HTTP_1_1, ])
+                    ]
+                )
+            },
+            {
+                TlsHandshakeType.SERVER_HELLO:
+                TlsHandshakeServerHello(
+                    cipher_suite=TlsCipherSuite.TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256,
+                    compression_method=TlsCompressionMethod.LZS,
+                    extensions=[
+                        TlsExtensionApplicationLayerProtocolNegotiation([TlsProtocolName.HTTP_1_1, ])
+                    ]
+                )
+            }
+        ]
+    )
+    def test_compression_method_all(self, _):
+        analyzer = AnalyzerExtensions()
+        l7_client = L7ClientTlsBase.from_scheme('tls', 'www.cloudflare.com', 443)
+        compression_methods = analyzer._analyze_compression_methods(  # pylint: disable=protected-access
+            l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        )
+
+        self.assertEqual(
+            set(compression_methods),
+            set([TlsCompressionMethod.NULL, TlsCompressionMethod.DEFLATE, TlsCompressionMethod.LZS])
+        )
+
+    def test_compression_method(self):
+        result = self.get_result('www.cloudflare.com', 443)
+
+        self.assertEqual(
+            set(result.compression_methods),
+            set([TlsCompressionMethod.NULL, ])
         )
 
     def test_encrypt_then_mac(self):

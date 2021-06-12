@@ -15,7 +15,7 @@ from cryptoparser.tls.extension import (
     TlsExtensionSessionTicket,
     TlsExtensionType,
 )
-from cryptoparser.tls.subprotocol import TlsHandshakeType
+from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsCompressionMethodVector, TlsCompressionMethod
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
@@ -32,6 +32,9 @@ from cryptolyzer.tls.client import (
 class AnalyzerResultExtensions(AnalyzerResultTls):
     application_layer_protocols = attr.ib(
         validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(TlsProtocolName))
+    )
+    compression_methods = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsCompressionMethod))
     )
     clock_is_accurate = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)))
     renegotiation_supported = attr.ib(validator=attr.validators.instance_of(bool))
@@ -131,6 +134,30 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             analyzable, client_hello, TlsExtensionType.EXTENDED_MASTER_SECRET,
         )
 
+    @classmethod
+    def _analyze_compression_methods(cls, analyzable, protocol_version):
+        supported_compression_methods = set()
+        client_hello = cls._get_client_hello(analyzable, protocol_version)
+
+        for compression_method in TlsCompressionMethod:
+            if compression_method == TlsCompressionMethod.NULL:
+                offered_compression_methods = [TlsCompressionMethod.NULL, ]
+            else:
+                offered_compression_methods = [compression_method, TlsCompressionMethod.NULL, ]
+            client_hello.compression_methods = TlsCompressionMethodVector(offered_compression_methods)
+
+            try:
+                server_messages = analyzable.do_tls_handshake(client_hello)
+            except (TlsAlert, NetworkError):
+                break
+
+            supported_compression_method = server_messages[TlsHandshakeType.SERVER_HELLO].compression_method
+
+            supported_compression_methods.add(supported_compression_method)
+
+        return supported_compression_methods
+
+    @classmethod
     def _analyze_clock_skew(cls, analyzable, protocol_version):
         client_hello = cls._get_client_hello(analyzable, protocol_version)
         try:
@@ -184,6 +211,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
     def analyze(self, analyzable, protocol_version):
         supported_protocol_names = self._analyze_alpn(analyzable, protocol_version)
+        supported_compression_methods = self._analyze_compression_methods(analyzable, protocol_version)
         clock_is_accurate = self._analyze_clock_skew(analyzable, protocol_version)
         renegotiation_supported = self._analyze_renegotiation(analyzable, protocol_version)
         session_ticket_supported = self._analyze_session_ticket(analyzable, protocol_version)
@@ -193,6 +221,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         return AnalyzerResultExtensions(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
             supported_protocol_names,
+            supported_compression_methods,
             clock_is_accurate,
             renegotiation_supported,
             session_ticket_supported,
