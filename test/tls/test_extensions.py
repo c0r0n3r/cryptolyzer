@@ -79,6 +79,13 @@ class TestTlsExtensions(unittest.TestCase):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertTrue(result.extended_master_secret_supported)
 
+    def test_clock_is_accurate(self):
+        result = self.get_result('www.facebook.com', 443)
+        self.assertFalse(result.clock_is_accurate)
+
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertTrue(result.clock_is_accurate)
+
     def test_renegotiation_info(self):
         result = self.get_result('www.deloton.com', 443)
         self.assertFalse(result.renegotiation_supported)
