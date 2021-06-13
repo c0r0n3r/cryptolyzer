@@ -6,11 +6,13 @@ import datetime
 import attr
 import six
 
-from cryptoparser.tls.algorithm import TlsProtocolName
+from cryptoparser.tls.algorithm import TlsNextProtocolName, TlsProtocolName
+
 from cryptoparser.tls.extension import (
     TlsExtensionApplicationLayerProtocolNegotiation,
     TlsExtensionEncryptThenMAC,
     TlsExtensionExtendedMasterSecret,
+    TlsExtensionNextProtocolNegotiationClient,
     TlsExtensionRenegotiationInfo,
     TlsExtensionSessionTicket,
     TlsExtensionType,
@@ -28,8 +30,11 @@ from cryptolyzer.tls.client import (
 )
 
 
-@attr.s  # pylint: disable=too-few-public-methods
+@attr.s  # pylint: disable=too-many-instance-attributes
 class AnalyzerResultExtensions(AnalyzerResultTls):
+    next_protocols = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(TlsNextProtocolName))
+    )
     application_layer_protocols = attr.ib(
         validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(TlsProtocolName))
     )
@@ -54,6 +59,18 @@ class AnalyzerExtensions(AnalyzerTlsBase):
     @classmethod
     def get_help(cls):
         return 'Check which extensions supported by the server(s)'
+
+    @classmethod
+    def _analyze_npn(cls, analyzable, protocol_version):
+        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionNextProtocolNegotiationClient())
+        try:
+            extension = AnalyzerExtensions._get_symmetric_extension(
+                analyzable, client_hello, TlsExtensionType.NEXT_PROTOCOL_NEGOTIATION
+            )
+        except KeyError:
+            return []
+
+        return list(extension.protocol_names)
 
     @classmethod
     def _analyze_alpn(cls, analyzable, protocol_version):
@@ -211,6 +228,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
     def analyze(self, analyzable, protocol_version):
         supported_protocol_names = self._analyze_alpn(analyzable, protocol_version)
+        supported_next_protocol_names = self._analyze_npn(analyzable, protocol_version)
         supported_compression_methods = self._analyze_compression_methods(analyzable, protocol_version)
         clock_is_accurate = self._analyze_clock_skew(analyzable, protocol_version)
         renegotiation_supported = self._analyze_renegotiation(analyzable, protocol_version)
@@ -220,6 +238,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return AnalyzerResultExtensions(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
+            supported_next_protocol_names,
             supported_protocol_names,
             supported_compression_methods,
             clock_is_accurate,

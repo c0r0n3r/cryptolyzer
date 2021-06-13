@@ -7,7 +7,7 @@ try:
 except ImportError:
     import mock
 
-from cryptoparser.tls.algorithm import TlsProtocolName
+from cryptoparser.tls.algorithm import TlsNextProtocolName, TlsProtocolName
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsExtensionApplicationLayerProtocolNegotiation,
@@ -30,6 +30,16 @@ class TestTlsExtensions(unittest.TestCase):
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
+
+    def test_next_protocols(self):
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertEqual(result.next_protocols, [])
+
+        result = self.get_result('amazon.com', 443)
+        self.assertEqual(
+            set(result.next_protocols),
+            set([TlsNextProtocolName.HTTP_1_1, ])
+        )
 
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
