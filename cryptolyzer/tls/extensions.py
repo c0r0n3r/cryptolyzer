@@ -17,7 +17,12 @@ from cryptoparser.tls.extension import (
     TlsExtensionSessionTicket,
     TlsExtensionType,
 )
-from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsCompressionMethodVector, TlsCompressionMethod
+from cryptoparser.tls.subprotocol import (
+    TlsCompressionMethodVector,
+    TlsCompressionMethod,
+    TlsHandshakeType,
+    TlsSessionIdVector,
+)
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
@@ -43,6 +48,7 @@ class AnalyzerResultExtensions(AnalyzerResultTls):
     )
     clock_is_accurate = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)))
     renegotiation_supported = attr.ib(validator=attr.validators.instance_of(bool))
+    session_cache_supported = attr.ib(validator=attr.validators.instance_of(bool))
     session_ticket_supported = attr.ib(validator=attr.validators.instance_of(bool))
     extended_master_secret_supported = attr.ib(validator=attr.validators.instance_of(bool))
     encrypt_then_mac_supported = attr.ib(
@@ -200,6 +206,18 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         )
 
     @classmethod
+    def _analyze_session_cache(cls, analyzable, protocol_version):
+        client_hello = cls._get_client_hello(analyzable, protocol_version)
+        client_hello.session_id = TlsSessionIdVector(list(range(32)))
+        try:
+            server_messages = analyzable.do_tls_handshake(client_hello)
+        except (TlsAlert, NetworkError):
+            return False
+
+        session_id = server_messages[TlsHandshakeType.SERVER_HELLO].session_id
+        return session_id != TlsSessionIdVector([])
+
+    @classmethod
     def _analyze_session_ticket(cls, analyzable, protocol_version):
         client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionSessionTicket())
         return AnalyzerExtensions._analyze_symmetric_extension(
@@ -232,6 +250,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         supported_compression_methods = self._analyze_compression_methods(analyzable, protocol_version)
         clock_is_accurate = self._analyze_clock_skew(analyzable, protocol_version)
         renegotiation_supported = self._analyze_renegotiation(analyzable, protocol_version)
+        session_cache_supported = self._analyze_session_cache(analyzable, protocol_version)
         session_ticket_supported = self._analyze_session_ticket(analyzable, protocol_version)
         extended_master_secret_supported = self._analyze_extended_master_secret(analyzable, protocol_version)
         encrypt_then_mac_supported = self._analyze_encrypt_than_mac(analyzable, protocol_version)
@@ -243,6 +262,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             supported_compression_methods,
             clock_is_accurate,
             renegotiation_supported,
+            session_cache_supported,
             session_ticket_supported,
             extended_master_secret_supported,
             encrypt_then_mac_supported,

@@ -159,6 +159,13 @@ class TestTlsExtensions(unittest.TestCase):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertTrue(result.renegotiation_supported)
 
+    def test_session_cache(self):
+        result = self.get_result('www.github.com', 443)
+        self.assertFalse(result.session_cache_supported)
+
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertTrue(result.session_cache_supported)
+
     def test_session_ticket(self):
         result = self.get_result('www.github.com', 443)
         self.assertFalse(result.session_ticket_supported)
