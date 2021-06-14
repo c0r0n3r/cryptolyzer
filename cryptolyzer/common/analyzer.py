@@ -7,6 +7,8 @@ import ipaddress
 import pkgutil
 import os
 
+import six
+
 from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.common.utils import get_leaf_classes
@@ -16,6 +18,7 @@ from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.tls.client import L7ClientTlsBase
 
 
+@six.add_metaclass(abc.ABCMeta)
 class ProtocolHandlerBase(object):
     @classmethod
     def import_plugins(cls):
