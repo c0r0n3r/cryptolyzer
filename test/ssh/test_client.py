@@ -34,11 +34,6 @@ class TestL7ClientBase(unittest.TestCase):
 
 
 class TestSshClientHandshake(TestL7ClientBase):
-    def test_error_no_connection(self):
-        with self.assertRaises(NetworkError) as context_manager:
-            self.get_result('badssl.com', 22, timeout=1)
-        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
-
     def test_error_no_response(self):
         l7_client = L7ClientSsh('ssh.blinkenshell.org', 2222, timeout=0.5)
         with self.assertRaises(NetworkError) as context_manager:

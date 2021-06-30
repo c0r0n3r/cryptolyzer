@@ -18,8 +18,7 @@ from cryptoparser.tls.ciphersuite import SslCipherKind
 from cryptoparser.tls.ldap import LDAPMessageParsableBase, LDAPExtendedResponseStartTLS, LDAPResultCode
 from cryptoparser.tls.rdp import RDPNegotiationResponse
 
-from cryptoparser.tls.record import ParsableBase
-from cryptoparser.tls.record import TlsRecord, SslRecord
+from cryptoparser.tls.record import ParsableBase, TlsRecord, SslRecord
 from cryptoparser.tls.subprotocol import (
     SslErrorMessage,
     SslErrorType,
@@ -29,7 +28,9 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertDescription,
     TlsAlertLevel,
     TlsAlertMessage,
+    TlsChangeCipherSpecMessage,
     TlsContentType,
+    TlsHandshakeType,
 )
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
@@ -58,17 +59,24 @@ from cryptolyzer.tls.server import (
 from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.versions import AnalyzerVersions
 
-from .classes import L7ServerTlsTest, L7ServerTlsMockResponse, TlsServerMockResponse
+from .classes import (
+    L7ServerTlsCloseDuringHandshake,
+    L7ServerTlsMockResponse,
+    L7ServerTlsOneMessageInMultipleRecords,
+    L7ServerTlsTest,
+    TlsServerOneMessageInMultipleRecords,
+    TlsServerMockResponse,
+)
 
 
 class L7ServerTlsFatalResponse(TlsServerHandshake):
-    def _process_handshake_message(self, record, last_handshake_message_type):
+    def _process_handshake_message(self, message, last_handshake_message_type):
         self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.USER_CANCELED)
         raise StopIteration()
 
 
 class L7ServerSslPlainTextResponse(SslServerHandshake):
-    def _process_handshake_message(self, record, last_handshake_message_type):
+    def _process_handshake_message(self, message, last_handshake_message_type):
         self.l4_transfer.send(b'\x00\x01\x00\xff\x00')
         raise StopIteration()
 
@@ -505,6 +513,20 @@ class TestClientDoH(TestL7ClientBase):
 
 
 class TestTlsClientHandshake(TestL7ClientBase):
+    def test_error_connection_closed_during_the_handshake(self):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsCloseDuringHandshake('localhost', 0, timeout=0.2),
+        )
+        threaded_server.start()
+
+        l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersionFinal(TlsVersion.TLS1_2), ], 'localhost')
+
+        with self.assertRaises(NetworkError) as context_manager:
+            l7_client.do_tls_handshake(client_hello)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
     def test_error_always_alert_wargning(self):
         threaded_server = L7ServerTlsTest(
             L7ServerTls('localhost', 0, timeout=0.2, configuration=TlsServerConfiguration(protocol_versions=[])),
@@ -515,9 +537,15 @@ class TestTlsClientHandshake(TestL7ClientBase):
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(
-        TlsRecord, 'content_type', mock.PropertyMock(return_value=TlsContentType.CHANGE_CIPHER_SPEC)
+        TlsRecord, 'parse_immutable', return_value=(
+            TlsRecord(
+                TlsChangeCipherSpecMessage().compose(),
+                content_type=TlsContentType.CHANGE_CIPHER_SPEC,
+            ),
+            1,
+        )
     )
-    def test_error_non_handshake_message(self):
+    def test_error_non_handshake_message(self, _):
         with self.assertRaises(TlsAlert) as context_manager:
             self.assertEqual(self.get_result('https', 'badssl.com', None).versions, [])
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
@@ -547,6 +575,21 @@ class TestTlsClientHandshake(TestL7ClientBase):
         with self.assertRaises(SecurityError) as context_manager:
             l7_client.do_ssl_handshake(client_hello)
         self.assertEqual(context_manager.exception.error, SecurityErrorType.UNPARSABLE_MESSAGE)
+
+    def test_one_message_in_multiple_records(self):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsOneMessageInMultipleRecords('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+
+        l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersionFinal(TlsVersion.TLS1_2), ], 'localhost')
+
+        self.assertEqual(
+            l7_client.do_tls_handshake(client_hello),
+            {TlsHandshakeType.SERVER_HELLO: TlsServerOneMessageInMultipleRecords.SERVER_HELLO_MESSAGE}
+        )
 
 
 class TestSslClientHandshake(unittest.TestCase):
@@ -578,8 +621,14 @@ class TestSslClientHandshake(unittest.TestCase):
     @mock.patch.object(
         L4ClientTCP, 'buffer',
         mock.PropertyMock(side_effect=[
-            TlsRecord([TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY), ]).compose() +
-            TlsRecord([TlsAlertMessage(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE), ]).compose(),
+            TlsRecord(
+                TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY).compose(),
+                content_type=TlsContentType.ALERT,
+            ).compose() +
+            TlsRecord(
+                TlsAlertMessage(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE).compose(),
+                content_type=TlsContentType.ALERT,
+            ).compose(),
             True,
             b'some text content',
             b'some text content',
@@ -587,7 +636,6 @@ class TestSslClientHandshake(unittest.TestCase):
         ])
     )
     def test_error_multiple_record_resonse(self, _):
-        print(TlsRecord([TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY), ]).compose())
         with self.assertRaises(SecurityError) as context_manager:
             L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
         self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
@@ -598,9 +646,10 @@ class TestSslClientHandshake(unittest.TestCase):
         mock.PropertyMock(side_effect=[
             b'',
             True,
-            TlsRecord([
-                TlsAlertMessage(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE)
-            ]).compose()
+            TlsRecord(
+                TlsAlertMessage(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE).compose(),
+                content_type=TlsContentType.ALERT
+            ).compose()
         ])
     )
     def test_error_unacceptable_tls_error_replied(self, _):

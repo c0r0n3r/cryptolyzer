@@ -131,15 +131,18 @@ class SshServerHandshake(L7ServerHandshakeBase, SshHandshakeBase):
 
         return record, is_handshake
 
-    def _process_handshake_message(self, record, last_handshake_message_type):
-        self._last_processed_message_type = record.packet.get_message_code()
-        self.client_messages[self._last_processed_message_type] = record.packet
+    def _parse_message(self, record):
+        return record.packet
+
+    def _process_handshake_message(self, message, last_handshake_message_type):
+        self._last_processed_message_type = message.get_message_code()
+        self.client_messages[self._last_processed_message_type] = message
 
         if self._last_processed_message_type == last_handshake_message_type:
             self._send_disconnect(SshReasonCode.HOST_NOT_ALLOWED_TO_CONNECT, 'not allowed to connect')
             raise StopIteration()
 
-    def _process_non_handshake_message(self, record):
+    def _process_non_handshake_message(self, message):
         self._send_disconnect(SshReasonCode.PROTOCOL_ERROR, 'protocol error', 'en')
         raise StopIteration()
 
