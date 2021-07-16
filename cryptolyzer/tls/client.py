@@ -38,9 +38,11 @@ from cryptoparser.tls.subprotocol import (
     SslMessageType,
     TlsAlertDescription,
     TlsAlertLevel,
+    TlsAlertMessage,
     TlsContentType,
     TlsHandshakeClientHello,
     TlsHandshakeType,
+    TlsSubprotocolMessageParser,
 )
 from cryptoparser.tls.extension import (
     TlsExtensionECPointFormats,
@@ -814,8 +816,8 @@ class TlsClient(object):
     _last_processed_message_type = attr.ib(init=False, default=None)
     server_messages = attr.ib(init=False, default={})
 
-    @staticmethod
-    def raise_response_error(transfer):
+    @classmethod
+    def raise_response_error(cls, transfer):
         response_is_plain_text = transfer.buffer and transfer.buffer_is_plain_text
         transfer.flush_buffer()
 
@@ -830,22 +832,42 @@ class TlsClient(object):
 
 
 class TlsClientHandshake(TlsClient):
-    def _process_record(self, protocol_version, record, last_handshake_message_type):
-        for handshake_message in record.messages:
-            handshake_type = handshake_message.get_handshake_type()
-            is_repeated_messages = handshake_type in self.server_messages
-            last_processed_message_type = handshake_message.get_handshake_type()
-            self.server_messages[last_processed_message_type] = handshake_message
+    def _process_handshake_message(self, protocol_version, message, last_handshake_message_type):
+        handshake_type = message.get_handshake_type()
+        is_repeated_messages = handshake_type in self.server_messages
+        self.server_messages[handshake_type] = message
 
-            if is_repeated_messages:
-                raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
-            if (handshake_type == TlsHandshakeType.SERVER_HELLO and
-                    handshake_message.random != TLS_HANDSHAKE_HELLO_RETRY_REQUEST_RANDOM and
-                    not handshake_message.protocol_version == protocol_version):
-                raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
+        if is_repeated_messages:
+            raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
 
-            if last_processed_message_type == last_handshake_message_type:
-                raise StopIteration
+        if (handshake_type == TlsHandshakeType.SERVER_HELLO and
+                message.random != TLS_HANDSHAKE_HELLO_RETRY_REQUEST_RANDOM and
+                not message.protocol_version == protocol_version):
+            raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
+
+        if handshake_type == last_handshake_message_type:
+            raise StopIteration
+
+    @classmethod
+    def _process_non_handshake_message(cls, content_type, message):
+        if content_type != TlsContentType.ALERT:
+            raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
+
+        if (message.level == TlsAlertLevel.FATAL or
+                message.description == TlsAlertDescription.CLOSE_NOTIFY):
+            raise TlsAlert(message.description)
+
+    @classmethod
+    def _process_invalid_message(cls, transfer):
+        cls.raise_response_error(transfer)
+
+    @classmethod
+    def _send_hello(cls, transfer, hello_message, record_version):
+        tls_record_bytes = TlsRecord(hello_message.compose(), record_version, TlsContentType.HANDSHAKE).compose()
+        try:
+            transfer.send(tls_record_bytes)
+        except socket.timeout as e:
+            six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
 
     def do_handshake(
             self,
@@ -855,40 +877,44 @@ class TlsClientHandshake(TlsClient):
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
     ):
         self.server_messages = {}
+        self._send_hello(transfer, hello_message, record_version)
 
-        tls_record = TlsRecord([hello_message, ], record_version)
-        transfer.send(tls_record.compose())
-
+        record_buffer = bytearray()
         while True:
             try:
-                record = TlsRecord.parse_exact_size(transfer.buffer)
-                transfer.flush_buffer()
+                while True:
+                    record, parsed_length = TlsRecord.parse_immutable(transfer.buffer)
+                    record_buffer += record.fragment
+                    transfer.flush_buffer(parsed_length)
 
-                if record.content_type == TlsContentType.ALERT:
-                    if (record.messages[0].level == TlsAlertLevel.FATAL or
-                            record.messages[0].description == TlsAlertDescription.CLOSE_NOTIFY):
-                        raise TlsAlert(record.messages[0].description)
+                    if not transfer.buffer:
+                        break
 
-                    transfer.flush_buffer()
-                    continue
+                subprotocol_parser = TlsSubprotocolMessageParser(record.content_type)
 
-                if record.content_type != TlsContentType.HANDSHAKE:
-                    raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
+                while record_buffer:
+                    message, parsed_length = subprotocol_parser.parse(record_buffer)
+                    record_buffer = record_buffer[parsed_length:]
 
-                self._process_record(hello_message.protocol_version, record, last_handshake_message_type)
+                    if record.content_type == TlsContentType.HANDSHAKE:
+                        self._process_handshake_message(
+                            hello_message.protocol_version, message, last_handshake_message_type
+                        )
+                    else:
+                        self._process_non_handshake_message(record.content_type, message)
 
                 receivable_byte_num = 0
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
             except (InvalidType, InvalidValue):
-                self.raise_response_error(transfer)
+                self._process_invalid_message(transfer)
             except StopIteration:
                 return
 
             try:
                 transfer.receive(receivable_byte_num)
             except NotEnoughData as e:
-                if transfer.buffer:
+                if transfer.buffer or record_buffer:
                     six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
 
                 six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
@@ -946,14 +972,15 @@ class SslClientHandshake(TlsClient):
                     except (InvalidType, InvalidValue, NotEnoughData, TooMuchData):
                         self.raise_response_error(transfer)
                     else:
-                        if (tls_record.content_type == TlsContentType.ALERT and
-                                (tls_record.messages[0].description in [
-                                    TlsAlertDescription.PROTOCOL_VERSION,
-                                    TlsAlertDescription.HANDSHAKE_FAILURE,
-                                    TlsAlertDescription.CLOSE_NOTIFY,
-                                    TlsAlertDescription.INTERNAL_ERROR,
-                                ])):
-                            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                        if tls_record.content_type == TlsContentType.ALERT:
+                            message, _ = TlsAlertMessage.parse_immutable(tls_record.fragment)
+                            if message.description in [
+                                        TlsAlertDescription.PROTOCOL_VERSION,
+                                        TlsAlertDescription.HANDSHAKE_FAILURE,
+                                        TlsAlertDescription.CLOSE_NOTIFY,
+                                        TlsAlertDescription.INTERNAL_ERROR,
+                                    ]:
+                                six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
 
                         six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
                 else:

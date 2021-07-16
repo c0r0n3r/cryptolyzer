@@ -5,9 +5,10 @@ try:
 except ImportError:
     import mock
 
+import socket
+
 import six
 
-from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.extension import TlsNamedCurve
@@ -110,8 +111,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         threaded_server.start()
         self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).curves, [])
 
-    @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData)
-    @mock.patch.object(L4ClientTCP, 'buffer', mock.PropertyMock(side_effect=[b'', b'some content', ]))
+    @mock.patch.object(L4ClientTCP, 'send', side_effect=socket.timeout)
     def test_error_connection_closed_during_the_handshake(self, _):
         with self.assertRaises(NetworkError) as context_manager:
             self.get_result('badssl.com', 443)

@@ -83,11 +83,15 @@ class L7ServerHandshakeBase(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _process_handshake_message(self, record, last_handshake_message_type):
+    def _parse_message(self, record):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _process_non_handshake_message(self, record):
+    def _process_handshake_message(self, message, last_handshake_message_type):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_non_handshake_message(self, message):
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -106,7 +110,8 @@ class L7ServerHandshakeBase(object):
         while True:
             try:
                 try:
-                    (record, is_handshake) = self._parse_record()
+                    record, is_handshake = self._parse_record()
+                    message = self._parse_message(record)
                     self.l4_transfer.flush_buffer()
                     receivable_byte_num = 0
                 except NotEnoughData as e:
@@ -115,9 +120,9 @@ class L7ServerHandshakeBase(object):
                     self._process_invalid_message()
                 else:
                     if is_handshake:
-                        self._process_handshake_message(record, last_handshake_message_type)
+                        self._process_handshake_message(message, last_handshake_message_type)
                     else:
-                        self._process_non_handshake_message(record)
+                        self._process_non_handshake_message(message)
 
                 try:
                     self.l4_transfer.receive(receivable_byte_num)

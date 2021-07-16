@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -14,6 +18,7 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertDescription,
     TlsAlertLevel,
     TlsAlertMessage,
+    TlsContentType,
     TlsExtensionsClient,
     TlsHandshakeType,
     TlsHandshakeServerHello,
@@ -61,7 +66,7 @@ class TestL7ServerBase(unittest.TestCase):
             self.assertEqual(actual_response.message, expected_response.message)
         else:
             actual_response = TlsRecord.parse_exact_size(l4_client.buffer)
-            self.assertEqual(actual_response.messages, expected_response.messages)
+            self.assertEqual(actual_response.fragment, expected_response.fragment)
         self._assert_on_more_data(l4_client)
         l4_client.close()
 
@@ -140,11 +145,17 @@ class TestL7ServerTls(TestL7ServerBase):
         self.threaded_server = self.create_server()
 
     def test_error_plain_text(self):
-        expected_response = TlsRecord([TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR), ])
+        expected_response = TlsRecord(
+            TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR).compose(),
+            content_type=TlsContentType.ALERT,
+        )
         self._send_binary_message(b'Plain text request', expected_response)
 
     def test_error_invalid_type(self):
-        expected_response = TlsRecord([TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR), ])
+        expected_response = TlsRecord(
+            TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR).compose(),
+            content_type=TlsContentType.ALERT,
+        )
         self._send_binary_message(b'\xff' + (TlsRecord.HEADER_SIZE - 1) * b'\x00', expected_response)
 
     def test_error_first_request_not_client_hello(self):
@@ -158,12 +169,20 @@ class TestL7ServerTls(TestL7ServerBase):
             l7_client.do_tls_handshake(hello_message=hello_message)
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
 
-    def test_error_alert_in_request(self):
+    @mock.patch.object(
+        TlsRecord, 'compose',
+        return_value=TlsRecord(
+            TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY).compose(),
+            TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+            TlsContentType.ALERT,
+        ).compose()
+    )
+    def test_error_alert_in_request(self, _):
         l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
         hello_message = TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY)
         with self.assertRaises(TlsAlert) as context_manager:
             l7_client.do_tls_handshake(hello_message=hello_message)
-        self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
+        self.assertEqual(context_manager.exception.description, TlsAlertDescription.CLOSE_NOTIFY)
 
     def test_handshake(self):
         self._test_tls_handshake(TlsProtocolVersionFinal(TlsVersion.TLS1_2))
