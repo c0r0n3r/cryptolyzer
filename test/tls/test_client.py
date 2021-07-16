@@ -420,6 +420,112 @@ class TestClientLDAP(TestL7ClientBase):
         )
 
 
+class TestClientSieve(TestL7ClientBase):
+    @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
+    @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
+    def test_error_send_socket_timeout(self, _):
+        with self.assertRaises(NetworkError) as context_manager:
+            self.get_result('sieve', 'mail.aa.net.uk', None)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    @unittest.skipIf(six.PY2, 'There is no TimeoutError in Python < 3.0')
+    def test_error_send_timeout_error(self):
+        with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
+                self.assertRaises(NetworkError) as context_manager:
+            self.get_result('sieve', 'lc.nasa.gov', None)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    @mock.patch.object(
+        TlsServerMockResponse,
+        '_get_mock_responses',
+        return_value=(b'"STARTTLS"\r\n', b'OK\r\n')
+    )
+    def test_no_starttls_response(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result(  # pylint: disable = expression-not-assigned
+                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+            ).versions,
+            []
+        )
+
+    @mock.patch.object(
+        TlsServerMockResponse,
+        '_get_mock_responses',
+        return_value=(b'"STARTTLS"\r\n', b'OK\r\n', b'ERROR\r\n')
+    )
+    def test_starttls_responses_error(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result(  # pylint: disable = expression-not-assigned
+                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+            ).versions,
+            []
+        )
+
+    @mock.patch.object(
+        TlsServerMockResponse,
+        '_get_mock_responses',
+        return_value=(u'αβγ'.encode('utf-8') + b'\r\n', )
+    )
+    def test_response_not_ascii(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result(  # pylint: disable = expression-not-assigned
+                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+            ).versions,
+            []
+        )
+
+    @mock.patch.object(
+        TlsServerMockResponse,
+        '_get_mock_responses',
+        return_value=(b'OK', )
+    )
+    def test_response_no_valid_response(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result(  # pylint: disable = expression-not-assigned
+                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+            ).versions,
+            []
+        )
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'OK\r\n', ))
+    def test_no_starttls_support(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        self.assertEqual(
+            self.get_result(  # pylint: disable = expression-not-assigned
+                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+            ).versions,
+            []
+        )
+
+    def test_sieve_client(self):
+        self.assertEqual(
+            self.get_result('sieve', 'mail.aa.net.uk', None).versions,
+            [
+                TlsProtocolVersionFinal(tls_version)
+                for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
+        )
+
+
 class TestClientXMPP(TestL7ClientBase):
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'<stream:error>', ))
     def test_error_stream_error(self, _):

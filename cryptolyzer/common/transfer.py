@@ -92,11 +92,13 @@ class L4TransferTCP(L4TransferBase):
                 raise NetworkError(NetworkErrorType.NO_CONNECTION)
             total_sent_byte_num = total_sent_byte_num + actual_sent_byte_num
 
-    def receive(self, receivable_byte_num):
+    def receive(self, receivable_byte_num, flags=0):
         total_received_byte_num = 0
         while total_received_byte_num < receivable_byte_num:
             try:
-                actual_received_bytes = self._socket.recv(min(receivable_byte_num - total_received_byte_num, 1024))
+                actual_received_bytes = self._socket.recv(
+                    min(receivable_byte_num - total_received_byte_num, 1024), flags
+                )
                 self._buffer += actual_received_bytes
                 total_received_byte_num += len(actual_received_bytes)
             except socket.error:
@@ -105,22 +107,24 @@ class L4TransferTCP(L4TransferBase):
             if not actual_received_bytes:
                 raise NotEnoughData(receivable_byte_num - total_received_byte_num)
 
+        return total_received_byte_num
+
     def receive_until(self, terminator, max_line_length=None):
         terminator_len = len(terminator)
-        original_buffer_len = len(self._buffer)
-        self.receive(terminator_len)
+        total_received_byte_num = self.receive(terminator_len)
 
         while True:
             if self._buffer[-terminator_len:] == terminator:
                 break
 
-            self._buffer += self._socket.recv(1)
-
-            if max_line_length is not None and (len(self._buffer) - original_buffer_len) == max_line_length:
+            total_received_byte_num += self.receive(1)
+            if max_line_length is not None and total_received_byte_num == max_line_length:
                 raise StopIteration
 
-    def receive_line(self, max_line_length):
-        self.receive_until(b'\n', max_line_length - 1)
+        return total_received_byte_num
+
+    def receive_line(self, max_line_length=None):
+        return self.receive_until(b'\n', max_line_length - 1 if max_line_length is not None else None)
 
     @abc.abstractmethod
     def _init_connection(self):
