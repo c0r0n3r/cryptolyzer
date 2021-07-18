@@ -6,7 +6,7 @@ import datetime
 import attr
 import six
 
-from cryptoparser.tls.algorithm import TlsNextProtocolName, TlsProtocolName
+from cryptoparser.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
 
 from cryptoparser.tls.extension import (
     TlsExtensionApplicationLayerProtocolNegotiation,
@@ -31,6 +31,7 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAnyAlgorithm,
     TlsHandshakeClientHelloBlockCipherModeCBC,
+    TlsHandshakeClientHelloKeyExchangeECDHx,
     TlsAlert,
 )
 
@@ -54,6 +55,10 @@ class AnalyzerResultExtensions(AnalyzerResultTls):
     encrypt_then_mac_supported = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(bool)),
         metadata={'human_readable_name': 'Encrypt then MAC Supported'}
+    )
+    ec_point_formats = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsECPointFormat)),
+        metadata={'human_readable_name': 'EC Point Formats'}
     )
 
 
@@ -244,6 +249,18 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return True
 
+    @classmethod
+    def _analyze_ec_point_formats(cls, analyzable, protocol_version):
+        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(protocol_version, analyzable.address)
+        try:
+            extension = AnalyzerExtensions._get_symmetric_extension(
+                analyzable, client_hello, TlsExtensionType.EC_POINT_FORMATS
+            )
+        except KeyError:
+            return [TlsECPointFormat.UNCOMPRESSED, ]
+
+        return extension.point_formats
+
     def analyze(self, analyzable, protocol_version):
         supported_protocol_names = self._analyze_alpn(analyzable, protocol_version)
         supported_next_protocol_names = self._analyze_npn(analyzable, protocol_version)
@@ -254,6 +271,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         session_ticket_supported = self._analyze_session_ticket(analyzable, protocol_version)
         extended_master_secret_supported = self._analyze_extended_master_secret(analyzable, protocol_version)
         encrypt_then_mac_supported = self._analyze_encrypt_than_mac(analyzable, protocol_version)
+        ec_point_formats = self._analyze_ec_point_formats(analyzable, protocol_version)
 
         return AnalyzerResultExtensions(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
@@ -266,4 +284,5 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             session_ticket_supported,
             extended_master_secret_supported,
             encrypt_then_mac_supported,
+            ec_point_formats,
         )

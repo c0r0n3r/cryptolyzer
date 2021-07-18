@@ -7,7 +7,7 @@ try:
 except ImportError:
     import mock
 
-from cryptoparser.tls.algorithm import TlsNextProtocolName, TlsProtocolName
+from cryptoparser.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsExtensionApplicationLayerProtocolNegotiation,
@@ -124,6 +124,23 @@ class TestTlsExtensions(unittest.TestCase):
             set(result.compression_methods),
             set([TlsCompressionMethod.NULL, ])
         )
+
+    def test_ec_point_formats(self):
+        result = self.get_result('ecc256.badssl.com', 433)
+        self.assertFalse(
+            result.encrypt_then_mac_supported,
+            [
+                TlsECPointFormat.UNCOMPRESSED,
+                TlsECPointFormat.ANSIX962_COMPRESSED_PRIME,
+                TlsECPointFormat.ANSIX962_COMPRESSED_CHAR2,
+            ]
+        )
+
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertFalse(
+            result.encrypt_then_mac_supported,
+            [TlsECPointFormat.UNCOMPRESSED, ]
+            )
 
     def test_encrypt_then_mac(self):
         result = self.get_result('tls-v1-0.badssl.com', 1010, TlsProtocolVersionFinal(TlsVersion.TLS1_0))
