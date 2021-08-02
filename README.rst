@@ -163,6 +163,7 @@ SSL/TLS
     * `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`_
     * `POP3 <https://en.wikipedia.org/wiki/Post_Office_Protocol>`_
     * `RDP <https://en.wikipedia.org/wiki/Remote_Desktop_Protocol>`_
+    * `Sieve <https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language)>`_
     * `SMTP <https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol>`_
     * `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`_
 

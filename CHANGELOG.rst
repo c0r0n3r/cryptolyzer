@@ -2,6 +2,16 @@
 Changelog
 =========
 
+Features
+--------
+
+.. _v0-7-0:
+
+* TLS (``tls``)
+
+  * Sieve opportunistic TLS (``STARTTLS``) support (#9)
+
+
 .. _v0-6-0:
 
 0.6.0 - 2021-05-27
