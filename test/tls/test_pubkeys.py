@@ -172,7 +172,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
 
     @mock.patch.object(
         AnalyzerPublicKeys, '_get_tls_certificate_chain',
-        side_effect=[ValueError, ValueError, ValueError]
+        side_effect=[ValueError, ValueError, ValueError, ValueError]
     )
     def test_error_unparsable_pubkey(self, _):
         result = self.get_result('www.cloudflare.com', 443)
@@ -198,7 +198,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
     def test_error_unrecognized_name(self, mocked_do_tls_handshake):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(len(result.pubkeys), 0)
-        self.assertEqual(mocked_do_tls_handshake.call_count, 2)
+        self.assertEqual(mocked_do_tls_handshake.call_count, 5)
 
     def test_eq(self):
         result_badssl_com = self.get_result('badssl.com', 443)

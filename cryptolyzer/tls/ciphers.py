@@ -13,7 +13,7 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType, Securit
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import (
     SslHandshakeClientHelloAnyAlgorithm,
-    TlsHandshakeClientHelloAnyAlgorithm,
+    TlsHandshakeClientHelloSpecalization,
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationGOST,
     TlsHandshakeClientHelloAuthenticationRSA,
@@ -41,6 +41,25 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         return 'Check which cipher suites supported by the server(s)'
 
     @staticmethod
+    def _handle_tls_alert(alert, retried_internal_error, checkable_cipher_suites, remaining_cipher_suites):
+        if len(checkable_cipher_suites) == len(remaining_cipher_suites):
+            if alert.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]:
+                return [], []
+            if alert.description == TlsAlertDescription.DECODE_ERROR:
+                return [], remaining_cipher_suites
+        if alert.description == TlsAlertDescription.INTERNAL_ERROR:  # maybe too many handshake request
+            if retried_internal_error:
+                raise alert
+
+            time.sleep(5)
+            raise OverflowError
+
+        if alert.description in AnalyzerCipherSuites._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
+            raise StopIteration
+
+        raise alert
+
+    @staticmethod
     def _next_accepted_cipher_suites(l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
         if isinstance(protocol_version, SslProtocolVersion):
             client_hello = SslHandshakeClientHelloAnyAlgorithm()
@@ -50,9 +69,14 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             accepted_cipher_suites.extend(server_messages[SslMessageType.SERVER_HELLO].cipher_kinds)
             raise StopIteration
 
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm([protocol_version, ], l7_client.address)
-        client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
-
+        client_hello = TlsHandshakeClientHelloSpecalization(
+            l7_client.address,
+            [protocol_version, ],
+            remaining_cipher_suites,
+            named_curves=None,
+            signature_algorithms=None,
+            extensions=[]
+        )
         server_messages = l7_client.do_tls_handshake(
             client_hello,
             record_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)
@@ -64,8 +88,8 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 accepted_cipher_suites.append(cipher_suite)
                 break
 
-    @staticmethod
-    def _get_accepted_cipher_suites(l7_client, protocol_version, checkable_cipher_suites):
+    @classmethod
+    def _get_accepted_cipher_suites(cls, l7_client, protocol_version, checkable_cipher_suites):
         retried_internal_error = False
         accepted_cipher_suites = []
         remaining_cipher_suites = copy.copy(checkable_cipher_suites)
@@ -75,27 +99,21 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 if retried_internal_error:
                     time.sleep(1)
 
-                AnalyzerCipherSuites._next_accepted_cipher_suites(
+                cls._next_accepted_cipher_suites(
                     l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites
                 )
             except StopIteration:
                 break
             except TlsAlert as e:
-                if (len(checkable_cipher_suites) == len(remaining_cipher_suites) and
-                        e.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]):
-                    return [], remaining_cipher_suites
-                if e.description == TlsAlertDescription.INTERNAL_ERROR:  # maybe too many handshake request
-                    if retried_internal_error:
-                        raise e
-
-                    retried_internal_error = True
-                    time.sleep(5)
-                    continue
-
-                if e.description in AnalyzerCipherSuites._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
+                try:
+                    return cls._handle_tls_alert(
+                        e, retried_internal_error, checkable_cipher_suites, remaining_cipher_suites
+                    )
+                except StopIteration:
                     break
-
-                raise e
+                except OverflowError:
+                    retried_internal_error = True
+                    continue
             except NetworkError as e:
                 if e.error == NetworkErrorType.NO_RESPONSE:
                     break
@@ -109,14 +127,14 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
         return accepted_cipher_suites, remaining_cipher_suites
 
-    @staticmethod
-    def _get_accepted_cipher_suites_all(l7_client, protocol_version, checkable_cipher_suites):
-        return AnalyzerCipherSuites._get_accepted_cipher_suites(
+    @classmethod
+    def _get_accepted_cipher_suites_all(cls, l7_client, protocol_version, checkable_cipher_suites):
+        return cls._get_accepted_cipher_suites(
             l7_client, protocol_version, checkable_cipher_suites
         )
 
-    @staticmethod
-    def _get_accepted_cipher_suites_fallback(l7_client, protocol_version):
+    @classmethod
+    def _get_accepted_cipher_suites_fallback(cls, l7_client, protocol_version):
         accepted_cipher_suites = []
         client_hello_messsages_in_order_of_probability = (
             TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
@@ -126,12 +144,12 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         )
         for client_hello in client_hello_messsages_in_order_of_probability:
             accepted_cipher_suites.extend(
-                AnalyzerCipherSuites._get_accepted_cipher_suites(
+                cls._get_accepted_cipher_suites(
                     l7_client, protocol_version, client_hello.cipher_suites
                 )[0]
             )
         if accepted_cipher_suites:
-            accepted_cipher_suites, _ = AnalyzerCipherSuites._get_accepted_cipher_suites(
+            accepted_cipher_suites, _ = cls._get_accepted_cipher_suites(
                 l7_client, protocol_version, accepted_cipher_suites
             )
 

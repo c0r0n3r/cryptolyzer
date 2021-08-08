@@ -2,6 +2,7 @@
 
 import attr
 
+from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionType
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
@@ -19,7 +20,7 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.tls.client import (
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
-    TlsHandshakeClientHelloAnyAlgorithm,
+    TlsHandshakeClientHelloSpecalization,
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationRarelyUsed,
@@ -146,7 +147,14 @@ class AnalyzerVersions(AnalyzerTlsBase):
         checkable_protocols = [TlsProtocolVersionFinal(TlsVersion.TLS1_3), ]
         checkable_protocols.extend([TlsProtocolVersionDraft(draft_version) for draft_version in range(28, 0, -1)])
         while checkable_protocols:
-            client_hello = TlsHandshakeClientHelloAnyAlgorithm(checkable_protocols, analyzable.address)
+            client_hello = TlsHandshakeClientHelloSpecalization(
+                analyzable.address,
+                checkable_protocols,
+                TlsCipherSuite,
+                named_curves=None,
+                signature_algorithms=None,
+                extensions=[],
+            )
 
             try:
                 server_messages = analyzable.do_tls_handshake(

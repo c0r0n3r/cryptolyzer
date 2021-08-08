@@ -32,6 +32,15 @@ Features
     * check which DH parameter sizes supported by the server by group exchange (#53)
     * check which DH parameter sizes supported by the server by key exchange (#53)
 
+Notable fixes
+-------------
+
+* TLS (``tls``)
+
+  * Generic
+
+    * handle server long cipher suite, signature algorithm list intolerance (#52)
+
 .. _v0-6-0:
 
 0.6.0 - 2021-05-27
