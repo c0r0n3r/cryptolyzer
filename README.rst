@@ -167,6 +167,15 @@ SSL/TLS
     * `SMTP <https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol>`_
     * `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`_
 
+* extensions
+
+  * `application-layer protocol negotiation <https://www.rfc-editor.org/rfc/rfc5077.html>`_
+  * `encrypt-then-MAC <https://www.rfc-editor.org/rfc/rfc7366.html>`_
+  * `extended master secret <https://www.rfc-editor.org/rfc/rfc7627.html>`_
+  * `next protocols negotiation <https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html>`_
+  * `renegotiation indication <https://www.rfc-editor.org/rfc/rfc5746.html>`_
+  * `session ticket <https://www.rfc-editor.org/rfc/rfc5077.html>`_
+
 Analyzers
 ---------
 
@@ -188,6 +197,8 @@ Analyzers
     | Elliptic Curves (``curves``)             |  n/a  |  n/a  |   ✓   |   ✓   |   ✓   |   ✓   |
     +------------------------------------------+-------+-------+-------+-------+-------+-------+
     | Diffie-Hellman parameters (``dhparams``) |  n/a  |  n/a  |   ✓   |   ✓   |   ✓   |   ✓   |
+    +------------------------------------------+-------+-------+-------+-------+-------+-------+
+    | Extensions (``extensions``)              |  n/a  |  n/a  |  n/a  |  n/a  |   ✓   |   ✓   |
     +------------------------------------------+-------+-------+-------+-------+-------+-------+
     | Signature Algorithms (``sigalgos``)      |  n/a  |  n/a  |  n/a  |   ✓   |   ✓   |   ✓   |
     +------------------------------------------+-------+-------+-------+-------+-------+-------+
