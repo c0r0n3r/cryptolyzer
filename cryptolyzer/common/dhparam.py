@@ -14,10 +14,18 @@ from .math import is_prime, prime_precheck
 
 @attr.s(eq=False)
 class DHParameterNumbers(object):
-    p = attr.ib(validator=attr.validators.instance_of(six.integer_types))  # pylint: disable=invalid-name
-    g = attr.ib(validator=attr.validators.instance_of(six.integer_types))  # pylint: disable=invalid-name
+    p = attr.ib(  # pylint: disable=invalid-name
+        validator=attr.validators.instance_of(six.integer_types),
+        metadata={'human_readable_name': 'p'},
+    )
+    g = attr.ib(  # pylint: disable=invalid-name
+        validator=attr.validators.instance_of(six.integer_types),
+        metadata={'human_readable_name': 'g'},
+    )
     q = attr.ib(  # pylint: disable=invalid-name
-        default=None, validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types)),
+        metadata={'human_readable_name': 'q'},
     )
 
     def __eq__(self, other):
@@ -26,7 +34,10 @@ class DHParameterNumbers(object):
 
 @attr.s
 class DHPublicNumbers(object):
-    y = attr.ib(validator=attr.validators.instance_of(six.integer_types))  # pylint: disable=invalid-name
+    y = attr.ib(  # pylint: disable=invalid-name
+        validator=attr.validators.instance_of(six.integer_types),
+        metadata={'human_readable_name': 'y'},
+    )
     parameter_numbers = attr.ib(validator=attr.validators.instance_of(DHParameterNumbers))
 
 
