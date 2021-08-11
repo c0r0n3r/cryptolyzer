@@ -652,21 +652,25 @@ class TlsDHParamVector(Vector):  # pylint: disable=too-many-ancestors
         return VectorParamNumeric(item_size=1, min_byte_num=1, max_byte_num=2 ** 16 - 1)
 
 
-def parse_dh_params(param_bytes):
+def get_dh_public_key_from_bytes(p_bytes, g_bytes, y_bytes):
+    p = int(''.join(map('{:02x}'.format, p_bytes)), 16)  # pylint: disable=invalid-name
+    g = int(''.join(map('{:02x}'.format, g_bytes)), 16)  # pylint: disable=invalid-name
+    y = int(''.join(map('{:02x}'.format, y_bytes)), 16)  # pylint: disable=invalid-name
+
+    parameter_numbers = DHParameterNumbers(p, g)
+    public_numbers = DHPublicNumbers(y, parameter_numbers)
+
+    return DHPublicKey(public_numbers, len(bytearray(p_bytes).lstrip(b'\x00')) * 8)
+
+
+def parse_tls_dh_params(param_bytes):
     parser = ParserBinary(param_bytes)
 
     parser.parse_parsable('p', TlsDHParamVector)
     parser.parse_parsable('g', TlsDHParamVector)
     parser.parse_parsable('y', TlsDHParamVector)
 
-    p = int(''.join(map('{:02x}'.format, parser['p'])), 16)  # pylint: disable=invalid-name
-    g = int(''.join(map('{:02x}'.format, parser['g'])), 16)  # pylint: disable=invalid-name
-    y = int(''.join(map('{:02x}'.format, parser['y'])), 16)  # pylint: disable=invalid-name
-
-    parameter_numbers = DHParameterNumbers(p, g)
-    public_numbers = DHPublicNumbers(y, parameter_numbers)
-
-    return DHPublicKey(public_numbers, len(parser['p']) * 8)
+    return get_dh_public_key_from_bytes(parser['p'], parser['g'], parser['y'])
 
 
 def parse_ecdh_params(param_bytes):
