@@ -23,10 +23,10 @@ class SshHandshakeBase(object):
 
         return parser
 
-    def do_key_exchange_init(self, transfer, protocol_message, key_exchange_init_message, last_message_type):
+    def do_key_exchange_init(self, transfer, protocol_message, key_exchange_init_message, last_handshake_message_type):
         parser = self.exchange_version(transfer, protocol_message)
         received_messages = {SshProtocolMessage: parser['protocol_message']}
-        if last_message_type == SshProtocolMessage:
+        if last_handshake_message_type == SshProtocolMessage:
             return received_messages
 
         transfer.flush_buffer(parser.parsed_length)

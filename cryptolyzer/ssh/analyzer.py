@@ -11,6 +11,7 @@ from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.result import AnalyzerResultAllSupportedVersions
 
 from cryptolyzer.ssh.ciphers import AnalyzerCiphers
+from cryptolyzer.ssh.dhparams import AnalyzerDHParams
 from cryptolyzer.ssh.versions import AnalyzerVersions
 
 
@@ -41,6 +42,7 @@ class ProtocolHandlerSsh2(ProtocolHandlerSshExactVersion):
     def get_analyzers(cls):
         return (
             AnalyzerCiphers,
+            AnalyzerDHParams,
         )
 
     @classmethod

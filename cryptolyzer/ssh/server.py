@@ -119,10 +119,10 @@ class SshServerHandshake(L7ServerHandshakeBase, SshHandshakeBase):
         )
 
         return self.do_key_exchange_init(
-            self.l4_transfer,
-            protocol_message,
-            key_exchange_init_message,
-            last_handshake_message_type
+            transfer=self.l4_transfer,
+            protocol_message=protocol_message,
+            key_exchange_init_message=key_exchange_init_message,
+            last_handshake_message_type=last_handshake_message_type
         )
 
     def _parse_record(self):

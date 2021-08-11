@@ -1,16 +1,25 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
-from cryptoparser.ssh.subprotocol import SshDisconnectMessage
+from cryptoparser.common.exception import NotEnoughData
+
+from cryptoparser.ssh.record import SshRecordInit
+from cryptoparser.ssh.subprotocol import SshDisconnectMessage, SshProtocolMessage
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
+from cryptolyzer.common.transfer import L4ClientTCP
+
 from cryptolyzer.ssh.client import L7ClientSsh
-from cryptolyzer.ssh.exception import SshDisconnect, SshReasonCode
-from cryptolyzer.ssh.server import L7ServerSsh
+from cryptolyzer.ssh.exception import SshReasonCode
+from cryptolyzer.ssh.server import L7ServerSsh, SshServerHandshake
 from cryptolyzer.ssh.versions import AnalyzerVersions
 
-from .classes import L7ServerSshTest, TestSshMessageInvalid
+from .classes import L7ServerSshTest
 
 
 class TestL7ServerBase(unittest.TestCase):
@@ -37,17 +46,35 @@ class TestSshServerHandshake(TestL7ServerBase):
         self.threaded_server.start()
         self.l7_client = L7ClientSsh('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
 
-    def test_error_non_handshake_message(self):
-        with self.assertRaises(SshDisconnect) as context_manager:
-            self.l7_client.do_handshake(
-                key_exchange_init_message=SshDisconnectMessage(SshReasonCode.BY_APPLICATION, 'by application')
-            )
-        self.assertEqual(context_manager.exception.reason, SshReasonCode.PROTOCOL_ERROR)
+    @staticmethod
+    def _receive_as_many_as_possibe_and_close(l4_client):
+        try:
+            while True:
+                l4_client.receive(1)
+        except NotEnoughData:
+            pass
+
+        l4_client.close()
+
+    @mock.patch.object(
+        SshServerHandshake, '_parse_record',
+        return_value=(SshRecordInit(SshDisconnectMessage(SshReasonCode.BY_APPLICATION, 'by application')), False)
+    )
+    def test_error_non_handshake_message(self, _):
+        l4_client = L4ClientTCP('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
+        l4_client.init_connection()
+
+        l4_client.send(SshProtocolMessage(SshProtocolVersion(SshVersion.SSH2, 0), 'software_version').compose())
+        l4_client.send(SshRecordInit(SshDisconnectMessage(SshReasonCode.BY_APPLICATION, 'by application')).compose())
+        SshRecordInit(SshDisconnectMessage(SshReasonCode.PROTOCOL_ERROR, 'protocol error', 'en')).compose()
+        self._receive_as_many_as_possibe_and_close(l4_client)
 
     def test_error_invalid_message(self):
-        with self.assertRaises(SshDisconnect) as context_manager:
-            self.l7_client.do_handshake(key_exchange_init_message=TestSshMessageInvalid())
-        self.assertEqual(context_manager.exception.reason, SshReasonCode.PROTOCOL_ERROR)
+        l4_client = L4ClientTCP('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
+        l4_client.init_connection()
+        l4_client.send(SshProtocolMessage(SshProtocolVersion(SshVersion.SSH2, 0), 'software_version').compose())
+        l4_client.send(b'\x00\x00\x00\x05\x00\x00\x00\x00\xff')
+        self._receive_as_many_as_possibe_and_close(l4_client)
 
     def test_ssh_client(self):
         result = self.get_result('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
