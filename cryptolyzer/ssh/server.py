@@ -12,7 +12,7 @@ from cryptoparser.ssh.ciphersuite import (
     SshKexAlgorithm,
     SshMacAlgorithm,
 )
-from cryptoparser.ssh.record import SshRecord
+from cryptoparser.ssh.record import SshRecordInit
 from cryptoparser.ssh.subprotocol import SshMessageCode, SshReasonCode, SshKeyExchangeInit, SshDisconnectMessage
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
@@ -126,7 +126,7 @@ class SshServerHandshake(L7ServerHandshakeBase, SshHandshakeBase):
         )
 
     def _parse_record(self):
-        record = SshRecord.parse_exact_size(self.l4_transfer.buffer)
+        record = SshRecordInit.parse_exact_size(self.l4_transfer.buffer)
         is_handshake = record.packet.get_message_code() == SshMessageCode.KEXINIT
 
         return record, is_handshake
@@ -158,7 +158,7 @@ class SshServerHandshake(L7ServerHandshakeBase, SshHandshakeBase):
         if language is not None:
             kwargs['language'] = language
 
-        self.l4_transfer.send(SshRecord(SshDisconnectMessage(**kwargs)).compose())
+        self.l4_transfer.send(SshRecordInit(SshDisconnectMessage(**kwargs)).compose())
 
 
 class L7ServerSsh(L7ServerSshBase):

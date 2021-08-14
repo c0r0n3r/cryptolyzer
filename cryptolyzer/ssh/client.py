@@ -4,7 +4,7 @@ import six
 
 from cryptoparser.common.exception import NotEnoughData
 
-from cryptoparser.ssh.record import SshRecord
+from cryptoparser.ssh.record import SshRecordInit
 from cryptoparser.ssh.subprotocol import SshProtocolMessage, SshKeyExchangeInit, SshMessageCode
 from cryptoparser.ssh.ciphersuite import (
     SshCompressionAlgorithm,
@@ -100,7 +100,7 @@ class SshClientHandshake(SshHandshakeBase):
 
         while True:
             try:
-                record, parsed_length = SshRecord.parse_immutable(transfer.buffer)
+                record, parsed_length = SshRecordInit.parse_immutable(transfer.buffer)
                 transfer.flush_buffer(parsed_length)
 
                 if record.packet.get_message_code() == SshMessageCode.DISCONNECT:

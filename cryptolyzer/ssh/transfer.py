@@ -4,7 +4,7 @@ import attr
 
 from cryptoparser.common.parse import ParserText
 
-from cryptoparser.ssh.record import SshRecord
+from cryptoparser.ssh.record import SshRecordInit
 
 from cryptoparser.ssh.subprotocol import SshProtocolMessage
 
@@ -30,6 +30,6 @@ class SshHandshakeBase(object):
             return received_messages
 
         transfer.flush_buffer(parser.parsed_length)
-        transfer.send(SshRecord(key_exchange_init_message).compose())
+        transfer.send(SshRecordInit(key_exchange_init_message).compose())
 
         return received_messages
