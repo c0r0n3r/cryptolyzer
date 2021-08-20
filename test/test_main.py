@@ -16,6 +16,7 @@ import test.ja3.test_generate
 import test.tls.test_ciphers
 import test.tls.test_curves
 import test.tls.test_dhparams
+import test.tls.test_extensions
 import test.tls.test_pubkeys
 import test.tls.test_pubkeyreq
 import test.tls.test_sigalgos
@@ -154,6 +155,23 @@ class TestMain(TestMainBase):
             443,
         )
         result = test.tls.test_dhparams.TestTlsDHParams.get_result(**func_arguments)
+        self.assertEqual(
+            self._get_test_analyzer_result_json(**cli_arguments),
+            result.as_json() + '\n'
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result_markdown(**cli_arguments),
+            result.as_markdown() + '\n'
+        )
+
+    def test_analyzer_output_tls_extensions(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            'extensions',
+            'dh2048.badssl.com',
+            443,
+        )
+        result = test.tls.test_extensions.TestTlsExtensions.get_result(**func_arguments)
         self.assertEqual(
             self._get_test_analyzer_result_json(**cli_arguments),
             result.as_json() + '\n'

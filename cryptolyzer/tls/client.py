@@ -16,7 +16,7 @@ import attr
 
 import six
 
-from cryptoparser.common.algorithm import Authentication, KeyExchange, NamedGroupType
+from cryptoparser.common.algorithm import Authentication, BlockCipherMode, KeyExchange, NamedGroupType
 from cryptoparser.common.exception import NotEnoughData, TooMuchData, InvalidType, InvalidValue
 
 from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm, TlsECPointFormat
@@ -343,6 +343,26 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
             protocol_versions=[protocol_version, ],
             cipher_suites=self._CIPHER_SUITES,
             named_curves=named_curves,
+            signature_algorithms=None,
+            extensions=[]
+        )
+
+
+class TlsHandshakeClientHelloBlockCipherModeCBC(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
+    _CIPHER_SUITES = [
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if cipher_suite.value.block_cipher_mode == BlockCipherMode.CBC
+    ]
+
+    def __init__(self, protocol_version, hostname):
+        super(TlsHandshakeClientHelloBlockCipherModeCBC, self).__init__(
+            hostname=hostname,
+            protocol_versions=[protocol_version, ],
+            cipher_suites=self._CIPHER_SUITES,
+            named_curves=None,
             signature_algorithms=None,
             extensions=[]
         )

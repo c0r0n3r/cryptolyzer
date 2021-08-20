@@ -9,8 +9,21 @@ Features
 
 * TLS (``tls``)
 
-  * Sieve opportunistic TLS (``STARTTLS``) support (#9)
+  * Extensions (``extensions``)
 
+    * add analyzer checking which `application-layer protocols <https://www.rfc-editor.org/rfc/rfc5077.html>`_ are
+      supported (#45)
+    * add analyzer checking whether `encrypt-then-MAC <https://www.rfc-editor.org/rfc/rfc7366.html>`_ mode is supported
+      (#45)
+    * add analyzer checking whether `extended master secret <https://www.rfc-editor.org/rfc/rfc7627.html>`_ is supported
+      (#45)
+    * add analyzer checking which `next protocols <https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html>`_ are
+      supported (#45)
+    * add analyzer checking whether `renegotiation indication <https://www.rfc-editor.org/rfc/rfc5746.html>`_ is
+      supported (#45)
+    * add analyzer checking whether `session ticket <https://www.rfc-editor.org/rfc/rfc5077.html>`_ is supported (#45)
+
+  * Sieve opportunistic TLS (``STARTTLS``) support (#9)
 
 .. _v0-6-0:
 
