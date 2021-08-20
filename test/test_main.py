@@ -52,10 +52,8 @@ class TestMain(TestMainBase):
             self.assertEqual(stdout.getvalue().split(os.linesep)[1], '* Error: ' + error_msg)
 
     def test_argument_parsing(self):
-        with open(os.devnull, 'w') as devnull, \
-                patch.object(sys, 'stdout', devnull), \
-                patch.object(sys, 'argv', ['cryptolyzer', '-h']):
-
+        devnull = six.StringIO()
+        with patch.object(sys, 'stdout', devnull), patch.object(sys, 'argv', ['cryptolyzer', '-h']):
             with self.assertRaises(SystemExit) as context_manager:
                 main()
             self.assertEqual(context_manager.exception.args[0], 0)
