@@ -26,7 +26,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
 
     @mock.patch.object(TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError)
     def test_error_missing_key_share_extension(self, _):
-        self.assertEqual(self.get_result('www.mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).dhparams, [])
+        self.assertEqual(self.get_result('mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).dhparams, [])
 
     def test_size(self):
         result = self.get_result('dh480.badssl.com', 443)
@@ -78,7 +78,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
             []
         )
 
-        result = self.get_result('www.mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
         self.assertEqual(
             [dhparam.public_key.public_numbers.parameter_numbers for dhparam in result.dhparams],
             [
