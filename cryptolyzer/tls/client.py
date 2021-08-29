@@ -5,8 +5,6 @@ import abc
 
 import ftplib
 import imaplib
-import poplib
-import smtplib
 
 import collections
 import socket
@@ -379,6 +377,7 @@ class TlsHandshakeClientHelloBlockCipherModeCBC(  # pylint: disable=too-many-anc
 
 
 @attr.s
+@six.add_metaclass(abc.ABCMeta)
 class L7ClientTlsBase(L7TransferBase):
     l4_transfer = attr.ib(init=False, default=None)
 
@@ -476,6 +475,114 @@ class L7ClientStartTlsBase(L7ClientTlsBase):
         self.l4_transfer.close()
 
 
+@attr.s
+class L7ClientStartTlsTextBase(L7ClientStartTlsBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_scheme(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_default_port(cls):
+        raise NotImplementedError()
+
+    @property
+    def _encoding(self):
+        return 'ascii'
+
+    @property
+    def _line_sep(self):
+        return '\r\n'
+
+    @property
+    def _capabilities_command(self):
+        return 'CAPABILITIES'
+
+    @property
+    def _starttls_command(self):
+        return 'STARTTLS'
+
+    @property
+    @abc.abstractmethod
+    def _starttls_ok_result(self):
+        raise NotImplementedError()
+
+    @property
+    @abc.abstractmethod
+    def _capabilities_ok_result(self):
+        raise NotImplementedError()
+
+    @property
+    @abc.abstractmethod
+    def _capabilities_terminator(self):
+        raise NotImplementedError()
+
+    def _update_capabilities(self, line, capabilities):
+        key_and_value = line.split(' ', 1)
+        key = key_and_value[0]
+        if len(key_and_value) > 1:
+            value = key_and_value[1]
+        else:
+            value = None
+
+        if key == self._capabilities_terminator:
+            raise StopIteration()
+
+        capabilities.update(collections.OrderedDict([(key, value)]))
+
+    def _get_capabilities(self):
+        self.l4_transfer.send((self._capabilities_command + self._line_sep).encode(self._encoding))
+        self.l4_transfer.receive_line()
+
+        capabilities_ok_result = str(self._capabilities_ok_result).encode(self._encoding)
+        if self.l4_transfer.buffer[:len(capabilities_ok_result)] != capabilities_ok_result:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        self.l4_transfer.flush_buffer()
+
+        capabilities = collections.OrderedDict()
+        while True:
+            self.l4_transfer.receive_line()
+            key_and_value = self.l4_transfer.buffer.decode('ascii').strip()
+            self.l4_transfer.flush_buffer()
+
+            try:
+                self._update_capabilities(key_and_value, capabilities)
+            except StopIteration:
+                break
+
+        return capabilities
+
+    def _init_l7(self):
+        try:
+            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client.init_connection()
+            self.l4_transfer = self._l7_client.l4_transfer
+
+            self.l4_transfer.receive_line()
+            self.l4_transfer.flush_buffer()
+
+            capabilities = self._get_capabilities()
+            if self._starttls_command in capabilities:
+                self.l4_transfer.send((self._starttls_command + self._line_sep).encode(self._encoding))
+
+                self.l4_transfer.receive_line()
+                starttls_ok_result = str(self._starttls_ok_result).encode(self._encoding)
+                if self.l4_transfer.buffer[:len(starttls_ok_result)] == starttls_ok_result:
+                    self.l4_transfer.flush_buffer()
+                else:
+                    raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+            else:
+                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        except UnicodeDecodeError as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+        except NotEnoughData as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+
+    def _deinit_l7(self):
+        pass
+
+
 class L7ClientTls(L7ClientTlsBase):
     @classmethod
     def get_scheme(cls):
@@ -517,7 +624,7 @@ class L7ClientPOP3S(L7ClientTlsBase):
 
 
 @attr.s
-class ClientPOP3(L7ClientStartTlsBase):
+class ClientPOP3(L7ClientStartTlsTextBase):
     @classmethod
     def get_scheme(cls):
         return 'pop3'
@@ -526,22 +633,25 @@ class ClientPOP3(L7ClientStartTlsBase):
     def get_default_port(cls):
         return 110
 
-    def _init_l7(self):
-        try:
-            self._l7_client = poplib.POP3(self.ip, self.port, self.timeout)
-            self.l4_transfer.init_connection(self._l7_client.sock)
+    @property
+    def _capabilities_command(self):
+        return 'CAPA'
 
-            response = self._l7_client._shortcmd('STLS')  # pylint: disable=protected-access
-            if len(response) < 3 or response[:3] != b'+OK':
-                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        except poplib.error_proto as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+    @property
+    def _starttls_command(self):
+        return 'STLS'
 
-    def _deinit_l7(self):
-        try:
-            self._l7_client.quit()
-        except poplib.error_proto:
-            self.l4_transfer.close()
+    @property
+    def _starttls_ok_result(self):
+        return '+OK'
+
+    @property
+    def _capabilities_ok_result(self):
+        return '+OK'
+
+    @property
+    def _capabilities_terminator(self):
+        return '.'
 
 
 class L7ClientSMTPS(L7ClientTlsBase):
@@ -554,7 +664,7 @@ class L7ClientSMTPS(L7ClientTlsBase):
         return 465
 
 
-class ClientSMTP(L7ClientStartTlsBase):
+class ClientSMTP(L7ClientStartTlsTextBase):
     @classmethod
     def get_scheme(cls):
         return 'smtp'
@@ -563,26 +673,33 @@ class ClientSMTP(L7ClientStartTlsBase):
     def get_default_port(cls):
         return 587
 
-    def _init_l7(self):
-        try:
-            self._l7_client = smtplib.SMTP(timeout=self.l4_transfer.timeout)
-            self._l7_client.connect(self.ip, self.port)
-            self.l4_transfer.init_connection(self._l7_client.sock)
+    @property
+    def _capabilities_command(self):
+        return 'EHLO cryptolyzer'
 
-            self._l7_client.ehlo()
-            if not self._l7_client.has_extn('STARTTLS'):
-                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-            response, _ = self._l7_client.docmd('STARTTLS')
-            if response != 220:
-                raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        except smtplib.SMTPException as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+    @property
+    def _starttls_ok_result(self):
+        return '220'
 
-    def _deinit_l7(self):
-        try:
-            self._l7_client.quit()
-        except smtplib.SMTPServerDisconnected:
-            pass
+    @property
+    def _capabilities_ok_result(self):
+        return '250'
+
+    @property
+    def _capabilities_terminator(self):
+        return None
+
+    def _update_capabilities(self, line, capabilities):
+        if len(line) < 4 or not line.startswith('250'):
+            raise StopIteration()
+
+        is_last_line = line[3] == ' '
+        line = line[4:]
+
+        super(ClientSMTP, self)._update_capabilities(line, capabilities)
+
+        if is_last_line:
+            raise StopIteration()
 
 
 class L7ClientIMAPS(L7ClientTlsBase):
