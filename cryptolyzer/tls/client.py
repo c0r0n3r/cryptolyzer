@@ -947,6 +947,38 @@ class ClientLDAP(L7ClientStartTlsBase):
         pass
 
 
+class L7ClientNNTPS(L7ClientTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'nntps'
+
+    @classmethod
+    def get_default_port(cls):
+        return 563
+
+
+class ClientNNTP(L7ClientStartTlsTextBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'nntp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 119
+
+    @property
+    def _starttls_ok_result(self):
+        return 382
+
+    @property
+    def _capabilities_ok_result(self):
+        return 101
+
+    @property
+    def _capabilities_terminator(self):
+        return '.'
+
+
 class ClientSieve(L7ClientStartTlsBase):
     @classmethod
     def get_scheme(cls):

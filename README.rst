@@ -163,6 +163,7 @@ SSL/TLS
     * `FTP <https://en.wikipedia.org/wiki/File_Transfer_Protocol>`_
     * `IMAP <https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol>`_
     * `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`_
+    * `NNTP <https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol>`_
     * `POP3 <https://en.wikipedia.org/wiki/Post_Office_Protocol>`_
     * `RDP <https://en.wikipedia.org/wiki/Remote_Desktop_Protocol>`_
     * `Sieve <https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language)>`_

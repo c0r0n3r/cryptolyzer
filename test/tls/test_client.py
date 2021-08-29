@@ -473,6 +473,55 @@ class TestClientLDAP(TestL7ClientBase):
         )
 
 
+class TestClientNNTP(TestL7ClientBase):
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'200 Server ready\r\n',
+            b'502 Command unavailable\r\n',
+        ]),
+    ))
+    def test_error_unsupported_capabilities(self, _):
+        result = self._get_mock_server_response('nntp')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'200 Server ready\r\n',
+            b'101 capability list\r\n',
+            b'.\r\n',
+        ]),
+    ))
+    def test_error_unsupported_starttls(self, _):
+        result = self._get_mock_server_response('nntp')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'200 Server ready\r\n',
+            b'101 capability list\r\n',
+            b'STARTTLS\r\n',
+            b'.\r\n',
+            b'502 Command unavailable\r\n',
+        ]),
+    ))
+    def test_error_starttls_error(self, _):
+        result = self._get_mock_server_response('nntp')
+        self.assertEqual(result.versions, [])
+
+    def test_default_port(self):
+        l7_client = L7ClientTlsBase.from_scheme('nntp', 'localhost')
+        self.assertEqual(l7_client.port, 119)
+
+    def test_nntp_client(self):
+        self.assertEqual(
+            self.get_result('nntps', 'secure-us.news.easynews.com', None).versions,
+            [
+                TlsProtocolVersionFinal(tls_version)
+                for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
+        )
+
+
 class TestClientSieve(TestL7ClientBase):
     @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
