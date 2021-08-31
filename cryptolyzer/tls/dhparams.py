@@ -12,7 +12,7 @@ from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import (
-    parse_dh_params,
+    parse_tls_dh_params,
     DHParameter,
     DHPublicKey,
     DHPublicNumbers,
@@ -76,7 +76,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
     @staticmethod
     def _get_public_key_tls_1_x(server_messages):
         server_key_exchange_message = server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
-        return parse_dh_params(server_key_exchange_message.param_bytes)
+        return parse_tls_dh_params(server_key_exchange_message.param_bytes)
 
     @staticmethod
     def _get_dh_param(analyzable, is_tls_1_3, client_hello):

@@ -25,6 +25,13 @@ Features
 
   * Sieve opportunistic TLS (``STARTTLS``) support (#9)
 
+* SSH (``ssh``)
+
+  * Diffie-Hellman (``dhparams``)
+
+    * check which DH parameter sizes supported by the server by group exchange (#53)
+    * check which DH parameter sizes supported by the server by key exchange (#53)
+
 .. _v0-6-0:
 
 0.6.0 - 2021-05-27

@@ -3,6 +3,7 @@
 from test.common.classes import TestMainBase
 
 import test.ssh.test_ciphers
+import test.ssh.test_dhparams
 import test.ssh.test_versions
 
 import urllib3
@@ -29,6 +30,17 @@ class TestMain(TestMainBase):
         self.assertEqual(
             self._get_test_analyzer_result_json('ssh2', 'ciphers', self.address),
             test.ssh.test_ciphers.TestSshCiphers.get_result(six.u(self.host), self.port).as_json() + '\n'
+        )
+
+    def test_dhparams(self):
+        result = test.ssh.test_dhparams.TestSshDHParams.get_result('gitlab.com', 22)
+        self.assertEqual(
+            self._get_test_analyzer_result_json('ssh2', 'dhparams', 'gitlab.com'),
+            result.as_json() + '\n'
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result_markdown('ssh2', 'dhparams', 'gitlab.com'),
+            result.as_markdown() + '\n',
         )
 
     def test_versions(self):
