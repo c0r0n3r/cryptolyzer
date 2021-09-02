@@ -44,6 +44,7 @@ setup(
     license=__setup__.__license__,
     license_files=['LICENSE.txt', ],
     url=__setup__.__url__,
+    keywords='ssl tls gost ja3 https pop3 smtp imap ftp rdp xmpp jabber ldap sieve ssh hsts',
     entry_points={
         'console_scripts': ['cryptolyze = cryptolyzer.__main__:main']
     },
