@@ -70,6 +70,8 @@ setup(
 
     classifiers=[
         'Development Status :: 3 - Alpha',
+        'Environment :: Console',
+        'Framework :: tox',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
         'Intended Audience :: Science/Research',
