@@ -36,6 +36,7 @@ setup(
     version=__setup__.__version__,
     description=__setup__.__description__,
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     author=__setup__.__author__,
     author_email=__setup__.__author_email__,
     maintainer=__setup__.__author__,
