@@ -61,7 +61,7 @@ from cryptoparser.tls.extension import (
 )
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, TlsProtocolVersionDraft, SslVersion
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.exception import TlsAlert
@@ -69,6 +69,58 @@ from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
 
 
 class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
+    @classmethod
+    def _get_signature_algorithms(cls, is_tls1_3_supported, cipher_suites):
+        if is_tls1_3_supported:
+            authentications_not_exist_in_tls1_3 = [Authentication.anon, Authentication.DSS]
+            signature_algorithms = [
+                signature_algorithm
+                for signature_algorithm in TlsSignatureAndHashAlgorithm
+                if (signature_algorithm.value.signature_algorithm not in authentications_not_exist_in_tls1_3 and
+                    signature_algorithm.value.hash_algorithm is not None)
+            ]
+        else:
+            authentication_algorithms = set(
+                cipher_suite.value.authentication
+                for cipher_suite in cipher_suites
+                if cipher_suite.value.authentication is not None
+            )
+            signature_algorithms = [
+                signature_algorithm
+                for signature_algorithm in TlsSignatureAndHashAlgorithm
+                if signature_algorithm.value.signature_algorithm in authentication_algorithms
+            ]
+
+        return signature_algorithms
+
+    @classmethod
+    def _get_tls1_3_extensions(cls, protocol_versions, named_curves, signature_algorithms):
+        key_share_entries = [
+            TlsKeyShareEntry(
+                named_curve, (
+                    random.randint(0, 255)
+                    for i in range(
+                        int(named_curve.value.named_group.value.size / 8) +
+                        (1 if named_curve.value.named_group.value.size % 8 else 0)
+                    )
+                )
+            )
+            for named_curve in named_curves
+            if (named_curve.value.named_group is not None and
+                named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
+        ]
+
+        extensions = [
+            TlsExtensionKeyShareReservedClient(key_share_entries),
+            TlsExtensionKeyShareClient(key_share_entries),
+            TlsExtensionSupportedVersionsClient(protocol_versions),
+        ]
+
+        if signature_algorithms:
+            extensions.append(TlsExtensionSignatureAlgorithmsCert(signature_algorithms))
+
+        return extensions
+
     def __init__(
             self,
             hostname,
@@ -78,53 +130,30 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             signature_algorithms,
             extensions
     ):  # pylint: disable=too-many-arguments
-        is_tls1_3_supported = self._is_tls1_3_supported(protocol_versions)
+        protocol_version_min = min(protocol_versions)
+        is_tls1_3_supported = max(protocol_versions) > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
 
         if hostname is not None:
             extensions.append(TlsExtensionServerName(hostname))
         if named_curves is None:
             named_curves = list(TlsNamedCurve)
+
         if signature_algorithms is None:
-            signature_algorithms = list((
-                signature_algorithm
-                for signature_algorithm in TlsSignatureAndHashAlgorithm
-                if not is_tls1_3_supported or (
-                    signature_algorithm.value.signature_algorithm not in [Authentication.anon, Authentication.DSS] and
-                    signature_algorithm.value.hash_algorithm is not None)
-            ))
+            signature_algorithms = self._get_signature_algorithms(is_tls1_3_supported, cipher_suites)
 
         if is_tls1_3_supported:
             #  filter out non TLS 1.3 cipher suites
             cipher_suites = [
-                cipher_suites
-                for cipher_suites in TlsCipherSuite
-                if cipher_suites.value.min_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+                cipher_suite
+                for cipher_suite in cipher_suites
+                if cipher_suite.value.min_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
             ]
 
-            key_share_entries = [
-                TlsKeyShareEntry(
-                    named_curve, (
-                        random.randint(0, 255)
-                        for i in range(
-                            int(named_curve.value.named_group.value.size / 8) +
-                            (1 if named_curve.value.named_group.value.size % 8 else 0)
-                        )
-                    )
-                )
-                for named_curve in named_curves
-                if (named_curve.value.named_group is not None and
-                    named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
-            ]
-
-            extensions.extend([
-                TlsExtensionKeyShareReservedClient(key_share_entries),
-                TlsExtensionKeyShareClient(key_share_entries),
-            ])
-            extensions.append(TlsExtensionSupportedVersionsClient(protocol_versions))
+            extensions.extend(self._get_tls1_3_extensions(protocol_versions, named_curves, signature_algorithms))
         elif len(protocol_versions) > 1:
             raise NotImplementedError
 
-        if is_tls1_3_supported or protocol_versions[0] >= TlsProtocolVersionFinal(TlsVersion.TLS1_0):
+        if protocol_version_min >= TlsProtocolVersionFinal(TlsVersion.TLS1_0):
             if named_curves:
                 extensions.append(TlsExtensionEllipticCurves(named_curves))
 
@@ -133,25 +162,16 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
 
         if signature_algorithms:
             extensions.append(TlsExtensionSignatureAlgorithms(signature_algorithms))
-            if is_tls1_3_supported:
-                extensions.append(TlsExtensionSignatureAlgorithmsCert(signature_algorithms))
 
         if is_tls1_3_supported:
             protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
         else:
-            protocol_version = protocol_versions[0]
+            protocol_version = protocol_version_min
 
         super(TlsHandshakeClientHelloSpecalization, self).__init__(
             cipher_suites=cipher_suites,
             protocol_version=protocol_version,
             extensions=TlsExtensionsClient(extensions)
-        )
-
-    @classmethod
-    def _is_tls1_3_supported(cls, protocol_versions):
-        return any(
-            version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
-            for version in protocol_versions
         )
 
 
@@ -162,11 +182,7 @@ class TlsHandshakeClientHelloAnyAlgorithm(  # pylint: disable=too-many-ancestors
         super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
             hostname=hostname,
             protocol_versions=protocol_versions,
-            cipher_suites=[
-                cipher_suites
-                for cipher_suites in TlsCipherSuite
-                if cipher_suites.value.min_version < TlsProtocolVersionDraft(0)
-            ],
+            cipher_suites=list(TlsCipherSuite),
             named_curves=None,
             signature_algorithms=None,
             extensions=[]
@@ -181,34 +197,22 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             self,
             protocol_version,
             hostname,
-            authentication,
-            named_curves=(),
-            signature_algorithms=()
+            authentications,
+            named_curves,
+            signature_algorithms,
     ):  # pylint: disable=too-many-arguments
         _cipher_suites = [
             cipher_suite
             for cipher_suite in TlsCipherSuite
-            if (cipher_suite.value.authentication and
-                cipher_suite.value.authentication == authentication)
+            if cipher_suite.value.authentication in authentications
         ]
-
-        if signature_algorithms:
-            _signature_algorithms = signature_algorithms
-        elif protocol_version >= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
-            _signature_algorithms = list(
-                signature_algorithm
-                for signature_algorithm in TlsSignatureAndHashAlgorithm
-                if signature_algorithm.value.signature_algorithm == authentication
-            )
-        else:
-            _signature_algorithms = None
 
         super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
             named_curves=named_curves,
-            signature_algorithms=_signature_algorithms,
+            signature_algorithms=signature_algorithms,
             extensions=[]
         )
 
@@ -219,7 +223,7 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthentica
         super(TlsHandshakeClientHelloAuthenticationRSA, self).__init__(
             hostname=hostname,
             protocol_version=protocol_version,
-            authentication=Authentication.RSA,
+            authentications=[Authentication.RSA, ],
             named_curves=None,
             signature_algorithms=None,
         )
@@ -231,7 +235,7 @@ class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthentica
         super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(
             protocol_version=protocol_version,
             hostname=hostname,
-            authentication=Authentication.DSS,
+            authentications=[Authentication.DSS, ],
             named_curves=None,
             signature_algorithms=None,
         )
@@ -243,7 +247,7 @@ class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenti
         super(TlsHandshakeClientHelloAuthenticationECDSA, self).__init__(
             hostname=hostname,
             protocol_version=protocol_version,
-            authentication=Authentication.ECDSA,
+            authentications=[Authentication.ECDSA, ],
             named_curves=None,
             signature_algorithms=None,
         )
@@ -255,9 +259,13 @@ class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthentic
         super(TlsHandshakeClientHelloAuthenticationGOST, self).__init__(
             protocol_version=protocol_version,
             hostname=hostname,
-            authentication=Authentication.GOST_R3410_94,
-            named_curves=list(TlsNamedCurve),
-            signature_algorithms=list(TlsSignatureAndHashAlgorithm),
+            authentications=[
+                Authentication.GOST_R3410_94,
+                Authentication.GOST_R3410_12_256,
+                Authentication.GOST_R3410_12_512,
+            ],
+            named_curves=None,
+            signature_algorithms=None,
         )
 
 
@@ -295,7 +303,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.key_exchange == KeyExchange.DHE or
-            cipher_suite.value.min_version > TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+            cipher_suite.value.min_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2))
     ]
     _NAMED_CURVES = [
         named_curve
@@ -364,20 +372,6 @@ class TlsHandshakeClientHelloBlockCipherModeCBC(  # pylint: disable=too-many-anc
             cipher_suites=self._CIPHER_SUITES,
             named_curves=None,
             signature_algorithms=None,
-            extensions=[]
-        )
-
-
-class TlsHandshakeClientHelloBasic(  # pylint: disable=too-many-ancestors
-            TlsHandshakeClientHelloSpecalization
-        ):
-    def __init__(self, protocol_version):
-        super(TlsHandshakeClientHelloBasic, self).__init__(
-            hostname=None,
-            protocol_versions=[protocol_version, ],
-            cipher_suites=list(TlsCipherSuite),
-            named_curves=[],
-            signature_algorithms=[],
             extensions=[]
         )
 

@@ -16,7 +16,6 @@ from cryptoparser.tls.extension import TlsExtensionCertificateStatusRequest, Tls
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.tls.client import (
-    TlsHandshakeClientHelloBasic,
     TlsHandshakeClientHelloAuthenticationDSS,
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationECDSA,
@@ -181,8 +180,8 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
     def get_help(cls):
         return 'Check which certificate used by the server(s)'
 
-    @staticmethod
-    def _get_tls_certificate_chain(server_messages):
+    @classmethod
+    def _get_tls_certificate_chain(cls, server_messages):
         certificate_chain = []
 
         for tls_certificate in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain:
@@ -190,6 +189,35 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             certificate_chain.append(cryptolyzer.common.x509.PublicKeyX509(certificate))
 
         return TlsCertificateChain(items=certificate_chain)
+
+    @classmethod
+    def _add_tls_public_key_to_results(cls, analyzable, sni_sent, server_messages, results):
+        try:
+            certificate_chain = cls._get_tls_certificate_chain(server_messages)
+        except ValueError:
+            return
+
+        leaf_certificate = certificate_chain.items[0]
+        subject_matches = leaf_certificate.is_subject_matches(six.u(analyzable.address))
+        if ((sni_sent or subject_matches) and
+                certificate_chain not in [result.tls_certificate_chain for result in results]):
+            tls_public_key_params = {
+                'sni_sent': sni_sent,
+                'subject_matches': subject_matches,
+                'tls_certificate_chain': certificate_chain,
+            }
+
+            if TlsHandshakeType.CERTIFICATE_STATUS in server_messages:
+                status_message = server_messages[TlsHandshakeType.CERTIFICATE_STATUS]
+                if status_message.status_type == TlsCertificateStatusType.OCSP:
+                    ocsp_response = asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
+                    if ocsp_response['response_status'].native == 'successful':
+                        certificate_status = CertificateStatus(
+                            asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
+                        )
+                        tls_public_key_params['certificate_status'] = certificate_status
+
+            results.append(TlsPublicKey(**tls_public_key_params))
 
     @staticmethod
     def _get_server_messages(l7_client, client_hello, sni_sent, client_hello_messages):
@@ -205,7 +233,8 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 if sni_sent:
                     six.raise_from(StopIteration, e)
             elif e.description not in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
-                    TlsAlertDescription.INTERNAL_ERROR
+                    TlsAlertDescription.INTERNAL_ERROR,
+                    TlsAlertDescription.DECODE_ERROR,
             ]:
                 raise e
         except NetworkError as e:
@@ -219,51 +248,30 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
 
     def analyze(self, analyzable, protocol_version):
         results = []
-        client_hello_messages = [
-            TlsHandshakeClientHelloBasic(protocol_version),
-            TlsHandshakeClientHelloAuthenticationDSS(protocol_version, analyzable.address),
-            TlsHandshakeClientHelloAuthenticationRSA(protocol_version, analyzable.address),
-            TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, analyzable.address),
-            TlsHandshakeClientHelloAuthenticationGOST(protocol_version, analyzable.address),
-        ]
 
-        for client_hello in client_hello_messages:
-            sni_sent = not isinstance(client_hello, TlsHandshakeClientHelloBasic)
-            client_hello.extensions.extend([
-                TlsExtensionCertificateStatusRequest(),
-            ])
-            try:
-                server_messages = self._get_server_messages(analyzable, client_hello, sni_sent, client_hello_messages)
-            except StopIteration:
-                break
+        for hostname in [None, analyzable.address]:
+            client_hello_messages = [
+                TlsHandshakeClientHelloAuthenticationDSS(protocol_version, hostname),
+                TlsHandshakeClientHelloAuthenticationRSA(protocol_version, hostname),
+                TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, hostname),
+                TlsHandshakeClientHelloAuthenticationGOST(protocol_version, hostname),
+            ]
+            for client_hello in client_hello_messages:
+                sni_sent = hostname is not None
+                client_hello.extensions.extend([
+                    TlsExtensionCertificateStatusRequest(),
+                ])
+                try:
+                    server_messages = self._get_server_messages(
+                        analyzable, client_hello, sni_sent, client_hello_messages
+                    )
+                except StopIteration:
+                    break
 
-            if not server_messages:
-                continue
+                if not server_messages:
+                    continue
 
-            try:
-                certificate_chain = self._get_tls_certificate_chain(server_messages)
-            except ValueError:
-                continue
-            else:
-                leaf_certificate = certificate_chain.items[0]
-                subject_matches = leaf_certificate.is_subject_matches(six.u(analyzable.address))
-                if ((sni_sent or subject_matches) and
-                        certificate_chain not in [result.tls_certificate_chain for result in results]):
-                    tls_public_key_params = {
-                        'sni_sent': sni_sent,
-                        'subject_matches': subject_matches,
-                        'tls_certificate_chain': certificate_chain,
-                    }
-
-                    if TlsHandshakeType.CERTIFICATE_STATUS in server_messages:
-                        status_message = server_messages[TlsHandshakeType.CERTIFICATE_STATUS]
-                        if status_message.status_type == TlsCertificateStatusType.OCSP:
-                            certificate_status = CertificateStatus(
-                                asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
-                            )
-                            tls_public_key_params['certificate_status'] = certificate_status
-
-                    results.append(TlsPublicKey(**tls_public_key_params))
+                self._add_tls_public_key_to_results(analyzable, sni_sent, server_messages, results)
 
         return AnalyzerResultPublicKeys(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
