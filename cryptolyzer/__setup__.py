@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 __title__ = 'CryptoLyzer'
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 __description__ = 'Fast and flexible cryptographic protocol analyzer'
 __author__ = 'Szilárd Pfeiffer'
 __author_email__ = 'coroner@pfeifferszilard.hu'
