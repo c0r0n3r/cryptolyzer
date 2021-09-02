@@ -69,7 +69,7 @@ setup(
     test_suite='setup.test_discover',
 
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Framework :: tox',
         'Intended Audience :: Developers',
