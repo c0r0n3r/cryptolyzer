@@ -42,6 +42,7 @@ setup(
     maintainer=__setup__.__author__,
     maintainer_email=__setup__.__author_email__,
     license=__setup__.__license__,
+    license_files=['LICENSE.txt', ],
     url=__setup__.__url__,
     entry_points={
         'console_scripts': ['cryptolyze = cryptolyzer.__main__:main']
