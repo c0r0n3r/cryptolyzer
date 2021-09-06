@@ -231,14 +231,14 @@ class TestMain(TestMainBase):
         )
 
     def test_analyzer_output_tls_all(self):
-        result = test.tls.test_all.TestTlsAll.get_result('one.one.one.one', 443, protocol_version=None, ip='1.1.1.1')
+        result = test.tls.test_all.TestTlsAll.get_result('dns.google', 443, protocol_version=None, ip='8.8.8.8')
         self.assertEqual(
-            self._get_test_analyzer_result_json('tls', 'all', 'one.one.one.one:443#1.1.1.1'),
+            self._get_test_analyzer_result_json('tls', 'all', 'dns.google:443#8.8.8.8'),
             result.as_json() + '\n',
         )
 
         self.assertEqual(
-            self._get_test_analyzer_result_markdown('tls', 'all', 'one.one.one.one:443#1.1.1.1'),
+            self._get_test_analyzer_result_markdown('tls', 'all', 'dns.google:443#8.8.8.8'),
             result.as_markdown() + '\n',
         )
 
