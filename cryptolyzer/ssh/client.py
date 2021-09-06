@@ -24,6 +24,7 @@ from cryptoparser.ssh.subprotocol import (
 )
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
+from cryptolyzer.common.dhparam import get_dh_ephemeral_key_forged, bytes_to_int, int_to_bytes
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
 
@@ -153,9 +154,9 @@ class SshClientHandshake(SshHandshakeBase):
 
     @classmethod
     def _process_dh_group_exchange_group(cls, record, transfer, record_class):
-        key_size = (len(record.packet.p) - 1) * 8
-        ephemeral_public_key = b'\x00' + key_size // 512 * b'\xff'
-        transfer.send(record_class(SshDHGroupExchangeInit(ephemeral_public_key)).compose())
+        ephemeral_public_key = get_dh_ephemeral_key_forged(bytes_to_int(record.packet.p))
+        ephemeral_public_key_bytes = int_to_bytes(ephemeral_public_key, 1024).lstrip(b'\x00')
+        transfer.send(record_class(SshDHGroupExchangeInit(ephemeral_public_key_bytes)).compose())
 
         return SshRecordKexDHGroup
 

@@ -62,7 +62,7 @@ from cryptoparser.tls.extension import (
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
 
-from cryptolyzer.common.dhparam import WellKnownDHParams, int_to_bytes
+from cryptolyzer.common.dhparam import WellKnownDHParams, get_dh_ephemeral_key_forged, int_to_bytes
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
@@ -107,7 +107,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             key_share_entries.append(TlsKeyShareEntry(
                 named_curve,
                 int_to_bytes(
-                    well_known_dh_param.value.dh_param_numbers.p // 2 + 1,
+                    get_dh_ephemeral_key_forged(well_known_dh_param.value.dh_param_numbers.p),
                     well_known_dh_param.value.key_size // 8
                 )
             ))

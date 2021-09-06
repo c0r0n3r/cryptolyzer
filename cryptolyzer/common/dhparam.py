@@ -712,6 +712,10 @@ def get_dh_public_key_from_bytes(p_bytes, g_bytes, y_bytes):
     return DHPublicKey(public_numbers, len(bytearray(p_bytes).lstrip(b'\x00')) * 8)
 
 
+def get_dh_ephemeral_key_forged(prime):
+    return prime // 2 + 1
+
+
 def parse_tls_dh_params(param_bytes):
     parser = ParserBinary(param_bytes)
 
