@@ -9,7 +9,6 @@ import poplib
 import smtplib
 
 import collections
-import random
 import socket
 
 import attr
@@ -63,6 +62,7 @@ from cryptoparser.tls.extension import (
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
 
+from cryptolyzer.common.dhparam import WellKnownDHParams, get_dh_ephemeral_key_forged, int_to_bytes
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
@@ -95,20 +95,22 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
 
     @classmethod
     def _get_tls1_3_extensions(cls, protocol_versions, named_curves, signature_algorithms):
-        key_share_entries = [
-            TlsKeyShareEntry(
-                named_curve, (
-                    random.randint(0, 255)
-                    for i in range(
-                        int(named_curve.value.named_group.value.size / 8) +
-                        (1 if named_curve.value.named_group.value.size % 8 else 0)
-                    )
+        key_share_entries = []
+        for well_known_dh_param in WellKnownDHParams:
+            if well_known_dh_param.value.source != 'RFC7919':
+                continue
+
+            named_curve = getattr(TlsNamedCurve, 'FFDHE{}'.format(well_known_dh_param.value.key_size))
+            if named_curve not in named_curves:
+                continue
+
+            key_share_entries.append(TlsKeyShareEntry(
+                named_curve,
+                int_to_bytes(
+                    get_dh_ephemeral_key_forged(well_known_dh_param.value.dh_param_numbers.p),
+                    well_known_dh_param.value.key_size // 8
                 )
-            )
-            for named_curve in named_curves
-            if (named_curve.value.named_group is not None and
-                named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
-        ]
+            ))
 
         extensions = [
             TlsExtensionKeyShareReservedClient(key_share_entries),

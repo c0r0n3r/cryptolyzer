@@ -5,12 +5,12 @@ try:
 except ImportError:
     import mock
 
-from cryptoparser.tls.extension import TlsExtensionsBase
+from cryptoparser.tls.extension import TlsExtensionsBase, TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.common.dhparam import WellKnownDHParams
 
-from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.client import L7ClientTlsBase, TlsHandshakeClientHelloKeyExchangeDHE
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
@@ -27,6 +27,17 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
     @mock.patch.object(TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError)
     def test_error_missing_key_share_extension(self, _):
         self.assertEqual(self.get_result('mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).dhparams, [])
+
+    @mock.patch.object(
+        TlsHandshakeClientHelloKeyExchangeDHE, '_NAMED_CURVES',
+        mock.PropertyMock(return_value=[TlsNamedCurve.FFDHE2048, ])
+    )
+    def test_last_key_share_extension(self):
+        dhparams = self.get_result('mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).dhparams
+        self.assertEqual(
+            [dhparam.public_key.public_numbers.parameter_numbers for dhparam in dhparams],
+            [WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.dh_param_numbers]
+        )
 
     def test_size(self):
         result = self.get_result('dh480.badssl.com', 443)

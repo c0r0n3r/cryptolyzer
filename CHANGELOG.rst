@@ -2,10 +2,21 @@
 Changelog
 =========
 
-Features
---------
+.. _v0-8-0:
+
+Notable fixes
+-------------
+
+* TLS (``tls``)
+
+  * Generic
+
+    * Use DH ephemeral keys that are matematically correct during a TLS 1.3 handshake to increase stability (#57)
 
 .. _v0-7-0:
+
+Features
+--------
 
 * TLS (``tls``)
 
