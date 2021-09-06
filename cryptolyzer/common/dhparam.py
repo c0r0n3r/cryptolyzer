@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import codecs
 import enum
 import six
 import attr
@@ -693,13 +694,20 @@ class TlsDHParamVector(Vector):  # pylint: disable=too-many-ancestors
         return VectorParamNumeric(item_size=1, min_byte_num=1, max_byte_num=2 ** 16 - 1)
 
 
-def get_dh_public_key_from_bytes(p_bytes, g_bytes, y_bytes):
-    p = int(''.join(map('{:02x}'.format, p_bytes)), 16)  # pylint: disable=invalid-name
-    g = int(''.join(map('{:02x}'.format, g_bytes)), 16)  # pylint: disable=invalid-name
-    y = int(''.join(map('{:02x}'.format, y_bytes)), 16)  # pylint: disable=invalid-name
+def bytes_to_int(bytes_value):
+    return int(''.join(map('{:02x}'.format, bytes_value)), 16)
 
-    parameter_numbers = DHParameterNumbers(p, g)
-    public_numbers = DHPublicNumbers(y, parameter_numbers)
+
+def int_to_bytes(int_value, size):
+    hex_value = '%x' % int_value
+    str_value = ('0' * (size - len(hex_value)) + hex_value)
+
+    return bytearray(codecs.decode(str_value, 'hex'))
+
+
+def get_dh_public_key_from_bytes(p_bytes, g_bytes, y_bytes):
+    parameter_numbers = DHParameterNumbers(bytes_to_int(p_bytes), bytes_to_int(g_bytes))
+    public_numbers = DHPublicNumbers(bytes_to_int(y_bytes), parameter_numbers)
 
     return DHPublicKey(public_numbers, len(bytearray(p_bytes).lstrip(b'\x00')) * 8)
 
