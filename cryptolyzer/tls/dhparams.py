@@ -152,6 +152,8 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             if not is_tls_1_3:
                 break
 
+            if len(client_hello.extensions.get_item_by_type(TlsExtensionType.SUPPORTED_GROUPS).elliptic_curves) == 1:
+                break
             self._remove_selected_group_among_supported_ones(client_hello, dhparams[-1])
 
         return AnalyzerResultDHParams(
