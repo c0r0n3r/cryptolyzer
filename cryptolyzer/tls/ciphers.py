@@ -67,6 +67,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             server_messages = l7_client.do_ssl_handshake(client_hello)
 
             accepted_cipher_suites.extend(server_messages[SslMessageType.SERVER_HELLO].cipher_kinds)
+            del remaining_cipher_suites[:]
             raise StopIteration
 
         client_hello = TlsHandshakeClientHelloSpecalization(
@@ -145,12 +146,8 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         for client_hello in client_hello_messsages_in_order_of_probability:
             accepted_cipher_suites.extend(
                 cls._get_accepted_cipher_suites(
-                    l7_client, protocol_version, client_hello.cipher_suites
+                    l7_client, protocol_version, list(client_hello.cipher_suites)
                 )[0]
-            )
-        if accepted_cipher_suites:
-            accepted_cipher_suites, _ = cls._get_accepted_cipher_suites(
-                l7_client, protocol_version, accepted_cipher_suites
             )
 
         return accepted_cipher_suites
