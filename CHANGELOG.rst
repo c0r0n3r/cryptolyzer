@@ -2,7 +2,16 @@
 Changelog
 =========
 
-.. _v0-8-0:
+.. _v0-7-1:
+
+Features
+--------
+
+* TLS (``tls``)
+
+  * LMTP opportunistic TLS (``STARTTLS``) support (#56)
+  * NNTP opportunistic TLS (``STARTTLS``) support (#7)
+  * PostgreSQL opportunistic TLS (``STARTTLS``) support (#55)
 
 Notable fixes
 -------------
@@ -11,7 +20,11 @@ Notable fixes
 
   * Generic
 
-    * Use DH ephemeral keys that are matematically correct during a TLS 1.3 handshake to increase stability (#57)
+    * Use DH ephemeral keys that are mathematically correct during a TLS 1.3 handshake to increase stability (#57)
+
+  * Ciphers (``ciphers``)
+
+    * No fallback mechanism is used to check cipher suites if server honors long cipher suite lists (#59)
 
 .. _v0-7-0:
 
@@ -34,9 +47,6 @@ Features
       supported (#45)
     * add analyzer checking whether `session ticket <https://www.rfc-editor.org/rfc/rfc5077.html>`_ is supported (#45)
 
-  * LMTP opportunistic TLS (``STARTTLS``) support (#56)
-  * NNTP opportunistic TLS (``STARTTLS``) support (#7)
-  * PostgreSQL opportunistic TLS (``STARTTLS``) support (#55)
   * Sieve opportunistic TLS (``STARTTLS``) support (#9)
 
 * SSH (``ssh``)
