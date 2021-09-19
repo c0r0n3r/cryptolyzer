@@ -90,7 +90,9 @@ class L4TransferTCP(L4TransferBase):
             actual_sent_byte_num = self._send(sendable_bytes[total_sent_byte_num:])
             if actual_sent_byte_num == 0:
                 raise NetworkError(NetworkErrorType.NO_CONNECTION)
-            total_sent_byte_num = total_sent_byte_num + actual_sent_byte_num
+            total_sent_byte_num += actual_sent_byte_num
+
+        return total_sent_byte_num
 
     def receive(self, receivable_byte_num, flags=0):
         total_received_byte_num = 0
@@ -204,7 +206,7 @@ class L7TransferBase(object):
         return self.l4_transfer.send(sendable_bytes)
 
     def receive(self, receivable_byte_num):
-        self.l4_transfer.receive(receivable_byte_num)
+        return self.l4_transfer.receive(receivable_byte_num)
 
     def flush_buffer(self, byte_num=None):
         self.l4_transfer.flush_buffer(byte_num)

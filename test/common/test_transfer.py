@@ -148,3 +148,21 @@ class TestL4ServerTCP(unittest.TestCase):
         self.assertNotEqual(l4_server.bind_port, 0)
         threaded_server.kill()
         threaded_server.join()
+
+    def test_count(self):
+        l4_client = L4ClientTCP('httpbin.org', 80)
+        l4_client.init_connection()
+        request = b'\r\n'.join([
+            b'GET /base64/SFRUUEJJTiBpcyBhd2Vzb21l HTTP/1.1',
+            b'Host: httpbin.org',
+            b'',
+            b''
+        ])
+        request_len = l4_client.send(request)
+        self.assertEqual(request_len, len(request))
+
+        response = b'HTTPBIN is awesome'
+        response_len = l4_client.receive(len(response))
+        self.assertEqual(response_len, len(response))
+
+        l4_client.close()
