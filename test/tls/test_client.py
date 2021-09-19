@@ -2,8 +2,6 @@
 
 import ftplib
 import imaplib
-import poplib
-import smtplib
 import socket
 import unittest
 try:
@@ -97,6 +95,15 @@ class TestL7ClientBase(unittest.TestCase):
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 
+    def _get_mock_server_response(self, scheme):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+        return self.get_result(  # pylint: disable = expression-not-assigned
+            scheme, 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+        )
+
 
 class L7ClientTlsMock(L7ClientTls):
     pass
@@ -166,19 +173,55 @@ class TestL7ClientTlsBase(TestL7ClientBase):
         )
 
 
+class TestL7ClientStartTlsTextBase(TestL7ClientBase):
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'+OK Server ready.\r\n',
+            b'+OK\r\n',
+            six.u('αβγ').encode('utf-8'),
+            b'\r\n',
+            b'.\r\n',
+        ]),
+    ))
+    def test_error_unsupported_capabilities(self, _):
+        result = self._get_mock_server_response('pop3')
+        self.assertEqual(result.versions, [])
+
+
 class TestClientPOP3(TestL7ClientBase):
-    @mock.patch.object(poplib.POP3, '_shortcmd', return_value=b'-ERR')
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'+OK Server ready.\r\n',
+            b'-ERR Command not permitted\r\n',
+        ]),
+    ))
+    def test_error_unsupported_capabilities(self, _):
+        result = self._get_mock_server_response('pop3')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'+OK Server ready.\r\n',
+            b'+OK\r\n',
+            b'.\r\n',
+        ]),
+    ))
     def test_error_unsupported_starttls(self, _):
-        self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, timeout=10).versions, [])
+        result = self._get_mock_server_response('pop3')
+        self.assertEqual(result.versions, [])
 
-    @mock.patch.object(poplib.POP3, '__init__', side_effect=poplib.error_proto)
-    def test_error_pop3_error_on_connect(self, _):
-        self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, timeout=10).versions, [])
-
-    @mock.patch.object(poplib.POP3, '_shortcmd', return_value=b'-ERR')
-    @mock.patch.object(poplib.POP3, 'quit', side_effect=poplib.error_proto)
-    def test_error_pop3_error_on_quit(self, _, __):
-        self.assertEqual(self.get_result('pop3', 'pop3.comcast.net', None, timeout=10).versions, [])
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'+OK Server ready.\r\n',
+            b'+OK\r\n',
+            b'STLS\r\n',
+            b'.\r\n',
+            b'-ERR Command not permitted\r\n',
+        ]),
+    ))
+    def test_error_starttls_error(self, _):
+        result = self._get_mock_server_response('pop3')
+        self.assertEqual(result.versions, [])
 
     def test_pop3_client(self):
         self.assertEqual(
@@ -243,27 +286,37 @@ class TestClientIMAP(TestL7ClientBase):
 
 
 class TestClientSMTP(TestL7ClientBase):
-    @mock.patch.object(smtplib.SMTP, 'has_extn', return_value=False)
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'220 localhost ESMTP Server\r\n',
+            b'502 Command not implemented\r\n',
+        ]),
+    ))
+    def test_error_unsupported_capabilities(self, _):
+        result = self._get_mock_server_response('smtp')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'220 localhost ESMTP Server\r\n',
+            b'250-server at your service\r\n',
+        ]),
+    ))
     def test_error_unsupported_starttls(self, _):
-        self.assertEqual(self.get_result('smtp', 'smtp.gmail.com', None).versions, [])
+        result = self._get_mock_server_response('smtp')
+        self.assertEqual(result.versions, [])
 
-    @mock.patch.object(smtplib.SMTP, 'connect', side_effect=smtplib.SMTPException)
-    def test_error_smtp_error_on_connect(self, _):
-        self.assertEqual(self.get_result('smtp', 'smtp.gmail.com', None).versions, [])
-
-    @mock.patch.object(smtplib.SMTP, 'quit', side_effect=smtplib.SMTPServerDisconnected)
-    def test_error_smtp_error_on_quit(self, _):
-        self.assertEqual(
-            self.get_result('smtp', 'smtp.gmail.com', None).versions,
-            [
-                TlsProtocolVersionFinal(version)
-                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
-            ]
-        )
-
-    @mock.patch.object(smtplib.SMTP, 'docmd', return_value=(454, 'TLS not available due to temporary reason'))
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'220 localhost ESMTP Server\r\n',
+            b'250-server at your service\r\n',
+            b'250-STARTTLS\r\n',
+            b'502 Command not implemented\r\n',
+        ]),
+    ))
     def test_error_starttls_error(self, _):
-        self.assertEqual(self.get_result('smtp', 'smtp.gmail.com', None).versions, [])
+        result = self._get_mock_server_response('smtp')
+        self.assertEqual(result.versions, [])
 
     def test_smtp_client(self):
         self.assertEqual(
@@ -420,6 +473,55 @@ class TestClientLDAP(TestL7ClientBase):
         )
 
 
+class TestClientNNTP(TestL7ClientBase):
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'200 Server ready\r\n',
+            b'502 Command unavailable\r\n',
+        ]),
+    ))
+    def test_error_unsupported_capabilities(self, _):
+        result = self._get_mock_server_response('nntp')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'200 Server ready\r\n',
+            b'101 capability list\r\n',
+            b'.\r\n',
+        ]),
+    ))
+    def test_error_unsupported_starttls(self, _):
+        result = self._get_mock_server_response('nntp')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'200 Server ready\r\n',
+            b'101 capability list\r\n',
+            b'STARTTLS\r\n',
+            b'.\r\n',
+            b'502 Command unavailable\r\n',
+        ]),
+    ))
+    def test_error_starttls_error(self, _):
+        result = self._get_mock_server_response('nntp')
+        self.assertEqual(result.versions, [])
+
+    def test_default_port(self):
+        l7_client = L7ClientTlsBase.from_scheme('nntp', 'localhost')
+        self.assertEqual(l7_client.port, 119)
+
+    def test_nntp_client(self):
+        self.assertEqual(
+            self.get_result('nntps', 'secure-us.news.easynews.com', None).versions,
+            [
+                TlsProtocolVersionFinal(tls_version)
+                for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+            ]
+        )
+
+
 class TestClientSieve(TestL7ClientBase):
     @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
@@ -572,7 +674,7 @@ class TestClientXMPP(TestL7ClientBase):
         b'  </stream:features>',
         b'<failure xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>'
     ))
-    def test_error_starttls_failure(self, _):
+    def test_error_starttls_error(self, _):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
@@ -675,7 +777,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
             L7ServerTls('localhost', 0, timeout=0.2),
         )
         threaded_server.start()
-        l7_client = L7ClientTlsBase('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        l7_client = L7ClientTls('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         client_hello = SslHandshakeClientHelloAnyAlgorithm()
         with self.assertRaises(SecurityError) as context_manager:
@@ -704,7 +806,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_ssl_error_replied(self, _):
         with self.assertRaises(SslError) as context_manager:
-            L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
+            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CIPHER_ERROR)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
@@ -720,7 +822,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_unparsable_response(self, _):
         with self.assertRaises(SecurityError) as context_manager:
-            L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
+            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
         self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
@@ -743,7 +845,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_multiple_record_resonse(self, _):
         with self.assertRaises(SecurityError) as context_manager:
-            L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
+            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
         self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
@@ -760,7 +862,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_unacceptable_tls_error_replied(self, _):
         with self.assertRaises(NetworkError) as context_manager:
-            L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
+            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @mock.patch.object(L4ClientTCP, 'receive', return_value=b'')
@@ -772,7 +874,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_multiple_messages(self, _, __):
         with self.assertRaises(SslError) as context_manager:
-            L7ClientTlsBase('badssl.com', 443).do_ssl_handshake(
+            L7ClientTls('badssl.com', 443).do_ssl_handshake(
                 SslHandshakeClientHello(SslCipherKind),
                 SslMessageType.ERROR
             )

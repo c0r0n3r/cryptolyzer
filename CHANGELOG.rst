@@ -34,6 +34,7 @@ Features
       supported (#45)
     * add analyzer checking whether `session ticket <https://www.rfc-editor.org/rfc/rfc5077.html>`_ is supported (#45)
 
+  * NNTP opportunistic TLS (``STARTTLS``) support (#7)
   * Sieve opportunistic TLS (``STARTTLS``) support (#9)
 
 * SSH (``ssh``)
