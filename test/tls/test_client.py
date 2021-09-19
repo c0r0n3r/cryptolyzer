@@ -560,6 +560,26 @@ class TestClientNNTP(TestL7ClientBase):
         )
 
 
+class TestClientPostgreSQL(TestL7ClientBase):
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'X', ))
+    def test_error_starttls_error(self, _):
+        result = self._get_mock_server_response('postgresql')
+        self.assertEqual(result.versions, [])
+
+    def test_default_port(self):
+        l7_client = L7ClientTlsBase.from_scheme('postgresql', 'localhost')
+        self.assertEqual(l7_client.port, 5432)
+
+    def test_postgresql_client(self):
+        self.assertEqual(
+            self.get_result('postgresql', 'ec2-54-75-226-17.eu-west-1.compute.amazonaws.com', None).versions,
+            [
+                TlsProtocolVersionFinal(tls_version)
+                for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, ]
+            ]
+        )
+
+
 class TestClientSieve(TestL7ClientBase):
     @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)

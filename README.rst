@@ -166,6 +166,7 @@ SSL/TLS
     * `LMTP <https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol>`_
     * `NNTP <https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol>`_
     * `POP3 <https://en.wikipedia.org/wiki/Post_Office_Protocol>`_
+    * `PostgreSQL <https://en.wikipedia.org/wiki/PostgreSQL>`_
     * `RDP <https://en.wikipedia.org/wiki/Remote_Desktop_Protocol>`_
     * `Sieve <https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language)>`_
     * `SMTP <https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol>`_
