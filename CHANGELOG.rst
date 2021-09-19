@@ -36,6 +36,7 @@ Features
 
   * LMTP opportunistic TLS (``STARTTLS``) support (#56)
   * NNTP opportunistic TLS (``STARTTLS``) support (#7)
+  * PostgreSQL opportunistic TLS (``STARTTLS``) support (#55)
   * Sieve opportunistic TLS (``STARTTLS``) support (#9)
 
 * SSH (``ssh``)

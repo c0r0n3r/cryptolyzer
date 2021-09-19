@@ -23,6 +23,7 @@ from cryptoparser.tls.ldap import (
     LDAPExtendedRequestStartTLS,
     LDAPExtendedResponseStartTLS,
 )
+from cryptoparser.tls.postgresql import SslRequest, Sync
 from cryptoparser.tls.rdp import (
     TPKT,
     COTPConnectionConfirm,
@@ -671,6 +672,33 @@ class L7ClientPOP3S(L7ClientTlsBase):
     @classmethod
     def get_default_port(cls):
         return 995
+
+
+class ClientPostgreSQL(L7ClientStartTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'postgresql'
+
+    @classmethod
+    def get_default_port(cls):
+        return 5432
+
+    def _init_l7(self):
+        try:
+            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client.init_connection()
+            self.l4_transfer = self._l7_client.l4_transfer
+
+            self.l4_transfer.send(SslRequest().compose())
+
+            self.l4_transfer.receive(Sync.MESSAGE_SIZE)
+            Sync.parse_exact_size(self.l4_transfer.buffer)
+            self.l4_transfer.flush_buffer(Sync.MESSAGE_SIZE)
+        except (InvalidValue, InvalidType) as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+
+    def _deinit_l7(self):
+        pass
 
 
 @attr.s
