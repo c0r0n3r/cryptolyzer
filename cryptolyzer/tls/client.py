@@ -583,6 +583,42 @@ class L7ClientStartTlsTextBase(L7ClientStartTlsBase):
         pass
 
 
+class L7ClientStartTlsMailBase(L7ClientStartTlsTextBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_scheme(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_default_port(cls):
+        raise NotImplementedError()
+
+    @property
+    def _starttls_ok_result(self):
+        return '220'
+
+    @property
+    def _capabilities_ok_result(self):
+        return '250'
+
+    @property
+    def _capabilities_terminator(self):
+        return None
+
+    def _update_capabilities(self, line, capabilities):
+        if len(line) < 4 or not line.startswith('250'):
+            raise StopIteration()
+
+        is_last_line = line[3] == ' '
+        line = line[4:]
+
+        super(L7ClientStartTlsMailBase, self)._update_capabilities(line, capabilities)
+
+        if is_last_line:
+            raise StopIteration()
+
+
 class L7ClientTls(L7ClientTlsBase):
     @classmethod
     def get_scheme(cls):
@@ -611,6 +647,20 @@ class L7ClientDoH(L7ClientTlsBase):
     @classmethod
     def get_default_port(cls):
         return 443
+
+
+class ClientLMTP(L7ClientStartTlsMailBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'lmtp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 24
+
+    @property
+    def _capabilities_command(self):
+        return 'LHLO cryptolyzer'
 
 
 class L7ClientPOP3S(L7ClientTlsBase):
@@ -664,7 +714,7 @@ class L7ClientSMTPS(L7ClientTlsBase):
         return 465
 
 
-class ClientSMTP(L7ClientStartTlsTextBase):
+class ClientSMTP(L7ClientStartTlsMailBase):
     @classmethod
     def get_scheme(cls):
         return 'smtp'
@@ -676,30 +726,6 @@ class ClientSMTP(L7ClientStartTlsTextBase):
     @property
     def _capabilities_command(self):
         return 'EHLO cryptolyzer'
-
-    @property
-    def _starttls_ok_result(self):
-        return '220'
-
-    @property
-    def _capabilities_ok_result(self):
-        return '250'
-
-    @property
-    def _capabilities_terminator(self):
-        return None
-
-    def _update_capabilities(self, line, capabilities):
-        if len(line) < 4 or not line.startswith('250'):
-            raise StopIteration()
-
-        is_last_line = line[3] == ' '
-        line = line[4:]
-
-        super(ClientSMTP, self)._update_capabilities(line, capabilities)
-
-        if is_last_line:
-            raise StopIteration()
 
 
 class L7ClientIMAPS(L7ClientTlsBase):

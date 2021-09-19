@@ -285,6 +285,44 @@ class TestClientIMAP(TestL7ClientBase):
         )
 
 
+class TestClientLMTP(TestL7ClientBase):
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'220 localhost LMTP Server\r\n',
+            b'502 Command not implemented\r\n',
+        ]),
+    ))
+    def test_error_unsupported_capabilities(self, _):
+        result = self._get_mock_server_response('lmtp')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'220 localhost LMTP Server\r\n',
+            b'250-server at your service\r\n',
+        ]),
+    ))
+    def test_error_unsupported_starttls(self, _):
+        result = self._get_mock_server_response('lmtp')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'220 localhost LMTP Server\r\n',
+            b'250-server at your service\r\n',
+            b'250-STARTTLS\r\n',
+            b'502 Command not implemented\r\n',
+        ]),
+    ))
+    def test_error_starttls_error(self, _):
+        result = self._get_mock_server_response('lmtp')
+        self.assertEqual(result.versions, [])
+
+    def test_default_port(self):
+        l7_client = L7ClientTlsBase.from_scheme('lmtp', 'localhost')
+        self.assertEqual(l7_client.port, 24)
+
+
 class TestClientSMTP(TestL7ClientBase):
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
         b''.join([
