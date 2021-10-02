@@ -1,6 +1,8 @@
-# Submitting bugs
+# Contributing
 
-## Due diligence
+## Submitting bugs
+
+### Due diligence
 
 Before submitting a bug, please do the following:
 
@@ -16,7 +18,7 @@ Before submitting a bug, please do the following:
 - If you don\'t find a pre-existing issue, consider **checking with the mailing list and/or IRC channel** in case the
   problem is non-bug-related.
 
-## What to put in your bug report
+### What to put in your bug report
 
 Make sure your report gets the attention it deserves: bug reports with missing information may be ignored or punted back
 to you, delaying a fix. The below constitutes a bare minimum; more info is almost always better:
@@ -33,9 +35,9 @@ to you, delaying a fix. The below constitutes a bare minimum; more info is almos
     can this help you identify problems which aren\'t real bugs, but it means the developer can get to fixing the bug
     faster.
 
-# Contributing changes
+## Contributing changes
 
-## Licensing of contributed material
+### Licensing of contributed material
 
 Keep in mind as you contribute, that code, docs and other material submitted to open source projects are usually
 considered licensed under the same terms as the rest of the work.
@@ -51,7 +53,7 @@ The details vary from project to project, but from the perspective of this docum
     copyright notice at the top) will inherently end up contributed to by dozens of others over time, making a
     per-file header outdated/misleading.
 
-## Version control branching
+### Version control branching
 
 - Always **make a new branch** for your work, no matter how small. This makes it easy for others to take just that one
   set of changes from your repository, in case you have multiple unrelated changes floating around.
@@ -68,7 +70,7 @@ The details vary from project to project, but from the perspective of this docum
       off of may get out of date! If you find yourself \'bumping\' a pull request that\'s been sidelined for a
       while, **make sure you rebase or merge to latest master** to ensure a speedier resolution.
 
-## Code formatting
+### Code formatting
 
 - **Follow the style you see used in the primary repository**! Consistency with the rest of the project always trumps
   other considerations. It doesn\'t matter if you have your own style or if the rest of the code breaks with the greater
@@ -76,10 +78,59 @@ The details vary from project to project, but from the perspective of this docum
 - Python projects usually follow the [PEP-8](http://www.python.org/dev/peps/pep-0008/) guidelines (though many have
   minor deviations depending on the lead maintainers\' preferences.)
 
-## Tests aren\'t optional
+### Documentation isn\'t optional
+
+It\'s not! Patches without documentation will be returned to sender. By \"documentation\" we mean:
+
+- **Docstrings** (for Python; or API-doc-friendly comments for other languages) must be created or updated for public
+  API functions/methods/etc. (This step is optional for some bugfixes.)
+  - Don\'t forget to include
+    [versionadded](http://sphinx-doc.org/markup/para.html#directive-versionadded)/[versionchanged](http://sphinx-doc.org/markup/para.html#directive-versionchanged)
+    ReST directives at the bottom of any new or changed Python docstrings!
+    - Use `versionadded` for truly new API members \-- new methods, functions, classes or modules.
+    - Use `versionchanged` when adding/removing new function/method arguments, or whenever behavior changes.
+
+- New features should ideally include updates to **prose documentation**, including useful example code snippets.
+
+- All submissions should have a **changelog entry** crediting the contributor and/or any individuals instrumental in
+  identifying the problem.
+
+### Tests aren\'t optional
 
 Any bugfix that doesn\'t include a test proving the existence of the bug being fixed, may be suspect. Ditto for new
 features that can\'t prove they actually work.
 
 We\'ve found that test-first development really helps make features better architected and identifies potential edge
 cases earlier instead of later. Writing tests before the implementation is strongly encouraged.
+
+### Full example
+
+Here\'s an example workflow for a project `theproject` hosted on Github, which is currently in version 1.3.x. Your
+username is `yourname` and you\'re submitting a basic bugfix. (This workflow only changes slightly if the project is
+hosted at Bitbucket, self-hosted, or etc.)
+
+#### Preparing your Fork
+
+1.  Click \'Fork\' on Github, creating e.g. `yourname/theproject`.
+2.  Clone your project: `git clone git@github.com:yourname/theproject`.
+3.  `cd theproject`
+4.  [Create and activate a virtual
+    environment](https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments).
+5.  Install the development requirements: `pip install -r dev-requirements.txt`.
+6.  Create a branch: `git checkout -b foo-the-bars 1.3`.
+
+#### Making your Changes
+
+1.  Add changelog entry crediting yourself.
+2.  Write tests expecting the correct/fixed functionality; make sure they fail.
+3.  Hack, hack, hack.
+4.  Run tests again, making sure they pass.
+5.  Commit your changes: `git commit -m "Foo the bars"`
+
+#### Creating Pull Requests
+
+1.  Push your commit to get it back up to your fork: `git push origin HEAD`
+2.  Visit Github, click handy \"Pull request\" button that it will make upon noticing your new branch.
+3.  In the description field, write down issue number (if submitting code fixing an existing issue) or describe the
+    issue + your fix (if submitting a wholly new bugfix).
+4.  Hit \'submit\'! And please be patient - the maintainers will get to you when they can.
