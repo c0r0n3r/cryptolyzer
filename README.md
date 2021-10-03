@@ -1,13 +1,23 @@
 # CryptoLyzer
 
+CryptoLyzer is a fast and flexible server cryptographic settings analyzer library for Python with an easy-to-use
+[command line interface](https://en.wikipedia.org/wiki/Command-line_interface) with both human-readable ([Markdown](
+https://en.wikipedia.org/wiki/Markdown)) and machine-readable ([JSON](https://en.wikipedia.org/wiki/JSON)) output.
+It works with multiple cryptographic protocols ([SSL](
+https://en.wikipedia.org/wiki/Transport_Layer_Security#SSL_1.0,_2.0,_and_3.0)/
+[TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security), [opportunistic TLS](
+https://en.wikipedia.org/wiki/Opportunistic_TLS), [SSH](https://en.wikipedia.org/wiki/Secure_Shell)) and analyzes
+additional security mechanisms ([web security](https://infosec.mozilla.org/guidelines/web_security) related 
+[HTTP response header fields](https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Response_fields), 
+[JA3 tag](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967)).
+
 ## What is it and what is it not?
 
-As the project name CryptoLyzer implies, it is a cryptographic protocol analyzer. The main purpose of creating this
-application is the fact, that cryptography protocol analysis differs in many aspect from establishing a connection using
-a cryptographic protocol. Analysis is mostly testing where we trigger special and corner cases of the protocol and we
-also trying to establish connection with hardly supported, experimental, obsoleted or even deprecated mechanisms or
-algorithms which are may or may not supported by the latest or any version of an implementation of the cryptographic
-protocol.
+The main purpose of creating this application is the fact, that cryptography protocol analysis differs in many aspect
+from establishing a connection using a cryptographic protocol. Analysis is mostly testing where we trigger special and
+corner cases of the protocol and we also trying to establish connection with hardly supported, experimental, obsoleted
+or even deprecated mechanisms or algorithms which are may or may not supported by the latest or any version of an
+implementation of the cryptographic protocol.
 
 As follows, it is neither a comprehensive nor a secure client/server implementation of any cryptographic protocol. On
 the one hand analyzer implements only the absolutely necessary parts of the protocol to interact with servers. On the
