@@ -35,6 +35,7 @@ pip install cryptolyzer
 
 cryptolyze tls ciphers www.example.com
 cryptolyze ssh2 ciphers www.example.com
+cryptolyze http headers www.example.com
 ```
 
 or via APT on Debian based systems
@@ -48,6 +49,7 @@ apt update && apt install -y python3-pkg-resources python3-cryptoparser python3-
 
 cryptolyze tls ciphers www.example.com
 cryptolyze ssh2 ciphers www.example.com
+cryptolyze http headers www.example.com
 ```
 
 or via DNF on Fedora based systems
@@ -64,6 +66,7 @@ or can be used via Docker
 ```shell
 docker run --rm coroner/cryptolyzer tls ciphers www.example.com
 docker run --rm coroner/cryptolyzer ssh2 ciphers www.example.com
+docker run --rm coroner/cryptolyzer http headers www.example.com
 ```
 
 ```shell
