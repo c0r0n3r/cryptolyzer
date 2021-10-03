@@ -38,6 +38,19 @@ cryptolyze ssh2 ciphers www.example.com
 cryptolyze http headers www.example.com
 ```
 
+or can be used via Docker
+
+```shell
+docker run --rm coroner/cryptolyzer tls ciphers www.example.com
+docker run --rm coroner/cryptolyzer ssh2 ciphers www.example.com
+docker run --rm coroner/cryptolyzer http headers www.example.com
+```
+
+```shell
+docker run -ti --rm -p 127.0.0.1:4433:4433 coroner/cryptolyzer ja3 generate 127.0.0.1:4433
+openssl s_client -connect 127.0.0.1:4433
+```
+
 or via APT on Debian based systems
 
 ```shell
@@ -59,19 +72,6 @@ dnf install 'dnf-command(config-manager)'
 dnf config-manager --add-repo https://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer:/dev/Fedora_31/
 rpm --import http://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer:/dev/Fedora_31/repodata/repomd.xml.key
 dnf install python3-urllib3 python3-cryptography cryptoparser cryptolyzer
-```
-
-or can be used via Docker
-
-```shell
-docker run --rm coroner/cryptolyzer tls ciphers www.example.com
-docker run --rm coroner/cryptolyzer ssh2 ciphers www.example.com
-docker run --rm coroner/cryptolyzer http headers www.example.com
-```
-
-```shell
-docker run -ti --rm -p 127.0.0.1:4433:4433 coroner/cryptolyzer ja3 generate 127.0.0.1:4433
-openssl s_client -connect 127.0.0.1:4433
 ```
 
 ### Development environment
