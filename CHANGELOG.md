@@ -1,5 +1,11 @@
 # Changelog
 
+### Features
+
+- SSH (`ssh`)
+  - Diffie-Hellman (`dhparams`)
+    - add group exchange algorithms supported by the server to the result (\#53)
+
 ## 0.7.1 - 2021-09-20
 
 ### Features
