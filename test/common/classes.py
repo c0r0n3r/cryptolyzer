@@ -62,16 +62,20 @@ class TestMainBase(unittest.TestCase):
             self.main_func()
             return stdout.getvalue(), stderr.getvalue()
 
-    def _get_test_analyzer_result(self, output_format, protocol, analyzer, address):
-        return self._get_command_result([
-            'cryptolyzer', '--output-format', output_format, protocol, analyzer, address
-        ])
+    def _get_test_analyzer_result(
+            self, output_format, protocol, analyzer, address, timeout=None
+    ):  # pylint: disable=too-many-arguments
+        command_line_arguments = ['cryptolyzer']
+        if timeout:
+            command_line_arguments.extend(['--socket-timeout', str(timeout)])
+        command_line_arguments.extend(['--output-format', output_format, protocol, analyzer, address])
+        return self._get_command_result(command_line_arguments)
 
-    def _get_test_analyzer_result_json(self, protocol, analyzer, address):
-        return self._get_test_analyzer_result('json', protocol, analyzer, address)[0]
+    def _get_test_analyzer_result_json(self, protocol, analyzer, address, timeout=None):
+        return self._get_test_analyzer_result('json', protocol, analyzer, address, timeout)[0]
 
-    def _get_test_analyzer_result_markdown(self, protocol, analyzer, address):
-        return self._get_test_analyzer_result('markdown', protocol, analyzer, address)[0]
+    def _get_test_analyzer_result_markdown(self, protocol, analyzer, address, timeout=None):
+        return self._get_test_analyzer_result('markdown', protocol, analyzer, address, timeout)[0]
 
     def _test_argument_error(self, argv, stderr_regexp, stdin=b''):
         with patch.object(sys, 'stderr', new_callable=six.StringIO) as stderr, \

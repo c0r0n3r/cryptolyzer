@@ -101,12 +101,14 @@ class ProtocolHandlerBase(object):
 
         raise NotImplementedError()
 
-    def analyze(self, analyzer, uri):
+    def analyze(self, analyzer, uri, timeout=None):
         LogSingleton().log(level=60, msg=six.u('Analysis started; protocol="%s", analyzer="%s"') % (
             self.get_protocol(), analyzer.get_name(),
         ))
 
         l7_client = self._l7_client_from_uri(uri)
+        if timeout is not None:
+            l7_client.timeout = timeout
         args, kwargs = self._get_analyzer_args()
         return analyzer.analyze(l7_client, *args, **kwargs)
 

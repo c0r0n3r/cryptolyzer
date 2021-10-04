@@ -41,6 +41,15 @@ def get_protocol_handler_analyzer_and_uris(parser, arguments):
     return protocol_handler, analyzer, targets
 
 
+def parse_arg_socket_timeout(value):
+    value = float(value)
+
+    if value <= 0:
+        raise argparse.ArgumentTypeError("%s socket timeout must be a positive integer value" % value)
+
+    return value
+
+
 def get_argument_parser():
     parser = argparse.ArgumentParser(prog='cryptolyze')
     parser.add_argument('--version', '-v', action='version', version='%(prog)s ' + __setup__.__version__)
@@ -55,6 +64,13 @@ def get_argument_parser():
         choices=['json', 'markdown'],
         default='markdown',
         help='format of the anlysis result (default: %(default)s)'
+    )
+    parser.add_argument(
+        '-t', '--socket-timeout',
+        type=parse_arg_socket_timeout,
+        default=5,
+        metavar='seconds',
+        help='Maximum time to wait for server to responde (default: %(default)s seconds)'
     )
 
     parsers_analyzer = parser.add_subparsers(title='protocol', dest='protocol')
@@ -84,7 +100,7 @@ def main():
 
     for target in targets:
         try:
-            analyzer_result = protocol_handler.analyze(analyzer, target)
+            analyzer_result = protocol_handler.analyze(analyzer, target, arguments.socket_timeout)
         except (NetworkError, SecurityError, InvalidDataLength, InvalidType, InvalidValue) as e:
             analyzer_result = AnalyzerResultError(str(target), str(e))
 
