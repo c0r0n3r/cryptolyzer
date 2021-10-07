@@ -1,10 +1,18 @@
 # Changelog
 
+## 0.7.2 - 2021-10-07
+
 ### Features
 
 - SSH (`ssh`)
   - Diffie-Hellman (`dhparams`)
     - add group exchange algorithms supported by the server to the result (\#53)
+
+### Other
+
+- switch to Markdown format in changelog, readme and contributing
+- update contributing to the latest version from contribution-guide.org
+- add summary of the project to the readme
 
 ## 0.7.1 - 2021-09-20
 
