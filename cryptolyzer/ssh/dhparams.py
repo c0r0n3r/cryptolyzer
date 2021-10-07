@@ -26,6 +26,10 @@ from cryptolyzer.ssh.ciphers import AnalyzerCiphers
 
 @attr.s
 class AnalyzerResultGroupExchange(object):
+    gex_algorithms = attr.ib(
+        attr.validators.deep_iterable(attr.validators.instance_of(SshKexAlgorithm)),
+        metadata={'human_readable_name': 'Group Exchange Algorithms'}
+    )
     key_sizes = attr.ib(attr.validators.deep_iterable(attr.validators.instance_of(six.integer_types)))
     bounds_tolerated = attr.ib(attr.validators.instance_of(bool))
 
@@ -61,14 +65,14 @@ class AnalyzerDHParams(AnalyzerSshBase):
         return 'Check DH parameters offered by the server(s)'
 
     @classmethod
-    def _get_negotiable_key_sizes(cls, analyzable, gex_algorithm):
+    def _get_negotiable_key_sizes(cls, analyzable, gex_algorithms):
         gex_min_size = 1
         gex_max_size = 8192
         gex_tolerates_bounds = True
         gex_key_sizes = set()
         while True:
             try:
-                key_exchange_init_message = SshKeyExchangeInitAnyAlgorithm(kex_algorithms=[gex_algorithm, ])
+                key_exchange_init_message = SshKeyExchangeInitAnyAlgorithm(kex_algorithms=[gex_algorithms[0], ])
                 server_messages = analyzable.do_handshake(
                     key_exchange_init_message=key_exchange_init_message,
                     gex_params=L7ServerSshGexParams(
@@ -101,7 +105,7 @@ class AnalyzerDHParams(AnalyzerSshBase):
 
             gex_key_sizes.add(dh_public_key.key_size)
 
-        return AnalyzerResultGroupExchange(list(sorted(gex_key_sizes)), gex_tolerates_bounds)
+        return AnalyzerResultGroupExchange(gex_algorithms, list(sorted(gex_key_sizes)), gex_tolerates_bounds)
 
     def analyze(self, analyzable):
         analyzer_result = AnalyzerCiphers().analyze(analyzable)
@@ -121,5 +125,5 @@ class AnalyzerDHParams(AnalyzerSshBase):
         return AnalyzerResultDHParams(
             AnalyzerTargetSsh.from_l7_client(analyzable),
             AnalyzerResultKeyExchange(kex_algorithms) if kex_algorithms else None,
-            self._get_negotiable_key_sizes(analyzable, gex_algorithms[0]) if gex_algorithms else None
+            self._get_negotiable_key_sizes(analyzable, gex_algorithms) if gex_algorithms else None
         )
