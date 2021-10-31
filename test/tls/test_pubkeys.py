@@ -10,7 +10,7 @@ from collections import OrderedDict
 import datetime
 import asn1crypto
 
-from cryptoparser.tls.subprotocol import TlsAlertDescription
+from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
@@ -199,6 +199,11 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(len(result.pubkeys), 0)
         self.assertEqual(mocked_do_tls_handshake.call_count, 5)
+
+    @mock.patch.object(AnalyzerPublicKeys, '_get_server_messages', return_value={TlsHandshakeType.SERVER_HELLO})
+    def test_error_no_server_key_exchange(self, _):
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertEqual(len(result.pubkeys), 0)
 
     def test_eq(self):
         result_badssl_com = self.get_result('badssl.com', 443)
