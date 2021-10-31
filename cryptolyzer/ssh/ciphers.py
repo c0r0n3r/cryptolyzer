@@ -2,6 +2,8 @@
 
 import attr
 
+import six
+
 from cryptoparser.ssh.ciphersuite import (
     SshCompressionAlgorithm,
     SshEncryptionAlgorithm,
@@ -20,48 +22,48 @@ from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
 class AnalyzerResultCiphers(AnalyzerResultSsh):
     kex_algorithms = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshKexAlgorithm, str))
+            member_validator=attr.validators.instance_of((SshKexAlgorithm, ) + six.string_types)
         ),
         metadata={'human_readable_name': 'KEX Algorithms'}
     )
     host_key_algorithms = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshHostKeyAlgorithm, str))
+            member_validator=attr.validators.instance_of((SshHostKeyAlgorithm, ) + six.string_types)
         ),
     )
     encryption_algorithms_client_to_server = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshEncryptionAlgorithm, str))
+            member_validator=attr.validators.instance_of((SshEncryptionAlgorithm, ) + six.string_types)
         ),
         metadata={'human_readable_name': 'Encryption Algorithms Client to Server'}
     )
     encryption_algorithms_server_to_client = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshEncryptionAlgorithm, str))
+            member_validator=attr.validators.instance_of((SshEncryptionAlgorithm, ) + six.string_types)
         ),
         metadata={'human_readable_name': 'Encryption Algorithms Server to Client'}
     )
     mac_algorithms_client_to_server = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshMacAlgorithm, str))
+            member_validator=attr.validators.instance_of((SshMacAlgorithm, ) + six.string_types)
         ),
         metadata={'human_readable_name': 'MAC Algorithms Client to Server'}
     )
     mac_algorithms_server_to_client = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshMacAlgorithm, str))
+            member_validator=attr.validators.instance_of((SshMacAlgorithm, ) + six.string_types)
         ),
         metadata={'human_readable_name': 'MAC Algorithms Server to Client'}
     )
     compression_algorithms_client_to_server = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshCompressionAlgorithm, str))
+            member_validator=attr.validators.instance_of((SshCompressionAlgorithm, ) + six.string_types)
         ),
         metadata={'human_readable_name': 'Compression Algorithms Client to Server'}
     )
     compression_algorithms_server_to_client = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshCompressionAlgorithm, str))
+            member_validator=attr.validators.instance_of((SshCompressionAlgorithm, ) + six.string_types)
         ),
         metadata={'human_readable_name': 'Compression Algorithms Server to Client'}
     )
