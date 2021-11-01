@@ -198,6 +198,8 @@ class L7TransferBase(object):
     def __attrs_post_init__(self):
         if self.port is None:
             self.port = self.get_default_port()
+        if self.timeout is None:
+            self.timeout = self.get_default_timeout()
 
         self._family, self.ip = resolve_address(self.address, self.port, self.ip)
         self.l4_transfer = None
@@ -241,6 +243,10 @@ class L7TransferBase(object):
     @abc.abstractmethod
     def get_default_port(cls):
         raise NotImplementedError()
+
+    @classmethod
+    def get_default_timeout(cls):
+        return None
 
     @abc.abstractmethod
     def _init_connection(self):
