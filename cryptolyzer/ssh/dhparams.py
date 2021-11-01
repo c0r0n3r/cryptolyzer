@@ -113,10 +113,14 @@ class AnalyzerDHParams(AnalyzerSshBase):
         gex_algorithms = []
         kex_algorithms = []
 
-        for kex_algorithm in analyzer_result.kex_algorithms:
-            if kex_algorithm.value.kex != KeyExchange.DHE:
-                continue
-
+        algorithms = filter(
+            lambda kex_algorithm: (
+                isinstance(kex_algorithm, SshKexAlgorithm) and
+                kex_algorithm.value.kex == KeyExchange.DHE
+            ),
+            analyzer_result.kex_algorithms
+        )
+        for kex_algorithm in algorithms:
             if kex_algorithm.value.key_size is None:
                 gex_algorithms.append(kex_algorithm)
             else:
