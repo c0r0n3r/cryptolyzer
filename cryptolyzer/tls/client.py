@@ -751,6 +751,11 @@ class ClientSMTP(L7ClientStartTlsMailBase):
     def get_default_port(cls):
         return 587
 
+    @classmethod
+    def get_default_timeout(cls):
+        # some servers delays initial response for 30 seconds
+        return 35
+
     @property
     def _capabilities_command(self):
         return 'EHLO cryptolyzer'
