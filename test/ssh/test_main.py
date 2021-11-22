@@ -10,9 +10,9 @@ import urllib3
 
 import six
 
-from cryptolyzer.ssh.analyzer import ProtocolHandlerSshAllSupportedVersions
-from cryptolyzer.ssh.ciphers import AnalyzerCiphers
+from cryptolyzer.ssh.analyzer import ProtocolHandlerSshVersionIndependent
 from cryptolyzer.ssh.server import L7ServerSsh
+from cryptolyzer.ssh.versions import AnalyzerVersions
 
 from .classes import L7ServerSshTest
 
@@ -52,6 +52,6 @@ class TestMain(TestMainBase):
     def test_all_versions(self):
         url = urllib3.util.parse_url('ssh://' + self.address)
         self.assertEqual(
-            self._get_test_analyzer_result_json('ssh', 'ciphers', self.address),
-            ProtocolHandlerSshAllSupportedVersions().analyze(AnalyzerCiphers(), url).as_json() + '\n'
+            self._get_test_analyzer_result_json('ssh', 'versions', self.address),
+            ProtocolHandlerSshVersionIndependent().analyze(AnalyzerVersions(), url).as_json() + '\n'
         )

@@ -11,6 +11,7 @@ import six
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsAlertDescription
+from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 from cryptoparser.common.utils import get_leaf_classes
 
 from cryptolyzer.httpx.client import L7ClientHttpBase
@@ -166,6 +167,28 @@ class ProtocolHandlerTlsBase(ProtocolHandlerBase):
 
 
 class ProtocolHandlerTlsExactVersion(ProtocolHandlerTlsBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_protocol_version(cls):
+        raise NotImplementedError()
+
+
+class ProtocolHandlerSshBase(ProtocolHandlerBase):
+    @classmethod
+    def get_protocol(cls):
+        return SshProtocolVersion(SshVersion.SSH2).identifier
+
+    @classmethod
+    def _get_analyzer_args(cls):
+        return ([], {})
+
+    @classmethod
+    @abc.abstractmethod
+    def get_analyzers(cls):
+        raise NotImplementedError()
+
+
+class ProtocolHandlerSshExactVersion(ProtocolHandlerSshBase):
     @classmethod
     @abc.abstractmethod
     def get_protocol_version(cls):

@@ -5,11 +5,10 @@ from collections import OrderedDict
 import attr
 
 from cryptoparser.common.algorithm import Authentication, KeyExchange
-from cryptoparser.common.utils import get_leaf_classes
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
 
-from cryptolyzer.common.analyzer import AnalyzerTlsBase, ProtocolHandlerTlsExactVersion
-from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+from cryptolyzer.common.analyzer import AnalyzerTlsBase, ProtocolHandlerBase
+from cryptolyzer.common.result import AnalyzerResultAllBase, AnalyzerTargetTls
 
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites, AnalyzerResultCipherSuites
 from cryptolyzer.tls.curves import AnalyzerCurves, AnalyzerResultCurves
@@ -22,7 +21,7 @@ from cryptolyzer.tls.versions import AnalyzerVersions, AnalyzerResultVersions
 
 
 @attr.s  # pylint: disable=too-few-public-methods,too-many-instance-attributes
-class AnalyzerResultAll(AnalyzerResultTls):
+class AnalyzerResultAll(AnalyzerResultAllBase):
     versions = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultVersions)),
         metadata={'human_readable_name': 'Supported Protocol Versions'}
@@ -58,26 +57,6 @@ class AnalyzerResultAll(AnalyzerResultTls):
         metadata={'human_readable_name': 'Supported Extensions'}
     )
 
-    def _as_markdown(self, level):
-        result = ''
-
-        dict_value = self._asdict()
-        name_dict = self._markdown_human_readable_names(self, dict_value)
-        for attr_name, value in dict_value.items():
-            result += '{} {}\n\n'.format((level + 1) * '#', name_dict[attr_name])
-            if value is None or isinstance(value, (AnalyzerResultTls, AnalyzerTargetTls)):
-                result += self._as_markdown_without_target(value, level)
-            else:
-                for index, cipher_result in enumerate(value):
-                    if index:
-                        result += '\n'
-
-                    result += '{} {}\n\n'.format((level + 2) * '#', cipher_result.target.proto_version)
-                    result += self._as_markdown_without_target(cipher_result, level)
-            result += '\n'
-
-        return True, result
-
 
 class AnalyzerAll(AnalyzerTlsBase):
     @classmethod
@@ -86,18 +65,17 @@ class AnalyzerAll(AnalyzerTlsBase):
 
     @classmethod
     def get_help(cls):
-        return 'Check TLS settings of the server(s) all'
+        return 'Check TLS settings of the server(s)'
 
     @staticmethod
     def _get_result(analyzer_class, analyzable, protocol_version):
-        for protocol_handler_class in get_leaf_classes(ProtocolHandlerTlsExactVersion):
-            if (analyzer_class in protocol_handler_class.get_analyzers() and
-                    protocol_handler_class.get_protocol_version() == protocol_version):
-                break
-        else:
-            protocol_version = None
-
         analyzer_name = analyzer_class.get_name()
+        if protocol_version is not None:
+            protocol_handler = ProtocolHandlerBase.from_protocol(protocol_version.identifier)
+            if not (analyzer_class in protocol_handler.get_analyzers() and
+                    protocol_handler.get_protocol_version() == protocol_version):
+                protocol_version = None
+
         if protocol_version is None:
             return {analyzer_name: None}
 
@@ -147,7 +125,7 @@ class AnalyzerAll(AnalyzerTlsBase):
         return AnalyzerAll._get_result(AnalyzerPublicKeyRequest, analyzable, protocol_version)
 
     @staticmethod
-    def is_publc_key_supported(cipher_suite_results):
+    def is_public_key_supported(cipher_suite_results):
         for protocol_version, cipher_suite_result in cipher_suite_results.items():
             for cipher_suite in cipher_suite_result.cipher_suites:
                 if cipher_suite.value.authentication != Authentication.anon:
@@ -157,7 +135,7 @@ class AnalyzerAll(AnalyzerTlsBase):
 
     @staticmethod
     def get_pubkeys_result(analyzable, cipher_suite_results):
-        protocol_version = AnalyzerAll.is_publc_key_supported(cipher_suite_results)
+        protocol_version = AnalyzerAll.is_public_key_supported(cipher_suite_results)
         return AnalyzerAll._get_result(AnalyzerPublicKeys, analyzable, protocol_version)
 
     @staticmethod

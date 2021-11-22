@@ -117,7 +117,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
 
     def test_is_public_key_supported(self):
         target = AnalyzerTargetTls('tls', 'one.one.one.one', '1.1.1.1', 443, None)
-        self.assertEqual(AnalyzerAll.is_publc_key_supported(OrderedDict([
+        self.assertEqual(AnalyzerAll.is_public_key_supported(OrderedDict([
             (
                 TlsProtocolVersionFinal(TlsVersion.TLS1_0),
                 AnalyzerResultCipherSuites(target, [
@@ -138,7 +138,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
             ),
         ])), None)
 
-        self.assertEqual(AnalyzerAll.is_publc_key_supported(OrderedDict([
+        self.assertEqual(AnalyzerAll.is_public_key_supported(OrderedDict([
             (
                 TlsProtocolVersionFinal(TlsVersion.TLS1_0),
                 AnalyzerResultCipherSuites(target, [
@@ -170,7 +170,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
 
     def test_missing_parts(self):
 
-        with mock.patch.object(AnalyzerAll, 'is_publc_key_supported', return_value=None):
+        with mock.patch.object(AnalyzerAll, 'is_public_key_supported', return_value=None):
             result = self.get_result('static-rsa.badssl.com', 443)
 
         self.assertEqual(result.curves, None)

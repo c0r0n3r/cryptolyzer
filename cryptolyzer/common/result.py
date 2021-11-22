@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict
-
 import six
 import attr
 
@@ -92,17 +90,26 @@ class AnalyzerResultError(AnalyzerResultBase):
 
 
 @attr.s
-class AnalyzerResultAllSupportedVersions(AnalyzerResultBase):
-    results = attr.ib(validator=attr.validators.instance_of(OrderedDict))
+class AnalyzerResultAllBase(AnalyzerResultBase):
+    def _as_markdown(self, level):
+        result = ''
 
-    def _asdict(self):
-        results = []
-        for protocol_version, result in iter(self.results.items()):
-            result_as_dict = result._asdict()
+        dict_value = self._asdict()
+        name_dict = self._markdown_human_readable_names(self, dict_value)
+        for attr_name, value in dict_value.items():
+            result += '{} {}\n\n'.format((level + 1) * '#', name_dict[attr_name])
+            if (value is None or isinstance(value, (AnalyzerResultBase, AnalyzerTarget))):
+                result += self._as_markdown_without_target(value, level)
+            else:
+                for index, cipher_result in enumerate(value):
+                    if index:
+                        result += '\n'
 
-            results.append((protocol_version.identifier, result_as_dict))
+                    result += '{} {}\n\n'.format((level + 2) * '#', cipher_result.target.proto_version)
+                    result += self._as_markdown_without_target(cipher_result, level)
+            result += '\n'
 
-        return OrderedDict([('target', self.target)] + results)
+        return True, result
 
 
 @attr.s
