@@ -33,7 +33,8 @@ CryptoLyzer can be installed directly via pip
 ```shell
 pip install cryptolyzer
 
-cryptolyze tls ciphers www.example.com
+cryptolyze tls all www.example.com
+cryptolyze tls1_2 ciphers www.example.com
 cryptolyze ssh2 ciphers www.example.com
 cryptolyze http headers www.example.com
 ```
@@ -41,7 +42,8 @@ cryptolyze http headers www.example.com
 or can be used via Docker
 
 ```shell
-docker run --rm coroner/cryptolyzer tls ciphers www.example.com
+docker run --rm coroner/cryptolyzer tls all www.example.com
+docker run --rm coroner/cryptolyzer tls1_2 ciphers www.example.com
 docker run --rm coroner/cryptolyzer ssh2 ciphers www.example.com
 docker run --rm coroner/cryptolyzer http headers www.example.com
 ```
@@ -60,7 +62,8 @@ curl -s https://download.opensuse.org/repositories/home:/pfeiffersz:/cryptolyzer
 
 apt update && apt install -y python3-pkg-resources python3-cryptoparser python3-cryptolyzer
 
-cryptolyze tls ciphers www.example.com
+cryptolyze tls all www.example.com
+cryptolyze tls1_2 ciphers www.example.com
 cryptolyze ssh2 ciphers www.example.com
 cryptolyze http headers www.example.com
 ```
