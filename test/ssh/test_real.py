@@ -15,10 +15,11 @@ class TestReal(unittest.TestCase):
         self.assertEqual(
             result.host_key_algorithms,
             [
+                SshHostKeyAlgorithm.SSH_ED25519,
+                SshHostKeyAlgorithm.ECDSA_SHA2_NISTP256,
                 SshHostKeyAlgorithm.RSA_SHA2_512,
                 SshHostKeyAlgorithm.RSA_SHA2_256,
                 SshHostKeyAlgorithm.SSH_RSA,
-                SshHostKeyAlgorithm.SSH_DSS,
             ]
         )
 
