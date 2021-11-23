@@ -39,19 +39,6 @@ class TestPublicKeyX509(unittest.TestCase):
             return PublicKeyX509(asn1crypto.x509.Certificate.load(der_bytes))
 
     def test_common_name(self):
-        result = self._get_result('no-common-name.badssl.com', 443)
-        self.assertEqual(len(result.pubkeys), 1)
-        self.assertEqual(len(result.pubkeys[0].tls_certificate_chain.items), 3)
-        self.assertNotEqual(result.pubkeys[0].tls_certificate_chain.items[0].subject, OrderedDict([]))
-        self.assertEqual(
-            result.pubkeys[0].tls_certificate_chain.items[0].subject_alternative_names,
-            ['no-common-name.badssl.com', ]
-        )
-        self.assertEqual(
-            result.pubkeys[0].tls_certificate_chain.items[0].valid_domains,
-            ['no-common-name.badssl.com', ]
-        )
-
         result = self._get_result('long-extended-subdomain-name-containing-many-letters-and-dashes.badssl.com', 443)
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].valid_domains, ['*.badssl.com', 'badssl.com'])
 
