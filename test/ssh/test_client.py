@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
-from cryptoparser.ssh.subprotocol import SshReasonCode, SshKexAlgorithmVector
+from cryptoparser.common.algorithm import NamedGroup
+from cryptoparser.ssh.subprotocol import (
+    SshDHKeyExchangeReply,
+    SshKexAlgorithmVector,
+    SshReasonCode,
+)
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
 from cryptolyzer.common.exception import (

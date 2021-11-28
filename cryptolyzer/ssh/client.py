@@ -15,18 +15,20 @@ from cryptoparser.ssh.ciphersuite import (
     SshMacAlgorithm,
 )
 from cryptoparser.ssh.subprotocol import (
-    SshKeyExchangeInit,
     SshDHGroupExchangeGroup,
     SshDHGroupExchangeInit,
     SshDHGroupExchangeRequest,
+    SshDHKeyExchangeInit,
     SshDisconnectMessage,
+    SshKeyExchangeInit,
+    SshNewKeys,
     SshProtocolMessage,
 )
 from cryptoparser.ssh.version import SshProtocolVersion, SshSoftwareVersionUnparsed, SshVersion
 
 from cryptolyzer import __setup__
 
-from cryptolyzer.common.dhparam import get_dh_ephemeral_key_forged, bytes_to_int, int_to_bytes
+from cryptolyzer.common.dhparam import get_dh_ephemeral_key_forged, bytes_to_int, int_to_bytes, WellKnownDHParams
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
 
@@ -129,6 +131,31 @@ class L7ClientSsh(L7TransferBase):
 
 class SshClientHandshake(SshHandshakeBase):
     @classmethod
+    def _process_kex_init_dhe(cls, transfer, agreed_kex_type, gex_params):
+        if agreed_kex_type.value.key_size is None:
+            record_class = SshRecordKexDHGroup
+            transfer.send(record_class(SshDHGroupExchangeRequest(
+                gex_min=gex_params.gex_min,
+                gex_max=gex_params.gex_max,
+                gex_number=gex_params.gex_number,
+            )).compose())
+            raise IndexError(record_class)
+
+        record_class = SshRecordKexDH
+        key_size = agreed_kex_type.value.key_size
+        for dh_param in WellKnownDHParams:
+            if dh_param.value.key_size == key_size:
+                ephemeral_public_key = get_dh_ephemeral_key_forged(dh_param.value.dh_param_numbers.p)
+                ephemeral_public_key_bytes = int_to_bytes(ephemeral_public_key, key_size).lstrip(b'\x00')
+                break
+        else:
+            raise NotImplementedError()
+
+        transfer.send(record_class(SshDHKeyExchangeInit(ephemeral_public_key_bytes)).compose())
+
+        return record_class
+
+    @classmethod
     def _process_kex_init(cls, transfer, record, key_exchange_init_message, gex_params):
         agreed_kex = list(filter(
             record.packet.kex_algorithms.__contains__,
@@ -139,16 +166,7 @@ class SshClientHandshake(SshHandshakeBase):
 
         agreed_kex_type = agreed_kex[0]
         if agreed_kex_type.value.kex == KeyExchange.DHE:
-            if agreed_kex_type.value.key_size is None:
-                record_class = SshRecordKexDHGroup
-                transfer.send(record_class(SshDHGroupExchangeRequest(
-                    gex_min=gex_params.gex_min,
-                    gex_max=gex_params.gex_max,
-                    gex_number=gex_params.gex_number,
-                )).compose())
-                raise IndexError(record_class)
-
-            record_class = SshRecordKexDH
+            record_class = cls._process_kex_init_dhe(transfer, agreed_kex_type, gex_params)
         else:
             raise NotImplementedError()
 
@@ -195,6 +213,8 @@ class SshClientHandshake(SshHandshakeBase):
                     record_class = self._process_kex_init(transfer, record, key_exchange_init_message, gex_params)
                 elif isinstance(record.packet, SshDHGroupExchangeGroup):
                     record_class = self._process_dh_group_exchange_group(record, transfer, record_class)
+                elif isinstance(record.packet, SshNewKeys):
+                    raise NotImplementedError()
 
                 receivable_byte_num = record_class.HEADER_SIZE
             except NotEnoughData as e:
