@@ -10,16 +10,17 @@ from cryptoparser.common.algorithm import NamedGroup
 from cryptoparser.ssh.subprotocol import (
     SshDHKeyExchangeReply,
     SshKexAlgorithmVector,
+    SshMessageCode,
     SshReasonCode,
 )
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
-from cryptolyzer.common.exception import (
-    NetworkError,
-    NetworkErrorType,
+from cryptolyzer.ssh.client import (
+    L7ClientSsh,
+    SshKeyExchangeInitKeyExchangeDHE,
+    SshKeyExchangeInitKeyExchangeECDHE,
+    SSH_KEX_ALGORITHMS_TO_NAMED_GROUP,
 )
-
-from cryptolyzer.ssh.client import L7ClientSsh, SshKeyExchangeInitKeyExchangeDHE
 from cryptolyzer.ssh.exception import SshDisconnect
 from cryptolyzer.ssh.server import L7ServerSsh
 from cryptolyzer.ssh.versions import AnalyzerVersions
@@ -43,11 +44,11 @@ class TestL7ClientBase(unittest.TestCase):
 
 
 class TestSshClientHandshake(TestL7ClientBase):
-    def test_error_no_response(self):
+    @mock.patch('cryptolyzer.ssh.client.SSH_KEX_ALGORITHMS_TO_NAMED_GROUP', {})
+    def test_error_kex_not_implemented(self):
         l7_client = L7ClientSsh('ssh.blinkenshell.org', 2222, timeout=0.5)
-        with self.assertRaises(NetworkError) as context_manager:
-            l7_client.do_handshake(key_exchange_init_message=SshKeyExchangeInitKeyExchangeDHE(), last_message_type=-1)
-        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_RESPONSE)
+        with self.assertRaises(NotImplementedError):
+            l7_client.do_handshake(key_exchange_init_message=SshKeyExchangeInitKeyExchangeECDHE(), last_message_type=-1)
 
     def test_error_disconnect(self):
         threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, timeout=0.2))
@@ -63,6 +64,37 @@ class TestSshClientHandshake(TestL7ClientBase):
             ])
             l7_client.do_handshake(key_exchange_init_message=key_exchange_init_message, last_message_type=None)
         self.assertEqual(context_manager.exception.reason, SshReasonCode.HOST_NOT_ALLOWED_TO_CONNECT)
+
+    def test_kex_ecdhe(self):
+        l7_client = L7ClientSsh('github.com')
+        key_exchange_init_message = SshKeyExchangeInitKeyExchangeECDHE()
+        key_exchange_init_message.kex_algorithms = SshKexAlgorithmVector(filter(
+            lambda kex_algorithm: SSH_KEX_ALGORITHMS_TO_NAMED_GROUP[kex_algorithm] in [
+                NamedGroup.CURVE25519,
+                NamedGroup.CURVE448,
+            ],
+            key_exchange_init_message.kex_algorithms
+        ))
+        server_messages = l7_client.do_handshake(
+            key_exchange_init_message=key_exchange_init_message,
+            last_message_type=SshMessageCode.NEWKEYS
+        )
+        self.assertIn(SshDHKeyExchangeReply, server_messages.keys())
+
+        l7_client = L7ClientSsh('github.com')
+        key_exchange_init_message = SshKeyExchangeInitKeyExchangeECDHE()
+        key_exchange_init_message.kex_algorithms = SshKexAlgorithmVector(filter(
+            lambda kex_algorithm: SSH_KEX_ALGORITHMS_TO_NAMED_GROUP[kex_algorithm] not in [
+                NamedGroup.CURVE25519,
+                NamedGroup.CURVE448,
+            ],
+            key_exchange_init_message.kex_algorithms
+        ))
+        server_messages = l7_client.do_handshake(
+            key_exchange_init_message=key_exchange_init_message,
+            last_message_type=SshMessageCode.NEWKEYS
+        )
+        self.assertIn(SshDHKeyExchangeReply, server_messages.keys())
 
     def test_ssh_client(self):
         threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, timeout=0.2))
