@@ -22,7 +22,9 @@ from cryptoparser.ssh.subprotocol import (
     SshDisconnectMessage,
     SshProtocolMessage,
 )
-from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
+from cryptoparser.ssh.version import SshProtocolVersion, SshSoftwareVersionUnparsed, SshVersion
+
+from cryptolyzer import __setup__
 
 from cryptolyzer.common.dhparam import get_dh_ephemeral_key_forged, bytes_to_int, int_to_bytes
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
@@ -36,8 +38,8 @@ class SshProtocolMessageDefault(SshProtocolMessage):
     def __init__(self):
         super(SshProtocolMessageDefault, self).__init__(
             protocol_version=SshProtocolVersion(SshVersion.SSH2, 0),
-            software_version='CryptoLyzer',
-            comment='https://gitlab.com/coroner/cyrptolyzer'
+            software_version=SshSoftwareVersionUnparsed('{}_{}'.format(__setup__.__title__, __setup__.__version__)),
+            comment=__setup__.__url__
         )
 
 

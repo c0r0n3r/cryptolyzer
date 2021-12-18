@@ -1,5 +1,9 @@
 # Changelog
 
+- SSH (`ssh`)
+  - Versions (`versions`)
+    - identify application server and version (\#71)
+
 ## 0.7.3 - 2021-12-26
 
 ### Features

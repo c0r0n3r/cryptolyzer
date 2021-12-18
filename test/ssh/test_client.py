@@ -60,4 +60,4 @@ class TestSshClientHandshake(TestL7ClientBase):
         threaded_server.start()
 
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
-        self.assertEqual(result.versions, [SshProtocolVersion(SshVersion.SSH2, )])
+        self.assertEqual(result.protocol_versions, [SshProtocolVersion(SshVersion.SSH2, )])
