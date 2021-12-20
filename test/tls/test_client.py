@@ -572,10 +572,10 @@ class TestClientPostgreSQL(TestL7ClientBase):
 
     def test_postgresql_client(self):
         self.assertEqual(
-            self.get_result('postgresql', 'ec2-54-75-226-17.eu-west-1.compute.amazonaws.com', None).versions,
+            self.get_result('postgresql', 'ec2-54-217-15-9.eu-west-1.compute.amazonaws.com', None).versions,
             [
                 TlsProtocolVersionFinal(tls_version)
-                for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, ]
+                for tls_version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]
             ]
         )
 
