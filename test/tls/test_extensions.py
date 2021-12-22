@@ -35,11 +35,8 @@ class TestTlsExtensions(unittest.TestCase):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(result.next_protocols, [])
 
-        result = self.get_result('amazon.com', 443)
-        self.assertEqual(
-            set(result.next_protocols),
-            set([TlsNextProtocolName.HTTP_1_1, ])
-        )
+        result = self.get_result('badssl.com', 443)
+        self.assertEqual(set(result.next_protocols), set([TlsNextProtocolName.HTTP_1_1, ]))
 
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
@@ -64,11 +61,8 @@ class TestTlsExtensions(unittest.TestCase):
         result = self.get_result('www.mail.ru', 443)
         self.assertEqual(result.application_layer_protocols, [])
 
-        result = self.get_result('www.wikipedia.org', 443)
-        self.assertEqual(
-            set(result.application_layer_protocols),
-            set([TlsProtocolName.HTTP_1_0, TlsProtocolName.H2, TlsProtocolName.HTTP_1_1])
-        )
+        result = self.get_result('badssl.com', 443)
+        self.assertEqual(set(result.application_layer_protocols), set([TlsProtocolName.HTTP_1_1]))
 
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
