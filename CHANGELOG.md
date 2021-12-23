@@ -3,6 +3,8 @@
 ### Notable fixes
 
 - TLS (`tls`)
+  - Generic
+    - Handle multi-line greeting message in the case of SMTP servers (\#72)
   - Public Keys (`pubkeys`)
     - Handle missing certificates message well during an anonymous Diffie-Hellman key exchange (\#66)
 
