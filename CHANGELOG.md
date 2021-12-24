@@ -5,6 +5,8 @@
 - TLS (`tls`)
   - Generic
     - Handle multi-line greeting message in the case of SMTP servers (\#72)
+  - Diffie-Hellman (`dhparams`)
+    - Add safe prime attribute to well-known DH params as there is an RFC (5144) which defines unsafe prime (\#73)
   - Public Keys (`pubkeys`)
     - Handle missing certificates message well during an anonymous Diffie-Hellman key exchange (\#66)
 
