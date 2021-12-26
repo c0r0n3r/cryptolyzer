@@ -2,6 +2,9 @@
 
 ### Notable fixes
 
+- Generic
+  - Diffie-Hellman
+    - Handle Diffie-Hellman parameter q value comparision well (#74)
 - TLS (`tls`)
   - Generic
     - Handle multi-line greeting message in the case of SMTP servers (\#72)
