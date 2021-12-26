@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.3 - 2021-12-26
+
+### Features
+
+- SSH (`ssh`)
+  - Generic
+    - Add all command to SSH
+
 ### Notable fixes
 
 - Generic
