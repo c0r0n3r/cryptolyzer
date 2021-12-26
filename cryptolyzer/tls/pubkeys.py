@@ -182,6 +182,9 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
 
     @classmethod
     def _get_tls_certificate_chain(cls, server_messages):
+        if TlsHandshakeType.CERTIFICATE not in server_messages:
+            raise ValueError
+
         certificate_chain = []
 
         for tls_certificate in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain:

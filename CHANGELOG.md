@@ -1,5 +1,11 @@
 # Changelog
 
+### Notable fixes
+
+- TLS (`tls`)
+  - Public Keys (`pubkeys`)
+    - Handle missing certificates message well during an anonymous Diffie-Hellman key exchange (\#66)
+
 ## 0.7.2 - 2021-10-07
 
 ### Features
