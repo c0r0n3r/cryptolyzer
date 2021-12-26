@@ -49,7 +49,7 @@ class DHPublicKey(object):
 
 
 @attr.s(eq=False)
-class DHParamWellKnown(object):
+class DHParamWellKnown(Serializable):
     dh_param_numbers = attr.ib(validator=attr.validators.instance_of(DHParameterNumbers))
     name = attr.ib(validator=attr.validators.instance_of(six.string_types))
     source = attr.ib(validator=attr.validators.instance_of(six.string_types))
@@ -58,6 +58,9 @@ class DHParamWellKnown(object):
 
     def __eq__(self, other):
         return self.dh_param_numbers == other.dh_param_numbers
+
+    def _as_markdown(self, level):
+        return self._markdown_result('{} ({})'.format(self.name, self.source), level)
 
 
 class WellKnownDHParams(enum.Enum):

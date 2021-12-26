@@ -98,3 +98,10 @@ class TestWellKnown(TestDHParamBase):
             dh_well_known_rfc5114_1024.value.dh_param_numbers,
             dh_param_number_without_q_value,
         )
+
+    def test_markdown(self):
+        dh_well_known_rfc5114_1024 = WellKnownDHParams.RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP
+        self.assertEqual(
+            dh_well_known_rfc5114_1024.value.as_markdown(),
+            '1024-bit MODP Group with 160-bit Prime Order Subgroup (RFC5114)'
+        )
