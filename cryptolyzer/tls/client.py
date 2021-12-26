@@ -478,6 +478,12 @@ class L7ClientStartTlsBase(L7ClientTlsBase):
 
 @attr.s
 class L7ClientStartTlsTextBase(L7ClientStartTlsBase):
+    greeting = attr.ib(
+        init=False,
+        default=[],
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str))
+    )
+
     @classmethod
     @abc.abstractmethod
     def get_scheme(cls):
@@ -554,14 +560,23 @@ class L7ClientStartTlsTextBase(L7ClientStartTlsBase):
 
         return capabilities
 
+    def _flush_line(self):
+        self.l4_transfer.receive_line()
+        line = self.l4_transfer.buffer.decode('ascii').strip()
+        self.l4_transfer.flush_buffer()
+
+        return line
+
+    def _fill_greeting(self):
+        self.greeting = [self._flush_line()]
+
     def _init_l7(self):
         try:
             self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
             self._l7_client.init_connection()
             self.l4_transfer = self._l7_client.l4_transfer
 
-            self.l4_transfer.receive_line()
-            self.l4_transfer.flush_buffer()
+            self._fill_greeting()
 
             capabilities = self._get_capabilities()
             if self._starttls_command in capabilities:
@@ -759,6 +774,14 @@ class ClientSMTP(L7ClientStartTlsMailBase):
     @property
     def _capabilities_command(self):
         return 'EHLO cryptolyzer'
+
+    def _fill_greeting(self):
+        greeting_line = self._flush_line()
+        self.greeting = [greeting_line, ]
+
+        while not greeting_line.startswith('220 '):
+            greeting_line = self._flush_line()
+            self.greeting.append(greeting_line)
 
 
 class L7ClientIMAPS(L7ClientTlsBase):

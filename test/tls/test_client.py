@@ -93,7 +93,7 @@ class TestL7ClientBase(unittest.TestCase):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout, ip=ip)
         result = analyzer.analyze(l7_client, protocol_version)
-        return result
+        return l7_client, result
 
     def _get_mock_server_response(self, scheme):
         threaded_server = L7ServerTlsTest(
@@ -153,8 +153,9 @@ class TestL7ClientTlsBase(TestL7ClientBase):
         )
 
     def test_tls_client(self):
+        _, result = self.get_result('tls', 'badssl.com', 443)
         self.assertEqual(
-            self.get_result('tls', 'badssl.com', 443).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(TlsVersion.TLS1_0),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_1),
@@ -163,8 +164,9 @@ class TestL7ClientTlsBase(TestL7ClientBase):
         )
 
     def test_https_client(self):
+        _, result = self.get_result('https', 'badssl.com', None)
         self.assertEqual(
-            self.get_result('https', 'badssl.com', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(TlsVersion.TLS1_0),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_1),
@@ -184,7 +186,8 @@ class TestL7ClientStartTlsTextBase(TestL7ClientBase):
         ]),
     ))
     def test_error_unsupported_capabilities(self, _):
-        result = self._get_mock_server_response('pop3')
+        l7_client, result = self._get_mock_server_response('pop3')
+        self.assertEqual(l7_client.greeting, ['+OK Server ready.'])
         self.assertEqual(result.versions, [])
 
 
@@ -196,7 +199,8 @@ class TestClientPOP3(TestL7ClientBase):
         ]),
     ))
     def test_error_unsupported_capabilities(self, _):
-        result = self._get_mock_server_response('pop3')
+        l7_client, result = self._get_mock_server_response('pop3')
+        self.assertEqual(l7_client.greeting, ['+OK Server ready.'])
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -207,7 +211,8 @@ class TestClientPOP3(TestL7ClientBase):
         ]),
     ))
     def test_error_unsupported_starttls(self, _):
-        result = self._get_mock_server_response('pop3')
+        l7_client, result = self._get_mock_server_response('pop3')
+        self.assertEqual(l7_client.greeting, ['+OK Server ready.'])
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -220,18 +225,22 @@ class TestClientPOP3(TestL7ClientBase):
         ]),
     ))
     def test_error_starttls_error(self, _):
-        result = self._get_mock_server_response('pop3')
+        l7_client, result = self._get_mock_server_response('pop3')
+        self.assertEqual(l7_client.greeting, ['+OK Server ready.'])
         self.assertEqual(result.versions, [])
 
     def test_pop3_client(self):
+        l7_client, result = self.get_result('pop3', 'pop3.comcast.net', None, timeout=10)
+        self.assertEqual(l7_client.greeting, ['+OK Dovecot ready.'])
         self.assertEqual(
-            self.get_result('pop3', 'pop3.comcast.net', None, timeout=10).versions,
+            result.versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
     def test_pop3s_client(self):
+        _, result = self.get_result('pop3s', 'pop.gmail.com', None)
         self.assertEqual(
-            self.get_result('pop3s', 'pop.gmail.com', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(version)
                 for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
@@ -255,11 +264,13 @@ class TestClientIMAP(TestL7ClientBase):
         create=True
     )
     def test_error_unsupported_starttls(self):
-        self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, timeout=10).versions, [])
+        _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(imaplib.IMAP4, '__init__', side_effect=imaplib.IMAP4.error)
     def test_error_imap_error(self, _):
-        self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, timeout=10).versions, [])
+        _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(
         imaplib.IMAP4, 'xatom',
@@ -267,17 +278,20 @@ class TestClientIMAP(TestL7ClientBase):
     )
     @mock.patch.object(imaplib.IMAP4, 'shutdown', side_effect=imaplib.IMAP4.error)
     def test_error_starttls_error(self, _, __):
-        self.assertEqual(self.get_result('imap', 'imap.comcast.net', None, timeout=10).versions, [])
+        _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
+        self.assertEqual(result.versions, [])
 
     def test_imap_client(self):
+        _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
         self.assertEqual(
-            self.get_result('imap', 'imap.comcast.net', None, timeout=10).versions,
+            result.versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
     def test_imaps_client(self):
+        _, result = self.get_result('imaps', 'imap.gmail.com', None)
         self.assertEqual(
-            self.get_result('imaps', 'imap.gmail.com', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(version)
                 for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
@@ -293,7 +307,8 @@ class TestClientLMTP(TestL7ClientBase):
         ]),
     ))
     def test_error_unsupported_capabilities(self, _):
-        result = self._get_mock_server_response('lmtp')
+        l7_client, result = self._get_mock_server_response('lmtp')
+        self.assertEqual(l7_client.greeting, ['220 localhost LMTP Server'])
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -303,7 +318,8 @@ class TestClientLMTP(TestL7ClientBase):
         ]),
     ))
     def test_error_unsupported_starttls(self, _):
-        result = self._get_mock_server_response('lmtp')
+        l7_client, result = self._get_mock_server_response('lmtp')
+        self.assertEqual(l7_client.greeting, ['220 localhost LMTP Server'])
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -315,7 +331,8 @@ class TestClientLMTP(TestL7ClientBase):
         ]),
     ))
     def test_error_starttls_error(self, _):
-        result = self._get_mock_server_response('lmtp')
+        l7_client, result = self._get_mock_server_response('lmtp')
+        self.assertEqual(l7_client.greeting, ['220 localhost LMTP Server'])
         self.assertEqual(result.versions, [])
 
     def test_default_port(self):
@@ -331,7 +348,8 @@ class TestClientSMTP(TestL7ClientBase):
         ]),
     ))
     def test_error_unsupported_capabilities(self, _):
-        result = self._get_mock_server_response('smtp')
+        l7_client, result = self._get_mock_server_response('smtp')
+        self.assertEqual(l7_client.greeting, ['220 localhost ESMTP Server'])
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -341,7 +359,8 @@ class TestClientSMTP(TestL7ClientBase):
         ]),
     ))
     def test_error_unsupported_starttls(self, _):
-        result = self._get_mock_server_response('smtp')
+        l7_client, result = self._get_mock_server_response('smtp')
+        self.assertEqual(l7_client.greeting, ['220 localhost ESMTP Server'])
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -353,12 +372,27 @@ class TestClientSMTP(TestL7ClientBase):
         ]),
     ))
     def test_error_starttls_error(self, _):
-        result = self._get_mock_server_response('smtp')
+        l7_client, result = self._get_mock_server_response('smtp')
+        self.assertEqual(l7_client.greeting, ['220 localhost ESMTP Server'])
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'220-localhost ESMTP\r\n',
+            b'220 second line\r\n',
+        ]),
+    ))
+    def test_multiline_greeting(self, _):
+        l7_client, result = self._get_mock_server_response('smtp')
+        self.assertEqual(l7_client.greeting, ['220-localhost ESMTP', '220 second line'])
         self.assertEqual(result.versions, [])
 
     def test_smtp_client(self):
+        l7_client, result = self.get_result('smtp', 'smtp.gmail.com', None)
+        self.assertEqual(len(l7_client.greeting), 1)
+        six.assertRegex(self, l7_client.greeting[0], '220 smtp.gmail.com')
         self.assertEqual(
-            self.get_result('smtp', 'smtp.gmail.com', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(version)
                 for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
@@ -366,8 +400,9 @@ class TestClientSMTP(TestL7ClientBase):
         )
 
     def test_smtps_client(self):
+        _, result = self.get_result('smtps', 'smtp.gmail.com', None)
         self.assertEqual(
-            self.get_result('smtps', 'smtp.gmail.com', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(version)
                 for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
@@ -378,33 +413,39 @@ class TestClientSMTP(TestL7ClientBase):
 class TestClientFTP(TestL7ClientBase):
     @mock.patch.object(ftplib.FTP, '__init__', side_effect=ftplib.error_reply)
     def test_error_ftplib_error(self, _):
-        self.assertEqual(self.get_result('ftp', 'ftp.cert.dfn.de', None).versions, [])
+        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(ftplib.FTP, 'sendcmd', return_value='502 Command not implemented')
     def test_error_unsupported_starttls(self, _):
-        self.assertEqual(self.get_result('ftp', 'ftp.cert.dfn.de', None).versions, [])
+        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(ftplib.FTP, 'connect', return_value='534 Could Not Connect to Server - Policy Requires SSL')
     @mock.patch.object(ftplib.FTP, 'quit', side_effect=ftplib.error_perm)
     def test_error_ftp_error_on_connect(self, _, __):
-        self.assertEqual(self.get_result('ftp', 'ftp.cert.dfn.de', None).versions, [])
+        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(ftplib.FTP, 'quit', side_effect=ftplib.error_reply)
     def test_error_ftp_error_on_quit(self, _):
+        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
         self.assertEqual(
-            self.get_result('ftp', 'ftp.cert.dfn.de', None).versions,
+            result.versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
 
     def test_ftp_client(self):
+        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
         self.assertEqual(
-            self.get_result('ftp', 'ftp.cert.dfn.de', None).versions,
+            result.versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
 
     def test_ftps_client(self):
+        _, result = self.get_result('ftps', 'ftps.tceq.texas.gov', None)
         self.assertEqual(
-            self.get_result('ftps', 'ftps.tceq.texas.gov', None).versions,
+            result.versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
@@ -429,22 +470,26 @@ class TestClientRDP(TestL7ClientBase):
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
-        self.assertEqual(self.get_result('rdp', 'xactdemo.com', None).versions, [])
+        _, result = self.get_result('rdp', 'xactdemo.com', None)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidValue('x', int))
     def test_error_parse_invalid_value(self, _):
-        self.assertEqual(self.get_result('rdp', 'xactdemo.com', None).versions, [])
+        _, result = self.get_result('rdp', 'xactdemo.com', None)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(
         RDPNegotiationResponse, '_parse',
         return_value=(RDPNegotiationResponse([], []), RDP_NEGOTIATION_RESPONSE_LENGTH)
     )
     def test_error_no_ssl_support(self, _):
-        self.assertEqual(self.get_result('rdp', 'xactdemo.com', None).versions, [])
+        _, result = self.get_result('rdp', 'xactdemo.com', None)
+        self.assertEqual(result.versions, [])
 
     def test_rdp_client(self):
+        _, result = self.get_result('rdp', 'xactdemo.com', None)
         self.assertEqual(
-            self.get_result('rdp', 'xactdemo.com', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(TlsVersion.TLS1_1),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_2),
@@ -469,7 +514,8 @@ class TestClientLDAP(TestL7ClientBase):
 
     @mock.patch.object(LDAPMessageParsableBase, '_parse_asn1', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
-        self.assertEqual(self.get_result('ldap', 'lc.nasa.gov', None).versions, [])
+        _, result = self.get_result('ldap', 'lc.nasa.gov', None)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(
         TlsServerMockResponse,
@@ -481,10 +527,8 @@ class TestClientLDAP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result('ldap', 'localhost', threaded_server.l7_server.l4_transfer.bind_port).versions,
-            []
-        )
+        _, result = self.get_result('ldap', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'\x30\x03\x02\x01\x01', ))
     def test_ldap_no_starttls_support(self, _):
@@ -495,20 +539,16 @@ class TestClientLDAP(TestL7ClientBase):
         with self.assertRaises(NotEnoughData) as context_manager:
             self.get_result(  # pylint: disable = expression-not-assigned
                 'ldap', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
-            ).versions
+            )
         self.assertEqual(context_manager.exception.bytes_needed, 1)
 
     def test_ldap_client(self):
-        self.assertEqual(
-            self.get_result('ldap', 'lc.nasa.gov', None).versions,
-            [TlsProtocolVersionFinal(TlsVersion.TLS1_2), ]
-        )
+        _, result = self.get_result('ldap', 'lc.nasa.gov', None)
+        self.assertEqual(result.versions, [TlsProtocolVersionFinal(TlsVersion.TLS1_2), ])
 
     def test_ldaps_client(self):
-        self.assertEqual(
-            self.get_result('ldaps', 'lc.nasa.gov', None).versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, ]]
-        )
+        _, result = self.get_result('ldaps', 'lc.nasa.gov', None)
+        self.assertEqual(result.versions, [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, ]])
 
 
 class TestClientNNTP(TestL7ClientBase):
@@ -519,7 +559,8 @@ class TestClientNNTP(TestL7ClientBase):
         ]),
     ))
     def test_error_unsupported_capabilities(self, _):
-        result = self._get_mock_server_response('nntp')
+        l7_client, result = self._get_mock_server_response('nntp')
+        self.assertEqual(l7_client.greeting, ['200 Server ready'])
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -530,7 +571,8 @@ class TestClientNNTP(TestL7ClientBase):
         ]),
     ))
     def test_error_unsupported_starttls(self, _):
-        result = self._get_mock_server_response('nntp')
+        l7_client, result = self._get_mock_server_response('nntp')
+        self.assertEqual(l7_client.greeting, ['200 Server ready'])
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -543,7 +585,8 @@ class TestClientNNTP(TestL7ClientBase):
         ]),
     ))
     def test_error_starttls_error(self, _):
-        result = self._get_mock_server_response('nntp')
+        l7_client, result = self._get_mock_server_response('nntp')
+        self.assertEqual(l7_client.greeting, ['200 Server ready'])
         self.assertEqual(result.versions, [])
 
     def test_default_port(self):
@@ -551,8 +594,9 @@ class TestClientNNTP(TestL7ClientBase):
         self.assertEqual(l7_client.port, 119)
 
     def test_nntp_client(self):
+        _, result = self.get_result('nntps', 'secure-us.news.easynews.com', None)
         self.assertEqual(
-            self.get_result('nntps', 'secure-us.news.easynews.com', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(tls_version)
                 for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
@@ -563,7 +607,7 @@ class TestClientNNTP(TestL7ClientBase):
 class TestClientPostgreSQL(TestL7ClientBase):
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'X', ))
     def test_error_starttls_error(self, _):
-        result = self._get_mock_server_response('postgresql')
+        _, result = self._get_mock_server_response('postgresql')
         self.assertEqual(result.versions, [])
 
     def test_default_port(self):
@@ -571,8 +615,9 @@ class TestClientPostgreSQL(TestL7ClientBase):
         self.assertEqual(l7_client.port, 5432)
 
     def test_postgresql_client(self):
+        _, result = self.get_result('postgresql', 'ec2-54-217-15-9.eu-west-1.compute.amazonaws.com', None)
         self.assertEqual(
-            self.get_result('postgresql', 'ec2-54-217-15-9.eu-west-1.compute.amazonaws.com', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(tls_version)
                 for tls_version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]
@@ -605,12 +650,10 @@ class TestClientSieve(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result(  # pylint: disable = expression-not-assigned
-                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
-            ).versions,
-            []
+        _, result = self.get_result(  # pylint: disable = expression-not-assigned
+            'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
         )
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(
         TlsServerMockResponse,
@@ -622,12 +665,10 @@ class TestClientSieve(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result(  # pylint: disable = expression-not-assigned
-                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
-            ).versions,
-            []
+        _, result = self.get_result(  # pylint: disable = expression-not-assigned
+            'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
         )
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(
         TlsServerMockResponse,
@@ -639,12 +680,10 @@ class TestClientSieve(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result(  # pylint: disable = expression-not-assigned
-                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
-            ).versions,
-            []
+        _, result = self.get_result(  # pylint: disable = expression-not-assigned
+            'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
         )
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(
         TlsServerMockResponse,
@@ -656,12 +695,10 @@ class TestClientSieve(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result(  # pylint: disable = expression-not-assigned
-                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
-            ).versions,
-            []
+        _, result = self.get_result(  # pylint: disable = expression-not-assigned
+            'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
         )
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'OK\r\n', ))
     def test_no_starttls_support(self, _):
@@ -669,16 +706,15 @@ class TestClientSieve(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result(  # pylint: disable = expression-not-assigned
-                'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
-            ).versions,
-            []
+        _, result = self.get_result(  # pylint: disable = expression-not-assigned
+            'sieve', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
         )
+        self.assertEqual(result.versions, [])
 
     def test_sieve_client(self):
+        _, result = self.get_result('sieve', 'mail.aa.net.uk', None)
         self.assertEqual(
-            self.get_result('sieve', 'mail.aa.net.uk', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(tls_version)
                 for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
@@ -693,10 +729,8 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port).versions,
-            []
-        )
+        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
         b'<stream:stream>',
@@ -706,10 +740,8 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2).versions,
-            []
-        )
+        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
         b'<stream:stream>',
@@ -720,10 +752,8 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2).versions,
-            []
-        )
+        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
         b'<stream:stream>' +
@@ -737,10 +767,8 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2).versions,
-            []
-        )
+        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
         b'<stream:stream>' +
@@ -754,14 +782,13 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        self.assertEqual(
-            self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2).versions,
-            []
-        )
+        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        self.assertEqual(result.versions, [])
 
     def test_xmpp_client(self):
+        _, result = self.get_result('xmpp', 'xmpp.zone', None)
         self.assertEqual(
-            self.get_result('xmpp', 'xmpp.zone', None).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(TlsVersion.TLS1_0),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_1),
@@ -772,8 +799,9 @@ class TestClientXMPP(TestL7ClientBase):
 
 class TestClientDoH(TestL7ClientBase):
     def test_doh_client(self):
+        _, result = self.get_result('doh', 'dns.google', None)
         self.assertEqual(
-            self.get_result('doh', 'dns.google', None).versions,
+            result.versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]]
         )
 
@@ -799,7 +827,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
         )
         threaded_server.start()
 
-        result = self.get_result('https', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        _, result = self.get_result('https', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(
@@ -813,7 +841,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
     )
     def test_error_non_handshake_message(self, _):
         with self.assertRaises(TlsAlert) as context_manager:
-            self.assertEqual(self.get_result('https', 'badssl.com', None).versions, [])
+            self.get_result('https', 'badssl.com', None)
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
 
     @mock.patch.object(L7ServerTlsBase, '_get_handshake_class', return_value=L7ServerTlsFatalResponse)
