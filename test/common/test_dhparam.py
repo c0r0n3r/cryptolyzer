@@ -15,7 +15,19 @@ from cryptolyzer.common.dhparam import (
 )
 
 
-class TestParse(unittest.TestCase):
+class TestDHParamBase(unittest.TestCase):
+    @staticmethod
+    def _generate_dh_param(parameter_numbers, reused, key_size):
+        public_numbers = DHPublicNumbers(
+            0x012345678abcdef,
+            DHParameterNumbers(parameter_numbers.p, parameter_numbers.g, parameter_numbers.q),
+        )
+        public_key = DHPublicKey(public_numbers, key_size)
+
+        return DHParameter(public_key, reused)
+
+
+class TestParse(TestDHParamBase):
     @staticmethod
     def _generate_dh_param(parameter_numbers, reused, key_size):
         public_numbers = DHPublicNumbers(
@@ -39,15 +51,6 @@ class TestParse(unittest.TestCase):
             {'key_size': 2048, 'name': '2048-bit MODP Group', 'safe_prime': True, 'source': 'RFC3526'}
         )
 
-    def test_all_well_known_dhparam(self):
-        dh_params = [
-            self._generate_dh_param(
-                well_known_dh_param.value.dh_param_numbers, False, well_known_dh_param.value.key_size
-            )
-            for well_known_dh_param in WellKnownDHParams
-        ]
-        self.assertTrue(all(dh_param.well_known for dh_param in dh_params))
-
     def test_parse_ecdh_param_secp256r1(self):
         point_data = bytes(
             b'\x04\x85\xa2\x90\xb7\x4f\x33\xe7\xae\xae\x7a\x34\xf7\xa0\x40\xf8' +
@@ -67,3 +70,31 @@ class TestParse(unittest.TestCase):
         supported_curve, public_key = parse_ecdh_params(param_bytes)
         self.assertEqual(supported_curve, TlsNamedCurve.SECP256R1)
         self.assertEqual(public_key, point_data)
+
+
+class TestWellKnown(TestDHParamBase):
+    def test_all_well_known_dhparam(self):
+        dh_params = [
+            self._generate_dh_param(
+                well_known_dh_param.value.dh_param_numbers, False, well_known_dh_param.value.key_size
+            )
+            for well_known_dh_param in WellKnownDHParams
+        ]
+        self.assertTrue(all(dh_param.well_known for dh_param in dh_params))
+
+    def test_eq(self):
+        dh_well_known_rfc5114_1024 = WellKnownDHParams.RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP
+        dh_param_number_without_q_value = DHParameterNumbers(
+            p=dh_well_known_rfc5114_1024.value.dh_param_numbers.p,
+            g=dh_well_known_rfc5114_1024.value.dh_param_numbers.g,
+        )
+        # compare without q value
+        self.assertEqual(
+            dh_param_number_without_q_value,
+            dh_well_known_rfc5114_1024.value.dh_param_numbers,
+        )
+        # compare with q value
+        self.assertNotEqual(
+            dh_well_known_rfc5114_1024.value.dh_param_numbers,
+            dh_param_number_without_q_value,
+        )

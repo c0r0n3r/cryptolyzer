@@ -30,7 +30,7 @@ class DHParameterNumbers(object):
     )
 
     def __eq__(self, other):
-        return self.p == other.p and self.g == other.g and self.q == other.q
+        return self.p == other.p and self.g == other.g and (self.q is None or self.q == other.q)
 
 
 @attr.s
@@ -768,7 +768,7 @@ class DHParameter(Serializable):
 
     def __attrs_post_init__(self):
         for well_know_public_number in WellKnownDHParams:
-            if well_know_public_number.value.dh_param_numbers == self.public_key.public_numbers.parameter_numbers:
+            if self.public_key.public_numbers.parameter_numbers == well_know_public_number.value.dh_param_numbers:
                 self.well_known = well_know_public_number
                 self.prime = True
                 self.safe_prime = well_know_public_number.value.safe_prime
