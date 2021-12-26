@@ -54,6 +54,7 @@ class DHParamWellKnown(object):
     name = attr.ib(validator=attr.validators.instance_of(six.string_types))
     source = attr.ib(validator=attr.validators.instance_of(six.string_types))
     key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
+    safe_prime = attr.ib(default=True, validator=attr.validators.instance_of(bool))
 
     def __eq__(self, other):
         return self.dh_param_numbers == other.dh_param_numbers
@@ -303,6 +304,7 @@ class WellKnownDHParams(enum.Enum):
         name='1024-bit MODP Group with 160-bit Prime Order Subgroup',
         source='RFC5114',
         key_size=1024,
+        safe_prime=False,
     )
     RFC5114_2048_BIT_MODP_GROUP_WITH_224_BIT_PRIME_ORDER_SUBGROUP = DHParamWellKnown(  # pylint: disable=invalid-name
         DHParameterNumbers(
@@ -340,6 +342,7 @@ class WellKnownDHParams(enum.Enum):
         name='2048-bit MODP Group with 224-bit Prime Order Subgroup',
         source='RFC5114',
         key_size=2048,
+        safe_prime=False,
     )
     RFC5114_2048_BIT_MODP_GROUP_WITH_256_BIT_PRIME_ORDER_SUBGROUP = DHParamWellKnown(  # pylint: disable=invalid-name
         DHParameterNumbers(
@@ -377,6 +380,7 @@ class WellKnownDHParams(enum.Enum):
         name='2048-bit MODP Group with 256-bit Prime Order Subgroup',
         source='RFC5114',
         key_size=2048,
+        safe_prime=False,
     )
     RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP = DHParamWellKnown(  # pylint: disable=invalid-name
         DHParameterNumbers(
@@ -767,7 +771,7 @@ class DHParameter(Serializable):
             if well_know_public_number.value.dh_param_numbers == self.public_key.public_numbers.parameter_numbers:
                 self.well_known = well_know_public_number
                 self.prime = True
-                self.safe_prime = True
+                self.safe_prime = well_know_public_number.value.safe_prime
                 break
         else:
             self.well_known = None
