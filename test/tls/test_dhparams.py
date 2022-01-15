@@ -33,7 +33,9 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         mock.PropertyMock(return_value=[TlsNamedCurve.FFDHE2048, ])
     )
     def test_last_key_share_extension(self):
-        dhparams = self.get_result('mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).dhparams
+        dhparams = self.get_result(
+            'mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3), ip='31.216.144.5'
+        ).dhparams
         self.assertEqual(
             [dhparam.public_key.public_numbers.parameter_numbers for dhparam in dhparams],
             [WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.dh_param_numbers]
@@ -89,7 +91,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
             []
         )
 
-        result = self.get_result('mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('mega.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3), ip='31.216.144.5')
         self.assertEqual(
             [dhparam.public_key.public_numbers.parameter_numbers for dhparam in result.dhparams],
             [
