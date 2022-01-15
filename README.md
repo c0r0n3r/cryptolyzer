@@ -191,6 +191,12 @@ Supported analyzers by cryptographic protocol versions
 
 ## Protocol Specific Features
 
+### Secure Shell (SSH)
+
+#### Protocol Versions
+
+1. identifies not only the software version, but also application server venrdor and version
+
 ### Transport Layer Security (TLS)
 
 Only features that cannot be or difficultly implemented by the most popular SSL/TLS implementations (eg:
