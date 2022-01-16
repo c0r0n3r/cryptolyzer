@@ -7,6 +7,7 @@ from cryptolyzer.common.analyzer import ProtocolHandlerSshBase, ProtocolHandlerS
 from cryptolyzer.ssh.all import AnalyzerAll
 from cryptolyzer.ssh.ciphers import AnalyzerCiphers
 from cryptolyzer.ssh.dhparams import AnalyzerDHParams
+from cryptolyzer.ssh.pubkeys import AnalyzerPublicKeys
 from cryptolyzer.ssh.versions import AnalyzerVersions
 
 
@@ -16,6 +17,7 @@ class ProtocolHandlerSsh2(ProtocolHandlerSshExactVersion):
         return (
             AnalyzerCiphers,
             AnalyzerDHParams,
+            AnalyzerPublicKeys,
         )
 
     @classmethod

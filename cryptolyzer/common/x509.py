@@ -3,20 +3,24 @@
 import abc
 import base64
 import datetime
-import hashlib
 
 from collections import OrderedDict
 
 import asn1crypto.x509
 import attr
 
+import cryptoparser.common.key
 from cryptoparser.common.algorithm import Authentication, Hash, Signature
-from cryptoparser.common.base import Serializable
 
 import cryptolyzer.common.utils
 
 
-class PublicKey(Serializable):
+class PublicKey(cryptoparser.common.key.PublicKey):
+    @property
+    @abc.abstractmethod
+    def key_bytes(self):
+        raise NotImplementedError()
+
     @property
     @abc.abstractmethod
     def valid_not_before(self):
@@ -39,26 +43,11 @@ class PublicKey(Serializable):
 
     @property
     @abc.abstractmethod
-    def key_type(self):
-        raise NotImplementedError()
-
-    @property
-    @abc.abstractmethod
-    def key_size(self):
-        raise NotImplementedError()
-
-    @property
-    @abc.abstractmethod
     def signature_hash_algorithm(self):
         raise NotImplementedError()
 
-    @property
-    @abc.abstractmethod
-    def fingerprints(self):
-        raise NotImplementedError()
 
-
-@attr.s(eq=False)
+@attr.s(eq=False)  # pylint: disable=too-many-public-methods
 class PublicKeyX509(PublicKey):
     _EV_OIDS_BY_CA = {
         'A-Trust': ('1.2.40.0.17.1.22', ),
@@ -116,8 +105,12 @@ class PublicKeyX509(PublicKey):
 
     certificate = attr.ib(validator=attr.validators.instance_of(asn1crypto.x509.Certificate))
 
+    @property
+    def key_bytes(self):
+        return self.certificate.dump()
+
     def __eq__(self, other):
-        return self.certificate.dump() == other.certificate.dump()
+        return self.key_bytes == other.key_bytes
 
     @property
     def valid_not_before(self):
@@ -172,24 +165,17 @@ class PublicKeyX509(PublicKey):
 
     @property
     def fingerprints(self):
-        certificyte_bytes = self.certificate.dump()
-        return {
-            Hash.MD5: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
-                hashlib.md5(certificyte_bytes).digest()
-            ),
-            Hash.SHA1: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
-                hashlib.sha1(certificyte_bytes).digest()
-            ),
-            Hash.SHA2_256: cryptolyzer.common.utils.bytes_to_colon_separated_hex(
-                hashlib.sha256(certificyte_bytes).digest()
-            ),
-        }
+        return OrderedDict([
+            (
+                hash_type,
+                cryptolyzer.common.utils.bytes_to_colon_separated_hex(self.get_digest(hash_type, self.key_bytes))
+            )
+            for hash_type in [Hash.MD5, Hash.SHA1, Hash.SHA2_256]
+        ])
 
     @property
     def public_key_pin(self):
-        return base64.b64encode(
-            hashlib.sha256(self.certificate.public_key.dump()).digest()
-        ).decode('ascii')
+        return base64.b64encode(self.get_digest(Hash.SHA2_256, self.certificate.public_key.dump())).decode('ascii')
 
     @property
     def extended_validation(self):

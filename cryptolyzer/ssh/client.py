@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import math
+
 import attr
 import six
 
-from cryptoparser.common.algorithm import KeyExchange
+from cryptoparser.common.algorithm import Authentication, KeyExchange, NamedGroup
 from cryptoparser.common.exception import NotEnoughData
 
 from cryptoparser.ssh.record import SshRecordInit, SshRecordKexDH, SshRecordKexDHGroup
@@ -11,27 +13,58 @@ from cryptoparser.ssh.ciphersuite import (
     SshCompressionAlgorithm,
     SshEncryptionAlgorithm,
     SshHostKeyAlgorithm,
+    SshHostKeyType,
     SshKexAlgorithm,
     SshMacAlgorithm,
 )
 from cryptoparser.ssh.subprotocol import (
-    SshKeyExchangeInit,
     SshDHGroupExchangeGroup,
     SshDHGroupExchangeInit,
     SshDHGroupExchangeRequest,
+    SshDHKeyExchangeInit,
     SshDisconnectMessage,
+    SshKeyExchangeInit,
+    SshNewKeys,
     SshProtocolMessage,
 )
 from cryptoparser.ssh.version import SshProtocolVersion, SshSoftwareVersionUnparsed, SshVersion
 
 from cryptolyzer import __setup__
 
-from cryptolyzer.common.dhparam import get_dh_ephemeral_key_forged, bytes_to_int, int_to_bytes
+from cryptolyzer.common.curves import WellKnownECParams
+from cryptolyzer.common.dhparam import get_dh_ephemeral_key_forged, bytes_to_int, int_to_bytes, WellKnownDHParams
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
 
 from cryptolyzer.ssh.exception import SshDisconnect
 from cryptolyzer.ssh.transfer import SshHandshakeBase
+
+
+SSH_KEX_ALGORITHMS_TO_NAMED_GROUP = {
+    SshKexAlgorithm.CURVE25519_SHA256: NamedGroup.CURVE25519,
+    SshKexAlgorithm.CURVE25519_SHA256_LIBSSH_ORG: NamedGroup.CURVE25519,
+    SshKexAlgorithm.CURVE448_SHA512_LIBSSH_ORG: NamedGroup.CURVE25519,
+    SshKexAlgorithm.ECDH_SHA2_1_3_132_0_10: NamedGroup.SECP256K1,
+    SshKexAlgorithm.ECDH_SHA2_BRAINPOOLP256R1_GENUA_DE: NamedGroup.BRAINPOOLP256R1,
+    SshKexAlgorithm.ECDH_SHA2_BRAINPOOLP384R1_GENUA_DE: NamedGroup.BRAINPOOLP384R1,
+    SshKexAlgorithm.ECDH_SHA2_BRAINPOOLP521R1_GENUA_DE: NamedGroup.BRAINPOOLP512R1,
+    SshKexAlgorithm.ECDH_SHA2_CURVE25519: NamedGroup.CURVE25519,
+    SshKexAlgorithm.ECDH_SHA2_NISTB233: NamedGroup.SECT233R1,
+    SshKexAlgorithm.ECDH_SHA2_NISTB409: NamedGroup.SECT409R1,
+    SshKexAlgorithm.ECDH_SHA2_NISTK163: NamedGroup.SECT163K1,
+    SshKexAlgorithm.ECDH_SHA2_NISTK233: NamedGroup.SECT233K1,
+    SshKexAlgorithm.ECDH_SHA2_NISTK283: NamedGroup.SECT283K1,
+    SshKexAlgorithm.ECDH_SHA2_NISTK409: NamedGroup.SECT409K1,
+    SshKexAlgorithm.ECDH_SHA2_NISTP192: NamedGroup.PRIME192V1,
+    SshKexAlgorithm.ECDH_SHA2_NISTP224: NamedGroup.SECP224R1,
+    SshKexAlgorithm.ECDH_SHA2_NISTP256: NamedGroup.PRIME256V1,
+    SshKexAlgorithm.ECDH_SHA2_NISTP256_WIN7_MICROSOFT_COM: NamedGroup.PRIME256V1,
+    SshKexAlgorithm.ECDH_SHA2_NISTP384: NamedGroup.SECP384R1,
+    SshKexAlgorithm.ECDH_SHA2_NISTP384_WIN7_MICROSOFT_COM: NamedGroup.SECP384R1,
+    SshKexAlgorithm.ECDH_SHA2_NISTP521: NamedGroup.SECP521R1,
+    SshKexAlgorithm.ECDH_SHA2_NISTP521_WIN7_MICROSOFT_COM: NamedGroup.SECP521R1,
+    SshKexAlgorithm.ECDH_SHA2_NISTT571: NamedGroup.SECT571R1,
+}
 
 
 class SshProtocolMessageDefault(SshProtocolMessage):
@@ -68,14 +101,67 @@ class SshKeyExchangeInitAnyAlgorithm(SshKeyExchangeInit):
         )
 
 
-class SshKeyExchangeInitKeyExchangeDHE(SshKeyExchangeInitAnyAlgorithm):
-    def __init__(self):
-        super(SshKeyExchangeInitKeyExchangeDHE, self).__init__(
+class SshKeyExchangeInitKeyExchangeBase(SshKeyExchangeInitAnyAlgorithm):
+    def __init__(self, key_exchange):
+        super(SshKeyExchangeInitKeyExchangeBase, self).__init__(
             kex_algorithms=[
                 kex_algorithm
                 for kex_algorithm in SshKexAlgorithm
-                if kex_algorithm.value.kex == KeyExchange.DHE
+                if kex_algorithm.value.kex == key_exchange
             ]
+        )
+
+
+class SshKeyExchangeInitKeyExchangeDHE(SshKeyExchangeInitKeyExchangeBase):
+    def __init__(self):
+        super(SshKeyExchangeInitKeyExchangeDHE, self).__init__(KeyExchange.DHE)
+
+
+class SshKeyExchangeInitKeyExchangeECDHE(SshKeyExchangeInitKeyExchangeBase):
+    def __init__(self):
+        super(SshKeyExchangeInitKeyExchangeECDHE, self).__init__(KeyExchange.ECDHE)
+
+
+class SshKeyExchangeInitHostKeyBase(SshKeyExchangeInitAnyAlgorithm):
+    def __init__(self, host_key_type, authentication):
+        super(SshKeyExchangeInitHostKeyBase, self).__init__(
+            kex_algorithms=list(filter(
+                lambda algorithm: algorithm.value.kex in [KeyExchange.DHE, KeyExchange.ECDHE],
+                SshKexAlgorithm
+            )),
+            host_key_algorithms=list(filter(
+                lambda algorithm:
+                algorithm.value.authentication == authentication and algorithm.value.key_type == host_key_type,
+                SshHostKeyAlgorithm
+            ))
+        )
+
+
+class SshKeyExchangeInitHostKeyDSS(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostKeyDSS, self).__init__(
+            SshHostKeyType.KEY, Authentication.DSS
+        )
+
+
+class SshKeyExchangeInitHostKeyRSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostKeyRSA, self).__init__(
+            SshHostKeyType.KEY, Authentication.RSA
+        )
+
+
+class SshKeyExchangeInitHostKeyECDSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostKeyECDSA, self).__init__(
+            SshHostKeyType.KEY, Authentication.ECDSA
+        )
+
+
+class SshKeyExchangeInitHostKeyEDDSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostKeyEDDSA, self).__init__(
+            SshHostKeyType.KEY, Authentication.EDDSA
         )
 
 
@@ -129,6 +215,53 @@ class L7ClientSsh(L7TransferBase):
 
 class SshClientHandshake(SshHandshakeBase):
     @classmethod
+    def _process_kex_init_dhe(cls, transfer, agreed_kex_type, gex_params):
+        if agreed_kex_type.value.key_size is None:
+            record_class = SshRecordKexDHGroup
+            transfer.send(record_class(SshDHGroupExchangeRequest(
+                gex_min=gex_params.gex_min,
+                gex_max=gex_params.gex_max,
+                gex_number=gex_params.gex_number,
+            )).compose())
+            raise IndexError(record_class)
+
+        record_class = SshRecordKexDH
+        key_size = agreed_kex_type.value.key_size
+        for dh_param in WellKnownDHParams:
+            if dh_param.value.key_size == key_size:
+                ephemeral_public_key = get_dh_ephemeral_key_forged(dh_param.value.dh_param_numbers.p)
+                ephemeral_public_key_bytes = int_to_bytes(ephemeral_public_key, key_size).lstrip(b'\x00')
+                break
+        else:
+            raise NotImplementedError()
+
+        transfer.send(record_class(SshDHKeyExchangeInit(ephemeral_public_key_bytes)).compose())
+
+        return record_class
+
+    @classmethod
+    def _process_kex_init_ecdhe(cls, transfer, agreed_kex_type):
+        record_class = SshRecordKexDH
+        try:
+            named_group = SSH_KEX_ALGORITHMS_TO_NAMED_GROUP[agreed_kex_type]
+        except KeyError as e:
+            six.raise_from(NotImplementedError(), e)
+
+        key_size_in_bytes = int(math.ceil(named_group.value.size / 8))
+        if named_group in [NamedGroup.CURVE25519, NamedGroup.CURVE448]:
+            ephemeral_public_key_bytes = key_size_in_bytes * b'\xff'
+        else:
+            well_know_ec_param = WellKnownECParams.from_named_group(named_group)
+            ephemeral_public_key_bytes = bytearray().join([
+                b'\x04',  # uncompressed point format
+                int_to_bytes(well_know_ec_param.value.parameter_numbers.x, key_size_in_bytes),
+                int_to_bytes(well_know_ec_param.value.parameter_numbers.y, key_size_in_bytes),
+            ])
+        transfer.send(record_class(SshDHKeyExchangeInit(ephemeral_public_key_bytes)).compose())
+
+        return record_class
+
+    @classmethod
     def _process_kex_init(cls, transfer, record, key_exchange_init_message, gex_params):
         agreed_kex = list(filter(
             record.packet.kex_algorithms.__contains__,
@@ -139,16 +272,9 @@ class SshClientHandshake(SshHandshakeBase):
 
         agreed_kex_type = agreed_kex[0]
         if agreed_kex_type.value.kex == KeyExchange.DHE:
-            if agreed_kex_type.value.key_size is None:
-                record_class = SshRecordKexDHGroup
-                transfer.send(record_class(SshDHGroupExchangeRequest(
-                    gex_min=gex_params.gex_min,
-                    gex_max=gex_params.gex_max,
-                    gex_number=gex_params.gex_number,
-                )).compose())
-                raise IndexError(record_class)
-
-            record_class = SshRecordKexDH
+            record_class = cls._process_kex_init_dhe(transfer, agreed_kex_type, gex_params)
+        elif agreed_kex_type.value.kex == KeyExchange.ECDHE:
+            record_class = cls._process_kex_init_ecdhe(transfer, agreed_kex_type)
         else:
             raise NotImplementedError()
 
@@ -195,6 +321,8 @@ class SshClientHandshake(SshHandshakeBase):
                     record_class = self._process_kex_init(transfer, record, key_exchange_init_message, gex_params)
                 elif isinstance(record.packet, SshDHGroupExchangeGroup):
                     record_class = self._process_dh_group_exchange_group(record, transfer, record_class)
+                elif isinstance(record.packet, SshNewKeys):
+                    raise NotImplementedError()
 
                 receivable_byte_num = record_class.HEADER_SIZE
             except NotEnoughData as e:

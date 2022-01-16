@@ -10,6 +10,7 @@ from cryptolyzer.common.result import AnalyzerResultAllBase, AnalyzerTargetSsh
 
 from cryptolyzer.ssh.ciphers import AnalyzerCiphers, AnalyzerResultCiphers
 from cryptolyzer.ssh.dhparams import AnalyzerDHParams, AnalyzerResultDHParams
+from cryptolyzer.ssh.pubkeys import AnalyzerPublicKeys, AnalyzerResultPublicKeys
 from cryptolyzer.ssh.versions import AnalyzerVersions, AnalyzerResultVersions
 
 
@@ -26,6 +27,10 @@ class AnalyzerResultAll(AnalyzerResultAllBase):
     dhparams = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultDHParams)),
         metadata={'human_readable_name': 'Supported Diffie-Hellman Algorithms and Key Sizes'}
+    )
+    pubkeys = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultPublicKeys)),
+        metadata={'human_readable_name': 'Supported Host Key Types'}
     )
 
 
@@ -79,5 +84,6 @@ class AnalyzerAll(AnalyzerSshBase):
         ciphers_result = AnalyzerCiphers().analyze(analyzable)
         results.update({AnalyzerCiphers.get_name(): ciphers_result})
         results.update(self.get_dhparams_result(analyzable, ciphers_result))
+        results.update({AnalyzerPublicKeys.get_name(): AnalyzerPublicKeys().analyze(analyzable)})
 
         return AnalyzerResultAll(**results)

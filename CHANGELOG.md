@@ -1,6 +1,9 @@
 # Changelog
 
 - SSH (`ssh`)
+  - Public Keys (`pubkeys`)
+    - add analyzer for checking SSH server against used
+      [host keys](https://datatracker.ietf.org/doc/html/rfc4253#section-6.6) (\#34)
   - Versions (`versions`)
     - identify application server and version (\#71)
 
