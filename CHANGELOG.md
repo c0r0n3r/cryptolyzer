@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.8.0 - 2022-01-18
+
 - SSH (`ssh`)
   - Public Keys (`pubkeys`)
     - add analyzer for checking SSH server against used
