@@ -8,6 +8,7 @@ from cryptoparser.common.utils import get_leaf_classes
 from cryptoparser.tls.subprotocol import TlsHandshakeType
 
 from cryptolyzer.common.analyzer import AnalyzerBase
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultBase
 
 from cryptolyzer.tls.server import L7ServerTlsBase
@@ -44,8 +45,10 @@ class AnalyzerGenerate(AnalyzerBase):
         analyzable.max_handshake_count = 1
         analyzable.init_connection()
         client_messages = analyzable.do_handshake()
-        tag = client_messages[0][TlsHandshakeType.CLIENT_HELLO].ja3()
+        if not client_messages:
+            raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
+        tag = client_messages[0][TlsHandshakeType.CLIENT_HELLO].ja3()
         return AnalyzerResultGenerate(
             tag
         )
