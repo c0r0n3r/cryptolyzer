@@ -49,7 +49,7 @@ docker run --rm coroner/cryptolyzer http headers www.example.com
 ```
 
 ```shell
-docker run -ti --rm -p 127.0.0.1:4433:4433 coroner/cryptolyzer ja3 generate 127.0.0.1:4433
+docker run -ti --rm -p 127.0.0.1:4433:4433 coroner/cryptolyzer ja3 generate 0.0.0.0:4433
 openssl s_client -connect 127.0.0.1:4433
 ```
 
