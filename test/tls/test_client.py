@@ -502,19 +502,19 @@ class TestClientLDAP(TestL7ClientBase):
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
     def test_error_send_socket_timeout(self, _):
         with self.assertRaises(NetworkError) as context_manager:
-            self.get_result('ldap', 'lc.nasa.gov', None)
+            self.get_result('ldap', 'ldap.uchicago.edu', None)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @unittest.skipIf(six.PY2, 'There is no TimeoutError in Python < 3.0')
     def test_error_send_timeout_error(self):
         with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
                 self.assertRaises(NetworkError) as context_manager:
-            self.get_result('ldap', 'lc.nasa.gov', None)
+            self.get_result('ldap', 'ldap.uchicago.edu', None)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @mock.patch.object(LDAPMessageParsableBase, '_parse_asn1', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
-        _, result = self.get_result('ldap', 'lc.nasa.gov', None)
+        _, result = self.get_result('ldap', 'ldap.uchicago.edu', None)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(
@@ -543,12 +543,20 @@ class TestClientLDAP(TestL7ClientBase):
         self.assertEqual(context_manager.exception.bytes_needed, 1)
 
     def test_ldap_client(self):
-        _, result = self.get_result('ldap', 'lc.nasa.gov', None)
-        self.assertEqual(result.versions, [TlsProtocolVersionFinal(TlsVersion.TLS1_2), ])
+        _, result = self.get_result('ldap', 'ldap.uchicago.edu', None)
+        self.assertEqual(result.versions, [
+            TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+            TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+        ])
 
     def test_ldaps_client(self):
-        _, result = self.get_result('ldaps', 'lc.nasa.gov', None)
-        self.assertEqual(result.versions, [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, ]])
+        _, result = self.get_result('ldaps', 'ldap.uchicago.edu', None)
+        self.assertEqual(result.versions, [
+            TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+            TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+        ])
 
 
 class TestClientNNTP(TestL7ClientBase):
@@ -637,7 +645,7 @@ class TestClientSieve(TestL7ClientBase):
     def test_error_send_timeout_error(self):
         with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
                 self.assertRaises(NetworkError) as context_manager:
-            self.get_result('sieve', 'lc.nasa.gov', None)
+            self.get_result('sieve', 'ldap.uchicago.edu', None)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @mock.patch.object(
