@@ -1,6 +1,6 @@
-# CryptoLyzer
+# Summary
 
-CryptoLyzer is a fast and flexible server cryptographic settings analyzer library for Python with an easy-to-use
+**CryptoLyzer** is a fast and flexible server cryptographic settings analyzer library for Python with an easy-to-use
 [command line interface](https://en.wikipedia.org/wiki/Command-line_interface) with both human-readable ([Markdown](
 https://en.wikipedia.org/wiki/Markdown)) and machine-readable ([JSON](https://en.wikipedia.org/wiki/JSON)) output.
 It works with multiple cryptographic protocols ([SSL](
@@ -26,7 +26,7 @@ client/server implementations establishing secure connections. If you are search
 implementations, there are several existing wrappers and native implementations for Python (eg: M2Crypto, pyOpenSSL,
 Paramiko, \...).
 
-## Quick start
+# Quick start
 
 CryptoLyzer can be installed directly via pip
 
@@ -90,35 +90,16 @@ pipenv shell
 cryptolyze -h
 ```
 
-## Generic Features
+# Features
+
+## SSH
+
+### Differentiators
+
+* checks supported Diffie-Hellman (group exchange) key sizes
+* analyzes server protocol version string to identify application server vendor and version
 
 ### Protocols
-
-#### Hypertext Transfer Protocol (HTTP)
-
-#### Analyzers
-
-- Headers (`headers`)
-  - generic headers
-    - [Content-Type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
-    - [Server](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server)
-  - caching headers
-    - [Age](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age)
-    - [Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
-    - [Date](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date)
-    - [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
-    - [Expires](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires)
-    - [Last-Modified](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified)
-    - [Pragma](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Pragma)
-  - security headers
-    - [Expect-CT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect-CT)
-    - [Expect-Staple](https://scotthelme.co.uk/designing-a-new-security-header-expect-staple)
-    - [Referrer-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy)
-    - [Strict-Transport-Security](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)
-    - [X-Content-Type-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options)
-    - [X-Frame-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options)
-
-#### SSH
 
 - [SSH 2.0](https://tools.ietf.org/html/rfc4253)
 
@@ -132,38 +113,21 @@ Supported analyzers by cryptographic protocol versions
 | Diffie-Hellman parameters (`dhparams`)   | ✓          |
 | Host Keys (`pubkeys`)                    | ✓          |
 
+## SSL/TLS
 
-### SSL/TLS
+### Differentiators
 
-- transport layer
-  - Secure Socket Layer (SSL)
-    - [SSL 2.0](https://tools.ietf.org/html/draft-hickman-netscape-ssl-00)
-    - [SSL 3.0](https://tools.ietf.org/html/rfc6101)
-  - Transport Layer Security (TLS)
-    - [TLS 1.0](https://tools.ietf.org/html/rfc2246)
-    - [TLS 1.1](https://tools.ietf.org/html/rfc4346)
-    - [TLS 1.2](https://tools.ietf.org/html/rfc5246)
-    - [TLS 1.3](https://tools.ietf.org/html/rfc8446)
-- application layer
-  - [opportunistic TLS](https://en.wikipedia.org/wiki/Opportunistic_TLS) (STARTTLS)
-    - [FTP](https://en.wikipedia.org/wiki/File_Transfer_Protocol)
-    - [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol)
-    - [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol)
-    - [LMTP](https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol)
-    - [NNTP](https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol)
-    - [POP3](https://en.wikipedia.org/wiki/Post_Office_Protocol)
-    - [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL)
-    - [RDP](https://en.wikipedia.org/wiki/Remote_Desktop_Protocol)
-    - [Sieve](https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language))
-    - [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)
-    - [XMPP (Jabber)](https://en.wikipedia.org/wiki/XMPP)
-- extensions
-  - [application-layer protocol negotiation](https://www.rfc-editor.org/rfc/rfc5077.html)
-  - [encrypt-then-MAC](https://www.rfc-editor.org/rfc/rfc7366.html)
-  - [extended master secret](https://www.rfc-editor.org/rfc/rfc7627.html)
-  - [next protocols negotiation](https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html)
-  - [renegotiation indication](https://www.rfc-editor.org/rfc/rfc5746.html)
-  - [session ticket](https://www.rfc-editor.org/rfc/rfc5077.html)
+* checks 10+ application layer protocols with [opportunistic TLS](https://en.wikipedia.org/wiki/Opportunistic_TLS)
+  capability
+* checks TLS 1.3 draft versions, not just finnal version
+* checks each cipher suites discussed on [ciphersuite.info](https://ciphersuite.info), not just supported by 
+  [GnuTls](https://www.gnutls.org/), [LibreSSL](https://www.libressl.org/), [OpenSSL](https://www.openssl.org/), or
+  [wolfSSL](https://www.wolfssl.com/)
+* checks [GOST](https://en.wikipedia.org/wiki/GOST) (national standards of the Russian Federation and CIS countries)
+  cipher suites
+* checks whether Diffie-Hellman
+  * public parameter is a [safe prime](https://en.wikipedia.org/wiki/Safe_and_Sophie_Germain_primes)
+  * key is [reused](https://security.stackexchange.com/questions/225209/what-is-ecdh-public-server-param-reuse)
 
 ### Analyzers
 
@@ -179,47 +143,91 @@ Supported analyzers by cryptographic protocol versions
 | Extensions (``extensions``)              |  n/a  |  n/a  |  n/a  |  n/a  |   ✓   |   ✓   |
 | Signature Algorithms (``sigalgos``)      |  n/a  |  n/a  |  n/a  |   ✓   |   ✓   |   ✓   |
 
-### Python implementation
 
-- CPython (2.7, \>=3.3)
-- PyPy (2.7, 3.5)
+### Protocols
 
-### Operating systems
+#### Transport Layer
 
-- Linux
-- macOS
-- Windows
+- Secure Socket Layer (SSL)
+  - [SSL 2.0](https://tools.ietf.org/html/draft-hickman-netscape-ssl-00)
+  - [SSL 3.0](https://tools.ietf.org/html/rfc6101)
+- Transport Layer Security (TLS)
+  - [TLS 1.0](https://tools.ietf.org/html/rfc2246)
+  - [TLS 1.1](https://tools.ietf.org/html/rfc4346)
+  - [TLS 1.2](https://tools.ietf.org/html/rfc5246)
+  - [TLS 1.3](https://tools.ietf.org/html/rfc8446)
 
-## Protocol Specific Features
+#### Application Layer
 
-### Secure Shell (SSH)
+[Opportunistic TLS](https://en.wikipedia.org/wiki/Opportunistic_TLS) or STARTTLS) is an extension of an application
+layer protocol, whichs offer a way to upgrade a plain text connection to an encrypted ione without using a separate
+port.
 
-#### Protocol Versions
+- [FTP](https://en.wikipedia.org/wiki/File_Transfer_Protocol)
+- [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol)
+- [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol)
+- [LMTP](https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol)
+- [NNTP](https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol)
+- [POP3](https://en.wikipedia.org/wiki/Post_Office_Protocol)
+- [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL)
+- [RDP](https://en.wikipedia.org/wiki/Remote_Desktop_Protocol)
+- [Sieve](https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language))
+- [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)
+- [XMPP (Jabber)](https://en.wikipedia.org/wiki/XMPP)
 
-1. identifies not only the software version, but also application server venrdor and version
+### Extensions
 
-### Transport Layer Security (TLS)
+- [application-layer protocol negotiation](https://www.rfc-editor.org/rfc/rfc5077.html)
+- [encrypt-then-MAC](https://www.rfc-editor.org/rfc/rfc7366.html)
+- [extended master secret](https://www.rfc-editor.org/rfc/rfc7627.html)
+- [next protocols negotiation](https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html)
+- [renegotiation indication](https://www.rfc-editor.org/rfc/rfc5746.html)
+- [session ticket](https://www.rfc-editor.org/rfc/rfc5077.html)
 
-Only features that cannot be or difficultly implemented by the most popular SSL/TLS implementations (eg:
-[GnuTls](https://www.gnutls.org/), [LibreSSL](https://www.libressl.org/), [OpenSSL](https://www.openssl.org/),
-[wolfSSL](https://www.wolfssl.com/), \...) are listed.
-
-#### Protocol Versions
-
-1.  support not only the final, but also draft versions
-
-#### Cipher Suites
-
-1.  supports each cipher suites discussed on [ciphersuite.info](https://ciphersuite.info)
-2.  supports [GOST](https://en.wikipedia.org/wiki/GOST) (national standards of the Russian Federation and CIS countries)
-    cipher suites
-
-#### Fingerprinting
+## Fingerprinting
 
 1.  generates [JA3 tag](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967) of any
     connecting TLS client independently from its type (graphical/cli, browser/email client/\...)
 2.  decodes existing [JA3 tags](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967) by
     showing human-readable format of the TLS parameters represented by the tag
+
+## Hypertext Transfer Protocol (HTTP)
+
+### Analyzers
+
+#### Headers (`headers`)
+
+- generic headers
+  - [Content-Type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
+  - [Server](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server)
+- caching headers
+  - [Age](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age)
+  - [Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
+  - [Date](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date)
+  - [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+  - [Expires](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires)
+  - [Last-Modified](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified)
+  - [Pragma](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Pragma)
+- security headers
+  - [Expect-CT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect-CT)
+  - [Expect-Staple](https://scotthelme.co.uk/designing-a-new-security-header-expect-staple)
+  - [Referrer-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy)
+  - [Strict-Transport-Security](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)
+  - [X-Content-Type-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options)
+  - [X-Frame-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options)
+
+# Support
+
+## Python implementation
+
+- CPython (2.7, \>=3.3)
+- PyPy (2.7, 3.5)
+
+## Operating systems
+
+- Linux
+- macOS
+- Windows
 
 ## Social Media
 
