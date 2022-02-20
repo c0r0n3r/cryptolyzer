@@ -8,6 +8,15 @@ import six
 from cryptoparser.common.exception import NotEnoughData, InvalidValue
 
 from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionSupportedVersionsServer
+from cryptoparser.tls.rdp import (
+    TPKT,
+    COTPConnectionConfirm,
+    COTPConnectionRequest,
+    RDPProtocol,
+    RDPNegotiationRequest,
+    RDPNegotiationResponse,
+)
+
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.subprotocol import (
     SslErrorMessage,
@@ -30,7 +39,7 @@ from cryptoparser.tls.version import (
     TlsVersion
 )
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.application import L7ServerBase, L7ServerHandshakeBase, L7ServerConfigurationBase
 
 
@@ -61,6 +70,12 @@ class L7ServerTlsBase(L7ServerBase):
     def get_default_port(cls):
         raise NotImplementedError()
 
+    def _init_l7(self):
+        pass
+
+    def _deinit_l7(self):
+        pass
+
     def _get_handshake_class(self, l4_transfer):
         if self.configuration.fallback_to_ssl:
             try:
@@ -80,6 +95,12 @@ class L7ServerTlsBase(L7ServerBase):
 
     def _do_handshake(self, last_handshake_message_type):
         try:
+            self._init_l7()
+        except (NotEnoughData, InvalidValue, NetworkError, SecurityError):
+            self.l4_transfer.close()
+            return {}
+
+        try:
             handshake_class = self._get_handshake_class(self.l4_transfer)
             handshake_object = handshake_class(self.l4_transfer, self.configuration)
         except NetworkError:
@@ -89,12 +110,26 @@ class L7ServerTlsBase(L7ServerBase):
         try:
             handshake_object.do_handshake(last_handshake_message_type)
         finally:
+            self._deinit_l7()
             self.l4_transfer.close()
 
         return handshake_object.client_messages
 
     def do_handshake(self, last_handshake_message_type=TlsHandshakeType.CLIENT_HELLO):
         return self._do_handshakes(last_handshake_message_type)
+
+
+@attr.s
+class L7ServerStartTlsBase(L7ServerTlsBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_scheme(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_default_port(cls):
+        raise NotImplementedError()
 
 
 @attr.s
@@ -271,3 +306,37 @@ class L7ServerTls(L7ServerTlsBase):
     @classmethod
     def get_default_port(cls):
         return 4433
+
+
+class L7ServerTlsRDP(L7ServerStartTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'rdp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 3389
+
+    def _init_l7(self):
+        self.l4_transfer.receive(TPKT.HEADER_SIZE)
+        try:
+            TPKT.parse_exact_size(self.l4_transfer.buffer)
+        except NotEnoughData as e:
+            self.l4_transfer.receive(e.bytes_needed)
+
+        tpkt = TPKT.parse_exact_size(self.l4_transfer.buffer)
+        cotp = COTPConnectionRequest.parse_exact_size(tpkt.message)
+        neg_req = RDPNegotiationRequest.parse_exact_size(cotp.user_data)
+        if RDPProtocol.SSL not in neg_req.protocol:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+        self.l4_transfer.flush_buffer()
+
+        neg_resp = RDPNegotiationResponse([], [RDPProtocol.SSL, ])
+        cotp = COTPConnectionConfirm(src_ref=cotp.src_ref, user_data=neg_resp.compose())
+        tpkt = TPKT(version=3, message=cotp.compose())
+        request_bytes = tpkt.compose()
+        self.l4_transfer.send(request_bytes)
+
+    def _deinit_l7(self):
+        pass
