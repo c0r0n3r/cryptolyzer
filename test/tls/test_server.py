@@ -10,6 +10,12 @@ from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.record import SslRecord, TlsRecord
+from cryptoparser.tls.rdp import (
+    TPKT,
+    COTPConnectionRequest,
+    RDPProtocol,
+    RDPNegotiationRequest,
+)
 from cryptoparser.tls.subprotocol import (
     SslCipherKind,
     SslErrorMessage,
@@ -26,13 +32,14 @@ from cryptoparser.tls.subprotocol import (
 
 from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.client import (
+    ClientRDP,
     L7ClientTls,
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
     TlsAlert,
     TlsHandshakeClientHelloAnyAlgorithm
 )
-from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
+from cryptolyzer.tls.server import L7ServerTls, L7ServerTlsRDP, TlsServerConfiguration
 
 from .classes import L7ServerTlsTest
 
@@ -42,8 +49,8 @@ class TestL7ServerBase(unittest.TestCase):
         self.threaded_server = None
 
     @staticmethod
-    def create_server(configuration=None):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=2, configuration=configuration))
+    def create_server(configuration=None, l7_server_class=L7ServerTls):
+        threaded_server = L7ServerTlsTest(l7_server_class('localhost', 0, timeout=2, configuration=configuration))
         threaded_server.wait_for_server_listen()
         return threaded_server
 
@@ -79,9 +86,14 @@ class TestL7ServerBase(unittest.TestCase):
 
         self.threaded_server.join()
 
-    def _test_tls_handshake(self, protocol_version, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO):
+    def _test_tls_handshake(
+        self,
+        protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+        last_handshake_message_type=TlsHandshakeType.SERVER_HELLO,
+        l7_client_class=L7ClientTls
+    ):
         client_hello = TlsHandshakeClientHelloAnyAlgorithm([protocol_version, ], self.threaded_server.l7_server.address)
-        l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
+        l7_client = self.create_client(l7_client_class, self.threaded_server.l7_server)
         server_messages = l7_client.do_tls_handshake(
             hello_message=client_hello,
             last_handshake_message_type=last_handshake_message_type
@@ -223,3 +235,26 @@ class TestL7ServerTlsCloseOnError(TestL7ServerBase):
 
     def test_tls_handshake(self):
         self._test_tls_handshake(TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+
+
+class TestL7ServerTlsRDP(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsRDP)
+
+    def test_error_alert_in_request(self):
+        l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        l4_client.init_connection()
+
+        neg_req = RDPNegotiationRequest([], [RDPProtocol.RDP, ])
+        cotp = COTPConnectionRequest(src_ref=0, user_data=neg_req.compose())
+        tpkt = TPKT(version=3, message=cotp.compose())
+        request_bytes = tpkt.compose()
+
+        l4_client.send(request_bytes)
+        l4_client.close()
+
+    def test_default_port(self):
+        self.assertEqual(ClientRDP.get_default_port(), L7ServerTlsRDP.get_default_port())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientRDP)
