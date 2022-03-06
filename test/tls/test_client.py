@@ -798,9 +798,8 @@ class TestClientXMPP(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersionFinal(TlsVersion.TLS1_3),
             ]
         )
 
