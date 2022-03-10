@@ -8,6 +8,7 @@ except ImportError:
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
+from cryptoparser.tls.ldap import LDAPExtendedRequestStartTLS
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.record import SslRecord, TlsRecord
 from cryptoparser.tls.rdp import (
@@ -32,6 +33,7 @@ from cryptoparser.tls.subprotocol import (
 
 from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.client import (
+    ClientLDAP,
     ClientRDP,
     L7ClientTls,
     SslError,
@@ -39,7 +41,7 @@ from cryptolyzer.tls.client import (
     TlsAlert,
     TlsHandshakeClientHelloAnyAlgorithm
 )
-from cryptolyzer.tls.server import L7ServerTls, L7ServerTlsRDP, TlsServerConfiguration
+from cryptolyzer.tls.server import L7ServerTls, L7ServerTlsLDAP, L7ServerTlsRDP, TlsServerConfiguration
 
 from .classes import L7ServerTlsTest
 
@@ -251,6 +253,8 @@ class TestL7ServerTlsRDP(TestL7ServerBase):
         request_bytes = tpkt.compose()
 
         l4_client.send(request_bytes)
+        self._assert_on_more_data(l4_client)
+
         l4_client.close()
 
     def test_default_port(self):
@@ -258,3 +262,37 @@ class TestL7ServerTlsRDP(TestL7ServerBase):
 
     def test_tls_handshake(self):
         self._test_tls_handshake(l7_client_class=ClientRDP)
+
+
+class TestL7ServerTlsLDAP(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsLDAP)
+
+    def test_error_unfinished_tls_request(self):
+        l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        l4_client.init_connection()
+
+        self._assert_on_more_data(l4_client)
+
+        l4_client.close()
+
+    def test_error_invlaid_tls_request(self):
+        l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        l4_client.init_connection()
+
+        l4_client.send((LDAPExtendedRequestStartTLS.HEADER_SIZE + 1) * b'\x00')
+        self._assert_on_more_data(l4_client)
+
+        l4_client.close()
+
+    def test_default_port(self):
+        self.assertEqual(
+            ClientLDAP.get_default_port() // 100 * 1000 + ClientLDAP.get_default_port(),
+            L7ServerTlsLDAP.get_default_port()
+        )
+
+    def test_scheme(self):
+        self.assertEqual(ClientLDAP.get_scheme(), L7ServerTlsLDAP.get_scheme())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientLDAP)
