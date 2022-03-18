@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import time
-import unittest
 
-from test.common.classes import TestThreadedServer
+from test.common.classes import TestThreadedServer, TestLoggerBase
 
 import six
 
@@ -37,7 +36,7 @@ class AnalyzerThread(TestThreadedServer):
         self.result = self.analyzer.analyze(self.l7_server)
 
 
-class TestJA3Generate(unittest.TestCase):
+class TestJA3Generate(TestLoggerBase):
     @staticmethod
     def get_result(hello_message):
         analyzer_thread = AnalyzerThread(TlsServerConfiguration(protocol_versions=[]))
@@ -72,6 +71,10 @@ class TestJA3Generate(unittest.TestCase):
         hello_message = TlsHandshakeClientHello([TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5])
         result = self.get_result(hello_message)
         self.assertEqual(result.target, '771,3,,,')
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            'Client offers TLS client hello which JA3 tag is "{}"\n'.format(result.target)
+        )
 
     def test_tag_one_element_lists(self):
         hello_message = TlsHandshakeClientHello(
@@ -88,6 +91,10 @@ class TestJA3Generate(unittest.TestCase):
         )
         result = self.get_result(hello_message)
         self.assertEqual(result.target, '771,3,11-10,1,0')
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            'Client offers TLS client hello which JA3 tag is "{}"\n'.format(result.target)
+        )
 
     def test_tag_two_element_lists(self):
         hello_message = TlsHandshakeClientHello(
@@ -109,3 +116,7 @@ class TestJA3Generate(unittest.TestCase):
         )
         result = self.get_result(hello_message)
         self.assertEqual(result.target, '771,13-12,11-10,3-2,1-0')
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            'Client offers TLS client hello which JA3 tag is "{}"\n'.format(result.target)
+        )

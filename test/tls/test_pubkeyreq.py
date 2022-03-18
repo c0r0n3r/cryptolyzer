@@ -77,6 +77,10 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
                 ])
             ]
         )
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            'Server requests X.509 for client authentication\n'
+        )
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(

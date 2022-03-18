@@ -16,6 +16,7 @@ from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
 from cryptolyzer.common.analyzer import AnalyzerSshBase
 from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
+from cryptolyzer.common.utils import LogSingleton
 
 
 @attr.s
@@ -82,11 +83,50 @@ class AnalyzerCiphers(AnalyzerSshBase):
     def get_help(cls):
         return 'Check which cipher suites supported by the server(s)'
 
+    @staticmethod
+    def _log_algorithms(protocol_version, key_exchange_init_message, message_attr_name, algorithm_name=None):
+        if algorithm_name is None:
+            algorithm_name = message_attr_name.replace('_', ' ')
+
+        LogSingleton().log(level=60, msg=six.u('Server offers %s %s (%s)') % (
+            algorithm_name,
+            ', '.join(list(map(
+                lambda algorithm: algorithm if isinstance(algorithm, six.string_types) else algorithm.value.code,
+                getattr(key_exchange_init_message, message_attr_name)
+            ))),
+            protocol_version,
+        ))
+
     def analyze(self, analyzable):
         server_messages = analyzable.do_handshake(last_message_type=SshMessageCode.KEXINIT)
         key_exchange_init_message = server_messages[SshKeyExchangeInit]
+
+        protocol_version = SshProtocolVersion(SshVersion.SSH2)
+        self._log_algorithms(protocol_version, key_exchange_init_message, 'kex_algorithms', 'KEX algorithms')
+        self._log_algorithms(protocol_version, key_exchange_init_message, 'host_key_algorithms', None)
+        self._log_algorithms(
+            protocol_version, key_exchange_init_message, 'encryption_algorithms_client_to_server', None
+        )
+        self._log_algorithms(
+            protocol_version, key_exchange_init_message, 'encryption_algorithms_server_to_client', None
+        )
+        self._log_algorithms(
+            protocol_version, key_exchange_init_message,
+            'mac_algorithms_client_to_server', 'MAC algorithms client to server'
+        )
+        self._log_algorithms(
+            protocol_version, key_exchange_init_message,
+            'mac_algorithms_server_to_client', 'MAC algorithms server to client'
+        )
+        self._log_algorithms(
+            protocol_version, key_exchange_init_message, 'compression_algorithms_client_to_server', None
+        )
+        self._log_algorithms(
+            protocol_version, key_exchange_init_message, 'compression_algorithms_server_to_client', None
+        )
+
         return AnalyzerResultCiphers(
-            AnalyzerTargetSsh.from_l7_client(analyzable, SshProtocolVersion(SshVersion.SSH2)),
+            AnalyzerTargetSsh.from_l7_client(analyzable, protocol_version),
             list(key_exchange_init_message.kex_algorithms),
             list(key_exchange_init_message.host_key_algorithms),
             list(key_exchange_init_message.encryption_algorithms_client_to_server),

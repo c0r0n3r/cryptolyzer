@@ -22,6 +22,7 @@ from cryptolyzer.common.dhparam import (
 )
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE
 from cryptolyzer.tls.exception import TlsAlert
 
@@ -171,19 +172,36 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                 if not has_extenstion or named_group in named_groups:
                     dhparam = _dhparam
                     named_groups = []
+                    LogSingleton().log(level=60, msg=six.u('Server offers well-known DH public parameter %s (%s)') % (
+                        dhparam.well_known.value.name, client_hello.protocol_version,
+                    ))
                     break
 
                 has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_group)
                 named_groups.append(named_group)
+                LogSingleton().log(level=60, msg=six.u('Server offers FFDHE public parameter with size %d-bit (%s)') % (
+                    named_group.value.named_group.value.size, client_hello.protocol_version,
+                ))
             else:
                 # no extension support, so only one DH parameter is possible
                 dhparam = _dhparam
+                if dhparam.well_known:
+                    LogSingleton().log(level=60, msg=six.u('Server offers well-known DH public parameter %s (%s)') % (
+                        dhparam.well_known.value.name, client_hello.protocol_version,
+                    ))
+                else:
+                    LogSingleton().log(
+                        level=60,
+                        msg=six.u('Server offers custom DH public parameter with size %d-bit (%s)') % (
+                            dhparam.key_size, client_hello.protocol_version,
+                        )
+                    )
                 break
 
         return dhparam, named_groups
 
     @staticmethod
-    def _analyze_tls_1_3(analyzable, client_hello):
+    def _analyze_tls_1_3(analyzable, client_hello, protocol_version):
         named_groups = []
         extensions = [
             extension
@@ -202,6 +220,9 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
             named_groups.append(named_group)
             has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_group)
+            LogSingleton().log(level=60, msg=six.u('Server offers FFDHE public parameter with size %d-bit (%s)') % (
+                named_group.value.named_group.value.size, protocol_version,
+            ))
 
         return named_groups
 
@@ -210,7 +231,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
         is_tls_1_3 = protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
 
         if is_tls_1_3:
-            named_groups = self._analyze_tls_1_3(analyzable, client_hello)
+            named_groups = self._analyze_tls_1_3(analyzable, client_hello, protocol_version)
             dhparam = None
         else:
             dhparam, named_groups = self._analyze_tls_1_x(analyzable, client_hello)

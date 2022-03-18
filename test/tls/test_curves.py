@@ -81,6 +81,11 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         self.assertEqual(result.curves, [TlsNamedCurve.SECP256R1, ])
         self.assertTrue(result.extension_supported)
+        self.assertEqual(
+            self.pop_log_lines(), [
+                'Server offers elliptic-curve PRIME256V1',
+            ]
+        )
 
         result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
         self.assertEqual(
@@ -88,10 +93,19 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
             [TlsNamedCurve.X25519, TlsNamedCurve.SECP256R1, TlsNamedCurve.SECP384R1, TlsNamedCurve.SECP521R1, ]
         )
         self.assertTrue(result.extension_supported)
+        self.assertEqual(
+            self.pop_log_lines(), [
+                'Server offers elliptic-curve CURVE25519',
+                'Server offers elliptic-curve PRIME256V1',
+                'Server offers elliptic-curve SECP384R1',
+                'Server offers elliptic-curve SECP521R1',
+            ]
+        )
 
     def test_no_ec_support(self):
         result = self.get_result('static-rsa.badssl.com', 443)
         self.assertEqual(len(result.curves), 0)
+        self.assertFalse(self.log_stream.getvalue(), '')
 
     def test_tls_1_3(self):
         self.assertEqual(
@@ -101,6 +115,14 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
                 TlsNamedCurve.SECP256R1,
                 TlsNamedCurve.SECP384R1,
                 TlsNamedCurve.SECP521R1,
+            ]
+        )
+        self.assertEqual(
+            self.get_log_lines(), [
+                'Server offers elliptic-curve CURVE25519',
+                'Server offers elliptic-curve PRIME256V1',
+                'Server offers elliptic-curve SECP384R1',
+                'Server offers elliptic-curve SECP521R1',
             ]
         )
 

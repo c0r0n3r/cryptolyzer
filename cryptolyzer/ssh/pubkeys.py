@@ -16,8 +16,9 @@ from cryptoparser.ssh.subprotocol import (
 )
 
 from cryptolyzer.common.analyzer import AnalyzerSshBase
-from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
+from cryptolyzer.common.utils import LogSingleton
 
 from cryptolyzer.ssh.ciphers import AnalyzerCiphers
 from cryptolyzer.ssh.client import (
@@ -70,7 +71,9 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
         )))
 
     def analyze(self, analyzable):
+        LogSingleton().disabled = True
         analyzer_result = AnalyzerCiphers().analyze(analyzable)
+        LogSingleton().disabled = False
         host_key_types = set(map(
             lambda host_key_algorithm: (host_key_algorithm.value.key_type, host_key_algorithm.value.authentication),
             analyzer_result.host_key_algorithms
@@ -99,7 +102,11 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
             except StopIteration:
                 pass
             else:
-                host_public_keys.append(dh_key_exchange_reply_message.host_public_key)
+                host_public_key = dh_key_exchange_reply_message.host_public_key
+                host_public_keys.append(host_public_key)
+                LogSingleton().log(level=60, msg=six.u('Server offers %s host key') % (
+                    host_public_key.host_key_algorithm.value.code
+                ))
 
         return AnalyzerResultPublicKeys(
             AnalyzerTargetSsh.from_l7_client(analyzable),

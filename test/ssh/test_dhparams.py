@@ -29,12 +29,26 @@ class TestSshDHParams(TestSshCases.TestSshClientBase):
         ])
         self.assertEqual(result.group_exchange.key_sizes, [2048, 3072, 4096, 6144, 7680, 8192])
         self.assertFalse(result.group_exchange.bounds_tolerated)
+        log_lines = self.pop_log_lines()
+        for idx, key_size in enumerate(result.group_exchange.key_sizes):
+            self.assertEqual(
+                'Server offers custom DH public parameter with size {}-bit (SSH 2.0)'.format(key_size),
+                log_lines[idx + 1]
+            )
 
         result = self.get_result('github.com', 22)
         self.assertEqual(result.key_exchange, None)
         self.assertEqual(result.group_exchange.gex_algorithms, [SshKexAlgorithm.DIFFIE_HELLMAN_GROUP_EXCHANGE_SHA256])
         self.assertEqual(result.group_exchange.key_sizes, [2048, 3072, 4096, 6144, 7680, 8192])
         self.assertTrue(result.group_exchange.bounds_tolerated)
+        log_lines = self.pop_log_lines()
+        for idx, key_size in enumerate(result.group_exchange.key_sizes):
+            self.assertIn(
+                'Server offers custom DH public parameter with size {}-bit (SSH 2.0)'.format(
+                    key_size,
+                ),
+                log_lines[idx]
+            )
 
         result = self.get_result('gitlab.com', 22)
         self.assertEqual(result.key_exchange.kex_algorithms, [

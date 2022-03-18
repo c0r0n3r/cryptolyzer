@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
+
 import six
 import attr
 
@@ -10,6 +11,7 @@ from cryptoparser.tls.subprotocol import TlsHandshakeType
 from cryptolyzer.common.analyzer import AnalyzerBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultBase
+from cryptolyzer.common.utils import LogSingleton
 
 from cryptolyzer.tls.server import L7ServerTlsBase
 
@@ -49,6 +51,8 @@ class AnalyzerGenerate(AnalyzerBase):
             raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
         tag = client_messages[0][TlsHandshakeType.CLIENT_HELLO].ja3()
+        LogSingleton().log(level=60, msg=six.u('Client offers TLS client hello which JA3 tag is "%s"') % (tag, ))
+
         return AnalyzerResultGenerate(
             tag
         )

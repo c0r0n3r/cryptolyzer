@@ -14,6 +14,7 @@ from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 from cryptoparser.common.utils import get_leaf_classes
 
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.httpx.client import L7ClientHttpBase
 from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -97,6 +98,10 @@ class ProtocolHandlerBase(object):
         raise NotImplementedError()
 
     def analyze(self, analyzer, uri):
+        LogSingleton().log(level=60, msg=six.u('Analysis started; protocol="%s", analyzer="%s"') % (
+            self.get_protocol(), analyzer.get_name(),
+        ))
+
         l7_client = self._l7_client_from_uri(uri)
         args, kwargs = self._get_analyzer_args()
         return analyzer.analyze(l7_client, *args, **kwargs)

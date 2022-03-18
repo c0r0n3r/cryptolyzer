@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import six
+
 import attr
 
 from cryptoparser.common.utils import get_leaf_classes
@@ -8,6 +10,7 @@ from cryptoparser.ssh.subprotocol import SshMessageCode
 from cryptolyzer.common.analyzer import AnalyzerBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultBase
+from cryptolyzer.common.utils import LogSingleton
 
 from cryptolyzer.ssh.server import L7ServerSshBase
 
@@ -42,6 +45,9 @@ class AnalyzerGenerate(AnalyzerBase):
             raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
         fingerprint = client_messages[0][SshMessageCode.KEXINIT].hassh
+        LogSingleton().log(
+            level=60, msg=six.u('Client offers SSH key exchange init which HASSH fingerprint is "%s"') % (fingerprint, )
+        )
         return AnalyzerResultGenerate(
             fingerprint
         )

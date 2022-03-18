@@ -43,6 +43,12 @@ def get_argument_parser():
     parser = argparse.ArgumentParser(prog='cryptolyze')
     parser.add_argument('--version', '-v', action='version', version='%(prog)s ' + __setup__.__version__)
     parser.add_argument(
+        '--log-level',
+        choices=['debug', 'info', 'warning', 'error', 'critical'],
+        default='info',
+        help='level of logging (default: %(default)s)'
+    )
+    parser.add_argument(
         '--output-format',
         choices=['json', 'markdown'],
         default='markdown',

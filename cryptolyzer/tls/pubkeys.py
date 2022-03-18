@@ -16,6 +16,7 @@ from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.extension import TlsExtensionCertificateStatusRequest, TlsCertificateStatusType
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationDSS,
     TlsHandshakeClientHelloAuthenticationRSA,
@@ -221,7 +222,12 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                         )
                         tls_public_key_params['certificate_status'] = certificate_status
 
-            results.append(TlsPublicKey(**tls_public_key_params))
+            tls_public_key = TlsPublicKey(**tls_public_key_params)
+            LogSingleton().log(level=60, msg=six.u('Server offers %s X.509 public key (with%s SNI)') % (
+                tls_public_key.tls_certificate_chain.items[-1].key_type.name,
+                '' if tls_public_key.sni_sent else 'out',
+            ))
+            results.append(tls_public_key)
 
     @staticmethod
     def _get_server_messages(l7_client, client_hello, sni_sent, client_hello_messages):

@@ -3,13 +3,12 @@
 import datetime
 
 import abc
-import unittest
 try:
     from unittest import mock
 except ImportError:
     import mock
 
-from test.common.classes import TestThreadedServer
+from test.common.classes import TestThreadedServer, TestLoggerBase
 
 import attr
 import six
@@ -34,7 +33,7 @@ from cryptolyzer.tls.server import L7ServerTls, L7ServerStartTlsTextBase, TlsSer
 
 
 class TestTlsCases:
-    class TestTlsBase(unittest.TestCase):
+    class TestTlsBase(TestLoggerBase):
         @staticmethod
         @abc.abstractmethod
         def get_result(host, port, protocol_version=None, timeout=None, ip=None):

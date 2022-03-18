@@ -17,6 +17,7 @@ from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx
 from cryptolyzer.tls.exception import TlsAlert
 
@@ -140,6 +141,9 @@ class AnalyzerCurves(AnalyzerTlsBase):
                 extension_supported = False
                 break
 
+            LogSingleton().log(level=60, msg=six.u('Server offers elliptic-curve %s') % (
+                supported_curve.value.named_group.name,
+            ))
             supported_curves.update([(supported_curve.name, supported_curve), ])
 
         return AnalyzerResultCurves(

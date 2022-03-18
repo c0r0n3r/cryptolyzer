@@ -25,3 +25,4 @@ class TestSshVersions(TestL7ClientBase):
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.protocol_versions, [protocol_message_default.protocol_version, ])
         self.assertEqual(result.software_version, protocol_message_default.software_version)
+        self.assertIn('Server offers protocol version SSH 2.0', self.log_stream.getvalue())

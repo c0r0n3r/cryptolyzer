@@ -5,6 +5,7 @@
 - Generic
   - Diffie-Hellman
     - add builtin Diffie-Hellman parameters of several application servers (#104)
+    - add logging support to make possible following up the analysis process (#58) 
 - HASSH (`hassh`)
   - Generate (`generate`)
 - TLS (`tls`)
