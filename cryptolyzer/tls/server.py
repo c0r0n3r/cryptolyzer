@@ -45,6 +45,7 @@ from cryptoparser.tls.version import (
     TlsVersion
 )
 
+from cryptolyzer.__setup__ import __title__, __version__
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.application import L7ServerBase, L7ServerHandshakeBase, L7ServerConfigurationBase
 
@@ -397,3 +398,69 @@ class L7ServerTlsPostgreSQL(L7ServerStartTlsBase):
 
     def _deinit_l7(self):
         pass
+
+
+@attr.s
+class L7ServerStartTlsTextBase(L7ServerStartTlsBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_scheme(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_default_port(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def _get_greeting(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def _get_starttls_request_prefix(cls):
+        return b'STARTTLS'
+
+    @classmethod
+    @abc.abstractmethod
+    def _get_starttls_response(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def _get_software_name(cls):
+        return '{} {}'.format(__title__, __version__).encode('ascii')
+
+    def _init_l7(self):
+        greeting = self._get_greeting()
+        if greeting:
+            self.l4_transfer.send(greeting)
+
+        self.l4_transfer.receive_line()
+        starttls_request_prefix = self._get_starttls_request_prefix()
+        if not self.l4_transfer.buffer.startswith(starttls_request_prefix):
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        self.l4_transfer.flush_buffer()
+
+        self.l4_transfer.send(self._get_starttls_response())
+
+
+class L7ServerTlsSieve(L7ServerStartTlsTextBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'sieve'
+
+    @classmethod
+    def get_default_port(cls):
+        return 4190
+
+    @classmethod
+    def _get_greeting(cls):
+        return b'\r\n'.join([
+            b'"STARTTLS"',
+            b'OK "' + cls._get_software_name() + b'" ready,',
+            b'',
+        ])
+
+    @classmethod
+    def _get_starttls_response(cls):
+        return b'OK "Begin TLS negotiation now."\r\n'
