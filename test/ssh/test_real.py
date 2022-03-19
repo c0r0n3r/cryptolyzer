@@ -5,10 +5,11 @@ import unittest
 import test.ssh.test_ciphers
 import test.ssh.test_versions
 
+import six
+
 from cryptoparser.ssh.ciphersuite import SshHostKeyAlgorithm
 from cryptoparser.ssh.version import (
     SshProtocolVersion,
-    SshSoftwareVersionUnparsed,
     SshSoftwareVersionOpenSSH,
     SshVersion,
 )
@@ -43,7 +44,7 @@ class TestReal(unittest.TestCase):
     def test_versions(self):
         result = test.ssh.test_versions.TestSshVersions.get_result('github.com')
         self.assertEqual(result.protocol_versions, [SshProtocolVersion(SshVersion.SSH2)])
-        self.assertEqual(result.software_version, SshSoftwareVersionUnparsed('babeld-0f6ba948'))
+        six.assertRegex(self, result.software_version.raw, 'babeld-[0-9a-f]{8}')
 
         result = test.ssh.test_versions.TestSshVersions.get_result('gitlab.com')
         self.assertEqual(result.protocol_versions, [SshProtocolVersion(SshVersion.SSH2)])
