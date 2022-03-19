@@ -418,6 +418,14 @@ class L7ServerStartTlsTextBase(L7ServerStartTlsBase):
         raise NotImplementedError()
 
     @classmethod
+    def _get_capabilities_request_prefix(cls):
+        return None
+
+    @classmethod
+    def _get_capabilities_response(cls):
+        return None  # pragma: no cover
+
+    @classmethod
     def _get_starttls_request_prefix(cls):
         return b'STARTTLS'
 
@@ -436,6 +444,12 @@ class L7ServerStartTlsTextBase(L7ServerStartTlsBase):
             self.l4_transfer.send(greeting)
 
         self.l4_transfer.receive_line()
+        capabilities_request_prefix = self._get_capabilities_request_prefix()
+        if capabilities_request_prefix and self.l4_transfer.buffer.startswith(capabilities_request_prefix):
+            self.l4_transfer.flush_buffer()
+            self.l4_transfer.send(self._get_capabilities_response())
+            self.l4_transfer.receive_line()
+
         starttls_request_prefix = self._get_starttls_request_prefix()
         if not self.l4_transfer.buffer.startswith(starttls_request_prefix):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
@@ -464,3 +478,41 @@ class L7ServerTlsSieve(L7ServerStartTlsTextBase):
     @classmethod
     def _get_starttls_response(cls):
         return b'OK "Begin TLS negotiation now."\r\n'
+
+
+class L7ServerTlsFTP(L7ServerStartTlsTextBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'ftp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 2121
+
+    @classmethod
+    def _get_capabilities_request_prefix(cls):
+        return b'FEAT'
+
+    @classmethod
+    def _get_capabilities_response(cls):
+        return b'\r\n'.join([
+            b'211-Extensions supported:',
+            b' AUTH TLS',
+            b'211 End.',
+            b'',
+        ])
+
+    @classmethod
+    def _get_greeting(cls):
+        return b'\r\n'.join([
+            b'220 Welcome to ' + cls._get_software_name() + b'.',
+            b'',
+        ])
+
+    @classmethod
+    def _get_starttls_request_prefix(cls):
+        return b'AUTH TLS'
+
+    @classmethod
+    def _get_starttls_response(cls):
+        return b'234 AUTH TLS OK.\r\n'
