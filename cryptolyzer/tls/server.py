@@ -516,3 +516,42 @@ class L7ServerTlsFTP(L7ServerStartTlsTextBase):
     @classmethod
     def _get_starttls_response(cls):
         return b'234 AUTH TLS OK.\r\n'
+
+
+class L7ServerTlsPOP3(L7ServerStartTlsTextBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'pop3'
+
+    @classmethod
+    def get_default_port(cls):
+        return 1110
+
+    @classmethod
+    def _get_greeting(cls):
+        return b'\r\n'.join([
+            b'+OK ' + cls._get_software_name() + b' ready.',
+            b'',
+        ])
+
+    @classmethod
+    def _get_capabilities_request_prefix(cls):
+        return b'CAPA'
+
+    @classmethod
+    def _get_capabilities_response(cls):
+        return b'\r\n'.join([
+            b'+OK',
+            b'CAPA',
+            b'STLS',
+            b'.',
+            b'',
+        ])
+
+    @classmethod
+    def _get_starttls_request_prefix(cls):
+        return b'STLS'
+
+    @classmethod
+    def _get_starttls_response(cls):
+        return b'+OK Begin TLS negotiation now.\r\n'
