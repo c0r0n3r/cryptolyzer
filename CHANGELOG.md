@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.1 - 2022-03-23
+
+- JA3 (`ja3`)
+  - Generate (`generate`)
+     - support NNTP clients (#83)
+     - support SMTP/LMTP clients (#82)
+     - support POP3 clients (#81)
+     - support FTP clients (#80)
+     - support Sieve clients (#79)
+     - support PostgreSQL clients (#78)
+     - support LDAP clients (#77)
+
 ## 0.8.0 - 2022-01-18
 
 - SSH (`ssh`)

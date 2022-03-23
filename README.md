@@ -51,6 +51,9 @@ docker run --rm coroner/cryptolyzer http headers www.example.com
 ```shell
 docker run -ti --rm -p 127.0.0.1:4433:4433 coroner/cryptolyzer ja3 generate 0.0.0.0:4433
 openssl s_client -connect 127.0.0.1:4433
+
+docker run -ti --rm -p 127.0.0.1:2121:2121 coroner/cryptolyzer ja3 generate ftp://0.0.0.0:2121
+openssl s_client -starttls ftp -connect 127.0.0.1:2121
 ```
 
 or via APT on Debian based systems
@@ -188,6 +191,15 @@ port.
 
 1.  generates [JA3 tag](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967) of any
     connecting TLS client independently from its type (graphical/cli, browser/email client/\...)
+  - [FTP](https://en.wikipedia.org/wiki/File_Transfer_Protocol)
+  - [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol)
+  - [LMTP](https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol)
+  - [NNTP](https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol)
+  - [POP3](https://en.wikipedia.org/wiki/Post_Office_Protocol)
+  - [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL)
+  - [RDP](https://en.wikipedia.org/wiki/Remote_Desktop_Protocol)
+  - [Sieve](https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language))
+  - [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)
 2.  decodes existing [JA3 tags](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967) by
     showing human-readable format of the TLS parameters represented by the tag
 
