@@ -623,3 +623,37 @@ class L7ServerTlsLMTP(L7ServerStartTlsMailBase):
     @classmethod
     def _get_capabilities_request_prefix(cls):
         return b'LHLO'
+
+
+class L7ServerTlsNNTP(L7ServerStartTlsTextBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'nntp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 1119
+
+    @classmethod
+    def _get_capabilities_request_prefix(cls):
+        return b'CAPABILITIES'
+
+    @classmethod
+    def _get_capabilities_response(cls):
+        return b'\r\n'.join([
+            b'101 Capability list:',
+            b'STARTTLS',
+            b'.',
+            b'',
+        ])
+
+    @classmethod
+    def _get_greeting(cls):
+        return b'\r\n'.join([
+            b'200 ' + cls._get_software_name() + b' Welcome!',
+            b'',
+        ])
+
+    @classmethod
+    def _get_starttls_response(cls):
+        return b'382 Continue with TLS negotiation\r\n'
