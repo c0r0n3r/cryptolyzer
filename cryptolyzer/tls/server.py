@@ -13,6 +13,7 @@ from cryptoparser.tls.ldap import (
     LDAPExtendedRequestStartTLS,
     LDAPExtendedResponseStartTLS,
 )
+from cryptoparser.tls.postgresql import SslRequest, Sync
 from cryptoparser.tls.rdp import (
     TPKT,
     COTPConnectionConfirm,
@@ -369,6 +370,30 @@ class L7ServerTlsLDAP(L7ServerStartTlsBase):
         self.l4_transfer.flush_buffer()
 
         self.l4_transfer.send(self._EXTENDED_RESPONSE_STARTLS_BYTES)
+
+    def _deinit_l7(self):
+        pass
+
+
+class L7ServerTlsPostgreSQL(L7ServerStartTlsBase):
+    _SSL_REQUEST_BYTES = SslRequest().compose()
+    _SYNC_BYTES = Sync().compose()
+
+    @classmethod
+    def get_scheme(cls):
+        return 'postgresql'
+
+    @classmethod
+    def get_default_port(cls):
+        return 5432
+
+    def _init_l7(self):
+        self.l4_transfer.receive(len(self._SSL_REQUEST_BYTES))
+        if self.l4_transfer.buffer != self._SSL_REQUEST_BYTES:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+        self.l4_transfer.flush_buffer()
+
+        self.l4_transfer.send(self._SYNC_BYTES)
 
     def _deinit_l7(self):
         pass

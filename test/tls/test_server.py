@@ -11,6 +11,7 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.ldap import LDAPExtendedRequestStartTLS
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.record import SslRecord, TlsRecord
+from cryptoparser.tls.postgresql import SslRequest
 from cryptoparser.tls.rdp import (
     TPKT,
     COTPConnectionRequest,
@@ -34,6 +35,7 @@ from cryptoparser.tls.subprotocol import (
 from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.client import (
     ClientLDAP,
+    ClientPostgreSQL,
     ClientRDP,
     L7ClientTls,
     SslError,
@@ -41,7 +43,13 @@ from cryptolyzer.tls.client import (
     TlsAlert,
     TlsHandshakeClientHelloAnyAlgorithm
 )
-from cryptolyzer.tls.server import L7ServerTls, L7ServerTlsLDAP, L7ServerTlsRDP, TlsServerConfiguration
+from cryptolyzer.tls.server import (
+    L7ServerTls,
+    L7ServerTlsLDAP,
+    L7ServerTlsPostgreSQL,
+    L7ServerTlsRDP,
+    TlsServerConfiguration,
+)
 
 from .classes import L7ServerTlsTest
 
@@ -296,3 +304,26 @@ class TestL7ServerTlsLDAP(TestL7ServerBase):
 
     def test_tls_handshake(self):
         self._test_tls_handshake(l7_client_class=ClientLDAP)
+
+
+class TestL7ServerTlsPostgreSQL(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsPostgreSQL)
+
+    def test_error_invlaid_tls_request(self):
+        l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        l4_client.init_connection()
+
+        l4_client.send(SslRequest.MESSAGE_SIZE * b'\x00')
+        self._assert_on_more_data(l4_client)
+
+        l4_client.close()
+
+    def test_default_port(self):
+        self.assertEqual(ClientPostgreSQL.get_default_port(), L7ServerTlsPostgreSQL.get_default_port())
+
+    def test_scheme(self):
+        self.assertEqual(ClientPostgreSQL.get_scheme(), L7ServerTlsPostgreSQL.get_scheme())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientPostgreSQL)
