@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import ftplib
+import nntplib
 import poplib
 import smtplib
 import ssl
@@ -43,6 +44,7 @@ from cryptolyzer.tls.client import (
     ClientFTP,
     ClientLDAP,
     ClientLMTP,
+    ClientNNTP,
     ClientPOP3,
     ClientPostgreSQL,
     ClientRDP,
@@ -59,6 +61,7 @@ from cryptolyzer.tls.server import (
     L7ServerTlsFTP,
     L7ServerTlsLDAP,
     L7ServerTlsLMTP,
+    L7ServerTlsNNTP,
     L7ServerTlsPOP3,
     L7ServerTlsPostgreSQL,
     L7ServerTlsRDP,
@@ -575,3 +578,31 @@ class TestL7ServerTlsSMTP(TestL7ServerBase):
             client.starttls()
 
         self.assertEqual(context_manager.exception.args[0], 'Connection unexpectedly closed')
+
+
+class TestL7ServerTlsNNTP(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsNNTP)
+
+    def test_default_port(self):
+        self.assertEqual(
+            ClientNNTP.get_default_port() // 100 * 1000 + ClientNNTP.get_default_port(),
+            L7ServerTlsNNTP.get_default_port()
+        )
+
+    def test_scheme(self):
+        self.assertEqual(ClientNNTP.get_scheme(), L7ServerTlsNNTP.get_scheme())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientNNTP)
+
+    @unittest.skipIf(six.PY2, 'There is no nntplib.NNTP.starttls in Python < 3.0')
+    def test_real_with_capabilities(self):
+        client = nntplib.NNTP(
+            host=str(self.threaded_server.l7_server.address),
+            port=self.threaded_server.l7_server.l4_transfer.bind_port
+        )
+        with self.assertRaises(ssl.SSLError) as context_manager:
+            client.starttls()
+
+        self.assertEqual(context_manager.exception.reason, 'UNEXPECTED_MESSAGE')
