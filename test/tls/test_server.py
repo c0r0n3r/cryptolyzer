@@ -2,6 +2,7 @@
 
 import ftplib
 import poplib
+import smtplib
 import ssl
 import unittest
 try:
@@ -41,10 +42,12 @@ from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.client import (
     ClientFTP,
     ClientLDAP,
+    ClientLMTP,
     ClientPOP3,
     ClientPostgreSQL,
     ClientRDP,
     ClientSieve,
+    ClientSMTP,
     L7ClientTls,
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
@@ -55,10 +58,12 @@ from cryptolyzer.tls.server import (
     L7ServerTls,
     L7ServerTlsFTP,
     L7ServerTlsLDAP,
+    L7ServerTlsLMTP,
     L7ServerTlsPOP3,
     L7ServerTlsPostgreSQL,
     L7ServerTlsRDP,
     L7ServerTlsSieve,
+    L7ServerTlsSMTP,
     TlsServerConfiguration,
 )
 
@@ -516,3 +521,57 @@ class TestL7ServerTlsPOP3(TestL7ServerBase):
 
         response = client._shortcmd('STLS')  # pylint: disable=protected-access
         self.assertEqual(response, '+OK Begin TLS negotiation now.')
+
+
+class TestL7ServerTlsLMTP(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsLMTP)
+
+    def test_default_port(self):
+        self.assertEqual(
+            ClientLMTP.get_default_port() * 100 + ClientLMTP.get_default_port(),
+            L7ServerTlsLMTP.get_default_port()
+        )
+
+    def test_scheme(self):
+        self.assertEqual(ClientLMTP.get_scheme(), L7ServerTlsLMTP.get_scheme())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientLMTP)
+
+    def test_real_with_capabilities(self):
+        client = smtplib.LMTP(
+            host=str(self.threaded_server.l7_server.address),
+            port=self.threaded_server.l7_server.l4_transfer.bind_port
+        )
+        with self.assertRaises(smtplib.SMTPServerDisconnected) as context_manager:
+            client.starttls()
+
+        self.assertEqual(context_manager.exception.args[0], 'Connection unexpectedly closed')
+
+
+class TestL7ServerTlsSMTP(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsSMTP)
+
+    def test_default_port(self):
+        self.assertEqual(
+            ClientSMTP.get_default_port() // 100 * 1000 + ClientSMTP.get_default_port(),
+            L7ServerTlsSMTP.get_default_port()
+        )
+
+    def test_scheme(self):
+        self.assertEqual(ClientSMTP.get_scheme(), L7ServerTlsSMTP.get_scheme())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientSMTP)
+
+    def test_real_with_capabilities(self):
+        client = smtplib.SMTP(
+            host=str(self.threaded_server.l7_server.address),
+            port=self.threaded_server.l7_server.l4_transfer.bind_port
+        )
+        with self.assertRaises(smtplib.SMTPServerDisconnected) as context_manager:
+            client.starttls()
+
+        self.assertEqual(context_manager.exception.args[0], 'Connection unexpectedly closed')

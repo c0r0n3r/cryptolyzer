@@ -555,3 +555,71 @@ class L7ServerTlsPOP3(L7ServerStartTlsTextBase):
     @classmethod
     def _get_starttls_response(cls):
         return b'+OK Begin TLS negotiation now.\r\n'
+
+
+class L7ServerStartTlsMailBase(L7ServerStartTlsTextBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_scheme(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_default_port(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def _get_greeting(cls):
+        return b'\r\n'.join([
+            b'220 localhost ' + cls._get_software_name() + b' ready.',
+            b'',
+        ])
+
+    @classmethod
+    @abc.abstractmethod
+    def _get_capabilities_request_prefix(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def _get_capabilities_response(cls):
+        return b'\r\n'.join([
+            b'250 localhost at your service',
+            b'250 STARTTLS',
+            b'',
+        ])
+
+    @classmethod
+    def _get_starttls_request_prefix(cls):
+        return b'STARTTLS'
+
+    @classmethod
+    def _get_starttls_response(cls):
+        return b'220 Ready to start TLS\r\n'
+
+
+class L7ServerTlsSMTP(L7ServerStartTlsMailBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'smtp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 5587
+
+    @classmethod
+    def _get_capabilities_request_prefix(cls):
+        return b'EHLO'
+
+
+class L7ServerTlsLMTP(L7ServerStartTlsMailBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'lmtp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 2424
+
+    @classmethod
+    def _get_capabilities_request_prefix(cls):
+        return b'LHLO'
