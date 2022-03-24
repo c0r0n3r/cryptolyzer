@@ -8,6 +8,11 @@ import six
 from cryptoparser.common.exception import NotEnoughData, InvalidValue
 
 from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionSupportedVersionsServer
+from cryptoparser.tls.ldap import (
+    LDAPResultCode,
+    LDAPExtendedRequestStartTLS,
+    LDAPExtendedResponseStartTLS,
+)
 from cryptoparser.tls.rdp import (
     TPKT,
     COTPConnectionConfirm,
@@ -337,6 +342,33 @@ class L7ServerTlsRDP(L7ServerStartTlsBase):
         tpkt = TPKT(version=3, message=cotp.compose())
         request_bytes = tpkt.compose()
         self.l4_transfer.send(request_bytes)
+
+    def _deinit_l7(self):
+        pass
+
+
+class L7ServerTlsLDAP(L7ServerStartTlsBase):
+    _EXTENDED_RESPONSE_STARTLS_BYTES = LDAPExtendedResponseStartTLS(LDAPResultCode.SUCCESS).compose()
+
+    @classmethod
+    def get_scheme(cls):
+        return 'ldap'
+
+    @classmethod
+    def get_default_port(cls):
+        return 3389
+
+    def _init_l7(self):
+        self.l4_transfer.receive(LDAPExtendedRequestStartTLS.HEADER_SIZE)
+        try:
+            LDAPExtendedRequestStartTLS.parse_exact_size(self.l4_transfer.buffer)
+        except NotEnoughData as e:
+            self.l4_transfer.receive(e.bytes_needed)
+
+        LDAPExtendedRequestStartTLS.parse_exact_size(self.l4_transfer.buffer)
+        self.l4_transfer.flush_buffer()
+
+        self.l4_transfer.send(self._EXTENDED_RESPONSE_STARTLS_BYTES)
 
     def _deinit_l7(self):
         pass
