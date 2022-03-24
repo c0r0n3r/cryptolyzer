@@ -37,6 +37,7 @@ from cryptolyzer.tls.client import (
     ClientLDAP,
     ClientPostgreSQL,
     ClientRDP,
+    ClientSieve,
     L7ClientTls,
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
@@ -48,6 +49,7 @@ from cryptolyzer.tls.server import (
     L7ServerTlsLDAP,
     L7ServerTlsPostgreSQL,
     L7ServerTlsRDP,
+    L7ServerTlsSieve,
     TlsServerConfiguration,
 )
 
@@ -327,3 +329,34 @@ class TestL7ServerTlsPostgreSQL(TestL7ServerBase):
 
     def test_tls_handshake(self):
         self._test_tls_handshake(l7_client_class=ClientPostgreSQL)
+
+
+class TestL7ServerTlsSieve(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsSieve)
+
+    def test_error_invlaid_tls_request(self):
+        l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        l4_client.init_connection()
+
+        while True:
+            l4_client.receive_line()
+            line = l4_client.buffer
+            l4_client.flush_buffer()
+
+            if line.startswith(b'OK'):
+                break
+
+        l4_client.send(b'\x00\r\n')
+        self._assert_on_more_data(l4_client)
+
+        l4_client.close()
+
+    def test_default_port(self):
+        self.assertEqual(ClientSieve.get_default_port(), L7ServerTlsSieve.get_default_port())
+
+    def test_scheme(self):
+        self.assertEqual(ClientSieve.get_scheme(), L7ServerTlsSieve.get_scheme())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientSieve)
