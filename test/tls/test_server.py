@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import ftplib
+import poplib
 import ssl
 import unittest
 try:
     from unittest import mock
 except ImportError:
     import mock
+
+import six
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -38,6 +41,7 @@ from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.client import (
     ClientFTP,
     ClientLDAP,
+    ClientPOP3,
     ClientPostgreSQL,
     ClientRDP,
     ClientSieve,
@@ -51,6 +55,7 @@ from cryptolyzer.tls.server import (
     L7ServerTls,
     L7ServerTlsFTP,
     L7ServerTlsLDAP,
+    L7ServerTlsPOP3,
     L7ServerTlsPostgreSQL,
     L7ServerTlsRDP,
     L7ServerTlsSieve,
@@ -469,3 +474,45 @@ class TestL7ServerTlsFTP(TestL7ServerBase):
             client.auth()
 
         self.assertEqual(context_manager.exception.reason, 'UNEXPECTED_MESSAGE')
+
+
+class TestL7ServerTlsPOP3(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsPOP3)
+
+    def test_default_port(self):
+        self.assertEqual(
+            ClientPOP3.get_default_port() * 10 + 10,
+            L7ServerTlsPOP3.get_default_port()
+        )
+
+    def test_scheme(self):
+        self.assertEqual(ClientPOP3.get_scheme(), L7ServerTlsPOP3.get_scheme())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientPOP3)
+
+    @unittest.skipIf(six.PY2, 'There is no poplib.POP3.stls in Python < 3.0')
+    def test_real_with_capabilities_stls(self):
+        client = poplib.POP3(
+            host=str(self.threaded_server.l7_server.address),
+            port=self.threaded_server.l7_server.l4_transfer.bind_port
+        )
+        with self.assertRaises(ssl.SSLError) as context_manager:
+            client.stls()
+
+        self.assertEqual(context_manager.exception.reason, 'UNEXPECTED_MESSAGE')
+
+    @unittest.skipIf(six.PY3, 'There is no poplib.POP3.stls in Python < 3.0')
+    def test_real_with_capabilities_cmd(self):
+        client = poplib.POP3(
+            host=str(self.threaded_server.l7_server.address),
+            port=self.threaded_server.l7_server.l4_transfer.bind_port
+        )
+
+        response, capabilities, _ = client._longcmd('CAPABILITIES')  # pylint: disable=protected-access
+        self.assertEqual(response, '+OK')
+        self.assertEqual(capabilities, ['CAPA', 'STLS'])
+
+        response = client._shortcmd('STLS')  # pylint: disable=protected-access
+        self.assertEqual(response, '+OK Begin TLS negotiation now.')
