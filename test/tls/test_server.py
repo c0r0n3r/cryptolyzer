@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import ftplib
+import ssl
 import unittest
 try:
     from unittest import mock
@@ -34,6 +36,7 @@ from cryptoparser.tls.subprotocol import (
 
 from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.client import (
+    ClientFTP,
     ClientLDAP,
     ClientPostgreSQL,
     ClientRDP,
@@ -46,6 +49,7 @@ from cryptolyzer.tls.client import (
 )
 from cryptolyzer.tls.server import (
     L7ServerTls,
+    L7ServerTlsFTP,
     L7ServerTlsLDAP,
     L7ServerTlsPostgreSQL,
     L7ServerTlsRDP,
@@ -53,7 +57,7 @@ from cryptolyzer.tls.server import (
     TlsServerConfiguration,
 )
 
-from .classes import L7ServerTlsTest
+from .classes import L7ServerTlsTest, L7ServerStartTlsTest
 
 
 class TestL7ServerBase(unittest.TestCase):
@@ -360,3 +364,108 @@ class TestL7ServerTlsSieve(TestL7ServerBase):
 
     def test_tls_handshake(self):
         self._test_tls_handshake(l7_client_class=ClientSieve)
+
+
+class TestL7ServerStartTls(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerStartTlsTest)
+
+        self.l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        self.l4_client.init_connection()
+
+    def tearDown(self):
+        self.l4_client.close()
+
+    def _test_no_response(self):
+        self._assert_on_more_data(self.l4_client)
+
+    @mock.patch.object(L7ServerStartTlsTest, '_get_greeting', return_value=None)
+    def test_no_greeting(self, _):
+        self._test_no_response()
+
+    def test_greeting(self):
+        self.l4_client.receive_line()
+        self.assertEqual(self.l4_client.buffer, b'Greeting\r\n')
+        self.l4_client.flush_buffer()
+
+    def test_error_not_capabilities_and_not_starttls(self):
+        self.test_greeting()
+        self.l4_client.send(b'NO CAPABILITIES NO STARTTLS\r\n')
+        self._test_no_response()
+
+    def test_error_not_starttls(self):
+        self.test_capabilities()
+        self.l4_client.send(b'NOT STARTTLS\r\n')
+        self._test_no_response()
+
+    @mock.patch.object(L7ServerStartTlsTest, '_get_capabilities_request_prefix', return_value=None)
+    def test_no_capabilities(self, _):
+        self.test_greeting()
+        self._test_no_response()
+
+    def _test_capabilities(self):
+        self.test_greeting()
+
+        self.l4_client.send(b'CAPABILITIES\r\n')
+        self.l4_client.receive_line()
+        self.assertEqual(self.l4_client.buffer, b'STARTTLS\r\n')
+        self.l4_client.flush_buffer()
+
+    def test_capabilities(self):
+        self._test_capabilities()
+        self._test_no_response()
+
+    def _test_starttls(self):
+        self.l4_client.send(b'STARTTLS\r\n')
+        self.l4_client.receive_line()
+        self.assertEqual(self.l4_client.buffer, b'OK\r\n')
+
+    def test_starttls_with_capabilities(self):
+        self._test_capabilities()
+        self._test_starttls()
+        self._test_no_response()
+
+    def test_starttls_without_capabilities(self):
+        self.test_greeting()
+        self._test_starttls()
+        self._test_no_response()
+
+
+class TestL7ServerTlsFTP(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsFTP)
+
+    def test_default_port(self):
+        self.assertEqual(
+            ClientFTP.get_default_port() * 100 + ClientFTP.get_default_port(),
+            L7ServerTlsFTP.get_default_port()
+        )
+
+    def test_scheme(self):
+        self.assertEqual(ClientFTP.get_scheme(), L7ServerTlsFTP.get_scheme())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientFTP)
+
+    def test_real_with_capabilities(self):
+        client = ftplib.FTP_TLS()
+        client.connect(
+            host=str(self.threaded_server.l7_server.address),
+            port=self.threaded_server.l7_server.l4_transfer.bind_port
+        )
+        client.sendcmd('FEAT')
+        with self.assertRaises(ssl.SSLError) as context_manager:
+            client.auth()
+
+        self.assertEqual(context_manager.exception.reason, 'UNEXPECTED_MESSAGE')
+
+    def test_real_without_capabilities(self):
+        client = ftplib.FTP_TLS()
+        client.connect(
+            host=str(self.threaded_server.l7_server.address),
+            port=self.threaded_server.l7_server.l4_transfer.bind_port
+        )
+        with self.assertRaises(ssl.SSLError) as context_manager:
+            client.auth()
+
+        self.assertEqual(context_manager.exception.reason, 'UNEXPECTED_MESSAGE')

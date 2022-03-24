@@ -30,7 +30,7 @@ from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
-from cryptolyzer.tls.server import L7ServerTls, TlsServerHandshake
+from cryptolyzer.tls.server import L7ServerTls, L7ServerStartTlsTextBase, TlsServerHandshake
 
 
 class TestTlsCases:
@@ -164,3 +164,36 @@ class L7ServerTlsAlert(L7ServerTls):
     @staticmethod
     def _get_handshake_class(l4_transfer):
         return TlsServerAlert
+
+
+class L7ServerStartTlsTest(L7ServerStartTlsTextBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'test'
+
+    @classmethod
+    def get_default_port(cls):
+        return 1234
+
+    @classmethod
+    def _get_capabilities_request_prefix(cls):
+        return b'CAPABILITIES'
+
+    @classmethod
+    def _get_capabilities_response(cls):
+        return b'\r\n'.join([
+            b'STARTTLS',
+            b'',
+        ])
+
+    @classmethod
+    def _get_greeting(cls):
+        return b'Greeting\r\n'
+
+    @classmethod
+    def _get_starttls_request_prefix(cls):
+        return b'STARTTLS'
+
+    @classmethod
+    def _get_starttls_response(cls):
+        return b'OK\r\n'
