@@ -104,7 +104,7 @@ cryptolyze -h
 
 ### Protocols
 
-- [SSH 2.0](https://tools.ietf.org/html/rfc4253)
+* [SSH 2.0](https://tools.ietf.org/html/rfc4253)
 
 ### Analyzers
 
@@ -151,14 +151,14 @@ Supported analyzers by cryptographic protocol versions
 
 #### Transport Layer
 
-- Secure Socket Layer (SSL)
-  - [SSL 2.0](https://tools.ietf.org/html/draft-hickman-netscape-ssl-00)
-  - [SSL 3.0](https://tools.ietf.org/html/rfc6101)
-- Transport Layer Security (TLS)
-  - [TLS 1.0](https://tools.ietf.org/html/rfc2246)
-  - [TLS 1.1](https://tools.ietf.org/html/rfc4346)
-  - [TLS 1.2](https://tools.ietf.org/html/rfc5246)
-  - [TLS 1.3](https://tools.ietf.org/html/rfc8446)
+* Secure Socket Layer (SSL)
+  * [SSL 2.0](https://tools.ietf.org/html/draft-hickman-netscape-ssl-00)
+  * [SSL 3.0](https://tools.ietf.org/html/rfc6101)
+* Transport Layer Security (TLS)
+  * [TLS 1.0](https://tools.ietf.org/html/rfc2246)
+  * [TLS 1.1](https://tools.ietf.org/html/rfc4346)
+  * [TLS 1.2](https://tools.ietf.org/html/rfc5246)
+  * [TLS 1.3](https://tools.ietf.org/html/rfc8446)
 
 #### Application Layer
 
@@ -166,40 +166,40 @@ Supported analyzers by cryptographic protocol versions
 layer protocol, whichs offer a way to upgrade a plain text connection to an encrypted ione without using a separate
 port.
 
-- [FTP](https://en.wikipedia.org/wiki/File_Transfer_Protocol)
-- [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol)
-- [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol)
-- [LMTP](https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol)
-- [NNTP](https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol)
-- [POP3](https://en.wikipedia.org/wiki/Post_Office_Protocol)
-- [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL)
-- [RDP](https://en.wikipedia.org/wiki/Remote_Desktop_Protocol)
-- [Sieve](https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language))
-- [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)
-- [XMPP (Jabber)](https://en.wikipedia.org/wiki/XMPP)
+* [FTP](https://en.wikipedia.org/wiki/File_Transfer_Protocol)
+* [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol)
+* [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol)
+* [LMTP](https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol)
+* [NNTP](https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol)
+* [POP3](https://en.wikipedia.org/wiki/Post_Office_Protocol)
+* [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL)
+* [RDP](https://en.wikipedia.org/wiki/Remote_Desktop_Protocol)
+* [Sieve](https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language))
+* [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)
+* [XMPP (Jabber)](https://en.wikipedia.org/wiki/XMPP)
 
 ### Extensions
 
-- [application-layer protocol negotiation](https://www.rfc-editor.org/rfc/rfc5077.html)
-- [encrypt-then-MAC](https://www.rfc-editor.org/rfc/rfc7366.html)
-- [extended master secret](https://www.rfc-editor.org/rfc/rfc7627.html)
-- [next protocols negotiation](https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html)
-- [renegotiation indication](https://www.rfc-editor.org/rfc/rfc5746.html)
-- [session ticket](https://www.rfc-editor.org/rfc/rfc5077.html)
+* [application-layer protocol negotiation](https://www.rfc-editor.org/rfc/rfc5077.html)
+* [encrypt-then-MAC](https://www.rfc-editor.org/rfc/rfc7366.html)
+* [extended master secret](https://www.rfc-editor.org/rfc/rfc7627.html)
+* [next protocols negotiation](https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html)
+* [renegotiation indication](https://www.rfc-editor.org/rfc/rfc5746.html)
+* [session ticket](https://www.rfc-editor.org/rfc/rfc5077.html)
 
 ## Fingerprinting
 
 1.  generates [JA3 tag](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967) of any
     connecting TLS client independently from its type (graphical/cli, browser/email client/\...)
-  - [FTP](https://en.wikipedia.org/wiki/File_Transfer_Protocol)
-  - [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol)
-  - [LMTP](https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol)
-  - [NNTP](https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol)
-  - [POP3](https://en.wikipedia.org/wiki/Post_Office_Protocol)
-  - [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL)
-  - [RDP](https://en.wikipedia.org/wiki/Remote_Desktop_Protocol)
-  - [Sieve](https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language))
-  - [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)
+  * [FTP](https://en.wikipedia.org/wiki/File_Transfer_Protocol)
+  * [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol)
+  * [LMTP](https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol)
+  * [NNTP](https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol)
+  * [POP3](https://en.wikipedia.org/wiki/Post_Office_Protocol)
+  * [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL)
+  * [RDP](https://en.wikipedia.org/wiki/Remote_Desktop_Protocol)
+  * [Sieve](https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language))
+  * [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)
 2.  decodes existing [JA3 tags](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967) by
     showing human-readable format of the TLS parameters represented by the tag
 
@@ -209,42 +209,42 @@ port.
 
 #### Headers (`headers`)
 
-- generic headers
-  - [Content-Type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
-  - [Server](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server)
-- caching headers
-  - [Age](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age)
-  - [Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
-  - [Date](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date)
-  - [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
-  - [Expires](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires)
-  - [Last-Modified](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified)
-  - [Pragma](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Pragma)
-- security headers
-  - [Expect-CT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect-CT)
-  - [Expect-Staple](https://scotthelme.co.uk/designing-a-new-security-header-expect-staple)
-  - [Referrer-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy)
-  - [Strict-Transport-Security](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)
-  - [X-Content-Type-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options)
-  - [X-Frame-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options)
+* generic headers
+  * [Content-Type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
+  * [Server](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server)
+* caching headers
+  * [Age](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age)
+  * [Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
+  * [Date](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date)
+  * [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+  * [Expires](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires)
+  * [Last-Modified](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified)
+  * [Pragma](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Pragma)
+* security headers
+  * [Expect-CT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect-CT)
+  * [Expect-Staple](https://scotthelme.co.uk/designing-a-new-security-header-expect-staple)
+  * [Referrer-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy)
+  * [Strict-Transport-Security](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)
+  * [X-Content-Type-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options)
+  * [X-Frame-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options)
 
 # Support
 
 ## Python implementation
 
-- CPython (2.7, \>=3.3)
-- PyPy (2.7, 3.5)
+* CPython (2.7, \>=3.3)
+* PyPy (2.7, 3.5)
 
 ## Operating systems
 
-- Linux
-- macOS
-- Windows
+* Linux
+* macOS
+* Windows
 
 ## Social Media
 
-- [Twitter](https://twitter.com/CryptoLyzer)
-- [Facebook](https://www.facebook.com/cryptolyzer)
+* [Twitter](https://twitter.com/CryptoLyzer)
+* [Facebook](https://www.facebook.com/cryptolyzer)
 
 ## Credits
 
