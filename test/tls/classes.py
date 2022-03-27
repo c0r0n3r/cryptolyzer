@@ -98,8 +98,7 @@ class TlsServerMockResponse(TlsServerHandshake):
 
 
 class L7ServerTlsMockResponse(L7ServerTls):
-    @staticmethod
-    def _get_handshake_class(l4_transfer):
+    def _get_handshake_class(self, l4_transfer):
         return TlsServerMockResponse
 
 
@@ -111,8 +110,7 @@ class TlsServerPlainTextResponse(TlsServerHandshake):
 
 
 class L7ServerTlsPlainTextResponse(L7ServerTls):
-    @staticmethod
-    def _get_handshake_class(l4_transfer):
+    def _get_handshake_class(self, l4_transfer):
         return TlsServerPlainTextResponse
 
 
@@ -127,8 +125,7 @@ class TlsServerCloseDuringHandshake(TlsServerHandshake):
 
 
 class L7ServerTlsCloseDuringHandshake(L7ServerTls):
-    @staticmethod
-    def _get_handshake_class(l4_transfer):
+    def _get_handshake_class(self, l4_transfer):
         return TlsServerCloseDuringHandshake
 
 
@@ -146,8 +143,7 @@ class TlsServerOneMessageInMultipleRecords(TlsServerHandshake):
 
 
 class L7ServerTlsOneMessageInMultipleRecords(L7ServerTls):
-    @staticmethod
-    def _get_handshake_class(l4_transfer):
+    def _get_handshake_class(self, l4_transfer):
         return TlsServerOneMessageInMultipleRecords
 
 
@@ -161,8 +157,7 @@ class TlsServerAlert(TlsServerHandshake):
 
 
 class L7ServerTlsAlert(L7ServerTls):
-    @staticmethod
-    def _get_handshake_class(l4_transfer):
+    def _get_handshake_class(self, l4_transfer):
         return TlsServerAlert
 
 

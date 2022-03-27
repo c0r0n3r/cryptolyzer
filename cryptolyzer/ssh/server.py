@@ -22,8 +22,8 @@ from cryptolyzer.ssh.client import SshProtocolMessageDefault
 from cryptolyzer.ssh.transfer import SshHandshakeBase
 
 
-@attr.s  # pylint: disable=too-many-instance-attributes
-class SshServerConfiguration(L7ServerConfigurationBase):
+@attr.s
+class SshServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-many-instance-attributes
     protocol_version = attr.ib(
         validator=attr.validators.instance_of(SshProtocolVersion),
         default=SshProtocolVersion(SshVersion.SSH2)

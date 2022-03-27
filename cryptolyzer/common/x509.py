@@ -47,8 +47,8 @@ class PublicKey(cryptoparser.common.key.PublicKey):
         raise NotImplementedError()
 
 
-@attr.s(eq=False)  # pylint: disable=too-many-public-methods
-class PublicKeyX509(PublicKey):
+@attr.s(eq=False)
+class PublicKeyX509(PublicKey):  # pylint: disable=too-many-public-methods
     _EV_OIDS_BY_CA = {
         'A-Trust': ('1.2.40.0.17.1.22', ),
         'Actalis': ('1.3.159.1.17.1', ),

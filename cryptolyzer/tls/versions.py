@@ -105,8 +105,8 @@ class AnalyzerVersions(AnalyzerTlsBase):
                         AnalyzerVersions._handle_tls_early_versions_alerts(
                             e.description, tls_version
                         )
-                    except StopIteration as e:
-                        alerts_unsupported_tls_version = e.args[0]
+                    except StopIteration as exc:
+                        alerts_unsupported_tls_version = exc.args[0]
                         continue
 
                     raise e
@@ -163,8 +163,8 @@ class AnalyzerVersions(AnalyzerTlsBase):
             except TlsAlert as e:
                 try:
                     AnalyzerVersions._handle_tls_1_3_alerts(e.description, checkable_protocols)
-                except StopIteration as e:
-                    alerts_unsupported_tls_version = e.args[0]
+                except StopIteration as exc:
+                    alerts_unsupported_tls_version = exc.args[0]
                     break
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:

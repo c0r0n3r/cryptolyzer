@@ -18,8 +18,8 @@ from cryptolyzer.common.analyzer import AnalyzerSshBase
 from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
 
 
-@attr.s  # pylint: disable=too-many-instance-attributes
-class AnalyzerResultCiphers(AnalyzerResultSsh):
+@attr.s
+class AnalyzerResultCiphers(AnalyzerResultSsh):  # pylint: disable=too-many-instance-attributes
     kex_algorithms = attr.ib(
         validator=attr.validators.deep_iterable(
             member_validator=attr.validators.instance_of((SshKexAlgorithm, ) + six.string_types)

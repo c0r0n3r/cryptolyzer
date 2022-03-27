@@ -36,8 +36,8 @@ from cryptolyzer.tls.client import (
 )
 
 
-@attr.s  # pylint: disable=too-many-instance-attributes
-class AnalyzerResultExtensions(AnalyzerResultTls):
+@attr.s
+class AnalyzerResultExtensions(AnalyzerResultTls):  # pylint: disable=too-many-instance-attributes
     next_protocols = attr.ib(
         validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(TlsNextProtocolName))
     )

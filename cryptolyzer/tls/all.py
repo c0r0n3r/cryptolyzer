@@ -20,8 +20,8 @@ from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos, AnalyzerResultSigAlgos
 from cryptolyzer.tls.versions import AnalyzerVersions, AnalyzerResultVersions
 
 
-@attr.s  # pylint: disable=too-few-public-methods,too-many-instance-attributes
-class AnalyzerResultAll(AnalyzerResultAllBase):
+@attr.s
+class AnalyzerResultAll(AnalyzerResultAllBase):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     versions = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultVersions)),
         metadata={'human_readable_name': 'Supported Protocol Versions'}
