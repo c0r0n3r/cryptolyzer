@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import ipaddress
 import six
 import attr
 
@@ -14,7 +15,9 @@ class AnalyzerTarget(Serializable):
     scheme = attr.ib(validator=attr.validators.instance_of(six.string_types))
     address = attr.ib(validator=attr.validators.instance_of(six.string_types))
     ip = attr.ib(
-        validator=attr.validators.instance_of(six.string_types),
+        validator=attr.validators.instance_of((
+            six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
+        )),
         metadata={'human_readable_name': 'IP address'}
     )
     port = attr.ib(validator=attr.validators.instance_of(int))

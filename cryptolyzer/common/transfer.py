@@ -3,8 +3,10 @@
 import abc
 import socket
 import string
-import six
+
+import ipaddress
 import attr
+import six
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.common.utils import get_leaf_classes
@@ -18,7 +20,9 @@ class L4TransferBase(object):
     address = attr.ib(validator=attr.validators.instance_of(six.string_types))
     port = attr.ib(validator=attr.validators.instance_of(int))
     timeout = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((int, float))))
-    ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(six.string_types)))
+    ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((
+        six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
+    ))))
     _socket = attr.ib(
         init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(socket.socket))
     )
@@ -136,7 +140,7 @@ class L4TransferTCP(L4TransferBase):
 class L4ClientTCP(L4TransferTCP):
     def _init_connection(self):
         try:
-            self._socket = socket.create_connection((self.ip, self.port), self.timeout)
+            self._socket = socket.create_connection((str(self.ip), self.port), self.timeout)
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, (socket.error, socket.timeout)):
                 six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
@@ -189,7 +193,9 @@ class L7TransferBase(object):
     address = attr.ib(validator=attr.validators.instance_of(six.string_types))
     port = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
     timeout = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((float, int))))
-    ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(six.string_types)))
+    ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((
+        six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
+    ))))
     _family = attr.ib(init=False)
     l4_transfer = attr.ib(
         init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(L4TransferBase))
