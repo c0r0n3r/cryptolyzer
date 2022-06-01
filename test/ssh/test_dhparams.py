@@ -10,7 +10,7 @@ from .classes import TestSshCases
 
 class TestSshDHParams(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, timeout=None, ip=None):
+    def get_result(host, port=None, timeout=5, ip=None):
         analyzer = AnalyzerDHParams()
         l7_client = L7ClientSsh(host, port, timeout, ip=ip)
         result = analyzer.analyze(l7_client)

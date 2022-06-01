@@ -4,6 +4,9 @@
 
 - HASSH (`hassh`)
   - Generate (`generate`)
+- TLS (`tls`)
+  - Diffie-Hellman (`dhparams`)
+    - support finite field Diffie-Hellman ephemeral (FFDHE) parameter negotiation defined in RFC 7919
 
 ## 0.8.1 - 2022-03-23
 

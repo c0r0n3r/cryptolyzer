@@ -5,9 +5,11 @@ import codecs
 import attr
 import six
 
+from cryptoparser.common.exception import NotEnoughData
+
 from cryptoparser.tls.algorithm import TlsNamedCurve
-from cryptoparser.tls.extension import TlsExtensionType
-from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
+from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionKeyShareClient
+from cryptoparser.tls.subprotocol import TlsExtensionsClient, TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
@@ -26,21 +28,26 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultDHParams(AnalyzerResultTls):
-    dhparams = attr.ib(
-        validator=attr.validators.deep_iterable(attr.validators.instance_of(DHParameter)),
-        metadata={'human_readable_name': 'Diffie-Hellman Parameters'}
+    groups = attr.ib(
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsNamedCurve)),
+        metadata={'human_readable_name': 'Named Groups'}
     )
+    dhparam = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(DHParameter)),
+        metadata={'human_readable_name': 'Diffie-Hellman Parameter'}
+    )
+    key_reuse = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)))
 
 
 class AnalyzerDHParams(AnalyzerTlsBase):
-    _NAMED_CURVE_TO_WELL_KNOWN = {
+    _NAMED_CURVE_TO_RFC7919_WELL_KNOWN = {
         TlsNamedCurve.FFDHE2048: WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
         TlsNamedCurve.FFDHE3072: WellKnownDHParams.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
         TlsNamedCurve.FFDHE4096: WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
         TlsNamedCurve.FFDHE6144: WellKnownDHParams.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
         TlsNamedCurve.FFDHE8192: WellKnownDHParams.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
     }
-    _WELL_KNOWN_TO_NAMED_CURVE = {
+    _RFC7919_WELL_KNOWN_TO_NAMED_CURVE = {
         WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE2048,
         WellKnownDHParams.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE3072,
         WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE4096,
@@ -57,14 +64,24 @@ class AnalyzerDHParams(AnalyzerTlsBase):
         return 'Check whether DH parameters are offered by the server(s)'
 
     @staticmethod
-    def _get_public_key_tls_1_3(server_messages):
+    def _get_extension_key_share(server_messages):
         server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
         try:
-            key_share_extension = server_hello.extensions.get_item_by_type(TlsExtensionType.KEY_SHARE)
+            extension = server_hello.extensions.get_item_by_type(TlsExtensionType.KEY_SHARE)
         except KeyError as e:
             six.raise_from(StopIteration(), e)
 
-        well_known = AnalyzerDHParams._NAMED_CURVE_TO_WELL_KNOWN[key_share_extension.key_share_entry.group]
+        return extension
+
+    @staticmethod
+    def _get_selected_group_tls_1_3(server_messages):
+        key_share_extension = AnalyzerDHParams._get_extension_key_share(server_messages)
+        return key_share_extension.selected_group
+
+    @staticmethod
+    def _get_public_key_tls_1_3(server_messages):
+        key_share_extension = AnalyzerDHParams._get_extension_key_share(server_messages)
+        well_known = AnalyzerDHParams._NAMED_CURVE_TO_RFC7919_WELL_KNOWN[key_share_extension.key_share_entry.group]
         y = int(  # pylint: disable=invalid-name
             codecs.encode(bytes(list(key_share_extension.key_share_entry.key_exchange)), 'hex_codec'), 16
         )
@@ -79,84 +96,142 @@ class AnalyzerDHParams(AnalyzerTlsBase):
         return parse_tls_dh_params(server_key_exchange_message.param_bytes)
 
     @staticmethod
-    def _get_dh_param(analyzable, is_tls_1_3, client_hello):
-        dh_public_keys = []
+    def _get_server_messages(analyzable, is_tls_1_3, client_hello):
+        try:
+            if is_tls_1_3:
+                last_handshake_message_type = TlsHandshakeType.SERVER_HELLO
+            else:
+                last_handshake_message_type = TlsHandshakeType.SERVER_KEY_EXCHANGE
 
-        for _ in (1, 2):
-            try:
-                if is_tls_1_3:
-                    last_handshake_message_type = TlsHandshakeType.SERVER_HELLO
-                else:
-                    last_handshake_message_type = TlsHandshakeType.SERVER_KEY_EXCHANGE
-                server_messages = analyzable.do_tls_handshake(
-                    client_hello,
-                    last_handshake_message_type=last_handshake_message_type
-                )
-                if is_tls_1_3:
-                    dh_public_key = AnalyzerDHParams._get_public_key_tls_1_3(server_messages)
-                else:
-                    dh_public_key = AnalyzerDHParams._get_public_key_tls_1_x(server_messages)
-                dh_public_keys.append(dh_public_key)
-
-                if len(dh_public_keys) == 2:
-                    return DHParameter(
-                        dh_public_keys[0],
-                        dh_public_keys[0].public_numbers.y == dh_public_keys[1].public_numbers.y,
-                    )
-            except TlsAlert as e:
-                acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
-                    TlsAlertDescription.INTERNAL_ERROR,
-                    TlsAlertDescription.UNRECOGNIZED_NAME
-                ]
-                if e.description not in acceptable_alerts:
-                    raise e
-            except NetworkError as e:
-                if e.error != NetworkErrorType.NO_RESPONSE:
-                    raise e
-            except SecurityError:
-                break
+            return analyzable.do_tls_handshake(
+                client_hello,
+                last_handshake_message_type=last_handshake_message_type
+            )
+        except TlsAlert as e:
+            acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                TlsAlertDescription.INTERNAL_ERROR,
+                TlsAlertDescription.UNRECOGNIZED_NAME
+            ]
+            if e.description not in acceptable_alerts:
+                raise e
+        except NetworkError as e:
+            if e.error != NetworkErrorType.NO_RESPONSE:
+                raise e
+        except SecurityError:
+            pass
 
         raise StopIteration
 
     @staticmethod
+    def _get_public_key(analyzable, is_tls_1_3, client_hello):
+        server_messages = AnalyzerDHParams._get_server_messages(analyzable, is_tls_1_3, client_hello)
+
+        if is_tls_1_3:
+            dh_public_key = AnalyzerDHParams._get_public_key_tls_1_3(server_messages)
+        else:
+            dh_public_key = AnalyzerDHParams._get_public_key_tls_1_x(server_messages)
+
+        return dh_public_key
+
+    @staticmethod
     def _remove_selected_group_among_supported_ones(client_hello, selected_group):
-        selected_named_curve = AnalyzerDHParams._WELL_KNOWN_TO_NAMED_CURVE[selected_group.well_known]
-
-        key_share_entries = client_hello.extensions.get_item_by_type(
-            TlsExtensionType.KEY_SHARE
-        ).key_share_entries
-        for key_share_entry in key_share_entries:
-            if key_share_entry.group == selected_named_curve:
-                key_share_entries.remove(key_share_entry)
-                break
-
-        elliptic_curves = client_hello.extensions.get_item_by_type(
+        elliptic_curves_extension = client_hello.extensions.get_item_by_type(
             TlsExtensionType.SUPPORTED_GROUPS
-        ).elliptic_curves
+        )
+        elliptic_curves = elliptic_curves_extension.elliptic_curves
         for elliptic_curve in elliptic_curves:
-            if elliptic_curve == selected_named_curve:
-                elliptic_curves.remove(elliptic_curve)
-                break
+            if elliptic_curve == selected_group:
+                try:
+                    elliptic_curves.remove(elliptic_curve)
+                except NotEnoughData:
+                    client_hello.extensions.remove(elliptic_curves_extension)
+                    return False
 
-    def analyze(self, analyzable, protocol_version):
-        client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, analyzable.address)
+        return True
 
-        dhparams = []
-        is_tls_1_3 = protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+    @staticmethod
+    def _analyze_tls_1_x(analyzable, client_hello):
+        dhparam = None
+        named_groups = []
+        has_extenstion = True
         while True:
             try:
-                dhparams.append(self._get_dh_param(analyzable, is_tls_1_3, client_hello))
+                server_messages = AnalyzerDHParams._get_server_messages(analyzable, False, client_hello)
+                dh_public_key = AnalyzerDHParams._get_public_key_tls_1_x(server_messages)
+                _dhparam = DHParameter(dh_public_key.public_numbers.parameter_numbers, dh_public_key.key_size)
             except StopIteration:
                 break
 
-            if not is_tls_1_3:
+            is_rfc7919_dhparam = (_dhparam.well_known and
+                                  _dhparam.well_known in AnalyzerDHParams._RFC7919_WELL_KNOWN_TO_NAMED_CURVE)
+            if is_rfc7919_dhparam:
+                named_group = AnalyzerDHParams._RFC7919_WELL_KNOWN_TO_NAMED_CURVE[_dhparam.well_known]
+
+                # no supported group extension, but FFDHE parameter is used
+                if not has_extenstion or named_group in named_groups:
+                    dhparam = _dhparam
+                    named_groups = []
+                    break
+
+                has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_group)
+                named_groups.append(named_group)
+            else:
+                # no extension support, so only one DH parameter is possible
+                dhparam = _dhparam
                 break
 
-            if len(client_hello.extensions.get_item_by_type(TlsExtensionType.SUPPORTED_GROUPS).elliptic_curves) == 1:
+        return dhparam, named_groups
+
+    @staticmethod
+    def _analyze_tls_1_3(analyzable, client_hello):
+        named_groups = []
+        extensions = [
+            extension
+            for extension in client_hello.extensions
+            if extension.extension_type != TlsExtensionType.KEY_SHARE
+        ]
+        client_hello.extensions = TlsExtensionsClient(extensions + [TlsExtensionKeyShareClient([])])
+
+        has_extenstion = True
+        while has_extenstion:
+            try:
+                server_messages = AnalyzerDHParams._get_server_messages(analyzable, True, client_hello)
+                named_group = AnalyzerDHParams._get_selected_group_tls_1_3(server_messages)
+            except StopIteration:
                 break
-            self._remove_selected_group_among_supported_ones(client_hello, dhparams[-1])
+
+            named_groups.append(named_group)
+            has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_group)
+
+        return named_groups
+
+    def analyze(self, analyzable, protocol_version):
+        client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, analyzable.address)
+        is_tls_1_3 = protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+
+        if is_tls_1_3:
+            named_groups = self._analyze_tls_1_3(analyzable, client_hello)
+            dhparam = None
+        else:
+            dhparam, named_groups = self._analyze_tls_1_x(analyzable, client_hello)
+
+        key_reuse = None
+        if named_groups or dhparam:
+            try_count = 3
+            ephemeral_keys = set()
+            client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, analyzable.address)
+            for _ in range(try_count):
+                try:
+                    dh_public_key = self._get_public_key(analyzable, is_tls_1_3, client_hello)
+                except StopIteration:
+                    key_reuse = None
+                    break
+                else:
+                    ephemeral_keys.add(dh_public_key.public_numbers.y)
+            else:
+                key_reuse = len(ephemeral_keys) < try_count
 
         return AnalyzerResultDHParams(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
-            dhparams
+            named_groups, dhparam, key_reuse
         )

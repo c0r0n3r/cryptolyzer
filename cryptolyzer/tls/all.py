@@ -89,26 +89,71 @@ class AnalyzerAll(AnalyzerTlsBase):
         return {analyzer_name: analyzer_class().analyze(analyzable, None)}
 
     @staticmethod
-    def _is_key_exchange_supported(cipher_suite_results, key_exchange):
+    def _is_key_exchange_supported(cipher_suites, key_exchange):
+        return any(map(lambda cipher_suite: cipher_suite.value.key_exchange == key_exchange, cipher_suites))
+
+    @staticmethod
+    def _min_tls_version_supported(cipher_suite_results, key_exchange):
         for protocol_version, cipher_suite_result in cipher_suite_results.items():
-            for cipher_suite in cipher_suite_result.cipher_suites:
-                if cipher_suite.value.key_exchange == key_exchange:
-                    return protocol_version
+            if AnalyzerAll._is_key_exchange_supported(cipher_suite_result.cipher_suites, key_exchange):
+                return protocol_version
 
         return None
 
     @staticmethod
     def is_dhe_supported(cipher_suite_results):
-        return AnalyzerAll._is_key_exchange_supported(cipher_suite_results, KeyExchange.DHE)
+        protocol_versions = [
+            protocol_version
+            for protocol_version, cipher_suite_result in cipher_suite_results.items()
+            if AnalyzerAll._is_key_exchange_supported(cipher_suite_result.cipher_suites, KeyExchange.DHE)
+        ]
+
+        protocol_version_tls1_2 = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        if protocol_version_tls1_2 in cipher_suite_results.keys() and protocol_version_tls1_2 not in protocol_versions:
+            protocol_versions.append(protocol_version_tls1_2)
+
+        for protocol_version in cipher_suite_results.keys():
+            if (protocol_version > protocol_version_tls1_2 and
+                    (not protocol_versions or protocol_version > protocol_versions[-1])):
+                protocol_versions.append(protocol_version)
+
+        return protocol_versions
 
     @staticmethod
     def is_ecdhe_supported(cipher_suite_results):
-        return AnalyzerAll._is_key_exchange_supported(cipher_suite_results, KeyExchange.ECDHE)
+        return AnalyzerAll._min_tls_version_supported(cipher_suite_results, KeyExchange.ECDHE)
 
     @staticmethod
     def get_dhparams_result(analyzable, cipher_suite_results):
-        protocol_version = AnalyzerAll.is_dhe_supported(cipher_suite_results)
-        return AnalyzerAll._get_result(AnalyzerDHParams, analyzable, protocol_version)
+        analyzer_name = AnalyzerDHParams.get_name()
+        result = {analyzer_name: None}
+        protocol_versions = AnalyzerAll.is_dhe_supported(cipher_suite_results)
+        if not protocol_versions:
+            return result
+
+        protocol_version_min = min(protocol_versions)
+        if protocol_version_min < TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+            result = AnalyzerAll._get_result(AnalyzerDHParams, analyzable, protocol_version_min)
+
+        protocol_version_tls1_2 = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        if protocol_version_tls1_2 in protocol_versions:
+            result_tls1_2 = AnalyzerAll._get_result(AnalyzerDHParams, analyzable, protocol_version_tls1_2)
+            if result[analyzer_name]:
+                result[analyzer_name].groups = result_tls1_2[analyzer_name].groups
+            else:
+                result = result_tls1_2
+
+        protocol_version_max = max(protocol_versions)
+        if (protocol_version_max > protocol_version_tls1_2 and
+                (result[analyzer_name] is None or not result[analyzer_name].groups)):
+            result_tls1_3 = AnalyzerAll._get_result(AnalyzerDHParams, analyzable, protocol_version_max)
+            if result[analyzer_name]:
+                result[analyzer_name].groups = result_tls1_3[analyzer_name].groups
+
+        if result[analyzer_name].groups or result[analyzer_name].dhparam:
+            return result
+
+        return {analyzer_name: None}
 
     @staticmethod
     def get_curves_result(analyzable, cipher_suite_results):

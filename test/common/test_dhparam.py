@@ -8,39 +8,15 @@ from cryptoparser.tls.extension import TlsNamedCurve
 from cryptolyzer.common.dhparam import (
     DHParameter,
     DHParameterNumbers,
-    DHPublicKey,
-    DHPublicNumbers,
     WellKnownDHParams,
     parse_ecdh_params,
 )
 
 
-class TestDHParamBase(unittest.TestCase):
-    @staticmethod
-    def _generate_dh_param(parameter_numbers, reused, key_size):
-        public_numbers = DHPublicNumbers(
-            0x012345678abcdef,
-            DHParameterNumbers(parameter_numbers.p, parameter_numbers.g, parameter_numbers.q),
-        )
-        public_key = DHPublicKey(public_numbers, key_size)
-
-        return DHParameter(public_key, reused)
-
-
-class TestParse(TestDHParamBase):
-    @staticmethod
-    def _generate_dh_param(parameter_numbers, reused, key_size):
-        public_numbers = DHPublicNumbers(
-            0x012345678abcdef,
-            DHParameterNumbers(parameter_numbers.p, parameter_numbers.g, parameter_numbers.q),
-        )
-        public_key = DHPublicKey(public_numbers, key_size)
-
-        return DHParameter(public_key, reused)
-
+class TestParse(unittest.TestCase):
     def test_parse_dh_param(self):
-        dh_parameter = self._generate_dh_param(
-            WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP.value.dh_param_numbers, False, 2048
+        dh_parameter = DHParameter(
+            WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP.value.dh_param_numbers, 2048
         )
         self.assertEqual(dh_parameter.well_known, WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP)
         self.assertEqual(
@@ -72,11 +48,11 @@ class TestParse(TestDHParamBase):
         self.assertEqual(public_key, point_data)
 
 
-class TestWellKnown(TestDHParamBase):
+class TestWellKnown(unittest.TestCase):
     def test_all_well_known_dhparam(self):
         dh_params = [
-            self._generate_dh_param(
-                well_known_dh_param.value.dh_param_numbers, False, well_known_dh_param.value.key_size
+            DHParameter(
+                well_known_dh_param.value.dh_param_numbers, well_known_dh_param.value.key_size
             )
             for well_known_dh_param in WellKnownDHParams
         ]
@@ -101,7 +77,15 @@ class TestWellKnown(TestDHParamBase):
 
     def test_markdown(self):
         dh_well_known_rfc5114_1024 = WellKnownDHParams.RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP
-        self.assertEqual(
-            dh_well_known_rfc5114_1024.value.as_markdown(),
-            '1024-bit MODP Group with 160-bit Prime Order Subgroup (RFC5114)'
+        dh_param = DHParameter(
+            dh_well_known_rfc5114_1024.value.dh_param_numbers,
+            dh_well_known_rfc5114_1024.value.key_size
         )
+        self.assertEqual(dh_param.as_markdown(), '\n'.join([
+            '* Parameter Numbers: n/a',
+            '* Key Size: 1024',
+            '* Well Known: 1024-bit MODP Group with 160-bit Prime Order Subgroup (RFC5114)',
+            '* Prime: yes',
+            '* Safe Prime: no',
+            '',
+        ]))

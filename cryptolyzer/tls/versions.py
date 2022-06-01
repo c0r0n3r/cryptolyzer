@@ -3,8 +3,8 @@
 import attr
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
-from cryptoparser.tls.extension import TlsExtensionType
-from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
+from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionKeyShareClient
+from cryptoparser.tls.subprotocol import TlsExtensionsClient, TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
 from cryptoparser.tls.version import (
     SslProtocolVersion,
@@ -74,6 +74,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
         if alert_description == TlsAlertDescription.UNRECOGNIZED_NAME:
             raise StopIteration(None)
         acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                TlsAlertDescription.DECODE_ERROR,
                 TlsAlertDescription.INTERNAL_ERROR,
         ]
         if alert_description in acceptable_alerts:
@@ -155,6 +156,12 @@ class AnalyzerVersions(AnalyzerTlsBase):
                 signature_algorithms=None,
                 extensions=[],
             )
+            extensions = [
+                extension
+                for extension in client_hello.extensions
+                if extension.extension_type != TlsExtensionType.KEY_SHARE
+            ]
+            client_hello.extensions = TlsExtensionsClient(extensions + [TlsExtensionKeyShareClient([])])
 
             try:
                 server_messages = analyzable.do_tls_handshake(

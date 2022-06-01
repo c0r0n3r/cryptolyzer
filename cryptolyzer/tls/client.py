@@ -313,7 +313,13 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
             and named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
     ]
 
-    def __init__(self, protocol_version, hostname, named_curves=None):
+    def __init__(
+            self,
+            protocol_version,
+            hostname,
+            named_curves=None,
+            signature_algorithms=None,
+    ):
         if named_curves is None:
             named_curves = self._NAMED_CURVES
 
@@ -322,7 +328,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
             protocol_versions=[protocol_version, ],
             cipher_suites=self._CIPHER_SUITES,
             named_curves=named_curves,
-            signature_algorithms=None,
+            signature_algorithms=signature_algorithms,
             extensions=[]
         )
 
@@ -343,7 +349,14 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
             and named_curve.value.named_group.value.group_type == NamedGroupType.ELLIPTIC_CURVE)
     ]
 
-    def __init__(self, protocol_version, hostname, named_curves=None):
+    def __init__(
+            self,
+            protocol_version,
+            hostname,
+            named_curves=None,
+            signature_algorithms=None,
+    ):
+
         if named_curves is None:
             named_curves = self._NAMED_CURVES
 
@@ -352,7 +365,7 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
             protocol_versions=[protocol_version, ],
             cipher_suites=self._CIPHER_SUITES,
             named_curves=named_curves,
-            signature_algorithms=None,
+            signature_algorithms=signature_algorithms,
             extensions=[]
         )
 
@@ -366,13 +379,20 @@ class TlsHandshakeClientHelloBlockCipherModeCBC(  # pylint: disable=too-many-anc
         if cipher_suite.value.block_cipher_mode == BlockCipherMode.CBC
     ]
 
-    def __init__(self, protocol_version, hostname):
+    def __init__(
+            self,
+            protocol_version,
+            hostname,
+            named_curves=None,
+            signature_algorithms=None,
+    ):
+
         super(TlsHandshakeClientHelloBlockCipherModeCBC, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self._CIPHER_SUITES,
-            named_curves=None,
-            signature_algorithms=None,
+            named_curves=named_curves,
+            signature_algorithms=signature_algorithms,
             extensions=[]
         )
 

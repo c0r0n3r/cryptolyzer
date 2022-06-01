@@ -30,7 +30,7 @@ from .classes import L7ServerSshTest
 
 class TestMain(TestMainBase):
     def setUp(self):
-        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, timeout=1))
+        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, timeout=2))
         self.threaded_server.start()
 
         self.host = 'localhost'
