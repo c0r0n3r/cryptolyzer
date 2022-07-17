@@ -125,17 +125,17 @@ class AnalyzerDHParams(AnalyzerTlsBase):
         key_share_entries = client_hello.extensions.get_item_by_type(
             TlsExtensionType.KEY_SHARE
         ).key_share_entries
-        for entry_num, _ in enumerate(key_share_entries):
-            if key_share_entries[entry_num].group == selected_named_curve:
-                del key_share_entries[entry_num]
+        for key_share_entry in key_share_entries:
+            if key_share_entry.group == selected_named_curve:
+                key_share_entries.remove(key_share_entry)
                 break
 
         elliptic_curves = client_hello.extensions.get_item_by_type(
             TlsExtensionType.SUPPORTED_GROUPS
         ).elliptic_curves
-        for entry_num, _ in enumerate(elliptic_curves):
-            if elliptic_curves[entry_num] == selected_named_curve:
-                del elliptic_curves[entry_num]
+        for elliptic_curve in elliptic_curves:
+            if elliptic_curve == selected_named_curve:
+                elliptic_curves.remove(elliptic_curve)
                 break
 
     def analyze(self, analyzable, protocol_version):
