@@ -246,8 +246,8 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self.assertEqual(len(result.pubkeys), 1)
 
         trusted_root_chain = result.pubkeys[0].tls_certificate_chain
-        self.assertEqual(len(trusted_root_chain.items), 2)
-        self.assertFalse(trusted_root_chain.contains_anchor)
+        self.assertEqual(len(trusted_root_chain.items), 3)
+        self.assertTrue(trusted_root_chain.contains_anchor)
         self.assertTrue(trusted_root_chain.verified)
         self.assertTrue(trusted_root_chain.ordered)
 
@@ -280,8 +280,6 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self.assertEqual(incomplete_chain.ordered, None)
         self.assertEqual(incomplete_chain.verified, None)
         self.assertEqual(result.pubkeys[0].certificate_status, None)
-
-        self.assertEqual(trusted_root_chain.items[0], incomplete_chain.items[0])
 
     def test_certificate_status(self):
         certificate_status = CertificateStatus(None)
