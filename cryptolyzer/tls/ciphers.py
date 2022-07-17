@@ -152,7 +152,8 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
         return accepted_cipher_suites
 
-    def analyze(self, analyzable, protocol_version):
+    @classmethod
+    def _get_checkable_cipher_suites(cls, protocol_version):
         if isinstance(protocol_version, SslProtocolVersion):
             checkable_cipher_suites = list(SslCipherKind)
         else:
@@ -166,6 +167,10 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 if cipher_suite.value.min_version >= min_version
             ]
 
+        return checkable_cipher_suites
+
+    def analyze(self, analyzable, protocol_version):
+        checkable_cipher_suites = self._get_checkable_cipher_suites(protocol_version)
         long_cipher_suite_list_intolerance = False
         accepted_cipher_suites, remaining_cipher_suites = self._get_accepted_cipher_suites_all(
             analyzable, protocol_version, checkable_cipher_suites

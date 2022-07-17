@@ -413,33 +413,33 @@ class TestClientSMTP(TestL7ClientBase):
 class TestClientFTP(TestL7ClientBase):
     @mock.patch.object(ftplib.FTP, '__init__', side_effect=ftplib.error_reply)
     def test_error_ftplib_error(self, _):
-        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
+        _, result = self.get_result('ftp', 'slackware.org.uk', None)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(ftplib.FTP, 'sendcmd', return_value='502 Command not implemented')
     def test_error_unsupported_starttls(self, _):
-        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
+        _, result = self.get_result('ftp', 'slackware.org.uk', None)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(ftplib.FTP, 'connect', return_value='534 Could Not Connect to Server - Policy Requires SSL')
     @mock.patch.object(ftplib.FTP, 'quit', side_effect=ftplib.error_perm)
     def test_error_ftp_error_on_connect(self, _, __):
-        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
+        _, result = self.get_result('ftp', 'slackware.org.uk', None)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(ftplib.FTP, 'quit', side_effect=ftplib.error_reply)
     def test_error_ftp_error_on_quit(self, _):
-        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
+        _, result = self.get_result('ftp', 'slackware.org.uk', None)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
         )
 
     def test_ftp_client(self):
-        _, result = self.get_result('ftp', 'ftp.cert.dfn.de', None)
+        _, result = self.get_result('ftp', 'slackware.org.uk', None)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
         )
 
     def test_ftps_client(self):

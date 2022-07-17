@@ -250,7 +250,11 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
             for cipher_suite in result.cipher_suites
         ))
 
-    def test_gost(self):
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_get_checkable_cipher_suites',
+        return_value=[TlsCipherSuite.OLD_TLS_GOSTR341112_256_WITH_28147_CNT_IMIT, ]
+    )
+    def test_gost(self, _):
         result = self.get_result('cryptopro.ru', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         self.assertIn(TlsCipherSuite.OLD_TLS_GOSTR341112_256_WITH_28147_CNT_IMIT, result.cipher_suites)
 

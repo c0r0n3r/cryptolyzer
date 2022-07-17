@@ -10,7 +10,6 @@ import six
 from cryptoparser.ssh.ciphersuite import SshHostKeyAlgorithm
 from cryptoparser.ssh.version import (
     SshProtocolVersion,
-    SshSoftwareVersionOpenSSH,
     SshVersion,
 )
 
@@ -33,11 +32,11 @@ class TestReal(unittest.TestCase):
         self.assertEqual(
             result.host_key_algorithms,
             [
-                SshHostKeyAlgorithm.RSA_SHA2_512,
-                SshHostKeyAlgorithm.RSA_SHA2_256,
-                SshHostKeyAlgorithm.SSH_RSA,
                 SshHostKeyAlgorithm.ECDSA_SHA2_NISTP256,
                 SshHostKeyAlgorithm.SSH_ED25519,
+                SshHostKeyAlgorithm.RSA_SHA2_256,
+                SshHostKeyAlgorithm.RSA_SHA2_512,
+                SshHostKeyAlgorithm.SSH_RSA,
             ]
         )
 
@@ -48,4 +47,4 @@ class TestReal(unittest.TestCase):
 
         result = test.ssh.test_versions.TestSshVersions.get_result('gitlab.com')
         self.assertEqual(result.protocol_versions, [SshProtocolVersion(SshVersion.SSH2)])
-        self.assertEqual(result.software_version, SshSoftwareVersionOpenSSH('8.4p1'))
+        self.assertEqual(result.software_version.raw, 'GitLab-SSHD')
