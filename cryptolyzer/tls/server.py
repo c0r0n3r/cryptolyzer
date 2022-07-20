@@ -5,6 +5,7 @@ import attr
 
 import six
 
+from cryptoparser.common.algorithm import BlockCipher
 from cryptoparser.common.exception import NotEnoughData, InvalidValue
 
 from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionSupportedVersionsServer
@@ -33,6 +34,7 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertDescription,
     TlsAlertLevel,
     TlsAlertMessage,
+    TlsCipherSuite,
     TlsContentType,
     TlsHandshakeHelloRetryRequest,
     TlsHandshakeServerHello,
@@ -56,6 +58,10 @@ class TlsServerConfiguration(L7ServerConfigurationBase):
         converter=sorted,
         default=[TlsProtocolVersionFinal(version) for version in TlsVersion],
         validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsProtocolVersionBase))
+    )
+    cipher_suites = attr.ib(
+        default=list(filter(lambda cipher_suite: cipher_suite.value.bulk_cipher == BlockCipher.RC2, TlsCipherSuite)),
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsCipherSuite))
     )
     fallback_to_ssl = attr.ib(default=False, validator=attr.validators.instance_of(bool))
     close_on_error = attr.ib(default=False, validator=attr.validators.instance_of(bool))
@@ -171,31 +177,22 @@ class TlsServer(L7ServerHandshakeBase):
 
 
 class TlsServerHandshake(TlsServer):
-    def _process_handshake_message(self, message, last_handshake_message_type):
-        self._last_processed_message_type = message.get_handshake_type()
-        self.client_messages[self._last_processed_message_type] = message
+    def _check_protocol_version(self, message):
+        try:
+            supported_versions = message.extensions.get_item_by_type(
+                TlsExtensionType.SUPPORTED_VERSIONS
+            ).supported_versions
+        except KeyError:
+            supported_versions = [message.protocol_version, ]
 
-        if len(self.client_messages) == 1:
-            if TlsHandshakeType.CLIENT_HELLO not in self.client_messages:
-                self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE)
-                raise StopIteration()
+        for supported_version in supported_versions:
+            if supported_version in self.configuration.protocol_versions:
+                return supported_version
 
-        if message.get_handshake_type() == TlsHandshakeType.CLIENT_HELLO:
-            try:
-                supported_versions = message.extensions.get_item_by_type(
-                    TlsExtensionType.SUPPORTED_VERSIONS
-                ).supported_versions
-            except KeyError:
-                supported_versions = [message.protocol_version, ]
+        self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.PROTOCOL_VERSION)
+        raise StopIteration()
 
-            for supported_version in supported_versions:
-                if supported_version in self.configuration.protocol_versions:
-                    protocol_version = supported_version
-                    break
-            else:
-                self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.PROTOCOL_VERSION)
-                raise StopIteration()
-
+    def _prepare_server_hello(self, message, protocol_version):
         extensions = []
         if protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2):
             extensions.append(TlsExtensionSupportedVersionsServer(protocol_version))
@@ -207,12 +204,37 @@ class TlsServerHandshake(TlsServer):
                 extensions=extensions,
             )
         else:
+            preferred_cipher_suite_list = self.configuration.cipher_suites
+            selectable_cipher_suite_set = set(message.cipher_suites)
+            for cipher_suite in preferred_cipher_suite_list:
+                if cipher_suite in selectable_cipher_suite_set:
+                    choosen_cipher_suite = cipher_suite
+                    break
+            else:
+                self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
+                raise StopIteration()
+
             server_hello = TlsHandshakeServerHello(
                 protocol_version=protocol_version,
-                cipher_suite=message.cipher_suites[0],
+                cipher_suite=choosen_cipher_suite,
                 extensions=extensions,
             )
-        self.l4_transfer.send(TlsRecord(server_hello.compose()).compose())
+
+        return server_hello
+
+    def _process_handshake_message(self, message, last_handshake_message_type):
+        self._last_processed_message_type = message.get_handshake_type()
+        self.client_messages[self._last_processed_message_type] = message
+
+        if len(self.client_messages) == 1:
+            if TlsHandshakeType.CLIENT_HELLO not in self.client_messages:
+                self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE)
+                raise StopIteration()
+
+        if message.get_handshake_type() == TlsHandshakeType.CLIENT_HELLO:
+            protocol_version = self._check_protocol_version(message)
+            server_hello = self._prepare_server_hello(message, protocol_version)
+            self.l4_transfer.send(TlsRecord(server_hello.compose()).compose())
 
         if self._last_processed_message_type == last_handshake_message_type:
             self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY)

@@ -18,7 +18,12 @@ from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
-from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
+from .classes import (
+    L7ServerTlsLongCipherSuiteListIntolerance,
+    L7ServerTlsPlainTextResponse,
+    L7ServerTlsTest,
+    TestTlsCases,
+)
 
 
 class TestSslCiphers(unittest.TestCase):
@@ -164,27 +169,16 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         result = self.get_result('rc4.badssl.com', 443)
         self.assertEqual(len(result.cipher_suites), 1)
 
-    @mock.patch.object(
-        AnalyzerCipherSuites, '_get_accepted_cipher_suites_all',
-        return_value=(TlsCipherSuite, TlsCipherSuite)
-    )
-    def test_long_cipher_suite_list_intolerance(self, _):
-        result = self.get_result('rc4.badssl.com', 443)
+    def test_long_cipher_suite_list_intolerance(self):
+        self.assertFalse(self.get_result('8.8.8.8', 443).long_cipher_suite_list_intolerance)
 
-        rc4_block_ciphers = [
-            BlockCipher.RC4_40,
-            BlockCipher.RC4_128,
-        ]
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsLongCipherSuiteListIntolerance('localhost', 0, timeout=0.2),
+        )
+        threaded_server.start()
 
-        self.assertTrue(all(
-            cipher_suite.value.bulk_cipher in rc4_block_ciphers
-            for cipher_suite in result.cipher_suites
-        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.long_cipher_suite_list_intolerance)
-
-        self.assertTrue(self.get_result('secure.simplepay.hu', 443))
-        self.assertTrue(self.get_result('www.aegon.hu', 443))
-        self.assertTrue(self.get_result('direkt.nn.hu', 443))
 
     def test_cbc(self):
         result = self.get_result('cbc.badssl.com', 443)

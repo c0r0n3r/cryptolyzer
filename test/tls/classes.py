@@ -161,6 +161,22 @@ class L7ServerTlsAlert(L7ServerTls):
         return TlsServerAlert
 
 
+class TlsServerLongCipherSuiteListIntolerance(TlsServerHandshake):
+    def _process_handshake_message(self, message, last_handshake_message_type):
+        if len(message.cipher_suites) >= 256:
+            self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
+            raise StopIteration()
+
+        super(TlsServerLongCipherSuiteListIntolerance, self)._process_handshake_message(
+            message, last_handshake_message_type
+        )
+
+
+class L7ServerTlsLongCipherSuiteListIntolerance(L7ServerTls):
+    def _get_handshake_class(self, l4_transfer):
+        return TlsServerLongCipherSuiteListIntolerance
+
+
 class L7ServerStartTlsTest(L7ServerStartTlsTextBase):
     @classmethod
     def get_scheme(cls):
