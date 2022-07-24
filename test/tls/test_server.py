@@ -5,6 +5,7 @@ import nntplib
 import poplib
 import smtplib
 import ssl
+import sys
 import unittest
 try:
     from unittest import mock
@@ -76,6 +77,13 @@ from .classes import L7ServerTlsTest, L7ServerStartTlsTest
 class TestL7ServerBase(unittest.TestCase):
     def setUp(self):
         self.threaded_server = None
+        if sys.version_info.major == 3 and sys.version_info.minor == 4:
+            if sys.implementation == 'cpython':
+                self.ssl_exception_reason = 'WRONG_SSL_VERSION'
+            else:
+                self.ssl_exception_reason = 'SSLV3_ALERT_HANDSHAKE_FAILURE'
+        else:
+            self.ssl_exception_reason = 'UNEXPECTED_MESSAGE'
 
     @staticmethod
     def create_server(configuration=None, l7_server_class=L7ServerTls):
@@ -446,6 +454,8 @@ class TestL7ServerStartTls(TestL7ServerBase):
 
 class TestL7ServerTlsFTP(TestL7ServerBase):
     def setUp(self):
+        super(TestL7ServerTlsFTP, self).setUp()
+
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsFTP)
 
     def test_default_port(self):
@@ -470,7 +480,7 @@ class TestL7ServerTlsFTP(TestL7ServerBase):
         with self.assertRaises(ssl.SSLError) as context_manager:
             client.auth()
 
-        self.assertEqual(context_manager.exception.reason, 'UNEXPECTED_MESSAGE')
+        self.assertEqual(context_manager.exception.reason, self.ssl_exception_reason)
 
     def test_real_without_capabilities(self):
         client = ftplib.FTP_TLS()
@@ -481,11 +491,13 @@ class TestL7ServerTlsFTP(TestL7ServerBase):
         with self.assertRaises(ssl.SSLError) as context_manager:
             client.auth()
 
-        self.assertEqual(context_manager.exception.reason, 'UNEXPECTED_MESSAGE')
+        self.assertEqual(context_manager.exception.reason, self.ssl_exception_reason)
 
 
 class TestL7ServerTlsPOP3(TestL7ServerBase):
     def setUp(self):
+        super(TestL7ServerTlsPOP3, self).setUp()
+
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsPOP3)
 
     def test_default_port(self):
@@ -509,7 +521,7 @@ class TestL7ServerTlsPOP3(TestL7ServerBase):
         with self.assertRaises(ssl.SSLError) as context_manager:
             client.stls()
 
-        self.assertEqual(context_manager.exception.reason, 'UNEXPECTED_MESSAGE')
+        self.assertEqual(context_manager.exception.reason, self.ssl_exception_reason)
 
     @unittest.skipIf(six.PY3, 'There is no poplib.POP3.stls in Python < 3.0')
     def test_real_with_capabilities_cmd(self):
@@ -582,6 +594,8 @@ class TestL7ServerTlsSMTP(TestL7ServerBase):
 
 class TestL7ServerTlsNNTP(TestL7ServerBase):
     def setUp(self):
+        super(TestL7ServerTlsNNTP, self).setUp()
+
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsNNTP)
 
     def test_default_port(self):
@@ -605,4 +619,4 @@ class TestL7ServerTlsNNTP(TestL7ServerBase):
         with self.assertRaises(ssl.SSLError) as context_manager:
             client.starttls()
 
-        self.assertEqual(context_manager.exception.reason, 'UNEXPECTED_MESSAGE')
+        self.assertEqual(context_manager.exception.reason, self.ssl_exception_reason)
