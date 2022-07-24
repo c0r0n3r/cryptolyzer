@@ -142,8 +142,11 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
         else:
             self.verified = True
             validated_items = [cryptolyzer.common.x509.PublicKeyX509(item) for item in reversed(build_path)]
-            self.ordered = validated_items[:len(self.items)] == self.items
             self.contains_anchor = len(self.items) == len(validated_items)
+            checkable_item_num = len(self.items)
+            if self.contains_anchor:
+                checkable_item_num -= 1
+            self.ordered = validated_items[:checkable_item_num] = self.items[:checkable_item_num]
 
 
 @attr.s
