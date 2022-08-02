@@ -9,7 +9,8 @@ https://en.wikipedia.org/wiki/Transport_Layer_Security#SSL_1.0,_2.0,_and_3.0)/
 https://en.wikipedia.org/wiki/Opportunistic_TLS), [SSH](https://en.wikipedia.org/wiki/Secure_Shell)) and analyzes
 additional security mechanisms ([web security](https://infosec.mozilla.org/guidelines/web_security) related 
 [HTTP response header fields](https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Response_fields), 
-[JA3 tag](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967)).
+[JA3 tag](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967)) or
+[HASSH tag](https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/)).
 
 ## What is it and what is it not?
 
@@ -49,11 +50,16 @@ docker run --rm coroner/cryptolyzer http headers www.example.com
 ```
 
 ```shell
-docker run -ti --rm -p 127.0.0.1:4433:4433 coroner/cryptolyzer ja3 generate 0.0.0.0:4433
+docker run -ti --rm -p 127.0.0.1:4433:4433 coroner/cryptolyzer ja3 generate 127.0.0.1:4433
 openssl s_client -connect 127.0.0.1:4433
 
-docker run -ti --rm -p 127.0.0.1:2121:2121 coroner/cryptolyzer ja3 generate ftp://0.0.0.0:2121
+docker run -ti --rm -p 127.0.0.1:2121:2121 coroner/cryptolyzer ja3 generate ftp://127.0.0.1:2121
 openssl s_client -starttls ftp -connect 127.0.0.1:2121
+```
+
+```shell
+docker run -ti --rm -p 127.0.0.1:2222:4433 coroner/cryptolyzer hassh generate 127.0.0.1:2222
+openssl s_client -connect 127.0.0.1:2222
 ```
 
 or via APT on Debian based systems
@@ -202,6 +208,7 @@ port.
   * [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol)
 2.  decodes existing [JA3 tags](https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967) by
     showing human-readable format of the TLS parameters represented by the tag
+3.  generates [HASSH tag](https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/)) of SSH clients
 
 ## Hypertext Transfer Protocol (HTTP)
 

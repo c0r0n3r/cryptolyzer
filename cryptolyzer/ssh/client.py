@@ -194,7 +194,7 @@ class L7ClientSsh(L7TransferBase):
             protocol_message=SshProtocolMessageDefault(),
             key_exchange_init_message=SshKeyExchangeInitAnyAlgorithm(),
             gex_params=L7ServerSshGexParams(),
-            last_message_type=SshKeyExchangeInit,
+            last_message_type=SshKeyExchangeInit.get_message_code(),
     ):
         self.init_connection()
 
