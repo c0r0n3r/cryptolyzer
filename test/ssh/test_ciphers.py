@@ -30,6 +30,7 @@ class TestSshCiphers(TestSshCases.TestSshClientBase):
             mac_algorithms_server_to_client=('mac_algorithm_server_to_client', ),
             compression_algorithms_client_to_server=('compression_algorithm_client_to_server', ),
             compression_algorithms_server_to_client=('compression_algorithm_server_to_client', ),
+            hassh_fingerprint=''
         )
         self.assertTrue(analyzer_result.as_json())
         self.assertTrue(analyzer_result.as_markdown())
