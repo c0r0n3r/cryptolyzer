@@ -14,6 +14,13 @@ from cryptoparser.tls.ldap import (
     LDAPExtendedRequestStartTLS,
     LDAPExtendedResponseStartTLS,
 )
+from cryptoparser.tls.mysql import (
+    MySQLCapability,
+    MySQLHandshakeSslRequest,
+    MySQLHandshakeV10,
+    MySQLRecord,
+    MySQLVersion,
+)
 from cryptoparser.tls.postgresql import SslRequest, Sync
 from cryptoparser.tls.rdp import (
     TPKT,
@@ -418,6 +425,43 @@ class L7ServerTlsPostgreSQL(L7ServerStartTlsBase):
         self.l4_transfer.flush_buffer()
 
         self.l4_transfer.send(self._SYNC_BYTES)
+
+    def _deinit_l7(self):
+        pass
+
+
+class L7ServerTlsMySQL(L7ServerStartTlsBase):
+    _SERVER_HANDSHAKE_RECORD_BYTES = MySQLRecord(0, MySQLHandshakeV10(
+        protocol_version=MySQLVersion.MYSQL_10,
+        server_version='1.2.3.4',
+        connection_id=0x01020304,
+        auth_plugin_data=b'12345678',
+        capabilities=[MySQLCapability.CLIENT_SSL, ],
+    ).compose()).compose()
+
+    @classmethod
+    def get_scheme(cls):
+        return 'mysql'
+
+    @classmethod
+    def get_default_port(cls):
+        return 3306
+
+    def _init_l7(self):
+        self.l4_transfer.send(self._SERVER_HANDSHAKE_RECORD_BYTES)
+
+        self.l4_transfer.receive(MySQLRecord.HEADER_SIZE)
+        try:
+            MySQLRecord.parse_exact_size(self.l4_transfer.buffer)
+        except NotEnoughData as e:
+            self.l4_transfer.receive(e.bytes_needed)
+
+        record, parsed_length = MySQLRecord.parse_immutable(self.l4_transfer.buffer)
+        self.l4_transfer.flush_buffer(parsed_length)
+
+        ssl_request = MySQLHandshakeSslRequest.parse_exact_size(record.packet_bytes)
+        if not set([MySQLCapability.CLIENT_SSL, MySQLCapability.CLIENT_SECURE_CONNECTION]) & ssl_request.capabilities:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
     def _deinit_l7(self):
         pass

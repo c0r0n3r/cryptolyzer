@@ -23,6 +23,7 @@ from cryptoparser.tls.ldap import (
     LDAPExtendedRequestStartTLS,
     LDAPExtendedResponseStartTLS,
 )
+from cryptoparser.tls.mysql import MySQLCapability, MySQLHandshakeSslRequest, MySQLHandshakeV10, MySQLRecord
 from cryptoparser.tls.postgresql import SslRequest, Sync
 from cryptoparser.tls.rdp import (
     TPKT,
@@ -812,6 +813,52 @@ class ClientLMTP(L7ClientStartTlsMailBase):
     @property
     def _capabilities_command(self):
         return 'LHLO cryptolyzer'
+
+
+class ClientMySQL(L7ClientStartTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'mysql'
+
+    @classmethod
+    def get_default_port(cls):
+        return 3306
+
+    def _init_l7(self):
+        self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+        self._l7_client.init_connection()
+        self.l4_transfer = self._l7_client.l4_transfer
+
+        self.l4_transfer.receive(MySQLRecord.HEADER_SIZE)
+        try:
+            MySQLRecord.parse_exact_size(self.l4_transfer.buffer)
+        except NotEnoughData as e:
+            self.l4_transfer.receive(e.bytes_needed)
+
+        try:
+            record, parsed_length = MySQLRecord.parse_immutable(self.l4_transfer.buffer)
+            self.l4_transfer.flush_buffer(parsed_length)
+            initial_handshake, _ = MySQLHandshakeV10.parse_immutable(record.packet_bytes)
+        except (InvalidValue, InvalidType, NotEnoughData) as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+
+        capabilities = set()
+        if MySQLCapability.CLIENT_SSL in initial_handshake.capabilities:
+            capabilities.add(MySQLCapability.CLIENT_SSL)
+        elif MySQLCapability.CLIENT_SECURE_CONNECTION in initial_handshake.capabilities:
+            capabilities.add(MySQLCapability.CLIENT_SECURE_CONNECTION)
+        else:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+        if MySQLCapability.CLIENT_PROTOCOL_41 in initial_handshake.capabilities:
+            capabilities.add(MySQLCapability.CLIENT_PROTOCOL_41)
+
+        self.l4_transfer.send(MySQLRecord(
+            packet_number=1, packet_bytes=MySQLHandshakeSslRequest(capabilities).compose()
+        ).compose())
+
+    def _deinit_l7(self):
+        pass
 
 
 class L7ClientPOP3S(L7ClientTlsBase):

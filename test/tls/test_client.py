@@ -17,6 +17,7 @@ import six
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
 from cryptoparser.tls.ciphersuite import SslCipherKind
 from cryptoparser.tls.ldap import LDAPMessageParsableBase, LDAPExtendedResponseStartTLS, LDAPResultCode
+from cryptoparser.tls.mysql import MySQLCapability, MySQLRecord, MySQLCharacterSet, MySQLHandshakeV10, MySQLVersion
 from cryptoparser.tls.rdp import RDPNegotiationResponse
 
 from cryptoparser.tls.record import ParsableBase, TlsRecord, SslRecord
@@ -658,6 +659,70 @@ class TestClientNNTP(TestL7ClientBase):
                 for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
+
+
+class TestClientMySQL(TestL7ClientBase):
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'X', ))
+    def test_error_not_enough_data(self, _):
+        _, result = self._get_mock_server_response('mysql')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b'\x21\x00\x00\x00\xff' + 33 * b'\x00',
+    ))
+    def test_error_invalid_data(self, _):
+        _, result = self._get_mock_server_response('mysql')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b''.join([
+            b'\x11\x00\x00',                      # packet_length
+            b'\x00',                              # packet_number
+            b'\x09',                              # protocol_version
+            b'\x00',                              # server_version
+            b'\x00\x00\x00\x00',                  # connection_id
+            b'\x00\x00\x00\x00\x00\x00\x00\x00',  # auth_plugin_data
+            b'\x00',                              # filler
+            b'\x00\x00',                          # capabilities
+        ]),
+    ))
+    def test_error_no_ssl_support(self, _):
+        _, result = self._get_mock_server_response('mysql')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(MySQLRecord(0, MySQLHandshakeV10(
+        protocol_version=MySQLVersion.MYSQL_9,
+        server_version='version',
+        connection_id=1,
+        auth_plugin_data=b'\x00\x00\x00\x00\x00\x00\x00\x00',
+        capabilities=set([]),
+        character_set=MySQLCharacterSet.UTF8,
+        states=set(),
+    ).compose()).compose(),))
+    def test_error_client_ssl_no_response(self, _):
+        _, result = self._get_mock_server_response('mysql')
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(MySQLRecord(0, MySQLHandshakeV10(
+        protocol_version=MySQLVersion.MYSQL_9,
+        server_version='version',
+        connection_id=1,
+        auth_plugin_data=b'\x00\x00\x00\x00\x00\x00\x00\x00',
+        capabilities=set([MySQLCapability.CLIENT_SECURE_CONNECTION, ]),
+        character_set=MySQLCharacterSet.UTF8,
+        states=set(),
+    ).compose()).compose(),))
+    def test_error_client_secure_connection_no_response(self, _):
+        _, result = self._get_mock_server_response('mysql')
+        self.assertEqual(result.versions, [])
+
+    def test_default_port(self):
+        l7_client = L7ClientTlsBase.from_scheme('mysql', 'localhost')
+        self.assertEqual(l7_client.port, 3306)
+
+    def test_mysql_client(self):
+        _, result = self.get_result('mysql', 'db4free.net', None)
+        self.assertIn(TlsProtocolVersionFinal(TlsVersion.TLS1_2), result.versions)
 
 
 class TestClientPostgreSQL(TestL7ClientBase):
