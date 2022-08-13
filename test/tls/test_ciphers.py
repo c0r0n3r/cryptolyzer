@@ -159,7 +159,9 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
     @mock.patch('time.sleep', return_value=None)
     def test_error_internal_error_once(self, _, __):
         result = self.get_result('rc4.badssl.com', 443)
-        self.assertEqual(len(result.cipher_suites), 2)
+        self.assertEqual(result.cipher_suites, [
+            TlsCipherSuite.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
+        ])
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
