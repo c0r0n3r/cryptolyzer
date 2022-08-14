@@ -26,6 +26,12 @@ from cryptolyzer.ssh.client import (
     SshKeyExchangeInitHostKeyECDSA,
     SshKeyExchangeInitHostKeyEDDSA,
     SshKeyExchangeInitHostKeyRSA,
+    SshKeyExchangeInitHostCertificateV00DSS,
+    SshKeyExchangeInitHostCertificateV00RSA,
+    SshKeyExchangeInitHostCertificateV01DSS,
+    SshKeyExchangeInitHostCertificateV01RSA,
+    SshKeyExchangeInitHostCertificateV01ECDSA,
+    SshKeyExchangeInitHostCertificateV01EDDSA,
 )
 
 
@@ -40,6 +46,12 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
         ((SshHostKeyType.KEY, Authentication.ECDSA), SshKeyExchangeInitHostKeyECDSA()),
         ((SshHostKeyType.KEY, Authentication.EDDSA), SshKeyExchangeInitHostKeyEDDSA()),
         ((SshHostKeyType.KEY, Authentication.RSA), SshKeyExchangeInitHostKeyRSA()),
+        ((SshHostKeyType.CERTIFICATE, Authentication.DSS), SshKeyExchangeInitHostCertificateV00DSS()),
+        ((SshHostKeyType.CERTIFICATE, Authentication.RSA), SshKeyExchangeInitHostCertificateV00RSA()),
+        ((SshHostKeyType.CERTIFICATE, Authentication.DSS), SshKeyExchangeInitHostCertificateV01DSS()),
+        ((SshHostKeyType.CERTIFICATE, Authentication.RSA), SshKeyExchangeInitHostCertificateV01RSA()),
+        ((SshHostKeyType.CERTIFICATE, Authentication.ECDSA), SshKeyExchangeInitHostCertificateV01ECDSA()),
+        ((SshHostKeyType.CERTIFICATE, Authentication.EDDSA), SshKeyExchangeInitHostCertificateV01EDDSA()),
     ])
 
     @classmethod

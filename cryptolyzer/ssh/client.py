@@ -165,6 +165,48 @@ class SshKeyExchangeInitHostKeyEDDSA(SshKeyExchangeInitHostKeyBase):
         )
 
 
+class SshKeyExchangeInitHostCertificateV00DSS(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostCertificateV00DSS, self).__init__(
+            SshHostKeyType.CERTIFICATE, Authentication.DSS
+        )
+
+
+class SshKeyExchangeInitHostCertificateV00RSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostCertificateV00RSA, self).__init__(
+            SshHostKeyType.CERTIFICATE, Authentication.RSA
+        )
+
+
+class SshKeyExchangeInitHostCertificateV01DSS(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostCertificateV01DSS, self).__init__(
+            SshHostKeyType.CERTIFICATE, Authentication.DSS
+        )
+
+
+class SshKeyExchangeInitHostCertificateV01RSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostCertificateV01RSA, self).__init__(
+            SshHostKeyType.CERTIFICATE, Authentication.RSA
+        )
+
+
+class SshKeyExchangeInitHostCertificateV01ECDSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostCertificateV01ECDSA, self).__init__(
+            SshHostKeyType.CERTIFICATE, Authentication.ECDSA
+        )
+
+
+class SshKeyExchangeInitHostCertificateV01EDDSA(SshKeyExchangeInitHostKeyBase):
+    def __init__(self):
+        super(SshKeyExchangeInitHostCertificateV01EDDSA, self).__init__(
+            SshHostKeyType.CERTIFICATE, Authentication.EDDSA
+        )
+
+
 @attr.s(frozen=True)
 class L7ServerSshGexParams(object):
     gex_min = attr.ib(default=768, validator=attr.validators.instance_of(six.integer_types))
