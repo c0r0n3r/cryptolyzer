@@ -96,9 +96,12 @@ class TestL7ServerBase(unittest.TestCase):
         return client_class(l7_server.address, l7_server.l4_transfer.bind_port, ip=l7_server.ip)
 
     def _assert_on_more_data(self, client):
-        with self.assertRaises(NotEnoughData) as context_manager:
-            client.receive(1)
-        self.assertEqual(context_manager.exception.bytes_needed, 1)
+        buffer_length = len(client.buffer)
+        try:
+            client.receive(16)
+        except NotEnoughData:
+            pass
+        self.assertEqual(client.buffer[buffer_length:], bytearray())
 
     def _send_binary_message(self, message, expected_response, ssl_expected=False):
         l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
@@ -399,10 +402,6 @@ class TestL7ServerStartTls(TestL7ServerBase):
 
     def _test_no_response(self):
         self._assert_on_more_data(self.l4_client)
-
-    @mock.patch.object(L7ServerStartTlsTest, '_get_greeting', return_value=None)
-    def test_no_greeting(self, _):
-        self._test_no_response()
 
     def test_greeting(self):
         self.l4_client.receive_line()
