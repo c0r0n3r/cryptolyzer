@@ -164,7 +164,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             checkable_cipher_suites = [
                 cipher_suite
                 for cipher_suite in TlsCipherSuite
-                if cipher_suite.value.min_version >= min_version
+                if cipher_suite.value.initial_version >= min_version
             ]
 
         return checkable_cipher_suites
