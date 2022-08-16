@@ -65,16 +65,23 @@ class TestThreadedServer(threading.Thread):
         self._server = server
         self._server.init_connection()
 
-    def wait_for_server_listen(self, expiry_in_sec=1):
+    def wait_for_server_listen(self, expiry_in_sec=5):
         self.start()
 
-        for _ in range(10 * expiry_in_sec):
-            time.sleep(0.1)
-            try:
-                self._server.port
-            except NotImplementedError:
-                pass
-            else:
-                break
+        if hasattr(self._server, 'bind_port'):
+            l4_transfer = self._server
         else:
-            raise TimeoutError()
+            l4_transfer = self._server.l4_transfer
+
+        for _ in range(expiry_in_sec * 100):
+            time.sleep(1.0 / (expiry_in_sec * 100))
+            try:
+                if l4_transfer.bind_port != 0:
+                    break
+            except AttributeError:
+                pass
+        else:
+            if six.PY3:
+                raise TimeoutError()
+
+            raise socket.timeout()
