@@ -9,6 +9,7 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 
 @attr.s
 class HttpHandshakeBase(object):
+    timeout = attr.ib(validator=attr.validators.instance_of((float, int)))
     response = attr.ib(init=False, validator=attr.validators.instance_of(requests.Response))
 
     @property
@@ -25,7 +26,7 @@ class HttpHandshakeBase(object):
 
     def do_handshake(self, transfer):
         try:
-            self.response = requests.head(transfer.uri)
+            self.response = requests.head(transfer.uri, timeout=self.timeout)
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
             six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
         except requests.exceptions.HTTPError as e:

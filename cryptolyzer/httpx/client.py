@@ -71,7 +71,7 @@ class L7ClientHttp(L7ClientHttpBase):
         return {'http': L7ClientHttp}
 
     def do_handshake(self):
-        http_client = HttpClientHandshake()
+        http_client = HttpClientHandshake(self.timeout)
 
         http_client.do_handshake(self)
 
@@ -92,7 +92,7 @@ class L7ClientHttps(L7ClientHttpBase):
         return {'https': L7ClientHttps}
 
     def do_handshake(self):
-        http_client = HttpsClientHandshake()
+        http_client = HttpsClientHandshake(self.timeout)
 
         http_client.do_handshake(self)
 
