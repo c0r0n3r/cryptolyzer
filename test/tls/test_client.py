@@ -432,14 +432,14 @@ class TestClientFTP(TestL7ClientBase):
         _, result = self.get_result('ftp', 'slackware.org.uk', None)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
 
     def test_ftp_client(self):
         _, result = self.get_result('ftp', 'slackware.org.uk', None)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2]]
+            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
 
     def test_ftps_client(self):
