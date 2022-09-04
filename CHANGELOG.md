@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.2
+
+- HASSH (`hassh`)
+  - Generate (`generate`)
+
 ## 0.8.1 - 2022-03-23
 
 - JA3 (`ja3`)
