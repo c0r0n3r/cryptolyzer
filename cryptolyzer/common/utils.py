@@ -7,10 +7,6 @@ import six
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 
 
-def bytes_to_colon_separated_hex(byte_array):
-    return ':'.join(['{:02X}'.format(x) for x in six.iterbytes(byte_array)])
-
-
 def resolve_address(address, port, ip=None):
     if ip:
         try:

@@ -10,9 +10,8 @@ import asn1crypto.x509
 import attr
 
 import cryptoparser.common.key
+import cryptoparser.common.utils
 from cryptoparser.common.algorithm import Authentication, Hash, Signature
-
-import cryptolyzer.common.utils
 
 
 class PublicKey(cryptoparser.common.key.PublicKey):
@@ -168,7 +167,7 @@ class PublicKeyX509(PublicKey):  # pylint: disable=too-many-public-methods
         return OrderedDict([
             (
                 hash_type,
-                cryptolyzer.common.utils.bytes_to_colon_separated_hex(self.get_digest(hash_type, self.key_bytes))
+                cryptoparser.common.utils.bytes_to_hex_string(self.get_digest(hash_type, self.key_bytes), ':')
             )
             for hash_type in [Hash.MD5, Hash.SHA1, Hash.SHA2_256]
         ])

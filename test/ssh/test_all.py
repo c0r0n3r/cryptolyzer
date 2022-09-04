@@ -38,6 +38,7 @@ class TestSshAll(TestSshCases.TestSshClientBase):
                 mac_algorithms_server_to_client=[],
                 compression_algorithms_client_to_server=[],
                 compression_algorithms_server_to_client=[],
+                hassh_fingerprint=''
             )
         ), None)
 
@@ -55,6 +56,7 @@ class TestSshAll(TestSshCases.TestSshClientBase):
                 mac_algorithms_server_to_client=[],
                 compression_algorithms_client_to_server=[],
                 compression_algorithms_server_to_client=[],
+                hassh_fingerprint=''
             ),
         ), SshProtocolVersion(SshVersion.SSH2))
 

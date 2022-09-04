@@ -67,6 +67,10 @@ class AnalyzerResultCiphers(AnalyzerResultSsh):  # pylint: disable=too-many-inst
         ),
         metadata={'human_readable_name': 'Compression Algorithms Server to Client'}
     )
+    hassh_fingerprint = attr.ib(
+        validator=attr.validators.instance_of(six.string_types),
+        metadata={'human_readable_name': 'HASSH fingerprint'}
+    )
 
 
 class AnalyzerCiphers(AnalyzerSshBase):
@@ -91,4 +95,5 @@ class AnalyzerCiphers(AnalyzerSshBase):
             list(key_exchange_init_message.mac_algorithms_server_to_client),
             list(key_exchange_init_message.compression_algorithms_client_to_server),
             list(key_exchange_init_message.compression_algorithms_server_to_client),
+            key_exchange_init_message.hassh_server,
         )

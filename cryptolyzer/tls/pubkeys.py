@@ -11,6 +11,7 @@ import asn1crypto.x509
 import certvalidator
 
 from cryptoparser.common.base import Serializable
+import cryptoparser.common.utils
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.extension import TlsExtensionCertificateStatusRequest, TlsCertificateStatusType
 
@@ -25,7 +26,6 @@ from cryptolyzer.tls.exception import TlsAlert
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-import cryptolyzer.common.utils
 import cryptolyzer.common.x509
 
 
@@ -53,9 +53,7 @@ class CertificateStatus(Serializable):
         if self._response_data['responder_id'].name == 'by_name':
             return self._response_data['responder_id'].chosen.native
 
-        return cryptolyzer.common.utils.bytes_to_colon_separated_hex(
-            bytes(self._response_data['responder_id'].chosen)
-        )
+        return cryptoparser.common.utils.bytes_to_hex_string(bytes(self._response_data['responder_id'].chosen), ':')
 
     @property
     def produced_at(self):
