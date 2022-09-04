@@ -8,6 +8,7 @@ except ImportError:
 from collections import OrderedDict
 
 from cryptoparser.common.algorithm import Authentication, Hash
+from cryptoparser.ssh.ciphersuite import SshHostKeyAlgorithm
 from cryptoparser.ssh.subprotocol import SshReasonCode
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
@@ -77,3 +78,21 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
             (Hash.SHA1, 'SHA1:v2toJdKXfFEaR1u++4iq1UqSrHM='),
             (Hash.MD5, 'MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'),
         ]))
+
+    def test_host_cert(self):
+        result = self.get_result('scm.infra.centos.org', 22)
+        self.assertEqual(
+            list(map(lambda public_key: public_key.key_type, result.public_keys)),
+            [Authentication.ECDSA, Authentication.EDDSA, Authentication.RSA, Authentication.EDDSA],
+        )
+        self.assertEqual(
+            list(map(lambda public_key: public_key.host_key_algorithm.value.code, result.public_keys)),
+            ['ecdsa-sha2-nistp256', 'ssh-ed25519', 'ssh-rsa', 'ssh-ed25519-cert-v01@openssh.com'],
+            [
+                SshHostKeyAlgorithm.ECDSA_SHA2_NISTP256,
+                SshHostKeyAlgorithm.SSH_ED25519,
+                SshHostKeyAlgorithm.SSH_RSA,
+                SshHostKeyAlgorithm.SSH_ED25519_CERT_V01_OPENSSH_COM
+            ]
+        )
+        self.assertEqual(result.public_keys[3].key_id, 'scm.infra.centos.org')
