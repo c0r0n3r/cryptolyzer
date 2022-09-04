@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import codecs
+import collections
 import enum
 import six
 import attr
@@ -751,15 +752,15 @@ def parse_ecdh_params(param_bytes):
 
 @attr.s
 class DHParameter(Serializable):
-    public_key = attr.ib(validator=attr.validators.instance_of(DHPublicKey))
-    reused = attr.ib(validator=attr.validators.instance_of(bool))
+    parameter_numbers = attr.ib(validator=attr.validators.instance_of(DHParameterNumbers))
+    key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
     well_known = attr.ib(init=False, validator=attr.validators.instance_of(bool))
     prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
     safe_prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
 
     def _check_prime(self):
-        param_num_p = self.public_key.public_numbers.parameter_numbers.p
-        param_num_g = self.public_key.public_numbers.parameter_numbers.g
+        param_num_p = self.parameter_numbers.p
+        param_num_g = self.parameter_numbers.g
 
         self.prime, self.safe_prime = prime_precheck(param_num_p, param_num_g)
 
@@ -771,7 +772,7 @@ class DHParameter(Serializable):
 
     def __attrs_post_init__(self):
         for well_know_public_number in WellKnownDHParams:
-            if self.public_key.public_numbers.parameter_numbers == well_know_public_number.value.dh_param_numbers:
+            if self.parameter_numbers == well_know_public_number.value.dh_param_numbers:
                 self.well_known = well_know_public_number
                 self.prime = True
                 self.safe_prime = well_know_public_number.value.safe_prime
@@ -780,15 +781,9 @@ class DHParameter(Serializable):
             self.well_known = None
             self._check_prime()
 
-    @property
-    def key_size(self):
-        return self.public_key.key_size
-
     def _asdict(self):
-        result = {'key_size': self.key_size}
-        result.update({
-            key: value
-            for key, value in self.__dict__.items()
-            if key != 'public_key'
-        })
+        result = attr.asdict(self, recurse=False, dict_factory=collections.OrderedDict)
+        if self.well_known:
+            result['parameter_numbers'] = None
+
         return result

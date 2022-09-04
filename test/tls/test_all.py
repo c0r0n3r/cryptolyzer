@@ -8,6 +8,7 @@ except ImportError:
 from collections import OrderedDict
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
+from cryptoparser.tls.extension import TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.common.result import AnalyzerTargetTls
@@ -71,50 +72,6 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
             ),
         ])), TlsProtocolVersionFinal(TlsVersion.TLS1_2))
 
-    def test_is_dhe_supported(self):
-        target = AnalyzerTargetTls('tls', 'one.one.one.one', '1.1.1.1', 443, None)
-        self.assertEqual(AnalyzerAll.is_dhe_supported(OrderedDict([
-            (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                AnalyzerResultCipherSuites(target, [
-                    TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
-                ], False, False)
-            ),
-            (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-                AnalyzerResultCipherSuites(target, [
-                    TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
-                ], False, False)
-            ),
-            (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
-                AnalyzerResultCipherSuites(target, [
-                    TlsCipherSuite.TLS_ECDH_anon_WITH_AES_256_CBC_SHA,
-                ], False, False)
-            ),
-        ])), None)
-
-        self.assertEqual(AnalyzerAll.is_dhe_supported(OrderedDict([
-            (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                AnalyzerResultCipherSuites(target, [
-                    TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
-                ], False, False)
-            ),
-            (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-                AnalyzerResultCipherSuites(target, [
-                    TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
-                ], False, False)
-            ),
-            (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
-                AnalyzerResultCipherSuites(target, [
-                    TlsCipherSuite.TLS_ECDH_anon_WITH_AES_256_CBC_SHA,
-                ], False, False)
-            ),
-        ])), TlsProtocolVersionFinal(TlsVersion.TLS1_1))
-
     def test_is_public_key_supported(self):
         target = AnalyzerTargetTls('tls', 'one.one.one.one', '1.1.1.1', 443, None)
         self.assertEqual(AnalyzerAll.is_public_key_supported(OrderedDict([
@@ -158,6 +115,25 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
                 ], False, False)
             ),
         ])), TlsProtocolVersionFinal(TlsVersion.TLS1_1))
+
+    def test_real(self):
+        result = self.get_result('dh2048.badssl.com', 443)
+        self.assertEqual(result.dhparams.groups, [])
+        self.assertNotEqual(result.dhparams.dhparam, None)
+
+        result = self.get_result('mega.co.nz', 443)
+        self.assertEqual(result.dhparams.groups, [TlsNamedCurve.FFDHE2048])
+        self.assertEqual(result.dhparams.dhparam, None)
+
+        result = self.get_result('imagemagick.org', 443)
+        self.assertEqual(result.dhparams.groups, [
+            TlsNamedCurve.FFDHE2048,
+            TlsNamedCurve.FFDHE3072,
+            TlsNamedCurve.FFDHE4096,
+            TlsNamedCurve.FFDHE6144,
+            TlsNamedCurve.FFDHE8192
+        ])
+        self.assertNotEqual(result.dhparams.dhparam, None)
 
     def test_markdown(self):
         result = self.get_result('rc4-md5.badssl.com', 443)
