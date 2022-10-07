@@ -54,13 +54,15 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         ])
 
     def test_sigalgos(self):
-        result = self.get_result('ecc256.badssl.com', 443)
+        result = self.get_result('dns.google', 443)
         self.assertEqual(result.sig_algos, [
-            TlsSignatureAndHashAlgorithm.ECDSA_SHA1,
-            TlsSignatureAndHashAlgorithm.ECDSA_SHA224,
-            TlsSignatureAndHashAlgorithm.ECDSA_SHA256,
-            TlsSignatureAndHashAlgorithm.ECDSA_SHA384,
-            TlsSignatureAndHashAlgorithm.ECDSA_SHA512,
+            TlsSignatureAndHashAlgorithm.RSA_SHA1,
+            TlsSignatureAndHashAlgorithm.RSA_SHA256,
+            TlsSignatureAndHashAlgorithm.RSA_SHA384,
+            TlsSignatureAndHashAlgorithm.RSA_SHA512,
+            TlsSignatureAndHashAlgorithm.RSA_PSS_RSAE_SHA256,
+            TlsSignatureAndHashAlgorithm.RSA_PSS_RSAE_SHA384,
+            TlsSignatureAndHashAlgorithm.RSA_PSS_RSAE_SHA512,
         ])
 
     def test_plain_text_response(self):

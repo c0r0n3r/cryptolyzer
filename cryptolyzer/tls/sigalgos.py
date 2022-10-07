@@ -4,7 +4,7 @@ import attr
 
 from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithmVector
 from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
-from cryptoparser.tls.subprotocol import TlsAlertDescription
+from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
@@ -45,7 +45,9 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
         for algorithm in extension.hash_and_signature_algorithms:
             extension.hash_and_signature_algorithms = TlsSignatureAndHashAlgorithmVector([algorithm, ])
             try:
-                l7_client.do_tls_handshake(client_hello)
+                l7_client.do_tls_handshake(
+                    client_hello, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
+                )
             except TlsAlert as e:
                 if algorithm == extension.hash_and_signature_algorithms[0]:
                     if e.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]:
