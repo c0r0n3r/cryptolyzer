@@ -61,6 +61,10 @@ from cryptoparser.tls.extension import (
     TlsKeyShareEntry,
     TlsNamedCurve,
 )
+from cryptoparser.tls.openvpn import (
+    OpenVpnPacketAckV1,
+    OpenVpnPacketHardResetClientV2,
+)
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -72,8 +76,11 @@ from cryptolyzer.common.dhparam import (
     int_to_bytes,
 )
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
+from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP, L7TransferBase
+from cryptolyzer.common.utils import buffer_flush, buffer_is_plain_text
+
+from cryptolyzer.tls.application import L7OpenVpnBase
 from cryptolyzer.tls.exception import TlsAlert
-from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
 
 
 NAMED_CURVE_TO_RFC7919_WELL_KNOWN = {
@@ -1381,13 +1388,15 @@ class TlsClientHandshake(TlsClient):
             raise StopIteration
 
     @classmethod
-    def _process_non_handshake_message(cls, content_type, message):
-        if content_type != TlsContentType.ALERT:
+    def _process_non_handshake_message(cls, content_type, message, last_handshake_message_type):
+        if content_type == TlsContentType.ALERT:
+            if (message.level == TlsAlertLevel.FATAL or
+                    message.description == TlsAlertDescription.CLOSE_NOTIFY):
+                raise TlsAlert(message.description)
+        elif last_handshake_message_type is None and content_type == TlsContentType.CHANGE_CIPHER_SPEC:
+            raise StopIteration
+        else:
             raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
-
-        if (message.level == TlsAlertLevel.FATAL or
-                message.description == TlsAlertDescription.CLOSE_NOTIFY):
-            raise TlsAlert(message.description)
 
     @classmethod
     def _process_invalid_message(cls, transfer):
@@ -1398,8 +1407,11 @@ class TlsClientHandshake(TlsClient):
         tls_record_bytes = TlsRecord(hello_message.compose(), record_version, TlsContentType.HANDSHAKE).compose()
         try:
             transfer.send(tls_record_bytes)
-        except socket.timeout as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+        except BaseException as e:  # pylint: disable=broad-except
+            if e.__class__.__name__ == 'TimeoutError' or isinstance(e, socket.timeout):
+                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+
+            raise e
 
     def do_handshake(
             self,
@@ -1409,33 +1421,37 @@ class TlsClientHandshake(TlsClient):
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
     ):
         self.server_messages = {}
+        transfer.flush_buffer()
         self._send_hello(transfer, hello_message, record_version)
 
-        record_buffer = bytearray()
+        receivable_byte_num = 0
+        message_buffer = bytearray()
         while True:
             try:
-                while True:
-                    record, parsed_length = TlsRecord.parse_immutable(transfer.buffer)
-                    record_buffer += record.fragment
-                    transfer.flush_buffer(parsed_length)
-
-                    if not transfer.buffer:
-                        break
+                record, parsed_length = TlsRecord.parse_immutable(transfer.buffer)
+                message_buffer += record.fragment
+                transfer.flush_buffer(parsed_length)
 
                 subprotocol_parser = TlsSubprotocolMessageParser(record.content_type)
 
-                while record_buffer:
-                    message, parsed_length = subprotocol_parser.parse(record_buffer)
-                    record_buffer = record_buffer[parsed_length:]
+                while message_buffer:
+                    try:
+                        message, parsed_length = subprotocol_parser.parse(message_buffer)
+                    except NotEnoughData:
+                        # another record should be received
+                        break
+
+                    message_buffer = message_buffer[parsed_length:]
 
                     if record.content_type == TlsContentType.HANDSHAKE:
                         self._process_handshake_message(
                             hello_message.protocol_version, message, last_handshake_message_type
                         )
                     else:
-                        self._process_non_handshake_message(record.content_type, message)
+                        self._process_non_handshake_message(record.content_type, message, last_handshake_message_type)
 
-                receivable_byte_num = 0
+                # transfer buffer may contain another record or another record should be received
+                continue
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
             except (InvalidType, InvalidValue):
@@ -1446,7 +1462,7 @@ class TlsClientHandshake(TlsClient):
             try:
                 transfer.receive(receivable_byte_num)
             except NotEnoughData as e:
-                if transfer.buffer or record_buffer:
+                if transfer.buffer:
                     six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
 
                 six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
@@ -1517,3 +1533,156 @@ class SslClientHandshake(TlsClient):
                         six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
                 else:
                     six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+
+
+@attr.s
+class ClientOpenVpnBase(L7ClientTlsBase, L7OpenVpnBase):
+    SESSION_ID = 0xff58585858585858
+
+    _buffer = attr.ib(init=False)
+
+    def __attrs_post_init__(self):
+        super(ClientOpenVpnBase, self).__attrs_post_init__()
+
+        self._buffer = bytearray()
+
+        if self.session_id is None:
+            self.session_id = int(self.SESSION_ID)
+
+    @classmethod
+    @abc.abstractmethod
+    def get_scheme(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_default_port(cls):
+        raise NotImplementedError()
+
+    def _reset_session(self):
+        self.flush_buffer()
+        self.client_packet_id = 0x00000000
+        self.remote_session_id = None
+        self.session_id += 1
+        packet_client_hard_reset = OpenVpnPacketHardResetClientV2(
+            self.session_id,
+            self.client_packet_id
+        )
+        self._send_packet(self.l4_transfer, packet_client_hard_reset)
+
+        packets = self._receive_packets(self.l4_transfer)
+        packet_hard_reset_server = packets[0]
+
+        if (packet_hard_reset_server.remote_session_id is not None and
+                packet_hard_reset_server.remote_session_id != self.session_id):
+            raise InvalidValue(
+                packet_hard_reset_server.remote_session_id, type(self), 'session_id'
+            )
+
+        self.session_id = packet_hard_reset_server.remote_session_id
+        self.remote_session_id = packet_hard_reset_server.session_id
+        packet_ack_server_hard_reset = OpenVpnPacketAckV1(
+            self.session_id,
+            self.remote_session_id,
+            [packet_hard_reset_server.packet_id, ]
+        )
+        self._send_packet(self.l4_transfer, packet_ack_server_hard_reset)
+
+    def do_ssl_handshake(self, hello_message, last_handshake_message_type=SslMessageType.SERVER_HELLO):
+        return self._do_handshake(
+            SslClientHandshake(),
+            hello_message,
+            TlsVersion.SSL2,
+            last_handshake_message_type
+        )
+
+    def do_tls_handshake(
+            self,
+            hello_message,
+            record_version=TlsProtocolVersion(TlsVersion.TLS1),
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
+    ):
+        return self._do_handshake(
+            TlsClientOpenVpn(),
+            hello_message,
+            record_version,
+            last_handshake_message_type
+        )
+
+    def _init_connection(self):
+        if self._is_tcp():
+            self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+        else:
+            self.l4_transfer = L4ClientUDP(self.address, self.port, self.timeout, self.ip)
+        self.l4_transfer.init_connection()
+
+        try:
+            self._reset_session()
+        except (InvalidValue, InvalidType, NotEnoughData) as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+
+    def send(self, sendable_bytes):
+        return self._send_bytes(self.l4_transfer, sendable_bytes)
+
+    def receive(self, receivable_byte_num):
+        total_received_byte_num = 0
+        while total_received_byte_num < receivable_byte_num:
+            try:
+                actual_received_bytes = self._receive_packet_bytes(self.l4_transfer, receivable_byte_num)
+            except NotEnoughData as e:
+                six.raise_from(NotEnoughData(receivable_byte_num - total_received_byte_num), e)
+            self._buffer += actual_received_bytes
+            total_received_byte_num += len(actual_received_bytes)
+
+        return len(actual_received_bytes)
+
+    def flush_buffer(self, byte_num=None):
+        self._buffer = buffer_flush(self._buffer, byte_num)
+
+    @property
+    def buffer_is_plain_text(self):
+        return buffer_is_plain_text(self._buffer)
+
+    @property
+    def buffer(self):
+        return self._buffer
+
+    @classmethod
+    def get_default_timeout(cls):
+        return 5
+
+
+class ClientOpenVpn(ClientOpenVpnBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'openvpn'
+
+    @classmethod
+    def get_default_port(cls):
+        return 1194
+
+    @classmethod
+    def get_default_timeout(cls):
+        return 2
+
+    @classmethod
+    def _is_tcp(cls):
+        return False
+
+
+class ClientOpenVpnTcp(ClientOpenVpnBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'openvpntcp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 443
+
+    @classmethod
+    def _is_tcp(cls):
+        return True
+
+
+class TlsClientOpenVpn(TlsClientHandshake):
+    pass

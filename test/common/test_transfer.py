@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import select
 import socket
 import unittest
 
@@ -13,8 +12,10 @@ try:
 except ImportError:
     import mock
 
+from cryptoparser.common.exception import NotEnoughData
+
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
-from cryptolyzer.common.transfer import L4ClientTCP, L4ServerTCP
+from cryptolyzer.common.transfer import L4ClientTCP, L4ServerTCP, L4ClientUDP, L4ServerUDP
 
 
 class TestL4ClientTCP(unittest.TestCase):
@@ -29,12 +30,26 @@ class TestL4ClientTCP(unittest.TestCase):
 
         return l4_client, result
 
+    def test_receive_uninitialized(self):
+        l4_client = L4ClientTCP('smtp.gmail.com', 587)
+        with self.assertRaises(NotEnoughData) as context_manager:
+            l4_client.receive(1)
+        self.assertEqual(context_manager.exception.bytes_needed, 1)
+
     def test_error_on_close(self):
         address = 'smtp.gmail.com'
         l4_client, _ = self._create_client_and_receive_text(address, 587, 4 + len(address), to_be_closed=False)
         sock = l4_client._socket  # pylint: disable=protected-access
         with mock.patch.object(socket.socket, 'close', side_effect=socket.error):
             l4_client.close()
+        sock.close()
+
+        l4_client, _ = self._create_client_and_receive_text(address, 587, 4 + len(address), to_be_closed=False)
+        sock = l4_client._socket  # pylint: disable=protected-access
+        with mock.patch.object(socket.socket, 'close', side_effect=NotImplementedError('not a timeout error')):
+            with self.assertRaises(NotImplementedError) as context_manager:
+                l4_client.close()
+            self.assertEqual(context_manager.exception.args, ('not a timeout error', ))
         sock.close()
 
     @unittest.skipIf(six.PY2, 'There is no ConnectionRefusedError in Python < 3.0')
@@ -79,9 +94,9 @@ class TestL4ClientTCP(unittest.TestCase):
         l4_client.close()
 
 
-class L4ServerTCPEcho(TestThreadedServer):
+class L4ServerEcho(TestThreadedServer):
     def __init__(self, l4_server):
-        super(L4ServerTCPEcho, self).__init__(l4_server)
+        super(L4ServerEcho, self).__init__(l4_server)
 
         self.killed = False
 
@@ -89,27 +104,20 @@ class L4ServerTCPEcho(TestThreadedServer):
         self.killed = True
 
     def run(self):
-        readers = [self._server._server_socket]  # pylint: disable=protected-access
-        writers = []
-
         while not self.killed:
-            read, write, _ = select.select(readers, writers, readers, 1)
-            for sock in read:
-                if sock is self._server._socket:  # pylint: disable=protected-access
-                    client_socket, _ = self._server._socket.accept()  # pylint: disable=protected-access
-                    readers.append(client_socket)
-                else:
+            self._server.accept()
+            while True:
+                try:
                     self._server.receive(1)
+                except NotEnoughData:
+                    break
+                except NotImplementedError:
+                    self.killed = True
+                    break
 
             if self._server.buffer:
-                for sock in write:
-                    self._server.send(self._server.buffer)
+                self._server.send(self._server.buffer)
                 self._server.flush_buffer(1)
-            elif len(readers) > 1:
-                del readers[-1]
-
-        for sock in readers:
-            sock.close()
 
 
 class TestL4ServerTCP(unittest.TestCase):
@@ -135,18 +143,48 @@ class TestL4ServerTCP(unittest.TestCase):
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
         l4_server.close()
 
-    def test_port(self):
-        l4_server = L4ServerTCP('localhost', 1234)
-        self.assertEqual(l4_server.port, 1234)
+    def test_bind_parameters(self):
+        l4_server = L4ServerTCP('127.0.0.1', 1234)
+        l4_server.init_connection()
+        self.assertEqual(l4_server.bind_address, '127.0.0.1')
+        self.assertEqual(l4_server.bind_port, 1234)
+
+        l4_server = L4ServerTCP('::1', 0)
+        l4_server.init_connection()
+        self.assertEqual(l4_server.bind_address, '::1')
+        self.assertNotEqual(l4_server.bind_port, 0)
+
+    def test_no_data_sent(self):
+        l4_server = L4ServerTCP('localhost', 0)
+        threaded_server = L4ServerEcho(l4_server)
+        threaded_server.start()
+
+        threaded_server.kill()
+
+        l4_client = L4ClientTCP('localhost', l4_server.bind_port)
+        l4_client.init_connection()
+
+        with self.assertRaises(NotEnoughData) as context_manager:
+            l4_client.receive(1)
+        self.assertEqual(context_manager.exception.bytes_needed, 1)
+
+        threaded_server.kill()
+        threaded_server.join()
 
     def test_echo(self):
         l4_server = L4ServerTCP('localhost', 0)
-        threaded_server = L4ServerTCPEcho(l4_server)
+        threaded_server = L4ServerEcho(l4_server)
         threaded_server.wait_for_server_listen()
 
-        self.assertEqual(l4_server.port, 0)
-        self.assertNotEqual(l4_server.bind_port, 0)
         threaded_server.kill()
+
+        l4_client = L4ClientTCP('localhost', l4_server.bind_port)
+        l4_client.init_connection()
+        l4_client.send(b'echo')
+        l4_client.receive(4)
+        self.assertEqual(l4_client.buffer, b'echo')
+        l4_client.close()
+
         threaded_server.join()
 
     def test_count(self):
@@ -166,3 +204,63 @@ class TestL4ServerTCP(unittest.TestCase):
         self.assertEqual(response_len, len(response))
 
         l4_client.close()
+
+
+class TestL4ServerUDP(unittest.TestCase):
+    def test_error_wrong_port(self):
+        l4_server = L4ServerUDP('localhost', 65536)
+        with self.assertRaises(NetworkError) as context_manager:
+            l4_server.init_connection()
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_ADDRESS)
+        l4_server.close()
+
+    def test_error_wrong_address(self):
+        l4_server = L4ServerUDP('8.8.8.8', 443)
+        with self.assertRaises(NetworkError) as context_manager:
+            l4_server.init_connection()
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+        l4_server.close()
+
+    def test_error_multiple_clients(self):
+        l4_server = L4ServerUDP('localhost', 0)
+        threaded_server = L4ServerEcho(l4_server)
+        threaded_server.start()
+
+        l4_client = L4ClientUDP('localhost', l4_server.bind_port)
+        l4_client.init_connection()
+        l4_client.send(b'echo')
+        l4_client.close()
+
+        l4_client = L4ClientUDP('localhost', l4_server.bind_port)
+        l4_client.init_connection()
+        l4_client.send(b'echo')
+        l4_client.close()
+
+        threaded_server.join(1)
+        self.assertTrue(threaded_server.killed)
+
+    def test_bind_parameters(self):
+        l4_server = L4ServerUDP('127.0.0.1', 1234)
+        l4_server.init_connection()
+        self.assertEqual(l4_server.bind_address, '127.0.0.1')
+        self.assertEqual(l4_server.bind_port, 1234)
+
+        l4_server = L4ServerUDP('::1', 0)
+        l4_server.init_connection()
+        self.assertEqual(l4_server.bind_address, '::1')
+        self.assertNotEqual(l4_server.bind_port, 0)
+
+    def test_echo(self):
+        l4_server = L4ServerUDP('localhost', 0)
+        threaded_server = L4ServerEcho(l4_server)
+        threaded_server.wait_for_server_listen()
+
+        l4_client = L4ClientUDP('localhost', l4_server.bind_port)
+        l4_client.init_connection()
+        l4_client.send(b'echo')
+        l4_client.receive(4)
+        self.assertEqual(l4_client.buffer, b'echo')
+        l4_client.close()
+
+        threaded_server.kill()
+        threaded_server.join()

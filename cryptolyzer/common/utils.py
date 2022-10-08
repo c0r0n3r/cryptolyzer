@@ -3,6 +3,7 @@
 import ipaddress
 import logging
 import socket
+import string
 import sys
 
 import six
@@ -56,3 +57,17 @@ def resolve_address(address, port, ip=None):
         ip = addresses[0][1]
 
     return family, ip
+
+
+def buffer_is_plain_text(buffer):
+    try:
+        return all(c in string.printable for c in buffer.decode('utf-8'))
+    except UnicodeDecodeError:
+        return False
+
+
+def buffer_flush(buffer, byte_num):
+    if byte_num is None:
+        byte_num = len(buffer)
+
+    return buffer[byte_num:]

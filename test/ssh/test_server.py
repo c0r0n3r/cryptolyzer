@@ -58,7 +58,7 @@ class TestSshServerHandshake(TestL7ServerBase):
 
     @mock.patch.object(
         SshServerHandshake, '_parse_record',
-        return_value=(SshRecordInit(SshDisconnectMessage(SshReasonCode.BY_APPLICATION, 'by application')), False)
+        return_value=(SshRecordInit(SshDisconnectMessage(SshReasonCode.BY_APPLICATION, 'by application')), 28, False)
     )
     def test_error_non_handshake_message(self, _):
         l4_client = L4ClientTCP('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)

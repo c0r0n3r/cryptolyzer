@@ -20,8 +20,14 @@ from cryptoparser.common.exception import NotEnoughData, InvalidType
 from cryptoparser.tls.ciphersuite import SslCipherKind
 from cryptoparser.tls.ldap import LDAPMessageParsableBase, LDAPExtendedResponseStartTLS, LDAPResultCode
 from cryptoparser.tls.mysql import MySQLCapability, MySQLRecord, MySQLCharacterSet, MySQLHandshakeV10, MySQLVersion
+from cryptoparser.tls.openvpn import (
+    OpenVpnPacketHardResetClientV2,
+    OpenVpnPacketHardResetServerV2,
+    OpenVpnPacketWrapperTcp,
+)
 from cryptoparser.tls.rdp import RDPNegotiationResponse
 
+from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.record import ParsableBase, TlsRecord, SslRecord
 from cryptoparser.tls.subprotocol import (
     SslErrorMessage,
@@ -34,12 +40,15 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertMessage,
     TlsChangeCipherSpecMessage,
     TlsContentType,
+    TlsHandshakeServerHello,
     TlsHandshakeType,
 )
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import (
     ClientIMAP,
+    ClientOpenVpnBase,
+    L7ClientHTTPS,
     L7ClientTls,
     L7ClientTlsBase,
     SslError,
@@ -65,7 +74,7 @@ from cryptolyzer.tls.server import (
     TlsServerConfiguration,
     TlsServerHandshake,
 )
-from cryptolyzer.common.transfer import L4ClientTCP
+from cryptolyzer.common.transfer import L4TransferBase, L4ClientTCP, L4ClientUDP, L7TransferBase
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 from .classes import (
@@ -126,7 +135,7 @@ class L7ServerTlsFatalResponse(TlsServerHandshake):
 
 class L7ServerSslPlainTextResponse(SslServerHandshake):
     def _process_handshake_message(self, message, last_handshake_message_type):
-        self.l4_transfer.send(b'\x00\x01\x00\xff\x00')
+        self.l7_transfer.send(b'\x00\x01\x00\xff\x00')
         raise StopIteration()
 
 
@@ -146,11 +155,17 @@ class TestL7ClientBase(TestLoggerBase):
         result = analyzer.analyze(l7_client, protocol_version)
         return l7_client, result
 
-    def _get_mock_server_response(self, scheme):
+    @staticmethod
+    def _start_mock_server():
         threaded_server = L7ServerTlsTest(
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
+
+        return threaded_server
+
+    def _get_mock_server_response(self, scheme):
+        threaded_server = self._start_mock_server()
         return self.get_result(  # pylint: disable = expression-not-assigned
             scheme, 'localhost', threaded_server.l7_server.l4_transfer.bind_port
         )
@@ -186,6 +201,29 @@ class TestL7ClientTlsBase(TestL7ClientBase):
     def test_error_unsupported_scheme(self):
         with self.assertRaises(ValueError):
             self.get_result('unsupported_scheme', 'badssl.com', 443)
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=[
+        TlsRecord(
+            TlsHandshakeServerHello(cipher_suite=TlsCipherSuite.TLS_RSA_WITH_3DES_EDE_CBC_MD5).compose(),
+            content_type=TlsContentType.HANDSHAKE,
+        ).compose(),
+        TlsRecord(
+            TlsChangeCipherSpecMessage().compose(),
+            content_type=TlsContentType.CHANGE_CIPHER_SPEC,
+        ).compose(),
+    ])
+    def test_different_content_types_in_one_message(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+        )
+        threaded_server.start()
+
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersion(TlsVersion.TLS1_2), ], 'localhost')
+        l7_client = L7ClientTlsBase.from_scheme(
+            'tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+        )
+        server_messages = l7_client.do_tls_handshake(client_hello, last_handshake_message_type=None)
+        self.assertEqual(list(server_messages.keys()), [TlsHandshakeType.SERVER_HELLO])
 
     def test_default_port(self):
         l7_client = L7ClientTlsMock('badssl.com')
@@ -907,6 +945,175 @@ class TestClientDoH(TestL7ClientBase):
             result.versions,
             [TlsProtocolVersion(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]]
         )
+
+
+class TestClientOpenVpn(TestL7ClientBase):
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+       OpenVpnPacketWrapperTcp(OpenVpnPacketHardResetServerV2(
+           session_id=1, packet_id_array=[0x58585858], remote_session_id=0xffffffffffffffff, packet_id=0,
+       ).compose()).compose(),
+    ))
+    def test_error_invalid_session_id_tcp(self, _):
+        l7_client, result = self._get_mock_server_response('openvpntcp')
+        self.assertEqual(l7_client.buffer, b'')
+        self.assertTrue(l7_client.buffer_is_plain_text)
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+       OpenVpnPacketHardResetServerV2(
+           session_id=1, packet_id_array=[0x58585858], remote_session_id=0xffffffffffffffff, packet_id=0,
+       ).compose(),
+    ))
+    def test_error_invalid_session_id_udp(self, _):
+        l7_client, result = self._get_mock_server_response('openvpn')
+        self.assertEqual(l7_client.buffer, b'')
+        self.assertTrue(l7_client.buffer_is_plain_text)
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'', ))
+    def test_error_no_response_to_client_hard_reset_tcp(self, _):
+        l7_client, result = self._get_mock_server_response('openvpntcp')
+        self.assertEqual(l7_client.buffer, b'')
+        self.assertTrue(l7_client.buffer_is_plain_text)
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'', ))
+    def test_error_no_response_to_client_hard_reset_udp(self, _):
+        l7_client, result = self._get_mock_server_response('openvpn')
+        self.assertEqual(l7_client.buffer, b'')
+        self.assertTrue(l7_client.buffer_is_plain_text)
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        OpenVpnPacketWrapperTcp(OpenVpnPacketHardResetServerV2(0, 0xff58585858585858 + 1, [0], 1).compose()).compose() +
+        OpenVpnPacketWrapperTcp(
+            b'\xff' + OpenVpnPacketHardResetServerV2(0, 0xff58585858585858 + 1, [0], 1).compose()[1:]
+        ).compose(),
+    ))
+    def test_error_invalid_response_to_in_hard_reset_tcp(self, _):
+        l7_client, result = self._get_mock_server_response('openvpntcp')
+        self.assertEqual(l7_client.buffer, b'')
+        self.assertTrue(l7_client.buffer_is_plain_text)
+        self.assertEqual(result.versions, [])
+
+    @mock.patch.object(L7TransferBase, 'receive', side_effect=NotEnoughData)
+    @mock.patch.object(L4TransferBase, 'buffer', mock.PropertyMock(return_value=b'\x00'))
+    def test_error_no_response(self, _):
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443)
+        l7_client.session_id = 0xfffffffffffffffe
+        with self.assertRaises(NetworkError) as context_manager:
+            l7_client.init_connection()
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    @mock.patch.object(
+        L4ClientUDP, '_receive_bytes',
+        return_value=OpenVpnPacketHardResetServerV2(1, 0xffffffffffffffff, [0], 1).compose()
+    )
+    @mock.patch.object(
+        L4ClientTCP, 'send', return_value=None
+    )
+    def test_error_not_enough_packet_byte_udp(self, _, __):
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443)
+        l7_client.session_id = 0xfffffffffffffffe
+        l7_client.init_connection()
+        with self.assertRaises(NotEnoughData) as context_manager:
+            l7_client.receive(1)
+        self.assertEqual(context_manager.exception.bytes_needed, 1)
+        l7_client.l4_transfer.close()
+
+    @mock.patch.object(
+        L4ClientTCP, '_receive_bytes',
+        return_value=OpenVpnPacketWrapperTcp(
+            OpenVpnPacketHardResetServerV2(1, 0xffffffffffffffff, [0], 1).compose()
+        ).compose()
+    )
+    @mock.patch.object(
+        L4ClientTCP, 'send', return_value=None
+    )
+    def test_error_not_enough_packet_byte_tcp(self, _, __):
+        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443)
+        l7_client.session_id = 0xfffffffffffffffe
+        l7_client.init_connection()
+        with self.assertRaises(NotEnoughData) as context_manager:
+            l7_client.receive(1)
+        self.assertEqual(context_manager.exception.bytes_needed, 1)
+        l7_client.l4_transfer.close()
+
+    @mock.patch.object(ClientOpenVpnBase, '_reset_session', return_value=None)
+    @mock.patch.object(
+        ClientOpenVpnBase, '_receive_packets',
+        return_value=[OpenVpnPacketHardResetClientV2(0xffffffffffffffff, 1), ]
+    )
+    def test_error_invalid_op_code_udp(self, _, __):
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443)
+        l7_client.session_id = 0xfffffffffffffffe
+        l7_client.init_connection()
+        with self.assertRaises(InvalidType):
+            l7_client.receive(1)
+        l7_client.l4_transfer.close()
+
+    @mock.patch.object(ClientOpenVpnBase, '_reset_session', return_value=None)
+    @mock.patch.object(
+        ClientOpenVpnBase, '_receive_packets',
+        return_value=[OpenVpnPacketHardResetClientV2(0xffffffffffffffff, 1), ]
+    )
+    def test_error_invalid_op_code_tcp(self, _, __):
+        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443)
+        l7_client.session_id = 0xfffffffffffffffe
+        l7_client.init_connection()
+        with self.assertRaises(InvalidType):
+            l7_client.receive(1)
+        l7_client.l4_transfer.close()
+
+    @mock.patch.object(
+        L4ClientTCP, '_receive_bytes',
+        return_value=OpenVpnPacketWrapperTcp(
+            OpenVpnPacketHardResetServerV2(1, 0xffffffffffffffff, [0], 1).compose()
+        ).compose()
+    )
+    @mock.patch.object(
+        L4ClientTCP, 'send', return_value=None
+    )
+    def test_error_receive_unexpected_server_reset_tcp(self, _, __):
+        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443)
+        l7_client.session_id = 0xfffffffffffffffe
+        l7_client.init_connection()
+        with self.assertRaises(NotEnoughData) as context_manager:
+            l7_client.receive(1)
+        self.assertEqual(context_manager.exception.bytes_needed, 1)
+        l7_client.l4_transfer.close()
+
+    def test_openvpn_tcp_client(self):
+        tls_versions = [TlsVersion.SSL3, TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3]
+        _, result = self.get_result('openvpntcp', 'public-vpn-232.opengw.net', 443)
+        self.assertEqual(result.versions, [TlsProtocolVersion(tls_version) for tls_version in tls_versions])
+
+        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'localhost')
+        self.assertEqual(l7_client.port, L7ClientHTTPS.get_default_port())
+
+    @mock.patch.object(
+        L4ClientUDP, '_receive_bytes',
+        return_value=OpenVpnPacketHardResetServerV2(1, 0xffffffffffffffff, [0], 1).compose()
+    )
+    @mock.patch.object(
+        L4ClientUDP, 'send', return_value=None
+    )
+    def test_error_receive_unexpected_server_reset_udp(self, _, __):
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 1194)
+        l7_client.session_id = 0xfffffffffffffffe
+        l7_client.init_connection()
+        with self.assertRaises(NotEnoughData) as context_manager:
+            l7_client.receive(1)
+        self.assertEqual(context_manager.exception.bytes_needed, 1)
+        l7_client.l4_transfer.close()
+
+    def test_openvpn_udp_client(self):
+        tls_versions = [TlsVersion.SSL3, TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3]
+        _, result = self.get_result('openvpn', 'public-vpn-232.opengw.net', 1195)
+        self.assertEqual(result.versions, [TlsProtocolVersion(tls_version) for tls_version in tls_versions])
+
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'localhost')
+        self.assertEqual(l7_client.port, 1194)
 
 
 class TestTlsClientHandshake(TestL7ClientBase):

@@ -8,7 +8,7 @@ import six
 from cryptodatahub.common.algorithm import BlockCipher
 from cryptodatahub.common.exception import InvalidValue
 
-from cryptoparser.common.exception import NotEnoughData
+from cryptoparser.common.exception import InvalidType, NotEnoughData
 
 from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionSupportedVersionsServer
 from cryptoparser.tls.ldap import (
@@ -22,6 +22,10 @@ from cryptoparser.tls.mysql import (
     MySQLHandshakeV10,
     MySQLRecord,
     MySQLVersion,
+)
+from cryptoparser.tls.openvpn import (
+    OpenVpnPacketHardResetServerV2,
+    OpenVpnOpCode,
 )
 from cryptoparser.tls.postgresql import SslRequest, Sync
 from cryptoparser.tls.rdp import (
@@ -55,6 +59,10 @@ from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 from cryptolyzer.__setup__ import __title__, __version__
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.application import L7ServerBase, L7ServerHandshakeBase, L7ServerConfigurationBase
+from cryptolyzer.common.transfer import L4ServerTCP, L4ServerUDP
+from cryptolyzer.common.utils import buffer_flush, buffer_is_plain_text
+
+from cryptolyzer.tls.application import L7OpenVpnBase
 
 
 @attr.s
@@ -94,15 +102,15 @@ class L7ServerTlsBase(L7ServerBase):
     def _deinit_l7(self):
         pass
 
-    def _get_handshake_class(self, l4_transfer):
+    def _get_handshake_class(self):
         if self.configuration.fallback_to_ssl:
             try:
-                l4_transfer.receive(TlsRecord.HEADER_SIZE)
+                self.receive(TlsRecord.HEADER_SIZE)
             except NotEnoughData as e:
                 six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
 
             try:
-                TlsRecord.parse_header(l4_transfer.buffer)
+                TlsRecord.parse_header(self.buffer)
                 handshake_class = TlsServerHandshake
             except InvalidValue:
                 handshake_class = SslServerHandshake
@@ -115,21 +123,21 @@ class L7ServerTlsBase(L7ServerBase):
         try:
             self._init_l7()
         except (NotEnoughData, InvalidValue, NetworkError, SecurityError):
-            self.l4_transfer.close()
+            self.l4_transfer.close_client()
             return {}
 
         try:
-            handshake_class = self._get_handshake_class(self.l4_transfer)
-            handshake_object = handshake_class(self.l4_transfer, self.configuration)
+            handshake_class = self._get_handshake_class()
+            handshake_object = handshake_class(self, self.configuration)
         except NetworkError:
-            self.l4_transfer.close()
+            self.l4_transfer.close_client()
             return {}
 
         try:
             handshake_object.do_handshake(last_handshake_message_type)
         finally:
             self._deinit_l7()
-            self.l4_transfer.close()
+            self.l4_transfer.close_client()
 
         return handshake_object.client_messages
 
@@ -137,7 +145,6 @@ class L7ServerTlsBase(L7ServerBase):
         return self._do_handshakes(last_handshake_message_type)
 
 
-@attr.s
 class L7ServerStartTlsBase(L7ServerTlsBase):
     @classmethod
     @abc.abstractmethod
@@ -152,10 +159,6 @@ class L7ServerStartTlsBase(L7ServerTlsBase):
 
 @attr.s
 class TlsServer(L7ServerHandshakeBase):
-    @staticmethod
-    def _is_message_plain_text(transfer):
-        return transfer.buffer and transfer.buffer_is_plain_text
-
     @abc.abstractmethod
     def _parse_record(self):
         raise NotImplementedError()
@@ -240,7 +243,7 @@ class TlsServerHandshake(TlsServer):
         if message.get_handshake_type() == TlsHandshakeType.CLIENT_HELLO:
             protocol_version = self._check_protocol_version(message)
             server_hello = self._prepare_server_hello(message, protocol_version)
-            self.l4_transfer.send(TlsRecord(server_hello.compose()).compose())
+            self.l7_transfer.send(TlsRecord(server_hello.compose()).compose())
 
         if self._last_processed_message_type == last_handshake_message_type:
             self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY)
@@ -251,7 +254,7 @@ class TlsServerHandshake(TlsServer):
         raise StopIteration()
 
     def _process_plain_text_message(self):
-        if self._is_message_plain_text(self.l4_transfer):
+        if self.l7_transfer.buffer_is_plain_text:
             self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR)
             raise StopIteration()
 
@@ -263,18 +266,18 @@ class TlsServerHandshake(TlsServer):
 
     def _handle_error(self, alert_level, alert_description):
         if self.configuration.close_on_error:
-            self.l4_transfer.close()
+            self.l7_transfer.l4_transfer.close_client()
         else:
-            self.l4_transfer.send(TlsRecord(
+            self.l7_transfer.send(TlsRecord(
                 TlsAlertMessage(alert_level, alert_description).compose(),
                 content_type=TlsContentType.ALERT,
             ).compose())
 
     def _parse_record(self):
-        record = TlsRecord.parse_exact_size(self.l4_transfer.buffer)
+        record, parsed_length = TlsRecord.parse_immutable(self.l7_transfer.buffer)
         is_handshake = record.content_type == TlsContentType.HANDSHAKE
 
-        return record, is_handshake
+        return record, parsed_length, is_handshake
 
     def _parse_message(self, record):
         subprotocol_parser = TlsSubprotocolMessageParser(record.content_type)
@@ -299,7 +302,7 @@ class SslServerHandshake(TlsServer):
             cipher_kinds=message.cipher_kinds,
             connection_id=b'fake connection id',
         )
-        self.l4_transfer.send(SslRecord(server_hello).compose())
+        self.l7_transfer.send(SslRecord(server_hello).compose())
 
         if self._last_processed_message_type == last_handshake_message_type:
             self._handle_error(SslErrorType.NO_CIPHER_ERROR)
@@ -310,7 +313,7 @@ class SslServerHandshake(TlsServer):
         raise StopIteration()
 
     def _process_plain_text_message(self):
-        if self._is_message_plain_text(self.l4_transfer):
+        if self.l7_transfer.buffer_is_plain_text:
             self._handle_error(SslErrorType.NO_CIPHER_ERROR)
             raise StopIteration()
 
@@ -321,13 +324,13 @@ class SslServerHandshake(TlsServer):
         raise StopIteration()
 
     def _handle_error(self, error_type):
-        self.l4_transfer.send(SslRecord(SslErrorMessage(error_type)).compose())
+        self.l7_transfer.send(SslRecord(SslErrorMessage(error_type)).compose())
 
     def _parse_record(self):
-        record = SslRecord.parse_exact_size(self.l4_transfer.buffer)
+        record, parsed_length = SslRecord.parse_immutable(self.l7_transfer.buffer)
         is_handshake = record.message.get_message_type() != SslMessageType.ERROR
 
-        return record, is_handshake
+        return record, parsed_length, is_handshake
 
     def _parse_message(self, record):
         return record.message
@@ -353,25 +356,25 @@ class L7ServerTlsRDP(L7ServerStartTlsBase):
         return 3389
 
     def _init_l7(self):
-        self.l4_transfer.receive(TPKT.HEADER_SIZE)
+        self.receive(TPKT.HEADER_SIZE)
         try:
-            TPKT.parse_exact_size(self.l4_transfer.buffer)
+            TPKT.parse_exact_size(self.buffer)
         except NotEnoughData as e:
-            self.l4_transfer.receive(e.bytes_needed)
+            self.receive(e.bytes_needed)
 
-        tpkt = TPKT.parse_exact_size(self.l4_transfer.buffer)
+        tpkt = TPKT.parse_exact_size(self.buffer)
         cotp = COTPConnectionRequest.parse_exact_size(tpkt.message)
         neg_req = RDPNegotiationRequest.parse_exact_size(cotp.user_data)
         if RDPProtocol.SSL not in neg_req.protocol:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-        self.l4_transfer.flush_buffer()
+        self.flush_buffer()
 
         neg_resp = RDPNegotiationResponse([], [RDPProtocol.SSL, ])
         cotp = COTPConnectionConfirm(src_ref=cotp.src_ref, user_data=neg_resp.compose())
         tpkt = TPKT(version=3, message=cotp.compose())
         request_bytes = tpkt.compose()
-        self.l4_transfer.send(request_bytes)
+        self.send(request_bytes)
 
     def _deinit_l7(self):
         pass
@@ -389,16 +392,16 @@ class L7ServerTlsLDAP(L7ServerStartTlsBase):
         return 3389
 
     def _init_l7(self):
-        self.l4_transfer.receive(LDAPExtendedRequestStartTLS.HEADER_SIZE)
+        self.receive(LDAPExtendedRequestStartTLS.HEADER_SIZE)
         try:
-            LDAPExtendedRequestStartTLS.parse_exact_size(self.l4_transfer.buffer)
+            LDAPExtendedRequestStartTLS.parse_exact_size(self.buffer)
         except NotEnoughData as e:
-            self.l4_transfer.receive(e.bytes_needed)
+            self.receive(e.bytes_needed)
 
-        LDAPExtendedRequestStartTLS.parse_exact_size(self.l4_transfer.buffer)
-        self.l4_transfer.flush_buffer()
+        LDAPExtendedRequestStartTLS.parse_exact_size(self.buffer)
+        self.flush_buffer()
 
-        self.l4_transfer.send(self._EXTENDED_RESPONSE_STARTLS_BYTES)
+        self.send(self._EXTENDED_RESPONSE_STARTLS_BYTES)
 
     def _deinit_l7(self):
         pass
@@ -417,12 +420,12 @@ class L7ServerTlsPostgreSQL(L7ServerStartTlsBase):
         return 5432
 
     def _init_l7(self):
-        self.l4_transfer.receive(len(self._SSL_REQUEST_BYTES))
-        if self.l4_transfer.buffer != self._SSL_REQUEST_BYTES:
+        self.receive(len(self._SSL_REQUEST_BYTES))
+        if self.buffer != self._SSL_REQUEST_BYTES:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        self.l4_transfer.flush_buffer()
+        self.flush_buffer()
 
-        self.l4_transfer.send(self._SYNC_BYTES)
+        self.send(self._SYNC_BYTES)
 
     def _deinit_l7(self):
         pass
@@ -446,16 +449,16 @@ class L7ServerTlsMySQL(L7ServerStartTlsBase):
         return 3306
 
     def _init_l7(self):
-        self.l4_transfer.send(self._SERVER_HANDSHAKE_RECORD_BYTES)
+        self.send(self._SERVER_HANDSHAKE_RECORD_BYTES)
 
-        self.l4_transfer.receive(MySQLRecord.HEADER_SIZE)
+        self.receive(MySQLRecord.HEADER_SIZE)
         try:
-            MySQLRecord.parse_exact_size(self.l4_transfer.buffer)
+            MySQLRecord.parse_exact_size(self.buffer)
         except NotEnoughData as e:
-            self.l4_transfer.receive(e.bytes_needed)
+            self.receive(e.bytes_needed)
 
-        record, parsed_length = MySQLRecord.parse_immutable(self.l4_transfer.buffer)
-        self.l4_transfer.flush_buffer(parsed_length)
+        record, parsed_length = MySQLRecord.parse_immutable(self.buffer)
+        self.flush_buffer(parsed_length)
 
         ssl_request = MySQLHandshakeSslRequest.parse_exact_size(record.packet_bytes)
         if not set([MySQLCapability.CLIENT_SSL, MySQLCapability.CLIENT_SECURE_CONNECTION]) & ssl_request.capabilities:
@@ -506,21 +509,21 @@ class L7ServerStartTlsTextBase(L7ServerStartTlsBase):
     def _init_l7(self):
         greeting = self._get_greeting()
         if greeting:
-            self.l4_transfer.send(greeting)
+            self.send(greeting)
 
         self.l4_transfer.receive_line()
         capabilities_request_prefix = self._get_capabilities_request_prefix()
-        if capabilities_request_prefix and self.l4_transfer.buffer.startswith(capabilities_request_prefix):
+        if capabilities_request_prefix and self.buffer.startswith(capabilities_request_prefix):
             self.l4_transfer.flush_buffer()
             self.l4_transfer.send(self._get_capabilities_response())
             self.l4_transfer.receive_line()
 
         starttls_request_prefix = self._get_starttls_request_prefix()
-        if not self.l4_transfer.buffer.startswith(starttls_request_prefix):
+        if not self.buffer.startswith(starttls_request_prefix):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        self.l4_transfer.flush_buffer()
+        self.flush_buffer()
 
-        self.l4_transfer.send(self._get_starttls_response())
+        self.send(self._get_starttls_response())
 
 
 class L7ServerTlsSieve(L7ServerStartTlsTextBase):
@@ -722,3 +725,110 @@ class L7ServerTlsNNTP(L7ServerStartTlsTextBase):
     @classmethod
     def _get_starttls_response(cls):
         return b'382 Continue with TLS negotiation\r\n'
+
+
+@attr.s
+class L7ServerStartTlsOpenVpnBase(L7ServerStartTlsBase, L7OpenVpnBase):
+    session_id = attr.ib(
+        init=False, default=0xff58585858585858,
+        validator=attr.validators.instance_of(six.integer_types)
+    )
+    client_packet_id = attr.ib(
+        init=False, default=0x00000000,
+        validator=attr.validators.instance_of(six.integer_types)
+    )
+    remote_session_id = attr.ib(
+        init=False, default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+    )
+    _buffer = attr.ib(init=False)
+
+    def __attrs_post_init__(self):
+        super(L7ServerStartTlsOpenVpnBase, self).__attrs_post_init__()
+
+        self._buffer = bytearray()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_scheme(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_default_port(cls):
+        raise NotImplementedError()
+
+    def _reset_session(self):
+        packets = self._receive_packets(self.l4_transfer)
+        packet_hard_reset_client = packets[0]
+
+        if packet_hard_reset_client.get_op_code() != OpenVpnOpCode.HARD_RESET_CLIENT_V2:
+            raise InvalidValue(
+                packet_hard_reset_client.get_op_code(), type(self), 'op_code'
+            )
+
+        self.remote_session_id = packet_hard_reset_client.session_id
+        packet_hard_reset_server = OpenVpnPacketHardResetServerV2(
+            self.session_id,
+            self.remote_session_id,
+            [packet_hard_reset_client.packet_id],
+            0
+        )
+        self._send_packet(self.l4_transfer, packet_hard_reset_server)
+
+    def _init_l7(self):
+        try:
+            self._reset_session()
+        except (InvalidValue, InvalidType, NotEnoughData) as e:
+            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+
+    def send(self, sendable_bytes):
+        return self._send_bytes(self.l4_transfer, sendable_bytes)
+
+    def receive(self, receivable_byte_num):
+        received_bytes = self._receive_packet_bytes(self.l4_transfer, receivable_byte_num)
+        self._buffer += received_bytes
+        return len(received_bytes)
+
+    def flush_buffer(self, byte_num=None):
+        self._buffer = buffer_flush(self._buffer, byte_num)
+
+    @property
+    def buffer_is_plain_text(self):
+        return buffer_is_plain_text(self._buffer)
+
+    @property
+    def buffer(self):
+        return self._buffer
+
+    @classmethod
+    def _is_tcp(cls):
+        return issubclass(cls._get_transfer_class(), L4ServerTCP)
+
+
+class L7ServerTlsOpenVpn(L7ServerStartTlsOpenVpnBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'openvpn'
+
+    @classmethod
+    def get_default_port(cls):
+        return 1194
+
+    @classmethod
+    def _get_transfer_class(cls):
+        return L4ServerUDP
+
+
+class L7ServerTlsOpenVpnTcp(L7ServerStartTlsOpenVpnBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'openvpntcp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 443
+
+    @classmethod
+    def _get_transfer_class(cls):
+        return L4ServerTCP

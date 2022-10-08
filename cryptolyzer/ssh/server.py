@@ -83,13 +83,13 @@ class L7ServerSshBase(L7ServerBase):
     def get_default_port(cls):
         raise NotImplementedError()
 
-    def _get_handshake_class(self, l4_transfer):
+    def _get_handshake_class(self):
         return SshServerHandshake
 
     def _do_handshake(self, last_handshake_message_type):
         try:
-            handshake_class = self._get_handshake_class(self.l4_transfer)
-            handshake_object = handshake_class(self.l4_transfer, self.configuration)
+            handshake_class = self._get_handshake_class()
+            handshake_object = handshake_class(self, self.configuration)
             handshake_object.do_handshake(last_handshake_message_type)
         finally:
             self.l4_transfer.close()
@@ -120,17 +120,17 @@ class SshServerHandshake(L7ServerHandshakeBase, SshHandshakeBase):
         )
 
         return self.do_key_exchange_init(
-            transfer=self.l4_transfer,
+            transfer=self.l7_transfer,
             protocol_message=protocol_message,
             key_exchange_init_message=key_exchange_init_message,
             last_handshake_message_type=last_handshake_message_type
         )
 
     def _parse_record(self):
-        record = SshRecordInit.parse_exact_size(self.l4_transfer.buffer)
+        record = SshRecordInit.parse_exact_size(self.l7_transfer.buffer)
         is_handshake = record.packet.get_message_code() == SshMessageCode.KEXINIT
 
-        return record, is_handshake
+        return record, len(self.l7_transfer.buffer), is_handshake
 
     def _parse_message(self, record):
         return record.packet
@@ -159,7 +159,7 @@ class SshServerHandshake(L7ServerHandshakeBase, SshHandshakeBase):
         if language is not None:
             kwargs['language'] = language
 
-        self.l4_transfer.send(SshRecordInit(SshDisconnectMessage(**kwargs)).compose())
+        self.l7_transfer.send(SshRecordInit(SshDisconnectMessage(**kwargs)).compose())
 
 
 class L7ServerSsh(L7ServerSshBase):

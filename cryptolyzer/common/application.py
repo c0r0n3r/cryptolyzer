@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import abc
-import socket
 
 import attr
 
@@ -9,7 +8,8 @@ from cryptodatahub.common.exception import InvalidValue
 
 from cryptoparser.common.exception import NotEnoughData, InvalidType
 
-from cryptolyzer.common.transfer import L7TransferBase, L4TransferBase, L4ServerTCP
+from cryptolyzer.common.exception import NetworkError
+from cryptolyzer.common.transfer import L4TransferBase, L7TransferBase, L4ServerTCP
 
 
 class L7ServerConfigurationBase(object):
@@ -38,10 +38,16 @@ class L7ServerBase(L7TransferBase):
         raise NotImplementedError()
 
     def _init_connection(self):
-        self.l4_transfer = L4ServerTCP(self.address, self.port, self.timeout, self.ip)
+        l4_transfer_class = self._get_transfer_class()
+        self.l4_transfer = l4_transfer_class(self.address, self.port, self.timeout, self.ip)
         self.l4_transfer.init_connection()
 
-    def _get_handshake_class(self, l4_transfer):
+    @classmethod
+    def _get_transfer_class(cls):
+        return L4ServerTCP
+
+    @abc.abstractmethod
+    def _get_handshake_class(self):
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -52,14 +58,14 @@ class L7ServerBase(L7TransferBase):
         client_messages = []
         actual_handshake_count = 0
         while True:
-            self.l4_transfer.close()
+            self.l4_transfer.close_client()
 
             if self.max_handshake_count is not None and actual_handshake_count >= self.max_handshake_count:
                 break
 
             try:
                 self.l4_transfer.accept()
-            except socket.timeout:
+            except NetworkError:
                 break
 
             actual_handshake_count += 1
@@ -72,7 +78,7 @@ class L7ServerBase(L7TransferBase):
 
 @attr.s
 class L7ServerHandshakeBase(object):
-    l4_transfer = attr.ib(validator=attr.validators.instance_of(L4TransferBase))
+    l7_transfer = attr.ib(validator=attr.validators.instance_of(L7TransferBase))
     configuration = attr.ib(validator=attr.validators.instance_of(L7ServerConfigurationBase))
     _last_processed_message_type = attr.ib(init=False, default=None)
     client_messages = attr.ib(init=False, default={})
@@ -112,22 +118,23 @@ class L7ServerHandshakeBase(object):
         while True:
             try:
                 try:
-                    record, is_handshake = self._parse_record()
+                    record, parsed_length, is_handshake = self._parse_record()
                     message = self._parse_message(record)
-                    self.l4_transfer.flush_buffer()
-                    receivable_byte_num = 0
                 except NotEnoughData as e:
                     receivable_byte_num = e.bytes_needed
                 except (InvalidType, InvalidValue):
                     self._process_invalid_message()
                 else:
+                    self.l7_transfer.flush_buffer(parsed_length)
+                    receivable_byte_num = 0
+
                     if is_handshake:
                         self._process_handshake_message(message, last_handshake_message_type)
                     else:
                         self._process_non_handshake_message(message)
 
                 try:
-                    self.l4_transfer.receive(receivable_byte_num)
+                    self.l7_transfer.receive(receivable_byte_num)
                 except NotEnoughData:
                     self._process_not_enough_data()
 
