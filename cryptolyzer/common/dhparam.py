@@ -77,7 +77,7 @@ class WellKnownDHParams(enum.Enum):
         ),
         key_size=768,
         name='768-bit MODP Group',
-        source='RFC2539',
+        source='RFC2409/RFC2539/Oakley Group 1',
     )
     RFC2539_1024_BIT_MODP_GROUP = DHParamWellKnown(
         dh_param_numbers=DHParameterNumbers(
@@ -93,7 +93,7 @@ class WellKnownDHParams(enum.Enum):
         ),
         key_size=1024,
         name='1024-bit MODP Group',
-        source='RFC2539',
+        source='RFC2409/RFC2539/Oakley Group 2',
     )
     RFC3526_1536_BIT_MODP_GROUP = DHParamWellKnown(
         dh_param_numbers=DHParameterNumbers(
@@ -110,7 +110,7 @@ class WellKnownDHParams(enum.Enum):
             g=0x2,
         ),
         name='1536-bit MODP Group',
-        source='RFC3526',
+        source='RFC3526/Oakley Group 5',
         key_size=1536,
     )
     RFC3526_2048_BIT_MODP_GROUP = DHParamWellKnown(
@@ -131,7 +131,7 @@ class WellKnownDHParams(enum.Enum):
             g=0x2,
         ),
         name='2048-bit MODP Group',
-        source='RFC3526',
+        source='RFC3526/Oakley Group 14',
         key_size=2048,
     )
     RFC3526_3072_BIT_MODP_GROUP = DHParamWellKnown(
@@ -157,7 +157,7 @@ class WellKnownDHParams(enum.Enum):
             g=0x2,
         ),
         name='3072-bit MODP Group',
-        source='RFC3526',
+        source='RFC3526/Oakley Group 15',
         key_size=3072,
     )
     RFC3526_4096_BIT_MODP_GROUP = DHParamWellKnown(
@@ -189,7 +189,7 @@ class WellKnownDHParams(enum.Enum):
             g=0x2,
         ),
         name='4096-bit MODP Group',
-        source='RFC3526',
+        source='RFC3526/Oakley Group 16',
         key_size=4096,
     )
     RFC3526_6144_BIT_MODP_GROUP = DHParamWellKnown(
@@ -226,7 +226,7 @@ class WellKnownDHParams(enum.Enum):
             ).replace(' ', ''), 16),
             g=0x2,
         ),
-        name='6144-bit MODP Group',
+        name='6144-bit MODP Group/Oakley Group 17',
         source='RFC3526',
         key_size=6144,
     )
@@ -280,7 +280,7 @@ class WellKnownDHParams(enum.Enum):
             g=0x2,
         ),
         name='8192-bit MODP Group',
-        source='RFC3526',
+        source='RFC3526/Oakley Group 18',
         key_size=8192,
     )
     RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP = DHParamWellKnown(  # pylint: disable=invalid-name
