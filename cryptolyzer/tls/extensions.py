@@ -193,9 +193,13 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         except (TlsAlert, NetworkError):
             return None
 
-        clock_skew = datetime.datetime.utcnow() - server_messages[TlsHandshakeType.SERVER_HELLO].random.time
+        clock_skew = (
+            int(datetime.datetime.utcnow().strftime('%s')) -
+            int(server_messages[TlsHandshakeType.SERVER_HELLO].random.time.strftime('%s'))
+        )
+        clock_is_accurate = -15 < clock_skew < 15
 
-        return -5 < clock_skew.seconds < 5
+        return clock_is_accurate
 
     @classmethod
     def _analyze_renegotiation(cls, analyzable, protocol_version):
