@@ -136,6 +136,8 @@ Supported analyzers by cryptographic protocol versions
   cipher suites
 * checks whether Diffie-Hellman
   * public parameter is a [safe prime](https://en.wikipedia.org/wiki/Safe_and_Sophie_Germain_primes)
+  * public parameter is defined in an RFC (e.g., FFDHE, MODP) or used by an application server as a builtin parameter
+  * key exchange supports [RFC 7919](https://www.rfc-editor.org/rfc/rfc7919.html) (FFDHE)
   * key is [reused](https://security.stackexchange.com/questions/225209/what-is-ecdh-public-server-param-reuse)
 
 ### Analyzers
@@ -192,6 +194,7 @@ port.
 * [next protocols negotiation](https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html)
 * [renegotiation indication](https://www.rfc-editor.org/rfc/rfc5746.html)
 * [session ticket](https://www.rfc-editor.org/rfc/rfc5077.html)
+* [inetrnal clock accuracy](https://www.rfc-editor.org/rfc/rfc5246#section-7.4.1.2)
 
 ## Fingerprinting
 

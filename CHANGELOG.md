@@ -2,15 +2,29 @@
 
 ## 0.8.2
 
+### Features
+
 - Generic
   - Diffie-Hellman
-    - add builtin Diffie-Hellman parameters of several application servers (#104)
-    - add logging support to make possible following up the analysis process (#58) 
-- HASSH (`hassh`)
-  - Generate (`generate`)
+    - add builtin Diffie-Hellman parameters of several application servers (\#104)
+    - add logging support to make possible following up the analysis process (\#58) 
+- SSH (`ssh`)
+  - HASSH (`hassh`)
+    - tag generatoin support for servers (\#97)
+    - tag generatoin support for clients (\#96)
+  - Public Keys (`pubkeys`)
+    - host certificate support (\#69)
 - TLS (`tls`)
   - Diffie-Hellman (`dhparams`)
-    - support finite field Diffie-Hellman ephemeral (FFDHE) parameter negotiation defined in RFC 7919
+    - support finite field Diffie-Hellman ephemeral (FFDHE) parameter negotiation defined in RFC 7919 (\#98)
+
+### Notable fixes
+
+- TLS (`tls`)
+  - Extensions (`extensions`)
+    - Clock accuracy check works even if difference to current time is negative (#103)
+  - Signature Algorithms (`sigalgos`)
+    - Not supported signature algorithms are are not listed anymore (#102)
 
 ## 0.8.1 - 2022-03-23
 
