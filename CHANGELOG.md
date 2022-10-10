@@ -2,6 +2,9 @@
 
 ## 0.8.2
 
+- Generic
+  - Diffie-Hellman
+    - add builtin Diffie-Hellman parameters of several application servers (#104)
 - HASSH (`hassh`)
   - Generate (`generate`)
 - TLS (`tls`)

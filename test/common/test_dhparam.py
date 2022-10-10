@@ -24,7 +24,7 @@ class TestParse(unittest.TestCase):
                 dh_parameter.well_known.value,
                 filter=lambda attribute, value: attribute.name != 'dh_param_numbers'
             ),
-            {'key_size': 2048, 'name': '2048-bit MODP Group', 'safe_prime': True, 'source': 'RFC3526'}
+            {'key_size': 2048, 'name': '2048-bit MODP Group', 'safe_prime': True, 'source': 'RFC3526/Oakley Group 14'}
         )
 
     def test_parse_ecdh_param_secp256r1(self):
