@@ -22,21 +22,21 @@
 
 - TLS (`tls`)
   - Extensions (`extensions`)
-    - Clock accuracy check works even if difference to current time is negative (#103)
+    - Clock accuracy check works even if difference to current time is negative (\#103)
   - Signature Algorithms (`sigalgos`)
-    - Not supported signature algorithms are are not listed anymore (#102)
+    - Not supported signature algorithms are are not listed anymore (\#102)
 
 ## 0.8.1 - 2022-03-23
 
 - JA3 (`ja3`)
   - Generate (`generate`)
-     - support NNTP clients (#83)
-     - support SMTP/LMTP clients (#82)
-     - support POP3 clients (#81)
-     - support FTP clients (#80)
-     - support Sieve clients (#79)
-     - support PostgreSQL clients (#78)
-     - support LDAP clients (#77)
+     - support NNTP clients (\#83)
+     - support SMTP/LMTP clients (\#82)
+     - support POP3 clients (\#81)
+     - support FTP clients (\#80)
+     - support Sieve clients (\#79)
+     - support PostgreSQL clients (\#78)
+     - support LDAP clients (\#77)
 
 ## 0.8.0 - 2022-01-18
 
@@ -59,7 +59,7 @@
 
 - Generic
   - Diffie-Hellman
-    - Handle Diffie-Hellman parameter q value comparision well (#74)
+    - Handle Diffie-Hellman parameter q value comparision well (\#74)
 - TLS (`tls`)
   - Generic
     - Handle multi-line greeting message in the case of SMTP servers (\#72)
