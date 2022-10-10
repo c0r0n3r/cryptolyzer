@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import time
-import unittest
 
-from test.common.classes import TestThreadedServer
+from test.common.classes import TestThreadedServer, TestLoggerBase
 
 import six
 
@@ -33,7 +32,7 @@ class AnalyzerThread(TestThreadedServer):
         self.result = self.analyzer.analyze(self.l7_server)
 
 
-class TestHASSHGenerate(unittest.TestCase):
+class TestHASSHGenerate(TestLoggerBase):
     @staticmethod
     def get_result(key_exchange_init_message):
         analyzer_thread = AnalyzerThread(SshServerConfiguration())
@@ -75,3 +74,7 @@ class TestHASSHGenerate(unittest.TestCase):
 
         result = self.get_result(key_exchange_init_message)
         self.assertEqual(result.target, '3cfda285775b67c360bdb6570a978e08')
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            'Client offers SSH key exchange init which HASSH fingerprint is "{}"\n'.format(result.target)
+        )

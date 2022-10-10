@@ -78,6 +78,12 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
             (Hash.SHA1, 'SHA1:v2toJdKXfFEaR1u++4iq1UqSrHM='),
             (Hash.MD5, 'MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'),
         ]))
+        log_lines = self.get_log_lines()
+        for idx, public_key in enumerate(result.public_keys):
+            self.assertIn(
+                'Server offers {} host key'.format(public_key.host_key_algorithm.value.code),
+                log_lines[idx]
+            )
 
     def test_host_cert(self):
         result = self.get_result('scm.infra.centos.org', 22)

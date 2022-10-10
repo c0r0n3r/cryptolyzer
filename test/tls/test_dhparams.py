@@ -60,6 +60,11 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparam.safe_prime, True)
         self.assertEqual(result.dhparam.well_known, None)
         self.assertFalse(result.key_reuse)
+        self.assertEqual(
+            self.get_log_lines(), [
+                'Server offers custom DH public parameter with size 480-bit (TLS 1.2)',
+            ]
+        )
 
     def test_prime(self):
         result = self.get_result('dh-composite.badssl.com', 443)
@@ -103,6 +108,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
         self.assertEqual(result.key_reuse, None)
+        self.assertFalse(self.log_stream.getvalue(), '')
 
     def test_tls_early_version(self):
         result = self.get_result('dh480.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0))
@@ -115,6 +121,11 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048])
         self.assertEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
+        self.assertEqual(
+            self.get_log_lines(), [
+                'Server offers FFDHE public parameter with size 2048-bit (TLS 1.2)',
+            ]
+        )
 
     @mock.patch.object(
         AnalyzerDHParams, '_get_public_key_tls_1_x',
@@ -133,6 +144,13 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
             WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.dh_param_numbers,
         )
         self.assertTrue(result.key_reuse)
+        log_lines = self.get_log_lines()
+        self.assertEqual(
+            log_lines, [
+                'Server offers FFDHE public parameter with size 4096-bit (TLS 1.2)',
+                'Server offers well-known DH public parameter 4096-bit Finite Field Diffie-Hellman group (TLS 1.2)',
+            ]
+        )
 
     def test_tls_1_3(self):
         result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
@@ -144,6 +162,10 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048])
         self.assertEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            'Server offers FFDHE public parameter with size 2048-bit (TLS 1.3)\n'
+        )
 
     def test_json(self):
         result = self.get_result('dh480.badssl.com', 443)

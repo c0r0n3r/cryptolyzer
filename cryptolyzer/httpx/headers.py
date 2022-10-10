@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 
+import six
+
 import attr
 
-from cryptoparser.httpx.header import HttpHeaderFieldBase, HttpHeaderFields
+from cryptoparser.httpx.header import HttpHeaderFieldBase, HttpHeaderFieldUnparsed, HttpHeaderFields
 
 from cryptolyzer.common.analyzer import AnalyzerHttpBase
 from cryptolyzer.common.result import AnalyzerResultHttp, AnalyzerTargetHttp
+from cryptolyzer.common.utils import LogSingleton
 
 
 @attr.s
@@ -28,7 +31,17 @@ class AnalyzerHeaders(AnalyzerHttpBase):
 
     @staticmethod
     def _analyze_headers(analyzable, version):  # pylint: disable=unused-argument
-        return HttpHeaderFields.parse_exact_size(analyzable.do_handshake())
+        header_fields = HttpHeaderFields.parse_exact_size(analyzable.do_handshake())
+        LogSingleton().log(level=60, msg=six.u('Server offers headers %s') % (
+            ', '.join(list(map(
+                lambda header_field:
+                    header_field.name
+                    if isinstance(header_field, HttpHeaderFieldUnparsed)
+                    else header_field.get_canonical_name().value.normalized_name,
+                header_fields
+            )))
+        ))
+        return header_fields
 
     def analyze(self, analyzable, protocol_version):
         headers = self._analyze_headers(analyzable, protocol_version)

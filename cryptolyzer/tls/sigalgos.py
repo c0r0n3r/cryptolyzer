@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import six
+
 import attr
 
 from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithmVector
@@ -9,6 +11,7 @@ from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+from cryptolyzer.common.utils import LogSingleton
 
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationDSS,
@@ -64,6 +67,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
             except SecurityError:
                 break
             else:
+                LogSingleton().log(level=60, msg=six.u('Server offers signature algorithm %s') % (algorithm.name, ))
                 supported_algorithms.append(algorithm)
 
         return supported_algorithms

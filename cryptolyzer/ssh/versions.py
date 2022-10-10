@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import six
+
 import attr
 
 from cryptoparser.ssh.subprotocol import SshProtocolMessage
@@ -7,6 +9,7 @@ from cryptoparser.ssh.version import SshProtocolVersion, SshSoftwareVersionBase
 
 from cryptolyzer.common.analyzer import AnalyzerSshBase
 from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
+from cryptolyzer.common.utils import LogSingleton
 
 
 @attr.s
@@ -32,8 +35,13 @@ class AnalyzerVersions(AnalyzerSshBase):
         server_messages = analyzable.do_handshake(last_message_type=SshProtocolMessage)
         protocol_message = server_messages[SshProtocolMessage]
         supported_protocols = protocol_message.protocol_version.supported_versions
+        ssh_protocol_versions = [SshProtocolVersion(supported_protocol) for supported_protocol in supported_protocols]
+        LogSingleton().log(level=60, msg=six.u('Server offers protocol version %s') % (
+            ', '.join([str(ssh_protocol_version) for ssh_protocol_version in ssh_protocol_versions]),
+        ))
+
         return AnalyzerResultVersions(
             AnalyzerTargetSsh.from_l7_client(analyzable),
-            [SshProtocolVersion(supported_protocol) for supported_protocol in supported_protocols],
+            ssh_protocol_versions,
             protocol_message.software_version,
         )

@@ -1,10 +1,37 @@
 # -*- coding: utf-8 -*-
 
 import ipaddress
+import logging
 import socket
+import sys
+
 import six
 
+from cryptolyzer import __setup__
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+
+
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+@six.add_metaclass(Singleton)
+class LogSingleton(logging.Logger):
+    def __init__(self):
+        super(LogSingleton, self).__init__(__setup__.__name__)
+
+        formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%Y-%m-%dT%H:%M:%S%z')
+
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setLevel(60)
+        handler.setFormatter(formatter)
+
+        self.addHandler(handler)
 
 
 def resolve_address(address, port, ip=None):

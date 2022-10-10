@@ -110,42 +110,57 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
 
         return analyzer_result
 
+    def _check_log(self, result):
+        for version in result.versions:
+            self.assertIn('Server offers protocol version {}'.format(str(version)), self.log_stream.getvalue())
+
     def test_tls_1_0_only(self):
+        result = self.get_result('tls-v1-0.badssl.com', 1010)
         self.assertEqual(
-            self.get_result('tls-v1-0.badssl.com', 1010).versions,
+            result.versions,
             [TlsProtocolVersionFinal(TlsVersion.TLS1_0)]
         )
+        self._check_log(result)
 
     def test_tls_1_1_only(self):
+        result = self.get_result('tls-v1-1.badssl.com', 1011)
         self.assertEqual(
-            self.get_result('tls-v1-1.badssl.com', 1011).versions,
+            result.versions,
             [TlsProtocolVersionFinal(TlsVersion.TLS1_1)]
         )
+        self._check_log(result)
 
     def test_tls_1_2_only(self):
+        result = self.get_result('tls-v1-2.badssl.com', 1012)
         self.assertEqual(
-            self.get_result('tls-v1-2.badssl.com', 1012).versions,
+            result.versions,
             [TlsProtocolVersionFinal(TlsVersion.TLS1_2)]
         )
+        self._check_log(result)
 
     def test_tls_1_2_3(self):
+        result = self.get_result('badssl.com', 443)
         self.assertEqual(
-            self.get_result('badssl.com', 443).versions,
+            result.versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
+        self._check_log(result)
 
     def test_tls_1_3(self):
+        result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(
-            self.get_result('www.cloudflare.com', 443).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(version)
                 for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
+        self._check_log(result)
 
     def test_tls_1_3_draft(self):
+        result = self.get_result('www.internet.org', 443)
         self.assertEqual(
-            self.get_result('www.internet.org', 443).versions,
+            result.versions,
             [
                 TlsProtocolVersionFinal(TlsVersion.TLS1_0),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_1),
@@ -156,18 +171,23 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
                 TlsProtocolVersionFinal(TlsVersion.TLS1_3),
             ]
         )
+        self._check_log(result)
 
     def test_ecdsa_only(self):
+        result = self.get_result('ecc256.badssl.com', 443)
         self.assertEqual(
-            self.get_result('ecc256.badssl.com', 443).versions,
+            result.versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
+        self._check_log(result)
 
     def test_with_client_auth(self):
+        result = self.get_result('client.badssl.com', 443)
         self.assertEqual(
-            self.get_result('client.badssl.com', 443).versions,
+            result.versions,
             [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
+        self._check_log(result)
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(

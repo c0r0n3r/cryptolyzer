@@ -197,6 +197,16 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
                 TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
             ]
         )
+        self.assertEqual(
+            self.get_log_lines(), [
+                'Server offers cipher suite TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA (TLS 1.0)',
+                'Server offers cipher suite TLS_DHE_RSA_WITH_AES_256_CBC_SHA (TLS 1.0)',
+                'Server offers cipher suite TLS_RSA_WITH_AES_256_CBC_SHA (TLS 1.0)',
+                'Server offers cipher suite TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (TLS 1.0)',
+                'Server offers cipher suite TLS_DHE_RSA_WITH_AES_128_CBC_SHA (TLS 1.0)',
+                'Server offers cipher suite TLS_RSA_WITH_AES_128_CBC_SHA (TLS 1.0)',
+            ]
+        )
 
     def test_rc4(self):
         result = self.get_result('rc4.badssl.com', 443)

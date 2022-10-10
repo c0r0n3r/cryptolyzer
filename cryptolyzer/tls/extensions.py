@@ -28,6 +28,7 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAnyAlgorithm,
     TlsHandshakeClientHelloBlockCipherModeCBC,
@@ -81,7 +82,13 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         except KeyError:
             return []
 
-        return list(extension.protocol_names)
+        protocol_names = list(extension.protocol_names)
+        if protocol_names:
+            LogSingleton().log(level=60, msg=six.u('Server offers next protocol(s) %s') % (
+                ', '.join(['"{}"'.format(protocol_name.value.code) for protocol_name in protocol_names]),
+            ))
+
+        return protocol_names
 
     @classmethod
     def _analyze_alpn(cls, analyzable, protocol_version):
@@ -112,6 +119,10 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
             if already_known_protocol_names:
                 break
+
+            LogSingleton().log(level=60, msg=six.u('Server offers application layer protocol "%s"') % (
+                protocol_name.value.code,
+            ))
 
             remaining_protocol_names.remove(protocol_name)
 
@@ -158,9 +169,14 @@ class AnalyzerExtensions(AnalyzerTlsBase):
     @classmethod
     def _analyze_extended_master_secret(cls, analyzable, protocol_version):
         client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionExtendedMasterSecret())
-        return cls._analyze_symmetric_extension(
+        extended_master_secret_supported = cls._analyze_symmetric_extension(
             analyzable, client_hello, TlsExtensionType.EXTENDED_MASTER_SECRET,
         )
+        if extended_master_secret_supported:
+            LogSingleton().log(level=60, msg=six.u('Server offers extended master secret'))
+        else:
+            LogSingleton().log(level=60, msg=six.u('Server does not offer extended master secret'))
+        return extended_master_secret_supported
 
     @classmethod
     def _analyze_compression_methods(cls, analyzable, protocol_version):
@@ -183,6 +199,14 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
             supported_compression_methods.add(supported_compression_method)
 
+        if supported_compression_methods:
+            LogSingleton().log(level=60, msg=six.u('Server offers compression method(s) %s') % (
+                ', '.join([
+                    '"{}"'.format(compression_method.name)
+                    for compression_method in supported_compression_methods
+                ]),
+            ))
+
         return supported_compression_methods
 
     @classmethod
@@ -199,39 +223,69 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         )
         clock_is_accurate = -15 < clock_skew < 15
 
+        if clock_is_accurate:
+            LogSingleton().log(level=60, msg=six.u('Server offers accurate clock'))
+        else:
+            LogSingleton().log(level=60, msg=six.u('Server does not offer accurate clock'))
+
         return clock_is_accurate
 
     @classmethod
     def _analyze_renegotiation(cls, analyzable, protocol_version):
+        renegotiation_supported = None
         client_hello = cls._get_client_hello(analyzable, protocol_version)
         client_hello.empty_renegotiation_info_scsv = True
         if AnalyzerExtensions._analyze_symmetric_extension(
                 analyzable, client_hello, TlsExtensionType.RENEGOTIATION_INFO):
-            return True
+            renegotiation_supported = True
 
-        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionRenegotiationInfo())
-        return AnalyzerExtensions._analyze_symmetric_extension(
-            analyzable, client_hello, TlsExtensionType.RENEGOTIATION_INFO
-        )
+        if renegotiation_supported is None:
+            client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionRenegotiationInfo())
+            renegotiation_supported = AnalyzerExtensions._analyze_symmetric_extension(
+                analyzable, client_hello, TlsExtensionType.RENEGOTIATION_INFO
+            )
+
+        if renegotiation_supported:
+            LogSingleton().log(level=60, msg=six.u('Server offers renegotiation'))
+        else:
+            LogSingleton().log(level=60, msg=six.u('Server does not offer renegotiation'))
+
+        return renegotiation_supported
 
     @classmethod
     def _analyze_session_cache(cls, analyzable, protocol_version):
+        session_cache_supported = None
         client_hello = cls._get_client_hello(analyzable, protocol_version)
         client_hello.session_id = TlsSessionIdVector(list(range(32)))
         try:
             server_messages = analyzable.do_tls_handshake(client_hello)
         except (TlsAlert, NetworkError):
-            return False
+            session_cache_supported = False
 
-        session_id = server_messages[TlsHandshakeType.SERVER_HELLO].session_id
-        return session_id != TlsSessionIdVector([])
+        if session_cache_supported is None:
+            session_id = server_messages[TlsHandshakeType.SERVER_HELLO].session_id
+            session_cache_supported = session_id != TlsSessionIdVector([])
+
+        if session_cache_supported:
+            LogSingleton().log(level=60, msg=six.u('Server offers session cache'))
+        else:
+            LogSingleton().log(level=60, msg=six.u('Server does not offer session cache'))
+
+        return session_cache_supported
 
     @classmethod
     def _analyze_session_ticket(cls, analyzable, protocol_version):
         client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionSessionTicket())
-        return AnalyzerExtensions._analyze_symmetric_extension(
+        session_ticket_supported = AnalyzerExtensions._analyze_symmetric_extension(
             analyzable, client_hello, TlsExtensionType.SESSION_TICKET,
         )
+
+        if session_ticket_supported:
+            LogSingleton().log(level=60, msg=six.u('Server offers session ticket'))
+        else:
+            LogSingleton().log(level=60, msg=six.u('Server does not offer session ticket'))
+
+        return session_ticket_supported
 
     @classmethod
     def _analyze_encrypt_than_mac(cls, analyzable, protocol_version):
@@ -249,8 +303,10 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             extensions = server_messages[TlsHandshakeType.SERVER_HELLO].extensions
             extensions.get_item_by_type(TlsExtensionType.ENCRYPT_THEN_MAC)
         except KeyError:
+            LogSingleton().log(level=60, msg=six.u('Server does not offer encrypt then MAC'))
             return False
 
+        LogSingleton().log(level=60, msg=six.u('Server offers encrypt then MAC'))
         return True
 
     @classmethod
@@ -260,10 +316,15 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             extension = AnalyzerExtensions._get_symmetric_extension(
                 analyzable, client_hello, TlsExtensionType.EC_POINT_FORMATS
             )
+            point_formats = extension.point_formats
         except KeyError:
-            return [TlsECPointFormat.UNCOMPRESSED, ]
+            point_formats = [TlsECPointFormat.UNCOMPRESSED, ]
 
-        return extension.point_formats
+        LogSingleton().log(level=60, msg=six.u('Server offers point format(s) %s') % (
+            ', '.join(['"{}"'.format(point_format.name) for point_format in point_formats]),
+        ))
+
+        return point_formats
 
     def analyze(self, analyzable, protocol_version):
         supported_protocol_names = self._analyze_alpn(analyzable, protocol_version)

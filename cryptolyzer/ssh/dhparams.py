@@ -14,11 +14,13 @@ from cryptoparser.ssh.subprotocol import (
     SshDHGroupExchangeReply,
     SshMessageCode,
 )
+from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
 from cryptolyzer.common.analyzer import AnalyzerSshBase
 from cryptolyzer.common.dhparam import get_dh_public_key_from_bytes
-from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
+from cryptolyzer.common.utils import LogSingleton
 
 from cryptolyzer.ssh.client import L7ServerSshGexParams, SshKeyExchangeInitAnyAlgorithm
 from cryptolyzer.ssh.ciphers import AnalyzerCiphers
@@ -103,12 +105,20 @@ class AnalyzerDHParams(AnalyzerSshBase):
             else:
                 gex_min_size = dh_public_key.key_size + 1
 
-            gex_key_sizes.add(dh_public_key.key_size)
+            if dh_public_key.key_size not in gex_key_sizes:
+                gex_key_sizes.add(dh_public_key.key_size)
+                LogSingleton().log(level=60, msg=six.u(
+                    'Server offers custom DH public parameter with size %d-bit (%s)') % (
+                        dh_public_key.key_size, SshProtocolVersion(SshVersion.SSH2),
+                    )
+                )
 
         return AnalyzerResultGroupExchange(gex_algorithms, list(sorted(gex_key_sizes)), gex_tolerates_bounds)
 
     def analyze(self, analyzable):
+        LogSingleton().disabled = True
         analyzer_result = AnalyzerCiphers().analyze(analyzable)
+        LogSingleton().disabled = False
 
         gex_algorithms = []
         kex_algorithms = []
@@ -117,14 +127,23 @@ class AnalyzerDHParams(AnalyzerSshBase):
             lambda kex_algorithm: (
                 isinstance(kex_algorithm, SshKexAlgorithm) and
                 kex_algorithm.value.kex == KeyExchange.DHE
-            ),
+                ),
             analyzer_result.kex_algorithms
         )
+
         for kex_algorithm in algorithms:
             if kex_algorithm.value.key_size is None:
                 gex_algorithms.append(kex_algorithm)
             else:
                 kex_algorithms.append(kex_algorithm)
+
+        for algorithm in kex_algorithms:
+            LogSingleton().log(level=60, msg=six.u(
+                'Server offers well-known DH public parameter with size %s-bit (%s)') % (
+                    'unknown' if isinstance(algorithm, six.string_types) else str(algorithm.value.key_size),
+                    algorithm if isinstance(algorithm, six.string_types) else algorithm.value.code,
+                )
+            )
 
         return AnalyzerResultDHParams(
             AnalyzerTargetSsh.from_l7_client(analyzable),

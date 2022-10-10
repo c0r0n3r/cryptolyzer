@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import os
+
 try:
     from unittest.mock import patch
 except ImportError:
@@ -7,6 +9,8 @@ except ImportError:
 
 import unittest
 
+import io
+import logging
 import socket
 import sys
 import threading
@@ -15,6 +19,7 @@ import time
 import six
 
 from cryptolyzer.__main__ import main
+from cryptolyzer.common.utils import LogSingleton
 
 
 class TestMainBase(unittest.TestCase):
@@ -43,19 +48,20 @@ class TestMainBase(unittest.TestCase):
     @staticmethod
     def _get_test_analyzer_result(output_format, protocol, analyzer, address):
         with patch('sys.stdout', new_callable=six.StringIO) as stdout, \
+                patch('sys.stderr', new_callable=six.StringIO) as stderr, \
                 patch.object(
                     sys, 'argv', ['cryptolyzer', '--output-format', output_format, protocol, analyzer, address]
                 ):
             main()
-            return stdout.getvalue()
+            return stdout.getvalue(), stderr.getvalue()
 
     @staticmethod
     def _get_test_analyzer_result_json(protocol, analyzer, address):
-        return TestMainBase._get_test_analyzer_result('json', protocol, analyzer, address)
+        return TestMainBase._get_test_analyzer_result('json', protocol, analyzer, address)[0]
 
     @staticmethod
     def _get_test_analyzer_result_markdown(protocol, analyzer, address):
-        return TestMainBase._get_test_analyzer_result('markdown', protocol, analyzer, address)
+        return TestMainBase._get_test_analyzer_result('markdown', protocol, analyzer, address)[0]
 
 
 class TestThreadedServer(threading.Thread):
@@ -85,3 +91,36 @@ class TestThreadedServer(threading.Thread):
                 raise TimeoutError()
 
             raise socket.timeout()
+
+
+class TestLoggerBase(unittest.TestCase):
+    def setUp(self):
+        log = LogSingleton()
+        log.setLevel(logging.INFO)
+        self.old_handlers = log.handlers
+        for handler in log.handlers:
+            log.removeHandler(handler)
+
+        self.log_stream = io.StringIO()
+        handler = logging.StreamHandler(self.log_stream)
+        log.addHandler(handler)
+
+    def tearDown(self):
+        log = LogSingleton()
+        for handler in self.old_handlers:
+            log.addHandler(handler)
+
+    def _get_log_lines(self, flush):
+        log_lines = self.log_stream.getvalue().strip().split(os.linesep)
+
+        if flush:
+            self.log_stream.seek(0)
+            self.log_stream.truncate(0)
+
+        return log_lines
+
+    def get_log_lines(self):
+        return self._get_log_lines(flush=False)
+
+    def pop_log_lines(self):
+        return self._get_log_lines(flush=True)

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import unittest
 try:
     from unittest.mock import patch
 except ImportError:
     from mock import patch
+
+from test.common.classes import TestLoggerBase
 
 import requests
 import urllib3
@@ -16,7 +17,7 @@ from cryptolyzer.httpx.client import L7ClientHttpBase
 from cryptolyzer.httpx.headers import AnalyzerHeaders
 
 
-class TestHttpHeaders(unittest.TestCase):
+class TestHttpHeaders(TestLoggerBase):
     @classmethod
     def get_result(cls, uri):
         analyzer = AnalyzerHeaders()
@@ -28,12 +29,14 @@ class TestHttpHeaders(unittest.TestCase):
         mock_response.return_value.headers = {'X-Test-Header-Name': 'Value'}
         analyzer_result = self.get_result('http://mock.site')
         self.assertEqual([HttpHeaderFieldUnparsed(name='X-Test-Header-Name', value='Value'), ], analyzer_result.headers)
+        self.assertEqual(self.log_stream.getvalue(), 'Server offers headers X-Test-Header-Name\n')
 
     @patch('requests.head', return_value=requests.Response())
     def test_https(self, mock_response):
         mock_response.return_value.headers = {'X-Test-Header-Name': 'Value'}
         analyzer_result = self.get_result('https://mock.site')
         self.assertEqual([HttpHeaderFieldUnparsed(name='X-Test-Header-Name', value='Value'), ], analyzer_result.headers)
+        self.assertEqual(self.log_stream.getvalue(), 'Server offers headers X-Test-Header-Name\n')
 
     def test_real(self):
         analyzer_result = self.get_result('http://httpbin.org/response-headers?X-Test-Header-Name=Value')

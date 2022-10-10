@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import abc
-import unittest
 
-from test.common.classes import TestThreadedServer
+from test.common.classes import TestThreadedServer, TestLoggerBase
 
 from cryptoparser.ssh.subprotocol import SshMessageBase
 
 
 class TestSshCases:
-    class TestSshClientBase(unittest.TestCase):
+    class TestSshClientBase(TestLoggerBase):
         @staticmethod
         @abc.abstractmethod
         def get_result(host, port, timeout=None, ip=None):

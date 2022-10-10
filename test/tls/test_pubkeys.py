@@ -240,6 +240,10 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
     def test_fallback_certificate(self):
         result = self.get_result('unexisting-hostname-to-get-wildcard-certificate-without-sni.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
+        self.assertEqual(
+            'Server offers RSA X.509 public key (with SNI)\n',
+            self.log_stream.getvalue()
+        )
 
     def test_certificate_chain(self):
         result = self.get_result('badssl.com', 443)

@@ -2,6 +2,8 @@
 
 from collections import OrderedDict
 
+import six
+
 import attr
 
 import asn1crypto.x509
@@ -16,6 +18,7 @@ from cryptoparser.tls.subprotocol import (
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationRSA,
@@ -92,6 +95,7 @@ class AnalyzerPublicKeyRequest(AnalyzerTlsBase):
                             except ValueError:
                                 pass
 
+                    LogSingleton().log(level=60, msg=six.u('Server requests X.509 for client authentication'))
                     return (
                         list(certificate_request.certificate_types),
                         list(certificate_request.supported_signature_algorithms),

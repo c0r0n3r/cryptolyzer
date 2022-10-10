@@ -2,6 +2,8 @@
 
 import copy
 import time
+import six
+
 import attr
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
@@ -11,6 +13,7 @@ from cryptoparser.tls.version import SslProtocolVersion, TlsVersion, TlsProtocol
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.client import (
     SslHandshakeClientHelloAnyAlgorithm,
     TlsHandshakeClientHelloSpecalization,
@@ -103,6 +106,9 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 cls._next_accepted_cipher_suites(
                     l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites
                 )
+                LogSingleton().log(level=60, msg=six.u('Server offers cipher suite %s (%s)') % (
+                    accepted_cipher_suites[-1].name, protocol_version,
+                ))
             except StopIteration:
                 break
             except TlsAlert as e:
@@ -179,12 +185,14 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             accepted_cipher_suites = self._get_accepted_cipher_suites_fallback(analyzable, protocol_version)
             long_cipher_suite_list_intolerance = bool(accepted_cipher_suites)
         if len(accepted_cipher_suites) > 1:
+            LogSingleton().disabled = True
             checkable_cipher_suites = [accepted_cipher_suites[-1], accepted_cipher_suites[0]]
             cipher_suite_preference = self._get_accepted_cipher_suites(
                 analyzable,
                 protocol_version,
                 checkable_cipher_suites
             )[0] != checkable_cipher_suites
+            LogSingleton().disabled = False
         else:
             cipher_suite_preference = None
 

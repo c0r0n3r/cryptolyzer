@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from cryptoparser.ssh.ciphersuite import SshKexAlgorithm, SshEncryptionAlgorithm, SshMacAlgorithm
+from cryptoparser.ssh.ciphersuite import (
+    SshCompressionAlgorithm,
+    SshEncryptionAlgorithm,
+    SshHostKeyAlgorithm,
+    SshKexAlgorithm,
+    SshMacAlgorithm,
+)
 
 from cryptolyzer.common.result import AnalyzerTargetSsh
 
@@ -41,10 +47,50 @@ class TestSshCiphers(TestSshCases.TestSshClientBase):
 
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.kex_algorithms, list(SshKexAlgorithm))
+        self.assertEqual(result.host_key_algorithms, list(SshHostKeyAlgorithm))
         self.assertEqual(result.encryption_algorithms_client_to_server, list(SshEncryptionAlgorithm))
         self.assertEqual(result.encryption_algorithms_server_to_client, list(SshEncryptionAlgorithm))
         self.assertEqual(result.mac_algorithms_client_to_server, list(SshMacAlgorithm))
         self.assertEqual(result.mac_algorithms_server_to_client, list(SshMacAlgorithm))
+        self.assertEqual(result.compression_algorithms_client_to_server, list(SshCompressionAlgorithm))
+        self.assertEqual(result.compression_algorithms_server_to_client, list(SshCompressionAlgorithm))
+        log_lines = self.get_log_lines()
+        self.assertIn(
+            'Server offers KEX algorithms {} (SSH 2.0)'.format(
+                ', '.join(map(lambda kex_algorithm: kex_algorithm.value.code, SshKexAlgorithm))
+            ),
+            log_lines[0]
+        )
+        self.assertIn(
+            'Server offers host key algorithms {} (SSH 2.0)'.format(
+                ', '.join(map(lambda kex_algorithm: kex_algorithm.value.code, SshHostKeyAlgorithm))
+            ),
+            log_lines[1]
+        )
+        self.assertIn(
+            'Server offers encryption algorithms client to server {} (SSH 2.0)'.format(
+                ', '.join(map(lambda encryption_algorithm: encryption_algorithm.value.code, SshEncryptionAlgorithm))
+            ),
+            log_lines[2]
+        )
+        self.assertIn(
+            'Server offers encryption algorithms server to client {} (SSH 2.0)'.format(
+                ', '.join(map(lambda encryption_algorithm: encryption_algorithm.value.code, SshEncryptionAlgorithm))
+            ),
+            log_lines[3]
+        )
+        self.assertIn(
+            'Server offers MAC algorithms client to server {} (SSH 2.0)'.format(
+                ', '.join(map(lambda mac_algorithm: mac_algorithm.value.code, SshMacAlgorithm))
+            ),
+            log_lines[4]
+        )
+        self.assertIn(
+            'Server offers MAC algorithms server to client {} (SSH 2.0)'.format(
+                ', '.join(map(lambda mac_algorithm: mac_algorithm.value.code, SshMacAlgorithm))
+            ),
+            log_lines[5]
+        )
 
     def test_real(self):
         self.get_result('github.com')

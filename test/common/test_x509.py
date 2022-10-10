@@ -3,7 +3,6 @@
 import os
 
 import datetime
-import unittest
 
 from collections import OrderedDict
 
@@ -11,6 +10,8 @@ try:
     from unittest import mock
 except ImportError:
     import mock
+
+from test.common.classes import TestLoggerBase
 
 import asn1crypto.pem
 import asn1crypto.x509
@@ -23,7 +24,7 @@ from cryptolyzer.common.x509 import PublicKeyX509
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
 
-class TestPublicKeyX509(unittest.TestCase):
+class TestPublicKeyX509(TestLoggerBase):
     @staticmethod
     def _get_result(host, port):
         analyzer = AnalyzerPublicKeys()
