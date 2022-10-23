@@ -23,6 +23,9 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.extensions import AnalyzerExtensions
+from cryptolyzer.tls.server import L7ServerTls
+
+from .classes import L7ServerTlsTest
 
 
 class TestTlsExtensions(TestLoggerBase):
@@ -186,7 +189,9 @@ class TestTlsExtensions(TestLoggerBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server does not offer accurate clock', log_lines)
 
-        result = self.get_result('www.cloudflare.com', 443)
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=0.5),)
+        threaded_server.start()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.clock_is_accurate)
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers accurate clock', log_lines)
