@@ -1,13 +1,31 @@
 # -*- coding: utf-8 -*-
 
 import enum
+
+import six
+
 import attr
 
 
+@attr.s
+class ErrorParams(object):
+    short_description = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    long_description = attr.ib(validator=attr.validators.instance_of(six.string_types))
+
+
 class NetworkErrorType(enum.Enum):
-    NO_CONNECTION = 'connection to target cannot be established'
-    NO_RESPONSE = 'no response received from target'
-    NO_ADDRESS = 'address of the target cannot be resolved'
+    NO_CONNECTION = ErrorParams(
+        short_description='no connection',
+        long_description='connection to target cannot be established',
+    )
+    NO_RESPONSE = ErrorParams(
+        short_description='no response',
+        long_description='no response received from target',
+    )
+    NO_ADDRESS = ErrorParams(
+        short_description='no address',
+        long_description='address of the target cannot be resolved',
+    )
 
 
 @attr.s
@@ -15,13 +33,22 @@ class NetworkError(IOError):
     error = attr.ib(validator=attr.validators.in_(NetworkErrorType))
 
     def __str__(self):
-        return self.error.value
+        return self.error.value.long_description
 
 
 class SecurityErrorType(enum.Enum):
-    PLAIN_TEXT_MESSAGE = 'plain text response reveived instead of binary from target'
-    UNPARSABLE_MESSAGE = 'unparsable message received from target'
-    UNSUPPORTED_SECURITY = 'target does not support secure communication'
+    PLAIN_TEXT_MESSAGE = ErrorParams(
+        short_description='plain text reponse',
+        long_description='plain text response reveived instead of binary from target',
+    )
+    UNPARSABLE_MESSAGE = ErrorParams(
+        short_description='unparsable response',
+        long_description='unparsable message received from target',
+    )
+    UNSUPPORTED_SECURITY = ErrorParams(
+        short_description='no encryption support',
+        long_description='target does not support secure communication',
+    )
 
 
 @attr.s
@@ -29,4 +56,4 @@ class SecurityError(ValueError):
     error = attr.ib(validator=attr.validators.in_(SecurityErrorType))
 
     def __str__(self):
-        return self.error.value
+        return self.error.value.long_description
