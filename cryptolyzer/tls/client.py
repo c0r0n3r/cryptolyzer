@@ -303,7 +303,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
     _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
-        if (cipher_suite.value.key_exchange == KeyExchange.DHE or
+        if (cipher_suite.value.key_exchange in [KeyExchange.DHE, KeyExchange.ADH] or
             cipher_suite.value.initial_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2))
     ]
     _NAMED_CURVES = [
@@ -339,7 +339,7 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
     _CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
-        if (cipher_suite.value.key_exchange in [KeyExchange.ECDH, KeyExchange.ECDHE] or
+        if (cipher_suite.value.key_exchange in [KeyExchange.ECDHE, KeyExchange.AECDH] or
             cipher_suite.value.initial_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2))
     ]
     _NAMED_CURVES = [
