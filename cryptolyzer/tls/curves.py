@@ -63,7 +63,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
         return None
 
     @staticmethod
-    def _get_supported_curve(protocol_version, response_message):
+    def get_supported_curve(protocol_version, response_message):
         if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2):
             return response_message.extensions.get_item_by_type(TlsExtensionType.KEY_SHARE).selected_group
 
@@ -132,7 +132,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
                     TlsExtensionType.SUPPORTED_GROUPS
                 ).elliptic_curves
 
-            supported_curve = self._get_supported_curve(protocol_version, server_key_exchange)
+            supported_curve = self.get_supported_curve(protocol_version, server_key_exchange)
 
             try:
                 checkable_curves.remove(supported_curve)

@@ -20,6 +20,7 @@ import test.tls.test_extensions
 import test.tls.test_pubkeys
 import test.tls.test_pubkeyreq
 import test.tls.test_sigalgos
+import test.tls.test_simulations
 import test.tls.test_versions
 import test.tls.test_all
 
@@ -204,6 +205,23 @@ class TestMain(TestMainBase):
             443,
         )
         result = test.tls.test_sigalgos.TestTlsSigAlgos.get_result(**func_arguments)
+        self.assertEqual(
+            self._get_test_analyzer_result_json(**cli_arguments),
+            result.as_json() + '\n',
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result_markdown(**cli_arguments),
+            result.as_markdown() + '\n',
+        )
+
+    def test_analyzer_output_tls_simulations(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls',
+            'simulations',
+            'tls-v1-0.badssl.com',
+            1010,
+        )
+        result = test.tls.test_simulations.TestTlsSimulations.get_result(**func_arguments)
         self.assertEqual(
             self._get_test_analyzer_result_json(**cli_arguments),
             result.as_json() + '\n',

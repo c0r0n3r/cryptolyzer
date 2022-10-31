@@ -1369,6 +1369,14 @@ class TlsClientHandshake(TlsClient):
                 not message.protocol_version == protocol_version):
             raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
 
+        if last_handshake_message_type is None:
+            if handshake_type == TlsHandshakeType.SERVER_HELLO_DONE:
+                raise StopIteration()
+
+            if (handshake_type == TlsHandshakeType.SERVER_HELLO and
+                    message.cipher_suite.value.last_version == TlsVersion.TLS1_3):
+                raise StopIteration()
+
         if handshake_type == last_handshake_message_type:
             raise StopIteration
 

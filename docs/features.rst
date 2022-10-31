@@ -75,7 +75,9 @@ Supported analyzers by cryptographic protocol versions
 +-------------------------------------------+-----+-----+-----+-----+-----+-----+
 | Extensions (``extensions``)               | n/a | n/a | n/a | n/a |  ✓  |  ✓  |
 +-------------------------------------------+-----+-----+-----+-----+-----+-----+
-| Vulnerabilities (``vulns``)               | n/a | n/a | n/a | n/a | n/a | n/  |
+| Vulnerabilities (``vulns``)               | n/a | n/a | n/a | n/a | n/a | n/a |
++-------------------------------------------+-----+-----+-----+-----+-----+-----+
+| Simulations (``simulations``)             | n/a | n/a | n/a | n/a | n/a | n/a |
 +-------------------------------------------+-----+-----+-----+-----+-----+-----+
 
 Versions
@@ -141,6 +143,15 @@ Vulnerabilities
 -  `export grade ciphers <https://en.wikipedia.org/wiki/Export_of_cryptography_from_the_United_States>`__
 -  `non-forward-secret ciphers <https://en.wikipedia.org/wiki/Forward_secrecy>`__
 -  `null encryption ciphers <https://en.wikipedia.org/wiki/Null_encryption>`__
+
+Simulated Clients
+"""""""""""""""""
+
+-  TLS
+
+   -  `Chromium <https://en.wikipedia.org/wiki/Chromium_(web_browser)>`__
+   -  `Firefox <https://en.wikipedia.org/wiki/Firefox>`__
+   -  `Opera <https://en.wikipedia.org/wiki/Opera_(web_browser)>`__
 
 Fingerprinting
 """"""""""""""

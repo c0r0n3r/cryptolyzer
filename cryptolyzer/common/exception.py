@@ -28,7 +28,7 @@ class NetworkErrorType(enum.Enum):
     )
 
 
-@attr.s
+@attr.s(frozen=True)
 class NetworkError(IOError):
     error = attr.ib(validator=attr.validators.in_(NetworkErrorType))
 
@@ -48,6 +48,18 @@ class SecurityErrorType(enum.Enum):
     UNSUPPORTED_SECURITY = ErrorParams(
         short_description='no encryption support',
         long_description='target does not support secure communication',
+    )
+    UNKNOWN_ERROR = ErrorParams(
+        short_description='unknown error',
+        long_description='unknown error happened during the handshake with the target',
+    )
+    NO_SHARED_CIPHER = ErrorParams(
+        short_description='no shared cipher',
+        long_description='target does not support cipher shared with the client',
+    )
+    NO_SHARED_VERSION = ErrorParams(
+        short_description='no shared version',
+        long_description='target does not support version shared with the client',
     )
 
 
