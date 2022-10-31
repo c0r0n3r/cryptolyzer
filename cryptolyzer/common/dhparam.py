@@ -1809,7 +1809,7 @@ def parse_ecdh_params(param_bytes):
 class DHParameter(Serializable):
     parameter_numbers = attr.ib(validator=attr.validators.instance_of(DHParameterNumbers))
     key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
-    well_known = attr.ib(init=False, validator=attr.validators.instance_of(bool))
+    well_known = attr.ib(init=False, validator=attr.validators.in_(WellKnownDHParams))
     prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
     safe_prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
 
