@@ -153,7 +153,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
 
             extensions.extend(self._get_tls1_3_extensions(protocol_versions, named_curves, signature_algorithms))
         elif len(protocol_versions) > 1:
-            raise NotImplementedError
+            raise NotImplementedError()
 
         if protocol_version_min >= TlsProtocolVersionFinal(TlsVersion.TLS1_0):
             if named_curves:
