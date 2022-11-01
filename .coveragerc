@@ -1,11 +1,16 @@
 [run]
-source = cryptolyzer
-omit = cryptolyzer/common/math.py
+omit = cryptolyzer/common/prime.py
+
+source =
+    cryptolyzer
+    tools
 
 [report]
 exclude_lines =
     pragma: no cover
     raise NotImplementedError
 fail_under = 100
-include = cryptolyzer/*
+include =
+    cryptolyzer/**/*
+    tools/*
 show_missing = True

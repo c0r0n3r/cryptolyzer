@@ -36,14 +36,8 @@ from cryptolyzer.ja3.generate import AnalyzerGenerate
 
 
 class TestMain(TestMainBase):
-    def _test_argument_error(self, argv, stderr_regexp):
-        with patch.object(sys, 'stderr', new_callable=six.StringIO) as stderr, \
-                patch.object(sys, 'argv', argv):
-
-            with self.assertRaises(SystemExit) as context_manager:
-                main()
-            self.assertEqual(context_manager.exception.args[0], 2)
-            six.assertRegex(self, stderr.getvalue(), stderr_regexp)
+    def setUp(self):
+        self.main_func = main
 
     def _test_runtime_error(self, argv, error_msg):
         with patch.object(sys, 'stdout', new_callable=six.StringIO) as stdout, \
@@ -53,11 +47,7 @@ class TestMain(TestMainBase):
             self.assertEqual(stdout.getvalue().split(os.linesep)[1], '* Error: ' + error_msg)
 
     def test_argument_parsing(self):
-        devnull = six.StringIO()
-        with patch.object(sys, 'stdout', devnull), patch.object(sys, 'argv', ['cryptolyzer', '-h']):
-            with self.assertRaises(SystemExit) as context_manager:
-                main()
-            self.assertEqual(context_manager.exception.args[0], 0)
+        self._test_argument_help('cryptolyzer')
 
         self._test_argument_error(
             ['cryptolyzer', 'unsupportedprotocol'],

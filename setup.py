@@ -39,7 +39,10 @@ setup(
     url=__setup__.__url__,
     keywords='ssl tls gost ja3 hassh https pop3 smtp imap ftp rdp xmpp jabber ldap sieve ssh hsts',
     entry_points={
-        'console_scripts': ['cryptolyze = cryptolyzer.__main__:main']
+        'console_scripts': [
+            'cryptolyze = cryptolyzer.__main__:main',
+            'handshake_to_json = tools.tls_client.__main__:main'
+        ]
     },
     install_requires=install_requirements,
     extras_require={

@@ -2,8 +2,13 @@
 
 from test.common.classes import TestMainBase
 
+from cryptolyzer.__main__ import main
+
 
 class TestMain(TestMainBase):
+    def setUp(self):
+        self.main_func = main
+
     def test_http(self):
         uri = 'http://httpbin.org/response-headers?X-Test-Header-Name=X-Test-Header-Value'
 
