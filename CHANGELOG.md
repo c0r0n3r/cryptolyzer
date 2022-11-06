@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.3
+
+- TLS (`tls`)
+  - Generic
+    - RDP hybrid mode support (\#109)
+
 ## 0.8.2 - 2022-10-10
 
 ### Features

@@ -9,6 +9,8 @@ try:
 except ImportError:
     import mock
 
+from test.common.classes import TestLoggerBase
+
 import six
 
 from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
@@ -85,7 +87,7 @@ class TestTlsAlert(unittest.TestCase):
         self.assertEqual(str(alert), repr(alert))
 
 
-class TestL7ClientBase(unittest.TestCase):
+class TestL7ClientBase(TestLoggerBase):
     @staticmethod
     def get_result(  # pylint: disable=too-many-arguments
             proto, host, port, timeout=None, ip=None, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)
@@ -458,24 +460,24 @@ class TestClientRDP(TestL7ClientBase):
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
     def test_error_send_socket_timeout(self, _):
         with self.assertRaises(NetworkError) as context_manager:
-            self.get_result('rdp', 'xactdemo.com', None)
+            self.get_result('rdp', 'demo.libertydemo.com', None)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @unittest.skipIf(six.PY2, 'TimeoutError is raised instead of socket.error in Python >= 3.0')
     def test_error_send_timeout_error(self):
         with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
                 self.assertRaises(NetworkError) as context_manager:
-            self.get_result('rdp', 'xactdemo.com', None)
+            self.get_result('rdp', 'demo.libertydemo.com', None)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
-        _, result = self.get_result('rdp', 'xactdemo.com', None)
+        _, result = self.get_result('rdp', 'demo.libertydemo.com', None)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidValue('x', int))
     def test_error_parse_invalid_value(self, _):
-        _, result = self.get_result('rdp', 'xactdemo.com', None)
+        _, result = self.get_result('rdp', 'demo.libertydemo.com', None)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(
@@ -483,14 +485,15 @@ class TestClientRDP(TestL7ClientBase):
         return_value=(RDPNegotiationResponse([], []), RDP_NEGOTIATION_RESPONSE_LENGTH)
     )
     def test_error_no_ssl_support(self, _):
-        _, result = self.get_result('rdp', 'xactdemo.com', None)
+        _, result = self.get_result('rdp', 'demo.libertydemo.com', None)
         self.assertEqual(result.versions, [])
 
     def test_rdp_client(self):
-        _, result = self.get_result('rdp', 'xactdemo.com', None)
+        _, result = self.get_result('rdp', 'demo.libertydemo.com', None)
         self.assertEqual(
             result.versions,
             [
+                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_1),
                 TlsProtocolVersionFinal(TlsVersion.TLS1_2),
             ]
