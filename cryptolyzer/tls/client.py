@@ -901,6 +901,8 @@ class ClientFTP(L7ClientStartTlsBase):
 
 @attr.s
 class ClientRDP(L7ClientStartTlsBase):
+    _SUPPORTED_MODES = [RDPProtocol.SSL, RDPProtocol.HYBRID]
+
     @classmethod
     def get_scheme(cls):
         return 'rdp'
@@ -915,7 +917,7 @@ class ClientRDP(L7ClientStartTlsBase):
             self._l7_client.init_connection()
             self.l4_transfer = self._l7_client.l4_transfer
 
-            neg_req = RDPNegotiationRequest([], [RDPProtocol.SSL, ])
+            neg_req = RDPNegotiationRequest([], self._SUPPORTED_MODES)
             cotp = COTPConnectionRequest(src_ref=0, user_data=neg_req.compose())
             tpkt = TPKT(version=3, message=cotp.compose())
             request_bytes = tpkt.compose()
@@ -929,7 +931,7 @@ class ClientRDP(L7ClientStartTlsBase):
         except (InvalidValue, InvalidType) as e:
             six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
 
-        if RDPProtocol.SSL not in neg_rsp.protocol:
+        if not set(self._SUPPORTED_MODES) & set(neg_rsp.protocol):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
     def _deinit_l7(self):
