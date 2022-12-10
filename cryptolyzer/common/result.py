@@ -11,9 +11,21 @@ from cryptoparser.tls.version import TlsProtocolVersion
 
 
 @attr.s
-class AnalyzerTarget(Serializable):
+class AnalyzerTargetBase(Serializable):
     scheme = attr.ib(validator=attr.validators.instance_of(six.string_types))
     address = attr.ib(validator=attr.validators.instance_of(six.string_types))
+
+    @classmethod
+    def _from_l7_client(cls, l7_client, **kwargs):
+        raise NotImplementedError()
+
+    @classmethod
+    def from_l7_client(cls, l7_client, proto_version=None):
+        raise NotImplementedError()
+
+
+@attr.s
+class AnalyzerTarget(AnalyzerTargetBase):
     ip = attr.ib(
         validator=attr.validators.instance_of((
             six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
@@ -72,6 +84,19 @@ class AnalyzerTargetSsh(AnalyzerTarget):
 
 
 @attr.s
+class AnalyzerTargetDnsRecord(AnalyzerTargetBase):
+    server = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(six.string_types)))
+
+    @classmethod
+    def _from_l7_client(cls, l7_client, **kwargs):
+        return cls(l7_client.get_scheme(), l7_client.domain.host, l7_client.domain.fragment)
+
+    @classmethod
+    def from_l7_client(cls, l7_client, proto_version=None):
+        return cls._from_l7_client(l7_client)
+
+
+@attr.s
 class AnalyzerResultBase(Serializable):
     target = attr.ib()
 
@@ -127,4 +152,9 @@ class AnalyzerResultSsh(AnalyzerResultBase):
 
 @attr.s
 class AnalyzerResultHttp(AnalyzerResultBase):
+    pass
+
+
+@attr.s
+class AnalyzerResultDnsRecord(AnalyzerResultBase):
     pass
