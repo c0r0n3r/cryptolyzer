@@ -585,11 +585,10 @@ class TestClientLDAP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        with self.assertRaises(NotEnoughData) as context_manager:
-            self.get_result(  # pylint: disable = expression-not-assigned
-                'ldap', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
-            )
-        self.assertEqual(context_manager.exception.bytes_needed, 1)
+        _, result = self.get_result(  # pylint: disable = expression-not-assigned
+            'ldap', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+        )
+        self.assertEqual(result.versions, [])
 
     def test_ldap_client(self):
         _, result = self.get_result('ldap', 'ldap.uchicago.edu', None)

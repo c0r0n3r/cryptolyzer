@@ -595,6 +595,8 @@ class L7ClientStartTlsBase(L7ClientTlsBase):
 
         try:
             self._init_l7()
+        except NotEnoughData as e:
+            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'TimeoutError' or isinstance(e, socket.timeout):
                 six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
