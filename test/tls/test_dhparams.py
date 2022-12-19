@@ -14,7 +14,7 @@ from cryptolyzer.common.dhparam import (
     WellKnownDHParams,
 )
 
-from cryptolyzer.tls.client import L7ClientTlsBase, TlsHandshakeClientHelloKeyExchangeDHE
+from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
@@ -30,26 +30,45 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
 
     @mock.patch.object(TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError)
     def test_error_missing_key_share_extension(self, _):
-        result = self.get_result('mega.co.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('example.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
     @mock.patch.object(AnalyzerDHParams, '_get_public_key', side_effect=StopIteration)
     def test_error_no_respoinse_during_key_reuse_check(self, _):
-        result = self.get_result('mega.co.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('example.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
         self.assertEqual(result.key_reuse, None)
 
     @mock.patch.object(
-        TlsHandshakeClientHelloKeyExchangeDHE, '_NAMED_CURVES',
-        mock.PropertyMock(return_value=[TlsNamedCurve.FFDHE2048, ])
+        AnalyzerDHParams, '_get_public_key', side_effect=StopIteration
     )
-    def test_last_key_share_extension(self):
-        result = self.get_result('mega.co.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
-        self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048])
-        self.assertEqual(result.dhparam, None)
+    def test_error_key_reuse_undeterminable(self, _):
+        result = self.get_result('mazda.at', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
+        self.assertIsNone(result.dhparam)
+        self.assertEqual(result.key_reuse, None)
 
-        result = self.get_result('mega.co.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
-        self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048])
+        result = self.get_result('openssl.org', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        self.assertEqual(result.groups, [
+            TlsNamedCurve.FFDHE2048,
+            TlsNamedCurve.FFDHE3072,
+            TlsNamedCurve.FFDHE4096,
+            TlsNamedCurve.FFDHE6144,
+            TlsNamedCurve.FFDHE8192,
+        ])
+        self.assertEqual(result.dhparam, None)
+        self.assertEqual(result.key_reuse, None)
+
+    @mock.patch.object(
+        TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError
+    )
+    def test_last_key_share_extension(self, _):
+        result = self.get_result('mazda.at', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self.assertEqual(result.groups, [])
+        self.assertIsNotNone(result.dhparam, None)
+
+        result = self.get_result('openssl.org', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
     def test_size(self):
@@ -117,13 +136,15 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertFalse(result.key_reuse)
 
     def test_tls_1_2_rfc_7919_support(self):
-        result = self.get_result('mega.co.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
-        self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048])
+        result = self.get_result('mazda.at', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
         self.assertEqual(result.dhparam, None)
-        self.assertFalse(result.key_reuse)
+        self.assertTrue(result.key_reuse)
         self.assertEqual(
             self.get_log_lines(), [
                 'Server offers FFDHE public parameter with size 2048-bit (TLS 1.2)',
+                'Server offers FFDHE public parameter with size 3072-bit (TLS 1.2)',
+                'Server offers FFDHE public parameter with size 4096-bit (TLS 1.2)',
             ]
         )
 
@@ -137,7 +158,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         )
     )
     def test_tls_1_2_no_rfc_7919_support(self, _):
-        result = self.get_result('mega.co.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('example.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertEqual(
             result.dhparam.parameter_numbers,
@@ -158,13 +179,23 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
 
-        result = self.get_result('mega.co.nz', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
-        self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048])
+        result = self.get_result('openssl.org', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        self.assertEqual(result.groups, [
+            TlsNamedCurve.FFDHE2048,
+            TlsNamedCurve.FFDHE3072,
+            TlsNamedCurve.FFDHE4096,
+            TlsNamedCurve.FFDHE6144,
+            TlsNamedCurve.FFDHE8192,
+        ])
         self.assertEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
         self.assertEqual(
             self.log_stream.getvalue(),
             'Server offers FFDHE public parameter with size 2048-bit (TLS 1.3)\n'
+            'Server offers FFDHE public parameter with size 3072-bit (TLS 1.3)\n'
+            'Server offers FFDHE public parameter with size 4096-bit (TLS 1.3)\n'
+            'Server offers FFDHE public parameter with size 6144-bit (TLS 1.3)\n'
+            'Server offers FFDHE public parameter with size 8192-bit (TLS 1.3)\n'
         )
 
     def test_json(self):

@@ -136,9 +136,13 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
     @staticmethod
     def _remove_selected_group_among_supported_ones(client_hello, selected_group):
-        elliptic_curves_extension = client_hello.extensions.get_item_by_type(
-            TlsExtensionType.SUPPORTED_GROUPS
-        )
+        try:
+            elliptic_curves_extension = client_hello.extensions.get_item_by_type(
+                TlsExtensionType.SUPPORTED_GROUPS
+            )
+        except KeyError:
+            return False
+
         elliptic_curves = elliptic_curves_extension.elliptic_curves
         for elliptic_curve in elliptic_curves:
             if elliptic_curve == selected_group:
