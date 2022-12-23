@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import math
-
 import attr
 import six
 
@@ -31,8 +29,13 @@ from cryptoparser.ssh.version import SshProtocolVersion, SshSoftwareVersionUnpar
 
 from cryptolyzer import __setup__
 
-from cryptolyzer.common.curves import WellKnownECParams
-from cryptolyzer.common.dhparam import get_dh_ephemeral_key_forged, bytes_to_int, int_to_bytes, WellKnownDHParams
+from cryptolyzer.common.dhparam import (
+    WellKnownDHParams,
+    bytes_to_int,
+    get_dh_ephemeral_key_forged,
+    get_ecdh_ephemeral_key_forged,
+    int_to_bytes,
+)
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
 
@@ -289,16 +292,7 @@ class SshClientHandshake(SshHandshakeBase):
         except KeyError as e:
             six.raise_from(NotImplementedError(), e)
 
-        key_size_in_bytes = int(math.ceil(named_group.value.size / 8))
-        if named_group in [NamedGroup.CURVE25519, NamedGroup.CURVE448]:
-            ephemeral_public_key_bytes = key_size_in_bytes * b'\xff'
-        else:
-            well_know_ec_param = WellKnownECParams.from_named_group(named_group)
-            ephemeral_public_key_bytes = bytearray().join([
-                b'\x04',  # uncompressed point format
-                int_to_bytes(well_know_ec_param.value.parameter_numbers.x, key_size_in_bytes),
-                int_to_bytes(well_know_ec_param.value.parameter_numbers.y, key_size_in_bytes),
-            ])
+        ephemeral_public_key_bytes = get_ecdh_ephemeral_key_forged(named_group)
         transfer.send(record_class(SshDHKeyExchangeInit(ephemeral_public_key_bytes)).compose())
 
         return record_class
