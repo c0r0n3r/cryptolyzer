@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import datetime
-
 import attr
 import six
 
@@ -218,7 +216,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             return None
 
         clock_skew = (
-            int(datetime.datetime.utcnow().strftime('%s')) -
+            int(client_hello.random.time.strftime('%s')) -
             int(server_messages[TlsHandshakeType.SERVER_HELLO].random.time.strftime('%s'))
         )
         clock_is_accurate = -15 < clock_skew < 15

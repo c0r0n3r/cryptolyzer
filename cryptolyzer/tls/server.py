@@ -217,6 +217,7 @@ class TlsServerHandshake(TlsServer):
             server_hello = TlsHandshakeServerHello(
                 protocol_version=protocol_version,
                 cipher_suite=choosen_cipher_suite,
+                random=message.random,
                 extensions=extensions,
             )
 
