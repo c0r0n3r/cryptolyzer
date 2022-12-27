@@ -13,7 +13,7 @@ import attr
 
 import six
 
-from cryptoparser.common.algorithm import Authentication, BlockCipherMode, KeyExchange, NamedGroupType
+from cryptoparser.common.algorithm import Authentication, BlockCipher, BlockCipherMode, KeyExchange, NamedGroupType
 from cryptoparser.common.exception import NotEnoughData, TooMuchData, InvalidType, InvalidValue
 
 from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm, TlsECPointFormat
@@ -300,7 +300,7 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(  # pylint: disable=too-ma
 class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancestors
             TlsHandshakeClientHelloSpecalization
         ):
-    _CIPHER_SUITES = [
+    CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.key_exchange in [KeyExchange.DHE, KeyExchange.ADH] or
@@ -326,7 +326,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
         super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
-            cipher_suites=self._CIPHER_SUITES,
+            cipher_suites=self.CIPHER_SUITES,
             named_curves=named_curves,
             signature_algorithms=signature_algorithms,
             extensions=[]
@@ -336,7 +336,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
 class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ancestors
             TlsHandshakeClientHelloSpecalization
         ):
-    _CIPHER_SUITES = [
+    CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.key_exchange in [KeyExchange.ECDHE, KeyExchange.AECDH] or
@@ -363,7 +363,7 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
         super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
-            cipher_suites=self._CIPHER_SUITES,
+            cipher_suites=self.CIPHER_SUITES,
             named_curves=named_curves,
             signature_algorithms=signature_algorithms,
             extensions=[]
@@ -373,7 +373,7 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
 class TlsHandshakeClientHelloBlockCipherModeCBC(  # pylint: disable=too-many-ancestors
             TlsHandshakeClientHelloSpecalization
         ):
-    _CIPHER_SUITES = [
+    CIPHER_SUITES = [
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if cipher_suite.value.block_cipher_mode == BlockCipherMode.CBC
@@ -390,7 +390,120 @@ class TlsHandshakeClientHelloBlockCipherModeCBC(  # pylint: disable=too-many-anc
         super(TlsHandshakeClientHelloBlockCipherModeCBC, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
-            cipher_suites=self._CIPHER_SUITES,
+            cipher_suites=self.CIPHER_SUITES,
+            named_curves=named_curves,
+            signature_algorithms=signature_algorithms,
+            extensions=[]
+        )
+
+
+class TlsHandshakeClientHelloStreamCipherRC4(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
+    CIPHER_SUITES = [
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if cipher_suite.value.bulk_cipher in (
+            BlockCipher.RC4_40,
+            BlockCipher.RC4_56,
+            BlockCipher.RC4_64,
+            BlockCipher.RC4_128,
+        )
+    ]
+
+    def __init__(
+            self,
+            protocol_version,
+            hostname,
+            named_curves=None,
+            signature_algorithms=None,
+    ):
+
+        super(TlsHandshakeClientHelloStreamCipherRC4, self).__init__(
+            hostname=hostname,
+            protocol_versions=[protocol_version, ],
+            cipher_suites=self.CIPHER_SUITES,
+            named_curves=named_curves,
+            signature_algorithms=signature_algorithms,
+            extensions=[]
+        )
+
+
+class TlsHandshakeClientHelloBulkCipherBlockSize64(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
+    CIPHER_SUITES = [
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if cipher_suite.value.bulk_cipher and cipher_suite.value.bulk_cipher.value.block_size == 64
+    ]
+
+    def __init__(
+            self,
+            protocol_version,
+            hostname,
+            named_curves=None,
+            signature_algorithms=None,
+    ):
+
+        super(TlsHandshakeClientHelloBulkCipherBlockSize64, self).__init__(
+            hostname=hostname,
+            protocol_versions=[protocol_version, ],
+            cipher_suites=self.CIPHER_SUITES,
+            named_curves=named_curves,
+            signature_algorithms=signature_algorithms,
+            extensions=[]
+        )
+
+
+class TlsHandshakeClientHelloBulkCipherNull(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
+    CIPHER_SUITES = [
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if cipher_suite.value.bulk_cipher is None
+    ]
+
+    def __init__(
+            self,
+            protocol_version,
+            hostname,
+            named_curves=None,
+            signature_algorithms=None,
+    ):
+
+        super(TlsHandshakeClientHelloBulkCipherNull, self).__init__(
+            hostname=hostname,
+            protocol_versions=[protocol_version, ],
+            cipher_suites=self.CIPHER_SUITES,
+            named_curves=named_curves,
+            signature_algorithms=signature_algorithms,
+            extensions=[]
+        )
+
+
+class TlsHandshakeClientHelloKeyExchangeAnonymousDH(  # pylint: disable=too-many-ancestors
+            TlsHandshakeClientHelloSpecalization
+        ):
+    CIPHER_SUITES = [
+        cipher_suite
+        for cipher_suite in TlsCipherSuite
+        if cipher_suite.value.key_exchange == KeyExchange.ADH
+    ]
+
+    def __init__(
+            self,
+            protocol_version,
+            hostname,
+            named_curves=None,
+            signature_algorithms=None,
+    ):
+
+        super(TlsHandshakeClientHelloKeyExchangeAnonymousDH, self).__init__(
+            hostname=hostname,
+            protocol_versions=[protocol_version, ],
+            cipher_suites=self.CIPHER_SUITES,
             named_curves=named_curves,
             signature_algorithms=signature_algorithms,
             extensions=[]

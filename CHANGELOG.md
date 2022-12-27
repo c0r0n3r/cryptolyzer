@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.0
+
+- TLS (`tls`)
+  - Vulnerabilities (`vulns`)
+    - checker for well-known vulnerabilities (\#93)
+      - Anonymous Diffie-Hellman
+      - DHEat attack
+      - DROWN attack
+      - Early TLS version
+      - Export grade ciphers
+      - FREAK attack
+      - Logjam attack
+      - Lucky Thirteen attack
+      - NULL encryption
+      - Non-Forward-Secret
+      - RC4
+      - Sweet32 attack
+
 ## 0.8.3 - 2022-11-06
 
 - TLS (`tls`)

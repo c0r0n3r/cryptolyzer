@@ -151,9 +151,9 @@ Supported analyzers by cryptographic protocol versions
 | X.509 Public Key Request (``pubkeyreq``) |  n/a  |   ✓   |   ✓   |   ✓   |   ✓   |   ✗   |
 | Elliptic Curves (``curves``)             |  n/a  |  n/a  |   ✓   |   ✓   |   ✓   |   ✓   |
 | Diffie-Hellman parameters (``dhparams``) |  n/a  |  n/a  |   ✓   |   ✓   |   ✓   |   ✓   |
-| Extensions (``extensions``)              |  n/a  |  n/a  |  n/a  |  n/a  |   ✓   |   ✓   |
 | Signature Algorithms (``sigalgos``)      |  n/a  |  n/a  |  n/a  |   ✓   |   ✓   |   ✓   |
-
+| Extensions (``extensions``)              |  n/a  |  n/a  |  n/a  |  n/a  |   ✓   |   ✓   |
+| Vulnerabilities (``vulns``)              |  n/a  |  n/a  |  n/a  |  n/a  |  n/a  |  n/a  |
 
 ### Protocols
 
@@ -195,6 +195,21 @@ port.
 * [renegotiation indication](https://www.rfc-editor.org/rfc/rfc5746.html)
 * [session ticket](https://www.rfc-editor.org/rfc/rfc5077.html)
 * [inetrnal clock accuracy](https://www.rfc-editor.org/rfc/rfc5246#section-7.4.1.2)
+
+### Vulnerabilities
+
+* [DHEat attack](https://dheatattack.com/)
+* [DROWN attack](https://drownattack.com/)
+* [FREAK attack](https://en.wikipedia.org/wiki/FREAK)
+* [Logjam attack](https://weakdh.org/)
+* [Lucky Thirteen attack](https://en.wikipedia.org/wiki/Lucky_Thirteen_attack)
+* [RC4 ciphers](https://en.wikipedia.org/wiki/RC4#Security)
+* [Sweet32 attack](https://sweet32.info/)
+* [anonymous Diffie-Hellman ciphers](https://en.wikipedia.org/wiki/Key-agreement_protocol#Exponential_key_exchange)
+* [early TLS versions](https://www.rfc-editor.org/rfc/rfc8996)
+* [export grade ciphers](https://en.wikipedia.org/wiki/Export_of_cryptography_from_the_United_States)
+* [non-forward-secret ciphers](https://en.wikipedia.org/wiki/Forward_secrecy)
+* [null encryption ciphers](https://en.wikipedia.org/wiki/Null_encryption)
 
 ## Fingerprinting
 

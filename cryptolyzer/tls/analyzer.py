@@ -13,6 +13,7 @@ from cryptolyzer.tls.dhparams import AnalyzerDHParams
 from cryptolyzer.tls.extensions import AnalyzerExtensions
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos
 from cryptolyzer.tls.versions import AnalyzerVersions
+from cryptolyzer.tls.vulnerabilities import AnalyzerVulnerabilities
 from cryptolyzer.tls.all import AnalyzerAll
 
 
@@ -98,6 +99,7 @@ class ProtocolHandlerTlsVersionIndependent(ProtocolHandlerTlsBase):
         return (
             AnalyzerVersions,
             AnalyzerAll,
+            AnalyzerVulnerabilities,
         )
 
     @classmethod

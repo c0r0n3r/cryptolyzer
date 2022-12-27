@@ -62,8 +62,8 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
         raise alert
 
-    @staticmethod
-    def _next_accepted_cipher_suites(l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
+    @classmethod
+    def _next_accepted_cipher_suites(cls, l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
         if isinstance(protocol_version, SslProtocolVersion):
             client_hello = SslHandshakeClientHelloAnyAlgorithm()
             client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
