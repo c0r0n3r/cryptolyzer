@@ -5,12 +5,13 @@ import codecs
 import attr
 import six
 
+from cryptodatahub.tls.algorithm import TlsNamedCurve
+
 from cryptoparser.common.exception import NotEnoughData
 
-from cryptoparser.tls.algorithm import TlsNamedCurve
 from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionKeyShareClient
 from cryptoparser.tls.subprotocol import TlsExtensionsClient, TlsHandshakeType, TlsAlertDescription
-from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import (
@@ -232,7 +233,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
     def analyze(self, analyzable, protocol_version):
         client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, analyzable.address)
-        is_tls_1_3 = protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        is_tls_1_3 = protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2)
 
         if is_tls_1_3:
             named_groups = self._analyze_tls_1_3(analyzable, client_hello, protocol_version)

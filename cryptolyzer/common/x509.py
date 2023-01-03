@@ -11,7 +11,7 @@ import attr
 
 import cryptoparser.common.key
 import cryptoparser.common.utils
-from cryptoparser.common.algorithm import Authentication, Hash, Signature
+from cryptodatahub.common.algorithm import Authentication, Hash, Signature
 
 
 class PublicKey(cryptoparser.common.key.PublicKey):

@@ -7,8 +7,9 @@ except ImportError:
 
 from collections import OrderedDict
 
-from cryptoparser.common.algorithm import Authentication, Hash
-from cryptoparser.ssh.ciphersuite import SshHostKeyAlgorithm
+from cryptodatahub.common.algorithm import Authentication, Hash
+
+from cryptodatahub.ssh.algorithm import SshHostKeyAlgorithm
 from cryptoparser.ssh.subprotocol import SshReasonCode
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType

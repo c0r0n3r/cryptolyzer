@@ -13,10 +13,13 @@ import attr
 
 import six
 
-from cryptoparser.common.algorithm import Authentication, BlockCipher, BlockCipherMode, KeyExchange, NamedGroupType
-from cryptoparser.common.exception import NotEnoughData, TooMuchData, InvalidType, InvalidValue
+from cryptodatahub.common.algorithm import Authentication, BlockCipher, BlockCipherMode, KeyExchange, NamedGroupType
+from cryptodatahub.common.exception import InvalidValue
 
-from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm, TlsECPointFormat
+from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm, TlsECPointFormat
+
+from cryptoparser.common.exception import NotEnoughData, TooMuchData, InvalidType
+
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.ldap import (
     LDAPResultCode,
@@ -50,7 +53,7 @@ from cryptoparser.tls.extension import (
     TlsExtensionEllipticCurves,
     TlsExtensionKeyShareClient,
     TlsExtensionKeyShareReservedClient,
-    TlsExtensionServerName,
+    TlsExtensionServerNameClient,
     TlsExtensionSignatureAlgorithms,
     TlsExtensionSignatureAlgorithmsCert,
     TlsExtensionSupportedVersionsClient,
@@ -60,7 +63,7 @@ from cryptoparser.tls.extension import (
 )
 
 from cryptoparser.tls.record import TlsRecord, SslRecord
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslVersion
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.dhparam import WellKnownDHParams, get_dh_ephemeral_key_forged, int_to_bytes
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
@@ -133,10 +136,10 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             extensions
     ):  # pylint: disable=too-many-arguments
         protocol_version_min = min(protocol_versions)
-        is_tls1_3_supported = max(protocol_versions) > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        is_tls1_3_supported = max(protocol_versions) > TlsProtocolVersion(TlsVersion.TLS1_2)
 
         if hostname is not None:
-            extensions.append(TlsExtensionServerName(hostname))
+            extensions.append(TlsExtensionServerNameClient(hostname))
         if named_curves is None:
             named_curves = list(TlsNamedCurve)
 
@@ -148,14 +151,14 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             cipher_suites = [
                 cipher_suite
                 for cipher_suite in cipher_suites
-                if cipher_suite.value.initial_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+                if TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2)
             ]
 
             extensions.extend(self._get_tls1_3_extensions(protocol_versions, named_curves, signature_algorithms))
         elif len(protocol_versions) > 1:
             raise NotImplementedError()
 
-        if protocol_version_min >= TlsProtocolVersionFinal(TlsVersion.TLS1_0):
+        if protocol_version_min >= TlsProtocolVersion(TlsVersion.TLS1):
             if named_curves:
                 extensions.append(TlsExtensionEllipticCurves(named_curves))
 
@@ -166,7 +169,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             extensions.append(TlsExtensionSignatureAlgorithms(signature_algorithms))
 
         if is_tls1_3_supported:
-            protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            protocol_version = TlsProtocolVersion(TlsVersion.TLS1_2)
         else:
             protocol_version = protocol_version_min
 
@@ -305,7 +308,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.key_exchange in [KeyExchange.DHE, KeyExchange.ADH] or
-            cipher_suite.value.initial_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+            TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2))
     ]
     _NAMED_CURVES = [
         named_curve
@@ -341,7 +344,7 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
         cipher_suite
         for cipher_suite in TlsCipherSuite
         if (cipher_suite.value.key_exchange in [KeyExchange.ECDHE, KeyExchange.AECDH] or
-            cipher_suite.value.initial_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+            TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2))
     ]
     _NAMED_CURVES = [
         named_curve
@@ -550,14 +553,14 @@ class L7ClientTlsBase(L7TransferBase):
         return self._do_handshake(
             SslClientHandshake(),
             hello_message,
-            SslVersion.SSL2,
+            TlsVersion.SSL2,
             last_handshake_message_type
         )
 
     def do_tls_handshake(
             self,
             hello_message,
-            record_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+            record_version=TlsProtocolVersion(TlsVersion.TLS1),
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
     ):
         return self._do_handshake(
@@ -1362,7 +1365,7 @@ class TlsClientHandshake(TlsClient):
             self,
             transfer,
             hello_message,
-            record_version=TlsProtocolVersionFinal(TlsVersion.SSL3),
+            record_version=TlsProtocolVersion(TlsVersion.SSL3),
             last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
     ):
         self.server_messages = {}
@@ -1426,7 +1429,7 @@ class SslClientHandshake(TlsClient):
             self,
             transfer,
             hello_message=None,
-            record_version=SslVersion.SSL2,
+            record_version=TlsVersion.SSL2,
             last_handshake_message_type=SslMessageType.SERVER_HELLO
     ):
         ssl_record = SslRecord(hello_message)

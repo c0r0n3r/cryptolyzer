@@ -9,9 +9,9 @@ import enum
 import six
 import attr
 
-from cryptoparser.common.algorithm import NamedGroup
+from cryptodatahub.common.algorithm import NamedGroup
+
 from cryptoparser.common.base import Vector, VectorParamNumeric, Serializable
-from cryptolyzer.common.curves import WellKnownECParams
 from cryptoparser.common.parse import ParserBinary
 from cryptoparser.tls.extension import TlsNamedCurveFactory
 from cryptoparser.tls.subprotocol import TlsECCurveType

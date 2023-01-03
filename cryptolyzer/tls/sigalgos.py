@@ -4,8 +4,9 @@ import six
 
 import attr
 
+from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm
+
 from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms, TlsSignatureAndHashAlgorithmVector
-from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase

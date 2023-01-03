@@ -19,8 +19,9 @@ from test.common.classes import TestLoggerBase
 import asn1crypto.pem
 import asn1crypto.x509
 
-from cryptoparser.common.algorithm import Authentication, Hash, Signature
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptodatahub.common.algorithm import Authentication, Hash, Signature
+
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.common.x509 import PublicKeyX509
@@ -32,7 +33,7 @@ class TestPublicKeyX509(TestLoggerBase):
     def _get_result(host, port):
         analyzer = AnalyzerPublicKeys()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
-        result = analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = analyzer.analyze(l7_client, TlsProtocolVersion(TlsVersion.TLS1_2))
         return result
 
     @staticmethod

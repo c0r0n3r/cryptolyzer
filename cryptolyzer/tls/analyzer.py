@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from cryptoparser.tls.version import TlsProtocolVersionFinal
-from cryptoparser.tls.version import TlsVersion
-from cryptoparser.tls.version import SslProtocolVersion
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.analyzer import ProtocolHandlerTlsBase, ProtocolHandlerTlsExactVersion
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
@@ -27,7 +25,7 @@ class ProtocolHandlerSsl2(ProtocolHandlerTlsExactVersion):
 
     @classmethod
     def get_protocol_version(cls):
-        return SslProtocolVersion()
+        return TlsProtocolVersion(TlsVersion.SSL2)
 
 
 class ProtocolHandlerSsl3(ProtocolHandlerTlsExactVersion):
@@ -37,7 +35,7 @@ class ProtocolHandlerSsl3(ProtocolHandlerTlsExactVersion):
 
     @classmethod
     def get_protocol_version(cls):
-        return TlsProtocolVersionFinal(TlsVersion.SSL3)
+        return TlsProtocolVersion(TlsVersion.SSL3)
 
 
 class ProtocolHandlerTls10(ProtocolHandlerTlsExactVersion):
@@ -51,7 +49,7 @@ class ProtocolHandlerTls10(ProtocolHandlerTlsExactVersion):
 
     @classmethod
     def get_protocol_version(cls):
-        return TlsProtocolVersionFinal(TlsVersion.TLS1_0)
+        return TlsProtocolVersion(TlsVersion.TLS1)
 
 
 class ProtocolHandlerTls11(ProtocolHandlerTlsExactVersion):
@@ -61,7 +59,7 @@ class ProtocolHandlerTls11(ProtocolHandlerTlsExactVersion):
 
     @classmethod
     def get_protocol_version(cls):
-        return TlsProtocolVersionFinal(TlsVersion.TLS1_1)
+        return TlsProtocolVersion(TlsVersion.TLS1_1)
 
 
 class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
@@ -74,7 +72,7 @@ class ProtocolHandlerTls12(ProtocolHandlerTlsExactVersion):
 
     @classmethod
     def get_protocol_version(cls):
-        return TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        return TlsProtocolVersion(TlsVersion.TLS1_2)
 
 
 class ProtocolHandlerTls13(ProtocolHandlerTlsExactVersion):
@@ -90,7 +88,7 @@ class ProtocolHandlerTls13(ProtocolHandlerTlsExactVersion):
 
     @classmethod
     def get_protocol_version(cls):
-        return TlsProtocolVersionFinal(TlsVersion.TLS1_3)
+        return TlsProtocolVersion(TlsVersion.TLS1_3)
 
 
 class ProtocolHandlerTlsVersionIndependent(ProtocolHandlerTlsBase):

@@ -8,7 +8,7 @@ import attr
 
 import asn1crypto.x509
 
-from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
+from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.subprotocol import (
     TlsAlertDescription,
     TlsClientCertificateType,

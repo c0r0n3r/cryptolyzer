@@ -6,7 +6,7 @@ from test.common.classes import TestThreadedServer, TestLoggerBase
 
 import six
 
-from cryptoparser.ssh.ciphersuite import (
+from cryptodatahub.ssh.algorithm import (
     SshCompressionAlgorithm,
     SshEncryptionAlgorithm,
     SshHostKeyAlgorithm,

@@ -14,7 +14,9 @@ from test.common.classes import TestLoggerBase
 
 import six
 
-from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
+from cryptodatahub.common.exception import InvalidValue
+
+from cryptoparser.common.exception import NotEnoughData, InvalidType
 from cryptoparser.tls.ciphersuite import SslCipherKind
 from cryptoparser.tls.ldap import LDAPMessageParsableBase, LDAPExtendedResponseStartTLS, LDAPResultCode
 from cryptoparser.tls.mysql import MySQLCapability, MySQLRecord, MySQLCharacterSet, MySQLHandshakeV10, MySQLVersion
@@ -34,7 +36,7 @@ from cryptoparser.tls.subprotocol import (
     TlsContentType,
     TlsHandshakeType,
 )
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import (
     ClientIMAP,
@@ -77,7 +79,7 @@ from .classes import (
 
 
 class TestTlsHandshakeClientHello(unittest.TestCase):
-    _PROTOCOL_VERSION = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+    _PROTOCOL_VERSION = TlsProtocolVersion(TlsVersion.TLS1_2)
     _HOSTNAME = 'hostname'
 
     def test_block_cipher_mode_cbc(self):
@@ -137,7 +139,7 @@ class TestTlsAlert(unittest.TestCase):
 class TestL7ClientBase(TestLoggerBase):
     @staticmethod
     def get_result(  # pylint: disable=too-many-arguments
-            proto, host, port, timeout=None, ip=None, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            proto, host, port, timeout=None, ip=None, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2)
     ):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout, ip=ip)
@@ -193,11 +195,11 @@ class TestL7ClientTlsBase(TestL7ClientBase):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsMock('badssl.com', 443)
         self.assertEqual(
-            analyzer.analyze(l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2)).versions,
+            analyzer.analyze(l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)).versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
             ]
         )
 
@@ -206,9 +208,9 @@ class TestL7ClientTlsBase(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
             ]
         )
 
@@ -217,9 +219,9 @@ class TestL7ClientTlsBase(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
             ]
         )
 
@@ -283,7 +285,7 @@ class TestClientPOP3(TestL7ClientBase):
         self.assertEqual(l7_client.greeting, ['+OK Dovecot ready.'])
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
     def test_pop3s_client(self):
@@ -291,8 +293,8 @@ class TestClientPOP3(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(version)
-                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+                TlsProtocolVersion(version)
+                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
 
@@ -334,7 +336,7 @@ class TestClientIMAP(TestL7ClientBase):
         _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
 
     def test_imaps_client(self):
@@ -342,8 +344,8 @@ class TestClientIMAP(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(version)
-                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+                TlsProtocolVersion(version)
+                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
 
@@ -443,8 +445,8 @@ class TestClientSMTP(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(version)
-                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+                TlsProtocolVersion(version)
+                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
 
@@ -453,8 +455,8 @@ class TestClientSMTP(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(version)
-                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+                TlsProtocolVersion(version)
+                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
 
@@ -481,19 +483,19 @@ class TestClientFTP(TestL7ClientBase):
         _, result = self.get_result('ftp', 'slackware.org.uk', None)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
 
     def test_ftp_client(self):
         _, result = self.get_result('ftp', 'slackware.org.uk', None)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
 
     def test_ftps_client(self):
         _, result = self.get_result('ftps', 'ftps.tceq.texas.gov', None)
-        self.assertEqual(result.versions, [TlsProtocolVersionFinal(TlsVersion.TLS1_2), ])
+        self.assertEqual(result.versions, [TlsProtocolVersion(TlsVersion.TLS1_2), ])
 
 
 RDP_NEGOTIATION_RESPONSE_LENGTH = 19
@@ -537,9 +539,9 @@ class TestClientRDP(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
             ]
         )
 
@@ -591,17 +593,17 @@ class TestClientLDAP(TestL7ClientBase):
     def test_ldap_client(self):
         _, result = self.get_result('ldap', 'ldap.uchicago.edu', None)
         self.assertEqual(result.versions, [
-            TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-            TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            TlsProtocolVersion(TlsVersion.TLS1),
+            TlsProtocolVersion(TlsVersion.TLS1_1),
+            TlsProtocolVersion(TlsVersion.TLS1_2),
         ])
 
     def test_ldaps_client(self):
         _, result = self.get_result('ldaps', 'ldap.uchicago.edu', None)
         self.assertEqual(result.versions, [
-            TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-            TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            TlsProtocolVersion(TlsVersion.TLS1),
+            TlsProtocolVersion(TlsVersion.TLS1_1),
+            TlsProtocolVersion(TlsVersion.TLS1_2),
         ])
 
 
@@ -652,8 +654,8 @@ class TestClientNNTP(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(tls_version)
-                for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+                TlsProtocolVersion(tls_version)
+                for tls_version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
 
@@ -719,7 +721,7 @@ class TestClientMySQL(TestL7ClientBase):
 
     def test_mysql_client(self):
         _, result = self.get_result('mysql', 'db4free.net', None, timeout=10)
-        self.assertIn(TlsProtocolVersionFinal(TlsVersion.TLS1_2), result.versions)
+        self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
 
 class TestClientPostgreSQL(TestL7ClientBase):
@@ -824,8 +826,8 @@ class TestClientSieve(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(tls_version)
-                for tls_version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+                TlsProtocolVersion(tls_version)
+                for tls_version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
 
@@ -898,8 +900,8 @@ class TestClientXMPP(TestL7ClientBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_3),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_3),
             ]
         )
 
@@ -909,7 +911,7 @@ class TestClientDoH(TestL7ClientBase):
         _, result = self.get_result('doh', 'dns.google', None)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]]
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]]
         )
 
 
@@ -922,7 +924,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
 
         l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersionFinal(TlsVersion.TLS1_2), ], 'localhost')
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersion(TlsVersion.TLS1_2), ], 'localhost')
 
         with self.assertRaises(NetworkError) as context_manager:
             l7_client.do_tls_handshake(client_hello)
@@ -959,7 +961,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
         threaded_server.wait_for_server_listen()
         l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersionFinal(TlsVersion.TLS1_2), ], 'localhost')
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersion(TlsVersion.TLS1_2), ], 'localhost')
         with self.assertRaises(NetworkError) as context_manager:
             l7_client.do_tls_handshake(client_hello)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_RESPONSE)
@@ -985,7 +987,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
 
         l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersionFinal(TlsVersion.TLS1_2), ], 'localhost')
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersion(TlsVersion.TLS1_2), ], 'localhost')
 
         self.assertEqual(
             l7_client.do_tls_handshake(client_hello),
@@ -999,7 +1001,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_ssl_error_replied(self, _):
         with self.assertRaises(SslError) as context_manager:
-            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
+            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CIPHER_ERROR)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
@@ -1015,7 +1017,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_unparsable_response(self, _):
         with self.assertRaises(SecurityError) as context_manager:
-            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
+            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
@@ -1038,7 +1040,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_multiple_record_resonse(self, _):
         with self.assertRaises(SecurityError) as context_manager:
-            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
+            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
@@ -1055,7 +1057,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_unacceptable_tls_error_replied(self, _):
         with self.assertRaises(NetworkError) as context_manager:
-            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(SslCipherKind))
+            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @mock.patch.object(L4ClientTCP, 'receive', return_value=b'')
@@ -1068,7 +1070,7 @@ class TestSslClientHandshake(unittest.TestCase):
     def test_multiple_messages(self, _, __):
         with self.assertRaises(SslError) as context_manager:
             L7ClientTls('badssl.com', 443).do_ssl_handshake(
-                SslHandshakeClientHello(SslCipherKind),
+                SslHandshakeClientHello(list(SslCipherKind)),
                 SslMessageType.ERROR
             )
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CERTIFICATE_ERROR)

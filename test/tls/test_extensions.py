@@ -8,7 +8,7 @@ except ImportError:
 
 from test.common.classes import TestLoggerBase
 
-from cryptoparser.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
+from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsECPointFormatVector,
@@ -19,7 +19,7 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeServerHello,
     TlsHandshakeType,
 )
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.extensions import AnalyzerExtensions
@@ -30,7 +30,7 @@ from .classes import L7ServerTlsTest
 
 class TestTlsExtensions(TestLoggerBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2), timeout=None, ip=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None):
         analyzer = AnalyzerExtensions()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
@@ -114,7 +114,7 @@ class TestTlsExtensions(TestLoggerBase):
         analyzer = AnalyzerExtensions()
         l7_client = L7ClientTlsBase.from_scheme('tls', 'www.cloudflare.com', 443)
         compression_methods = analyzer._analyze_compression_methods(  # pylint: disable=protected-access
-            l7_client, TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
         )
 
         self.assertEqual(
@@ -150,7 +150,7 @@ class TestTlsExtensions(TestLoggerBase):
         self.assertIn('Server offers point format(s) "UNCOMPRESSED"', log_lines)
 
     def test_encrypt_then_mac(self):
-        result = self.get_result('tls-v1-0.badssl.com', 1010, TlsProtocolVersionFinal(TlsVersion.TLS1_0))
+        result = self.get_result('tls-v1-0.badssl.com', 1010, TlsProtocolVersion(TlsVersion.TLS1))
         self.assertFalse(result.encrypt_then_mac_supported)
         log_lines = self.pop_log_lines()
         self.assertNotIn('Server does not offer encrypt then MAC', log_lines)

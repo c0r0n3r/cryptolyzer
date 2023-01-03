@@ -8,7 +8,7 @@ import attr
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.subprotocol import TlsCipherSuiteVector, TlsHandshakeType, TlsAlertDescription, SslMessageType
-from cryptoparser.tls.version import SslProtocolVersion, TlsVersion, TlsProtocolVersionDraft, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
@@ -64,7 +64,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
     @classmethod
     def _next_accepted_cipher_suites(cls, l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
-        if isinstance(protocol_version, SslProtocolVersion):
+        if protocol_version.version == TlsVersion.SSL2:
             client_hello = SslHandshakeClientHelloAnyAlgorithm()
             client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
             server_messages = l7_client.do_ssl_handshake(client_hello)
@@ -83,7 +83,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         )
         server_messages = l7_client.do_tls_handshake(
             client_hello,
-            record_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            record_version=TlsProtocolVersion(TlsVersion.TLS1_2)
         )
         server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
         for index, cipher_suite in enumerate(remaining_cipher_suites):
@@ -160,17 +160,17 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
     @classmethod
     def _get_checkable_cipher_suites(cls, protocol_version):
-        if isinstance(protocol_version, SslProtocolVersion):
+        if protocol_version.version == TlsVersion.SSL2:
             checkable_cipher_suites = list(SslCipherKind)
         else:
-            if protocol_version <= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+            if protocol_version <= TlsProtocolVersion(TlsVersion.TLS1_2):
                 min_version = protocol_version
             else:
-                min_version = TlsProtocolVersionDraft(0)
+                min_version = TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_0)
             checkable_cipher_suites = [
                 cipher_suite
                 for cipher_suite in TlsCipherSuite
-                if cipher_suite.value.initial_version >= min_version
+                if TlsProtocolVersion(cipher_suite.value.initial_version) >= min_version
             ]
 
         return checkable_cipher_suites

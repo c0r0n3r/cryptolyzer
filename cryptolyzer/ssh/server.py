@@ -3,15 +3,16 @@
 import abc
 import attr
 
-from cryptoparser.common.classes import LanguageTag
-
-from cryptoparser.ssh.ciphersuite import (
+from cryptodatahub.ssh.algorithm import (
     SshCompressionAlgorithm,
     SshEncryptionAlgorithm,
     SshHostKeyAlgorithm,
     SshKexAlgorithm,
     SshMacAlgorithm,
 )
+
+from cryptoparser.common.classes import LanguageTag
+
 from cryptoparser.ssh.record import SshRecordInit
 from cryptoparser.ssh.subprotocol import SshMessageCode, SshReasonCode, SshKeyExchangeInit, SshDisconnectMessage
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion

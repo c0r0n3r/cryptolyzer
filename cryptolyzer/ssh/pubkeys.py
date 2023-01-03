@@ -6,9 +6,10 @@ from collections import OrderedDict
 import attr
 import six
 
-from cryptoparser.common.algorithm import Authentication
+from cryptodatahub.common.algorithm import Authentication
 
-from cryptoparser.ssh.ciphersuite import SshHostKeyType
+
+from cryptodatahub.ssh.algorithm import SshHostKeyType
 from cryptoparser.ssh.key import SshPublicKeyBase
 from cryptoparser.ssh.subprotocol import (
     SshDHKeyExchangeReplyBase,

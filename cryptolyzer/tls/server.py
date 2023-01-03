@@ -5,8 +5,10 @@ import attr
 
 import six
 
-from cryptoparser.common.algorithm import BlockCipher
-from cryptoparser.common.exception import NotEnoughData, InvalidValue
+from cryptodatahub.common.algorithm import BlockCipher
+from cryptodatahub.common.exception import InvalidValue
+
+from cryptoparser.common.exception import NotEnoughData
 
 from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionSupportedVersionsServer
 from cryptoparser.tls.ldap import (
@@ -48,11 +50,7 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeType,
     TlsSubprotocolMessageParser,
 )
-from cryptoparser.tls.version import (
-    TlsProtocolVersionBase,
-    TlsProtocolVersionFinal,
-    TlsVersion
-)
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.__setup__ import __title__, __version__
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
@@ -63,8 +61,8 @@ from cryptolyzer.common.application import L7ServerBase, L7ServerHandshakeBase, 
 class TlsServerConfiguration(L7ServerConfigurationBase):
     protocol_versions = attr.ib(
         converter=sorted,
-        default=[TlsProtocolVersionFinal(version) for version in TlsVersion],
-        validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsProtocolVersionBase))
+        default=[TlsProtocolVersion(version) for version in TlsVersion],
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsProtocolVersion))
     )
     cipher_suites = attr.ib(
         default=list(filter(lambda cipher_suite: cipher_suite.value.bulk_cipher == BlockCipher.RC2, TlsCipherSuite)),
@@ -201,10 +199,10 @@ class TlsServerHandshake(TlsServer):
 
     def _prepare_server_hello(self, message, protocol_version):
         extensions = []
-        if protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+        if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2):
             extensions.append(TlsExtensionSupportedVersionsServer(protocol_version))
 
-        if protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+        if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2):
             server_hello = TlsHandshakeHelloRetryRequest(
                 protocol_version=protocol_version,
                 cipher_suite=message.cipher_suites[0],

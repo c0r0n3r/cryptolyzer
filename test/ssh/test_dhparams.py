@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from cryptoparser.ssh.ciphersuite import SshKexAlgorithm
+from cryptodatahub.ssh.algorithm import SshKexAlgorithm
 
 from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.ssh.dhparams import AnalyzerDHParams

@@ -5,7 +5,7 @@ try:
 except ImportError:
     import mock
 
-from cryptoparser.ssh.ciphersuite import SshKexAlgorithm
+from cryptodatahub.ssh.algorithm import SshKexAlgorithm
 from cryptoparser.ssh.version import SshVersion, SshProtocolVersion
 
 from cryptolyzer.common.result import AnalyzerTargetSsh

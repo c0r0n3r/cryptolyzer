@@ -7,7 +7,7 @@ import test.ssh.test_versions
 
 import six
 
-from cryptoparser.ssh.ciphersuite import SshHostKeyAlgorithm
+from cryptodatahub.ssh.algorithm import SshHostKeyAlgorithm
 from cryptoparser.ssh.version import (
     SshProtocolVersion,
     SshVersion,

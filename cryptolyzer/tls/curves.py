@@ -11,7 +11,7 @@ from cryptoparser.tls.extension import (
     TlsExtensionType,
     TlsNamedCurve,
 )
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import parse_ecdh_params
@@ -46,7 +46,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
     @staticmethod
     def _get_response_message(l7_client, client_hello, protocol_version):
         try:
-            if protocol_version <= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+            if protocol_version <= TlsProtocolVersion(TlsVersion.TLS1_2):
                 last_handshake_message_type = TlsHandshakeType.SERVER_KEY_EXCHANGE
             else:
                 last_handshake_message_type = TlsHandshakeType.SERVER_HELLO
@@ -64,7 +64,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
 
     @staticmethod
     def _get_supported_curve(protocol_version, response_message):
-        if protocol_version > TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+        if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2):
             return response_message.extensions.get_item_by_type(TlsExtensionType.KEY_SHARE).selected_group
 
         try:

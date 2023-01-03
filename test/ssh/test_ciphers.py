@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from cryptoparser.ssh.ciphersuite import (
+from cryptodatahub.ssh.algorithm import (
     SshCompressionAlgorithm,
     SshEncryptionAlgorithm,
     SshHostKeyAlgorithm,

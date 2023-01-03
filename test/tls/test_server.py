@@ -16,7 +16,7 @@ import six
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.ldap import LDAPExtendedRequestStartTLS
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptoparser.tls.record import SslRecord, TlsRecord
 from cryptoparser.tls.mysql import MySQLRecord, MySQLHandshakeSslRequest
 from cryptoparser.tls.postgresql import SslRequest
@@ -130,7 +130,7 @@ class TestL7ServerBase(unittest.TestCase):
 
     def _test_tls_handshake(
         self,
-        protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+        protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
         last_handshake_message_type=TlsHandshakeType.SERVER_HELLO,
         l7_client_class=L7ClientTls
     ):
@@ -215,7 +215,7 @@ class TestL7ServerTls(TestL7ServerBase):
     def test_error_first_request_not_client_hello(self):
         l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
         hello_message = TlsHandshakeServerHello(
-            protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
             cipher_suite=TlsCipherSuite.TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
             extensions=TlsExtensionsClient([]),
         )
@@ -227,7 +227,7 @@ class TestL7ServerTls(TestL7ServerBase):
         TlsRecord, 'compose',
         return_value=TlsRecord(
             TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY).compose(),
-            TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+            TlsProtocolVersion(TlsVersion.TLS1),
             TlsContentType.ALERT,
         ).compose()
     )
@@ -239,7 +239,7 @@ class TestL7ServerTls(TestL7ServerBase):
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.CLOSE_NOTIFY)
 
     def test_handshake(self):
-        self._test_tls_handshake(TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_2))
 
 
 class TestL7ServerTls13(TestL7ServerBase):
@@ -248,7 +248,7 @@ class TestL7ServerTls13(TestL7ServerBase):
 
     def test_handshake(self):
         self._test_tls_handshake(
-            TlsProtocolVersionFinal(TlsVersion.TLS1_3),
+            TlsProtocolVersion(TlsVersion.TLS1_3),
             TlsHandshakeType.HELLO_RETRY_REQUEST
         )
 
@@ -268,7 +268,7 @@ class TestL7ServerTlsFallbackToSsl(TestL7ServerBase):
         self._test_ssl_handshake()
 
     def test_tls_handshake(self):
-        self._test_tls_handshake(TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_2))
 
 
 class TestL7ServerTlsCloseOnError(TestL7ServerBase):
@@ -276,7 +276,7 @@ class TestL7ServerTlsCloseOnError(TestL7ServerBase):
         self.threaded_server = self.create_server(TlsServerConfiguration(close_on_error=True))
 
     def test_tls_handshake(self):
-        self._test_tls_handshake(TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_2))
 
 
 class TestL7ServerTlsRDP(TestL7ServerBase):

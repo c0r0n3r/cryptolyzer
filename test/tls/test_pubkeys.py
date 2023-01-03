@@ -11,7 +11,7 @@ import datetime
 import asn1crypto
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -164,7 +164,7 @@ OCSP_RESPONSE_REVOKED = asn1crypto.ocsp.OCSPResponse.load(bytes(
 
 class TestTlsPubKeys(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2), timeout=None, ip=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None):
         analyzer = AnalyzerPublicKeys()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
@@ -343,7 +343,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
             self.get_result(
                 'localhost',
                 threaded_server.l7_server.l4_transfer.bind_port,
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0)
+                TlsProtocolVersion(TlsVersion.TLS1)
             ).pubkeys,
             []
         )

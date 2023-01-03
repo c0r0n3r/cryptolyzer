@@ -6,11 +6,12 @@ try:
 except ImportError:
     import mock
 
-from cryptoparser.common.algorithm import Authentication, BlockCipher
+from cryptodatahub.common.algorithm import Authentication, BlockCipher
+
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal, SslProtocolVersion
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
@@ -39,7 +40,7 @@ class TestSslCiphers(unittest.TestCase):
         return threaded_server
 
     @staticmethod
-    def get_result(host, port, protocol_version=SslProtocolVersion(), timeout=None, ip=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.SSL2), timeout=None, ip=None):
         analyzer = AnalyzerCipherSuites()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
@@ -92,7 +93,7 @@ def _wrapped_next_accepted_cipher_suites_response_error(
 
 class TestTlsCiphers(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), timeout=None, ip=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1), timeout=None, ip=None):
         analyzer = AnalyzerCipherSuites()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         result = analyzer.analyze(l7_client, protocol_version)
@@ -258,7 +259,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
 
     def test_tls_1_3(self):
         self.assertEqual(
-            self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).cipher_suites,
+            self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).cipher_suites,
             [
                 TlsCipherSuite.TLS_AES_128_GCM_SHA256,
                 TlsCipherSuite.TLS_AES_256_GCM_SHA384,

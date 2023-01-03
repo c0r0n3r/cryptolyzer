@@ -6,7 +6,8 @@ try:
 except ImportError:
     import mock
 
-from cryptoparser.common.algorithm import NamedGroup
+from cryptodatahub.common.algorithm import NamedGroup
+
 from cryptoparser.ssh.subprotocol import (
     SshDHKeyExchangeReply,
     SshKexAlgorithmVector,

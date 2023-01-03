@@ -5,7 +5,9 @@ import socket
 
 import attr
 
-from cryptoparser.common.exception import NotEnoughData, InvalidType, InvalidValue
+from cryptodatahub.common.exception import InvalidValue
+
+from cryptoparser.common.exception import NotEnoughData, InvalidType
 
 from cryptolyzer.common.transfer import L7TransferBase, L4TransferBase, L4ServerTCP
 
