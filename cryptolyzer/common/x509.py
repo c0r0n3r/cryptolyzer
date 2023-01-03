@@ -9,9 +9,11 @@ from collections import OrderedDict
 import asn1crypto.x509
 import attr
 
+from cryptodatahub.common.algorithm import Authentication, Hash, Signature
+
 import cryptoparser.common.key
 import cryptoparser.common.utils
-from cryptodatahub.common.algorithm import Authentication, Hash, Signature
+from cryptoparser.common.x509 import SignedCertificateTimestampList
 
 
 class PublicKey(cryptoparser.common.key.PublicKey):
@@ -225,6 +227,15 @@ class PublicKeyX509(PublicKey):  # pylint: disable=too-many-public-methods
         return self.certificate.ocsp_urls
 
     @property
+    def signed_certificate_timestamps(self):
+        for extension in self.certificate['tbs_certificate']['extensions']:
+            if extension['extn_id'].dotted == '1.3.6.1.4.1.11129.2.4.2':
+                asn1_value = asn1crypto.core.load(bytes(extension['extn_value']))
+                return SignedCertificateTimestampList.parse_exact_size(bytes(asn1_value))
+
+        return SignedCertificateTimestampList([])
+
+    @property
     def is_ca(self):
         return self.certificate.ca
 
@@ -263,6 +274,7 @@ class PublicKeyX509(PublicKey):  # pylint: disable=too-many-public-methods
                 ('crl_distribution_points', self.crl_distribution_points),
                 ('ocsp_responders', self.ocsp_responders),
             ])),
+            ('signed_certificate_timestamps', self.signed_certificate_timestamps),
             ('fingerprints', self.fingerprints),
             ('public_key_pin', self.public_key_pin),
             ('version', self.certificate['tbs_certificate']['version'].native),

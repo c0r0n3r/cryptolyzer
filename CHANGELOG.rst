@@ -1,6 +1,15 @@
 Changelog
 =========
 
+0.9.1
+-----
+
+-  TLS (``tls``)
+
+   -  Public Keys (``pubkeys``)
+
+      -  certificate transparency (CT) log support (#47)
+
 0.9.0 - 2023-04-29
 ------------------
 

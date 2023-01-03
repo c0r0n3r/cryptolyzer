@@ -129,6 +129,15 @@ Extensions
 -  `session ticket <https://www.rfc-editor.org/rfc/rfc5077.html>`__
 -  `inetrnal clock accuracy <https://www.rfc-editor.org/rfc/rfc5246#section-7.4.1.2>`__
 
+Public Keys
+"""""""""""
+
+-  `certificate status (OCSP) <https://www.rfc-editor.org/info/rfc6960>`__
+   - status information
+-  `certificate transparency (CT) <https://www.rfc-editor.org/info/rfc6962>`__
+   - timestamp information
+   - transparency log information
+
 Vulnerabilities
 """""""""""""""
 

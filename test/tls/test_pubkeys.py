@@ -10,6 +10,10 @@ from collections import OrderedDict
 import datetime
 import asn1crypto
 
+from cryptodatahub.common.algorithm import Authentication
+from cryptodatahub.common.entity import Entity
+
+from cryptoparser.tls.extension import TlsExtensionsBase, TlsExtensionSignedCertificateTimestampServer
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
@@ -334,6 +338,14 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
                 self.assertIn('Status: good\n', markdnow_result)
                 self.assertIn('Revocation Time: n/a\n', markdnow_result)
 
+    @mock.patch.object(
+        TlsExtensionsBase, 'get_item_by_type',
+        return_value=TlsExtensionSignedCertificateTimestampServer([])
+    )
+    def test_signed_certificate_timestamp_extension(self, _):
+        result = self.get_result('www.cloudflare.com', 443)
+        self.assertFalse(any(pubkey.scts for pubkey in result.pubkeys))
+
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
             L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
@@ -347,6 +359,44 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
             ).pubkeys,
             []
         )
+
+    def test_real(self):
+        result = self.get_result('cloudflare.com', 443)
+        self.assertEqual(len(result.pubkeys), 2)
+
+        self.assertTrue(all(pubkey.certificate_status is not None for pubkey in result.pubkeys))
+        self.assertTrue(all(pubkey.scts is None for pubkey in result.pubkeys))
+
+        self.assertTrue(all(pubkey.tls_certificate_chain.ordered for pubkey in result.pubkeys))
+        self.assertTrue(all(pubkey.tls_certificate_chain.verified for pubkey in result.pubkeys))
+        self.assertFalse(any(pubkey.tls_certificate_chain.contains_anchor for pubkey in result.pubkeys))
+        self.assertEqual(
+            [pubkey.tls_certificate_chain.items[-1].key_type for pubkey in result.pubkeys],
+            [Authentication.RSA, Authentication.ECDSA]
+        )
+        self.assertEqual(
+            [pubkey.tls_certificate_chain.items[0].key_type for pubkey in result.pubkeys],
+            [Authentication.RSA, Authentication.ECDSA]
+        )
+        self.assertEqual(
+            [pubkey.tls_certificate_chain.items[-1].key_size for pubkey in result.pubkeys],
+            [2048, 256]
+        )
+        self.assertEqual(
+            [pubkey.tls_certificate_chain.items[0].key_size for pubkey in result.pubkeys],
+            [2048, 256]
+        )
+        for tls_public_key in result.pubkeys:
+            with self.subTest():
+                self.assertEqual(tls_public_key.certificate_status.status, 'good')
+                self.assertEqual(tls_public_key.scts, None)
+        for pubkey in result.pubkeys:
+            leaf_certificate = pubkey.tls_certificate_chain.items[0]
+            with self.subTest():
+                self.assertIn(
+                    Entity.CLOUDFLARE,
+                    [sct.log.operator for sct in leaf_certificate.signed_certificate_timestamps]
+                )
 
     def test_json(self):
         result = self.get_result('expired.badssl.com', 443)
