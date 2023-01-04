@@ -88,6 +88,13 @@ class CertificateStatus(Serializable):
 
         return cert_status.chosen['revocation_reason'].native
 
+    @property
+    def extensions(self):
+        return [
+            extension['extn_id'].dotted
+            for extension in self._response['single_extensions']
+        ]
+
     def _asdict(self):
         if self.ocsp_response is None:
             return OrderedDict()
@@ -101,6 +108,7 @@ class CertificateStatus(Serializable):
            ('update_interval', str(self.update_interval)),
            ('revocation_time', str(self.revocation_time)),
            ('revocation_time', self.revocation_reason),
+           ('extensions', self.extensions),
         ])
 
 
