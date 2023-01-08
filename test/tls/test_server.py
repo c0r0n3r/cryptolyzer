@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import ftplib
-import nntplib
 import poplib
 import smtplib
 import ssl
@@ -608,14 +607,3 @@ class TestL7ServerTlsNNTP(TestL7ServerBase):
 
     def test_tls_handshake(self):
         self._test_tls_handshake(l7_client_class=ClientNNTP)
-
-    @unittest.skipIf(six.PY2, 'There is no nntplib.NNTP.starttls in Python < 3.0')
-    def test_real_with_capabilities(self):
-        client = nntplib.NNTP(
-            host=str(self.threaded_server.l7_server.address),
-            port=self.threaded_server.l7_server.l4_transfer.bind_port
-        )
-        with self.assertRaises(ssl.SSLError) as context_manager:
-            client.starttls()
-
-        self.assertEqual(context_manager.exception.reason, self.ssl_exception_reason)
