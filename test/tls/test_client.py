@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 
 import ftplib
 import imaplib
@@ -41,7 +42,12 @@ from cryptolyzer.tls.client import (
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
     TlsAlert,
-    TlsHandshakeClientHelloAnyAlgorithm
+    TlsHandshakeClientHelloAnyAlgorithm,
+    TlsHandshakeClientHelloBlockCipherModeCBC,
+    TlsHandshakeClientHelloBulkCipherBlockSize64,
+    TlsHandshakeClientHelloBulkCipherNull,
+    TlsHandshakeClientHelloKeyExchangeAnonymousDH,
+    TlsHandshakeClientHelloStreamCipherRC4,
 )
 from cryptolyzer.common.exception import (
     NetworkError,
@@ -67,6 +73,46 @@ from .classes import (
     TlsServerOneMessageInMultipleRecords,
     TlsServerMockResponse,
 )
+
+
+class TestTlsHandshakeClientHello(unittest.TestCase):
+    _PROTOCOL_VERSION = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+    _HOSTNAME = 'hostname'
+
+    def test_block_cipher_mode_cbc(self):
+        self.assertEqual(
+            list(TlsHandshakeClientHelloBlockCipherModeCBC(self._PROTOCOL_VERSION, self._HOSTNAME).cipher_suites),
+            TlsHandshakeClientHelloBlockCipherModeCBC.CIPHER_SUITES
+
+        )
+
+    def test_bulk_cipher_block_size_64(self):
+        self.assertEqual(
+            list(TlsHandshakeClientHelloBulkCipherBlockSize64(self._PROTOCOL_VERSION, self._HOSTNAME).cipher_suites),
+            TlsHandshakeClientHelloBulkCipherBlockSize64.CIPHER_SUITES
+
+        )
+
+    def test_bulk_cipher_null(self):
+        self.assertEqual(
+            list(TlsHandshakeClientHelloBulkCipherNull(self._PROTOCOL_VERSION, self._HOSTNAME).cipher_suites),
+            TlsHandshakeClientHelloBulkCipherNull.CIPHER_SUITES
+
+        )
+
+    def test_key_exchange_anonymous_dh(self):
+        self.assertEqual(
+            list(TlsHandshakeClientHelloKeyExchangeAnonymousDH(self._PROTOCOL_VERSION, self._HOSTNAME).cipher_suites),
+            TlsHandshakeClientHelloKeyExchangeAnonymousDH.CIPHER_SUITES
+
+        )
+
+    def test_stream_cipher_rc4(self):
+        self.assertEqual(
+            list(TlsHandshakeClientHelloStreamCipherRC4(self._PROTOCOL_VERSION, self._HOSTNAME).cipher_suites),
+            TlsHandshakeClientHelloStreamCipherRC4.CIPHER_SUITES
+
+        )
 
 
 class L7ServerTlsFatalResponse(TlsServerHandshake):

@@ -2,6 +2,8 @@
 
 from collections import OrderedDict
 
+import itertools
+
 import attr
 
 from cryptoparser.common.algorithm import Authentication, KeyExchange
@@ -18,6 +20,7 @@ from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest, AnalyzerResultPu
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys, AnalyzerResultPublicKeys
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos, AnalyzerResultSigAlgos
 from cryptolyzer.tls.versions import AnalyzerVersions, AnalyzerResultVersions
+from cryptolyzer.tls.vulnerabilities import AnalyzerVulnerabilities, AnalyzerResultVulnerabilities
 
 
 @attr.s
@@ -55,6 +58,10 @@ class AnalyzerResultAll(AnalyzerResultAllBase):  # pylint: disable=too-few-publi
     extensions = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultExtensions)),
         metadata={'human_readable_name': 'Supported Extensions'}
+    )
+    vulns = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultVulnerabilities)),
+        metadata={'human_readable_name': 'Vulnerabilities'}
     )
 
 
@@ -215,12 +222,33 @@ class AnalyzerAll(AnalyzerTlsBase):
             for protocol_version in versions
         ])
 
+        dhparams_result = self.get_dhparams_result(analyzable, cipher_suite_results)
+        dhparams = dhparams_result[AnalyzerDHParams.get_name()]
+        if dhparams is not None:
+            dhparam = dhparams.dhparam
+            groups = dhparams.groups
+        else:
+            dhparam = None
+            groups = []
+        results.update(dhparams_result)
+
         results.update(self.get_pubkeyreq_result(analyzable, versions))
         results.update(self.get_pubkeys_result(analyzable, cipher_suite_results))
-        results.update(self.get_dhparams_result(analyzable, cipher_suite_results))
         results.update(self.get_curves_result(analyzable, cipher_suite_results))
         results.update(self.get_sigalgos_result(analyzable, versions))
         results.update(self.get_extensions_result(analyzable, versions))
+        results.update({
+            AnalyzerVulnerabilities.get_name():
+            AnalyzerResultVulnerabilities.from_results(
+                target=analyzable,
+                protocol_versions=versions,
+                cipher_suites=set(itertools.chain.from_iterable(
+                    map(lambda cipher_suite_result: cipher_suite_result.cipher_suites, cipher_suite_results.values())
+                )),
+                dhparam=dhparam,
+                groups=groups,
+            )
+        })
         results.update({AnalyzerCipherSuites.get_name(): list(cipher_suite_results.values())})
 
         return AnalyzerResultAll(**results)

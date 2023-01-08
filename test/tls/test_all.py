@@ -118,9 +118,20 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         ])), TlsProtocolVersionFinal(TlsVersion.TLS1_1))
 
     def test_real(self):
-        result = self.get_result('dh2048.badssl.com', 443)
+        result = self.get_result('dh1024.badssl.com', 443)
         self.assertEqual(result.dhparams.groups, [])
         self.assertNotEqual(result.dhparams.dhparam, None)
+        self.assertFalse(result.vulns.ciphers.null_encryption)
+        self.assertFalse(result.vulns.ciphers.sweet32)
+        self.assertTrue(result.vulns.dhparams.logjam)
+        self.assertTrue(result.vulns.versions.early_tls_version)
+
+        result = self.get_result('rc4-md5.badssl.com', 443)
+        self.assertTrue(result.vulns.ciphers.rc4)
+        self.assertFalse(result.vulns.ciphers.null_encryption)
+        self.assertFalse(result.vulns.ciphers.sweet32)
+        self.assertFalse(result.vulns.dhparams.logjam)
+        self.assertTrue(result.vulns.versions.early_tls_version)
 
         result = self.get_result('openssl.org', 443)
         self.assertEqual(result.dhparams.groups, [
