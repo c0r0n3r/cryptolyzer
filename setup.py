@@ -18,13 +18,6 @@ with codecs.open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as
     long_description = f.read()
 
 
-test_requirements = [
-    "unittest2",
-    "coverage",
-    "six",
-]
-
-
 def test_discover():
     test_loader = unittest.TestLoader()
     test_suite = test_loader.discover('test', pattern='test_*.py')
@@ -50,9 +43,8 @@ setup(
     },
     install_requires=install_requirements,
     extras_require={
-        ":python_version < '3'": ["enum34==1.1.6", "Mock", ],
-
-        "test": test_requirements,
+        ":python_version < '3'": ["enum34==1.1.6", "Mock", "unittest2", ],
+        "test": ["coverage", ],
         "pep8": ["flake8", ],
         "pylint": ["pylint", ],
     },

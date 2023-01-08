@@ -320,19 +320,19 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
 
         now = datetime.datetime.now(asn1crypto.util.timezone.utc)
 
-        self.assertEqual(result.pubkeys[0].certificate_status.status, 'good')
-        self.assertLess(result.pubkeys[0].certificate_status.produced_at, now)
-        self.assertLess(result.pubkeys[0].certificate_status.this_update, now)
-        self.assertGreater(result.pubkeys[0].certificate_status.next_update, now)
-        self.assertEqual(result.pubkeys[0].certificate_status.revocation_time, None)
-        self.assertEqual(result.pubkeys[0].certificate_status.revocation_reason, None)
+        for pubkey_index in range(2):
+            certificate_status = result.pubkeys[pubkey_index].certificate_status
+            with self.subTest():
+                self.assertEqual(certificate_status.status, 'good')
+                self.assertLess(certificate_status.produced_at, now)
+                self.assertLess(certificate_status.this_update, now)
+                self.assertGreater(certificate_status.next_update, now)
+                self.assertEqual(certificate_status.revocation_time, None)
+                self.assertEqual(certificate_status.revocation_reason, None)
 
-        self.assertEqual(result.pubkeys[1].certificate_status.status, 'good')
-        self.assertLess(result.pubkeys[1].certificate_status.produced_at, now)
-        self.assertLess(result.pubkeys[1].certificate_status.this_update, now)
-        self.assertGreater(result.pubkeys[1].certificate_status.next_update, now)
-        self.assertEqual(result.pubkeys[1].certificate_status.revocation_time, None)
-        self.assertEqual(result.pubkeys[1].certificate_status.revocation_reason, None)
+                markdnow_result = certificate_status.as_markdown()
+                self.assertIn('Status: good\n', markdnow_result)
+                self.assertIn('Revocation Time: n/a\n', markdnow_result)
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
