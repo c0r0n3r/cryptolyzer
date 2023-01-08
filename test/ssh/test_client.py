@@ -46,7 +46,7 @@ class TestL7ClientBase(unittest.TestCase):
 class TestSshClientHandshake(TestL7ClientBase):
     @mock.patch('cryptolyzer.ssh.client.SSH_KEX_ALGORITHMS_TO_NAMED_GROUP', {})
     def test_error_kex_not_implemented(self):
-        l7_client = L7ClientSsh('ssh.blinkenshell.org', 2222, timeout=0.5)
+        l7_client = L7ClientSsh('github.com', timeout=0.5)
         with self.assertRaises(NotImplementedError):
             l7_client.do_handshake(key_exchange_init_message=SshKeyExchangeInitKeyExchangeECDHE(), last_message_type=-1)
 
