@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.0
+## 0.8.4 - 2023-01-22
 
 - TLS (`tls`)
   - Generic
