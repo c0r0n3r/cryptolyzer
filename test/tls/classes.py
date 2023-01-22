@@ -90,7 +90,7 @@ class TlsServerMockResponse(TlsServerHandshake):
 
     def _init_connection(self, last_handshake_message_type):
         mock_responses = self._get_mock_responses()
-        self.l4_transfer.send(b''.join(mock_responses))
+        self.l4_transfer.send(bytearray().join(mock_responses))
 
     def _process_invalid_message(self):
         pass

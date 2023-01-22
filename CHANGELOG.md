@@ -3,6 +3,8 @@
 ## 0.9.0
 
 - TLS (`tls`)
+  - Generic
+    - MySQL support (\#54)
   - Vulnerabilities (`vulns`)
     - checker for well-known vulnerabilities (\#93)
       - Anonymous Diffie-Hellman

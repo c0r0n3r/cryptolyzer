@@ -18,6 +18,7 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.ldap import LDAPExtendedRequestStartTLS
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
 from cryptoparser.tls.record import SslRecord, TlsRecord
+from cryptoparser.tls.mysql import MySQLRecord, MySQLHandshakeSslRequest
 from cryptoparser.tls.postgresql import SslRequest
 from cryptoparser.tls.rdp import (
     TPKT,
@@ -44,6 +45,7 @@ from cryptolyzer.tls.client import (
     ClientFTP,
     ClientLDAP,
     ClientLMTP,
+    ClientMySQL,
     ClientNNTP,
     ClientPOP3,
     ClientPostgreSQL,
@@ -61,6 +63,7 @@ from cryptolyzer.tls.server import (
     L7ServerTlsFTP,
     L7ServerTlsLDAP,
     L7ServerTlsLMTP,
+    L7ServerTlsMySQL,
     L7ServerTlsNNTP,
     L7ServerTlsPOP3,
     L7ServerTlsPostgreSQL,
@@ -333,6 +336,46 @@ class TestL7ServerTlsLDAP(TestL7ServerBase):
 
     def test_tls_handshake(self):
         self._test_tls_handshake(l7_client_class=ClientLDAP)
+
+
+class TestL7ServerTlsMySQL(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsMySQL)
+
+    def _read_initial_handshake_from_server(self):
+        l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        l4_client.init_connection()
+
+        l4_client.receive(MySQLRecord.HEADER_SIZE)
+        try:
+            MySQLRecord.parse_immutable(l4_client.buffer)
+        except NotEnoughData as e:
+            l4_client.receive(e.bytes_needed)
+
+        return l4_client
+
+    def test_error_invlaid_tls_request(self):
+        l4_client = self._read_initial_handshake_from_server()
+        l4_client.send(SslRequest.MESSAGE_SIZE * b'\x00')
+        self._assert_on_more_data(l4_client)
+
+        l4_client.close()
+
+    def test_error_missing_ssl_capability(self):
+        l4_client = self._read_initial_handshake_from_server()
+        l4_client.send(MySQLRecord(0, MySQLHandshakeSslRequest(set(), 1).compose()).compose())
+        self._assert_on_more_data(l4_client)
+
+        l4_client.close()
+
+    def test_default_port(self):
+        self.assertEqual(ClientMySQL.get_default_port(), L7ServerTlsMySQL.get_default_port())
+
+    def test_scheme(self):
+        self.assertEqual(ClientMySQL.get_scheme(), L7ServerTlsMySQL.get_scheme())
+
+    def test_tls_handshake(self):
+        self._test_tls_handshake(l7_client_class=ClientMySQL)
 
 
 class TestL7ServerTlsPostgreSQL(TestL7ServerBase):
