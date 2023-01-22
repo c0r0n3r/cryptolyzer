@@ -721,7 +721,7 @@ class TestClientMySQL(TestL7ClientBase):
         self.assertEqual(l7_client.port, 3306)
 
     def test_mysql_client(self):
-        _, result = self.get_result('mysql', 'db4free.net', None)
+        _, result = self.get_result('mysql', 'db4free.net', None, timeout=10)
         self.assertIn(TlsProtocolVersionFinal(TlsVersion.TLS1_2), result.versions)
 
 
