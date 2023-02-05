@@ -178,6 +178,7 @@ port.
 * [IMAP](https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol)
 * [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol)
 * [LMTP](https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol)
+* [MySQL](https://en.wikipedia.org/wiki/MySQL)
 * [NNTP](https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol)
 * [POP3](https://en.wikipedia.org/wiki/Post_Office_Protocol)
 * [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL)
