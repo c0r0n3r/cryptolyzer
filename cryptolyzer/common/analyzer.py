@@ -5,7 +5,11 @@ import glob
 import importlib
 import ipaddress
 import pkgutil
-import os
+
+try:
+    import pathlib
+except ImportError:  # pragma: no cover
+    import pathlib2 as pathlib  # pragma: no cover
 
 import six
 
@@ -24,14 +28,14 @@ from cryptolyzer.tls.client import L7ClientTlsBase
 class ProtocolHandlerBase(object):
     @classmethod
     def import_plugins(cls):
-        plugin_root_dir_parts = __file__.split(os.path.sep)[:-2]  # remove common/analyzer.py
+        plugin_root_dir_parts = pathlib.PurePath(*pathlib.PurePath(__file__).parts[:-2])  # remove common/analyzer.py
         plugin_module_dir_parts = set()
         plugin_paths = filter(
             lambda path: path != __file__,
-            glob.iglob(os.path.sep.join(plugin_root_dir_parts + ['*', 'analyzer.py']))
+            glob.iglob(str(plugin_root_dir_parts / '*' / 'analyzer.py'))
         )
         for path in plugin_paths:
-            plugin_path_parts = path.split(os.path.sep)[-3:-1]  # split plugin dirs
+            plugin_path_parts = pathlib.PurePath(path).parts[-3:-1]  # split plugin dirs
             for index in range(len(plugin_path_parts)):
                 plugin_module_dir_parts.add('.'.join(plugin_path_parts[:index + 1]))
 

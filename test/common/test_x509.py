@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import os
+try:
+    import pathlib
+except ImportError:  # pragma: no cover
+    import pathlib2 as pathlib  # pragma: no cover
 
 import datetime
 
@@ -34,8 +37,8 @@ class TestPublicKeyX509(TestLoggerBase):
 
     @staticmethod
     def _get_public_key_x509(relative_file_path):
-        test_dir = os.path.dirname(__file__)
-        with open(os.path.join(test_dir, relative_file_path), 'rb') as pem_file:
+        test_dir = pathlib.PurePath(__file__).parent
+        with open(str(test_dir / relative_file_path), 'rb') as pem_file:
             _, _, der_bytes = asn1crypto.pem.unarmor(pem_file.read())
             return PublicKeyX509(asn1crypto.x509.Certificate.load(der_bytes))
 
@@ -218,11 +221,11 @@ class TestPublicKeyX509(TestLoggerBase):
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_type, Authentication.RSA)
         self.assertEqual(result.pubkeys[0].tls_certificate_chain.items[0].key_size, 8192)
 
-        public_key_x509 = self._get_public_key_x509('certs/gost_2001_cert.pem')
+        public_key_x509 = self._get_public_key_x509(pathlib.PurePath('certs').joinpath('gost_2001_cert.pem'))
         self.assertEqual(public_key_x509.key_size, 256)
-        public_key_x509 = self._get_public_key_x509('certs/gost_2012_256_cert.pem')
+        public_key_x509 = self._get_public_key_x509(pathlib.PurePath('certs/').joinpath('gost_2012_256_cert.pem'))
         self.assertEqual(public_key_x509.key_size, 256)
-        public_key_x509 = self._get_public_key_x509('certs/gost_2012_512_cert.pem')
+        public_key_x509 = self._get_public_key_x509(pathlib.PurePath('certs/').joinpath('gost_2012_512_cert.pem'))
         self.assertEqual(public_key_x509.key_size, 512)
 
     def test_signature_algorithm_unknown(self):

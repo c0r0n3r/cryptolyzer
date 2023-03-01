@@ -43,7 +43,12 @@ setup(
     },
     install_requires=install_requirements,
     extras_require={
-        ":python_version < '3'": ["enum34==1.1.6", "Mock", "unittest2", ],
+        ":python_version < '3'": [
+            "enum34==1.1.6",
+            "pathlib2==2.3.7.post1",
+            "Mock",
+            "unittest2",
+        ],
         "test": ["coverage", ],
         "pep8": ["flake8", ],
         "pylint": ["pylint", ],
