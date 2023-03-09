@@ -19,12 +19,15 @@ from cryptolyzer.common.dhparam import (
     DHParameter,
     DHPublicKey,
     DHPublicNumbers,
-    WellKnownDHParams,
 )
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.common.utils import LogSingleton
-from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeDHE
+from cryptolyzer.tls.client import (
+    TlsHandshakeClientHelloKeyExchangeDHE,
+    NAMED_CURVE_TO_RFC7919_WELL_KNOWN,
+    RFC7919_WELL_KNOWN_TO_NAMED_CURVE,
+)
 from cryptolyzer.tls.exception import TlsAlert
 
 
@@ -42,20 +45,6 @@ class AnalyzerResultDHParams(AnalyzerResultTls):
 
 
 class AnalyzerDHParams(AnalyzerTlsBase):
-    _NAMED_CURVE_TO_RFC7919_WELL_KNOWN = {
-        TlsNamedCurve.FFDHE2048: WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-        TlsNamedCurve.FFDHE3072: WellKnownDHParams.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-        TlsNamedCurve.FFDHE4096: WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-        TlsNamedCurve.FFDHE6144: WellKnownDHParams.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-        TlsNamedCurve.FFDHE8192: WellKnownDHParams.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    }
-    _RFC7919_WELL_KNOWN_TO_NAMED_CURVE = {
-        WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE2048,
-        WellKnownDHParams.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE3072,
-        WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE4096,
-        WellKnownDHParams.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE6144,
-        WellKnownDHParams.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE8192,
-    }
 
     @classmethod
     def get_name(cls):
@@ -83,7 +72,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
     @staticmethod
     def _get_public_key_tls_1_3(server_messages):
         key_share_extension = AnalyzerDHParams._get_extension_key_share(server_messages)
-        well_known = AnalyzerDHParams._NAMED_CURVE_TO_RFC7919_WELL_KNOWN[key_share_extension.key_share_entry.group]
+        well_known = NAMED_CURVE_TO_RFC7919_WELL_KNOWN[key_share_extension.key_share_entry.group]
         y = int(  # pylint: disable=invalid-name
             codecs.encode(bytes(list(key_share_extension.key_share_entry.key_exchange)), 'hex_codec'), 16
         )
@@ -169,9 +158,9 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                 break
 
             is_rfc7919_dhparam = (_dhparam.well_known and
-                                  _dhparam.well_known in AnalyzerDHParams._RFC7919_WELL_KNOWN_TO_NAMED_CURVE)
+                                  _dhparam.well_known in RFC7919_WELL_KNOWN_TO_NAMED_CURVE)
             if is_rfc7919_dhparam:
-                named_group = AnalyzerDHParams._RFC7919_WELL_KNOWN_TO_NAMED_CURVE[_dhparam.well_known]
+                named_group = RFC7919_WELL_KNOWN_TO_NAMED_CURVE[_dhparam.well_known]
 
                 # no supported group extension, but FFDHE parameter is used
                 if not has_extenstion or named_group in named_groups:

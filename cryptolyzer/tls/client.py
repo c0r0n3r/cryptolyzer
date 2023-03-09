@@ -65,10 +65,53 @@ from cryptoparser.tls.extension import (
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
-from cryptolyzer.common.dhparam import WellKnownDHParams, get_dh_ephemeral_key_forged, int_to_bytes
+from cryptolyzer.common.dhparam import (
+    WellKnownDHParams,
+    get_dh_ephemeral_key_forged,
+    get_ecdh_ephemeral_key_forged,
+    int_to_bytes,
+)
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
+
+
+NAMED_CURVE_TO_RFC7919_WELL_KNOWN = {
+    TlsNamedCurve.FFDHE2048: WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+    TlsNamedCurve.FFDHE3072: WellKnownDHParams.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+    TlsNamedCurve.FFDHE4096: WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+    TlsNamedCurve.FFDHE6144: WellKnownDHParams.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+    TlsNamedCurve.FFDHE8192: WellKnownDHParams.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+}
+
+
+RFC7919_WELL_KNOWN_TO_NAMED_CURVE = {
+    WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE2048,
+    WellKnownDHParams.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE3072,
+    WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE4096,
+    WellKnownDHParams.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE6144,
+    WellKnownDHParams.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE8192,
+}
+
+
+def key_share_entry_from_named_curve(named_curve):
+    if named_curve.value.named_group.value.group_type == NamedGroupType.ELLIPTIC_CURVE:
+        return TlsKeyShareEntry(
+            named_curve,
+            get_ecdh_ephemeral_key_forged(named_curve.value.named_group)
+        )
+
+    if named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM:
+        well_known_dh_param = NAMED_CURVE_TO_RFC7919_WELL_KNOWN[named_curve]
+        return TlsKeyShareEntry(
+            named_curve,
+            int_to_bytes(
+                get_dh_ephemeral_key_forged(well_known_dh_param.value.dh_param_numbers.p),
+                well_known_dh_param.value.key_size // 8
+            )
+        )
+
+    raise NotImplementedError()
 
 
 class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
@@ -98,22 +141,11 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
 
     @classmethod
     def _get_tls1_3_extensions(cls, protocol_versions, named_curves, signature_algorithms):
-        key_share_entries = []
-        for well_known_dh_param in WellKnownDHParams:
-            if well_known_dh_param.value.source != 'RFC7919':
-                continue
-
-            named_curve = getattr(TlsNamedCurve, 'FFDHE{}'.format(well_known_dh_param.value.key_size))
-            if named_curve not in named_curves:
-                continue
-
-            key_share_entries.append(TlsKeyShareEntry(
-                named_curve,
-                int_to_bytes(
-                    get_dh_ephemeral_key_forged(well_known_dh_param.value.dh_param_numbers.p),
-                    well_known_dh_param.value.key_size // 8
-                )
-            ))
+        key_share_entries = [
+            key_share_entry_from_named_curve(named_curve)
+            for named_curve in NAMED_CURVE_TO_RFC7919_WELL_KNOWN
+            if named_curve in named_curves
+        ]
 
         extensions = [
             TlsExtensionKeyShareReservedClient(key_share_entries),
