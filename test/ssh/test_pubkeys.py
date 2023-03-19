@@ -74,9 +74,9 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
             (Hash.MD5, 'MD5:65:96:2d:fc:e8:d5:a9:11:64:0c:0f:ea:00:6e:5b:bd'),
         ]))
         self.assertEqual(result.public_keys[2].fingerprints, OrderedDict([
-            (Hash.SHA2_256, 'SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8='),
-            (Hash.SHA1, 'SHA1:v2toJdKXfFEaR1u++4iq1UqSrHM='),
-            (Hash.MD5, 'MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'),
+            (Hash.SHA2_256, 'SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s='),
+            (Hash.SHA1, 'SHA1:b0xgN1AYuuCRjjfZFivBW6QOY2U='),
+            (Hash.MD5, 'MD5:d5:2c:63:d9:bc:75:9d:de:b1:4e:36:28:9f:7a:9c:39'),
         ]))
         log_lines = self.get_log_lines()
         for idx, public_key in enumerate(result.public_keys):
@@ -86,7 +86,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
             )
 
     def test_host_cert(self):
-        result = self.get_result('scm.infra.centos.org', 22)
+        result = self.get_result('git.centos.org', 22)
         self.assertEqual(
             list(map(lambda public_key: public_key.key_type, result.public_keys)),
             [Authentication.ECDSA, Authentication.EDDSA, Authentication.RSA, Authentication.EDDSA],
@@ -101,4 +101,4 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
                 SshHostKeyAlgorithm.SSH_ED25519_CERT_V01_OPENSSH_COM
             ]
         )
-        self.assertEqual(result.public_keys[3].key_id, 'scm.infra.centos.org')
+        self.assertEqual(result.public_keys[3].key_id, 'pagure1.centos.org')

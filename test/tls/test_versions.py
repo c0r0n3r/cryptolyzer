@@ -158,7 +158,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         self._check_log(result)
 
     def test_tls_1_3_draft(self):
-        result = self.get_result('www.internet.org', 443)
+        result = self.get_result('www.facebook.com', 443)
         self.assertEqual(
             result.versions,
             [

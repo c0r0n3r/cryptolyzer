@@ -231,14 +231,14 @@ class TestMain(TestMainBase):
         )
 
     def test_analyzer_output_tls_all(self):
-        result = test.tls.test_all.TestTlsAll.get_result('dns.google', 443, protocol_version=None, ip='8.8.8.8')
+        result = test.tls.test_all.TestTlsAll.get_result('rc4-md5.badssl.com', 443, protocol_version=None)
         self.assertEqual(
-            self._get_test_analyzer_result_json('tls', 'all', 'dns.google:443#8.8.8.8'),
+            self._get_test_analyzer_result_json('tls', 'all', 'rc4-md5.badssl.com'),
             result.as_json() + '\n',
         )
 
         self.assertEqual(
-            self._get_test_analyzer_result_markdown('tls', 'all', 'dns.google:443#8.8.8.8'),
+            self._get_test_analyzer_result_markdown('tls', 'all', 'rc4-md5.badssl.com'),
             result.as_markdown() + '\n',
         )
 

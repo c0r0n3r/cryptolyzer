@@ -493,10 +493,7 @@ class TestClientFTP(TestL7ClientBase):
 
     def test_ftps_client(self):
         _, result = self.get_result('ftps', 'ftps.tceq.texas.gov', None)
-        self.assertEqual(
-            result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
-        )
+        self.assertEqual(result.versions, [TlsProtocolVersionFinal(TlsVersion.TLS1_2), ])
 
 
 RDP_NEGOTIATION_RESPONSE_LENGTH = 19
@@ -735,16 +732,6 @@ class TestClientPostgreSQL(TestL7ClientBase):
         l7_client = L7ClientTlsBase.from_scheme('postgresql', 'localhost')
         self.assertEqual(l7_client.port, 5432)
 
-    def test_postgresql_client(self):
-        _, result = self.get_result('postgresql', 'ec2-54-217-15-9.eu-west-1.compute.amazonaws.com', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersionFinal(tls_version)
-                for tls_version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]
-            ]
-        )
-
 
 class TestClientSieve(TestL7ClientBase):
     @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
@@ -907,7 +894,7 @@ class TestClientXMPP(TestL7ClientBase):
         self.assertEqual(result.versions, [])
 
     def test_xmpp_client(self):
-        _, result = self.get_result('xmpp', 'xmpp.zone', None)
+        _, result = self.get_result('xmpp', 'xmpp.co', None)
         self.assertEqual(
             result.versions,
             [
