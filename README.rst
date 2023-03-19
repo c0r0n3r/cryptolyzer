@@ -14,7 +14,8 @@ tag <https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/>`__).
 Usage
 -----
 
-CryptoLyzer can be installed directly via pip
+Pip
+^^^
 
 .. code:: shell
 
@@ -25,7 +26,8 @@ CryptoLyzer can be installed directly via pip
    cryptolyze ssh2 ciphers www.example.com
    cryptolyze http headers www.example.com
 
-or can be used via Docker
+Docker
+^^^^^^
 
 .. code:: shell
 
@@ -53,21 +55,21 @@ Support
 Python implementation
 ^^^^^^^^^^^^^^^^^^^^^
 
-* CPython (2.7, >=3.3)
-* PyPy (2.7, 3.5)
+-  CPython (2.7, 3.3+)
+-  PyPy (2.7, 3.5+)
 
 Operating systems
 ^^^^^^^^^^^^^^^^^
 
-* Linux
-* macOS
-* Windows
+-  Linux
+-  macOS
+-  Windows
 
 Social Media
 ------------
 
-* `Twitter <https://twitter.com/CryptoLyzer>`__
-* `Facebook <https://www.facebook.com/cryptolyzer>`__
+-  `Twitter <https://twitter.com/CryptoLyzer>`__
+-  `Facebook <https://www.facebook.com/cryptolyzer>`__
 
 Credits
 -------
@@ -79,5 +81,5 @@ License
 
 The code is available under the terms of Mozilla Public License Version 2.0 (MPL 2.0).
 
-A non-comprehensive, but straightforward description of MPL 2 can be found at
+A non-comprehensive, but straightforward description of MPL 2.0 can be found at
 `Choose an open source license <https://choosealicense.com/licenses#mpl-2.0>`__ website.

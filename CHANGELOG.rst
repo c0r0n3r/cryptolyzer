@@ -7,28 +7,28 @@ Changelog
 Features
 ~~~~~~~~
 
-- TLS (``tls``)
+-  TLS (``tls``)
 
-  - Generic
+  -  Generic
 
-    - MySQL support (#54)
+    -  MySQL support (#54)
 
-  - Vulnerabilities (``vulns``)
+  -  Vulnerabilities (``vulns``)
 
-    - checker for well-known vulnerabilities (#93)
+    -  checker for well-known vulnerabilities (#93)
 
-      - Anonymous Diffie-Hellman
-      - DHEat attack
-      - DROWN attack
-      - Early TLS version
-      - Export grade ciphers
-      - FREAK attack
-      - Logjam attack
-      - Lucky Thirteen attack
-      - NULL encryption
-      - Non-Forward-Secret
-      - RC4
-      - Sweet32 attack
+      -  Anonymous Diffie-Hellman
+      -  DHEat attack
+      -  DROWN attack
+      -  Early TLS version
+      -  Export grade ciphers
+      -  FREAK attack
+      -  Logjam attack
+      -  Lucky Thirteen attack
+      -  NULL encryption
+      -  Non-Forward-Secret
+      -  RC4
+      -  Sweet32 attack
 
 0.8.3 - 2022-11-06
 ------------------
@@ -36,11 +36,11 @@ Features
 Features
 ~~~~~~~~
 
-- TLS (``tls``)
+-  TLS (``tls``)
 
-  - Generic
+  -  Generic
 
-   - RDP hybrid mode support (#109)
+   -  RDP hybrid mode support (#109)
 
 0.8.2 - 2022-10-10
 ------------------
