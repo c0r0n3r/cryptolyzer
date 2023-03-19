@@ -781,7 +781,7 @@ class TestClientSieve(TestL7ClientBase):
     @mock.patch.object(
         TlsServerMockResponse,
         '_get_mock_responses',
-        return_value=(u'αβγ'.encode('utf-8') + b'\r\n', )
+        return_value=(six.u('αβγ').encode('utf-8') + b'\r\n', )
     )
     def test_response_not_ascii(self, _):
         threaded_server = L7ServerTlsTest(
