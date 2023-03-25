@@ -1763,7 +1763,7 @@ def bytes_to_int(bytes_value):
 
 def int_to_bytes(int_value, size):
     hex_value = '%x' % int_value
-    str_value = ('0' * (size - len(hex_value)) + hex_value)
+    str_value = ('0' * (size - len(hex_value))) + hex_value
 
     return bytearray(codecs.decode(str_value, 'hex'))
 
