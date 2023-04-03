@@ -1,5 +1,5 @@
 certvalidator
-cryptoparser>=0.8.4
+cryptoparser>=0.8.5
 pathlib2==2.3.7.post1;python_version<"3.4"
 pathlib2;python_version>="3.4"
 requests
