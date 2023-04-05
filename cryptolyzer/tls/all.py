@@ -20,6 +20,7 @@ from cryptolyzer.tls.extensions import AnalyzerExtensions, AnalyzerResultExtensi
 from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest, AnalyzerResultPublicKeyRequest
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys, AnalyzerResultPublicKeys
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos, AnalyzerResultSigAlgos
+from cryptolyzer.tls.simulations import AnalyzerSimulations, AnalyzerResultSimulations
 from cryptolyzer.tls.versions import AnalyzerVersions, AnalyzerResultVersions
 from cryptolyzer.tls.vulnerabilities import AnalyzerVulnerabilities, AnalyzerResultVulnerabilities
 
@@ -55,6 +56,10 @@ class AnalyzerResultAll(AnalyzerResultAllBase):  # pylint: disable=too-few-publi
     sigalgos = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultSigAlgos)),
         metadata={'human_readable_name': 'Supported Signature Algorithms'}
+    )
+    simulations = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultSimulations)),
+        metadata={'human_readable_name': 'Simulated Clients'}
     )
     extensions = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultExtensions)),
@@ -200,6 +205,13 @@ class AnalyzerAll(AnalyzerTlsBase):
         return AnalyzerAll._get_result(AnalyzerSigAlgos, analyzable, protocol_version)
 
     @staticmethod
+    def get_simulations_result(analyzable):
+        analyzer_class = AnalyzerSimulations
+        analyzer_name = analyzer_class.get_name()
+
+        return {analyzer_name: analyzer_class().analyze(analyzable, None)}
+
+    @staticmethod
     def get_extensions_result(analyzable, versions):
         for version in reversed(versions):
             if version <= TlsProtocolVersion(TlsVersion.TLS1_2):
@@ -237,6 +249,7 @@ class AnalyzerAll(AnalyzerTlsBase):
         results.update(self.get_pubkeys_result(analyzable, cipher_suite_results))
         results.update(self.get_curves_result(analyzable, cipher_suite_results))
         results.update(self.get_sigalgos_result(analyzable, versions))
+        results.update(self.get_simulations_result(analyzable))
         results.update(self.get_extensions_result(analyzable, versions))
         results.update({
             AnalyzerVulnerabilities.get_name():
