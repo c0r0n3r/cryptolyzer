@@ -10,7 +10,7 @@ import socket
 import six
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptoparser.tls.extension import TlsNamedCurve
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
@@ -24,7 +24,7 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 class TestTlsCurves(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), timeout=None, ip=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1), timeout=None, ip=None):
         analyzer = AnalyzerCurves()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
@@ -35,7 +35,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         side_effect=len(TlsNamedCurve) * [NetworkError(NetworkErrorType.NO_RESPONSE)]
     )
     def test_error_response_error_no_response(self, _):
-        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(len(result.curves), 0)
 
     @mock.patch(
@@ -43,7 +43,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         side_effect=NotImplementedError(TlsNamedCurve.X25519)
     )
     def test_error_not_implemented_named_curve(self, _):
-        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.curves, [TlsNamedCurve.X25519])
 
     @mock.patch(
@@ -52,19 +52,19 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
     )
     def test_error_not_implemented_other(self, _):
         with six.assertRaisesRegex(self, NotImplementedError, 'cryptolyzer.tls.curves.parse_ecdh_params'):
-            self.get_result('ecc256.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+            self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
 
     @mock.patch.object(
         AnalyzerCurves, '_get_response_message',
         side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
     )
     def test_error_tls_alert_for_first_time(self, _):
-        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.curves, [])
 
     @mock.patch.object(
         TlsServerAlert, '_get_alert_message', return_value=TlsHandshakeClientHelloAnyAlgorithm(
-            [TlsProtocolVersionFinal(TlsVersion.TLS1_2), ], 'localhost'
+            [TlsProtocolVersion(TlsVersion.TLS1_2), ], 'localhost'
         )
     )
     def test_error_repeated_message_in_server_reply(self, _):
@@ -78,7 +78,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
 
     def test_curves(self):
-        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.curves, [TlsNamedCurve.SECP256R1, ])
         self.assertTrue(result.extension_supported)
         self.assertEqual(
@@ -87,7 +87,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
             ]
         )
 
-        result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(
             result.curves,
             [TlsNamedCurve.X25519, TlsNamedCurve.SECP256R1, TlsNamedCurve.SECP384R1, TlsNamedCurve.SECP521R1, ]
@@ -109,7 +109,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
 
     def test_tls_1_3(self):
         self.assertEqual(
-            self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3)).curves,
+            self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves,
             [
                 TlsNamedCurve.X25519,
                 TlsNamedCurve.SECP256R1,
@@ -140,5 +140,5 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     def test_json(self):
-        result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertTrue(result)

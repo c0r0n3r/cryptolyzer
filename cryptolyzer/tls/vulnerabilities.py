@@ -5,11 +5,7 @@ import itertools
 import attr
 
 
-from cryptoparser.tls.version import (
-    SslProtocolVersion,
-    TlsProtocolVersionFinal,
-    TlsVersion,
-)
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
@@ -116,12 +112,12 @@ class AnalyzerResultVulnerabilityVersions(object):  # pylint: disable=too-few-pu
 
     @staticmethod
     def from_protocol_versions(protocol_versions):
-        drown = SslProtocolVersion() in protocol_versions
+        drown = TlsProtocolVersion(TlsVersion.SSL2) in protocol_versions
 
         early_tls_version = any(map(
             lambda protocol_version: (
-                isinstance(protocol_version, TlsProtocolVersionFinal) and
-                protocol_version < TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+                isinstance(protocol_version, TlsProtocolVersion) and
+                protocol_version < TlsProtocolVersion(TlsVersion.TLS1_2)
             ),
             protocol_versions
         ))
@@ -199,8 +195,8 @@ class AnalyzerVulnerabilities(AnalyzerTlsBase):
             analyzer_result_versions.versions
         )))
         for supported_protocol_version in analyzer_result_versions.versions:
-            if (isinstance(supported_protocol_version, TlsProtocolVersionFinal) and
-                    supported_protocol_version <= TlsProtocolVersionFinal(TlsVersion.TLS1_2)):
+            if (isinstance(supported_protocol_version, TlsProtocolVersion) and
+                    supported_protocol_version <= TlsProtocolVersion(TlsVersion.TLS1_2)):
                 result = AnalyzerDHParams().analyze(analyzable, supported_protocol_version)
                 dhparam = result.dhparam
                 groups = result.groups
@@ -208,7 +204,7 @@ class AnalyzerVulnerabilities(AnalyzerTlsBase):
         else:
             dhparam = None
             groups = []
-        tls_protocol_version_1_3 = TlsProtocolVersionFinal(TlsVersion.TLS1_3)
+        tls_protocol_version_1_3 = TlsProtocolVersion(TlsVersion.TLS1_3)
         if not groups and tls_protocol_version_1_3 in analyzer_result_versions.versions:
             result = AnalyzerDHParams().analyze(analyzable, tls_protocol_version_1_3)
             groups = result.groups

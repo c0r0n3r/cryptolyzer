@@ -6,7 +6,7 @@ except ImportError:
     import mock
 
 from cryptoparser.tls.extension import TlsExtensionsBase, TlsNamedCurve
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.dhparam import (
     DHPublicKey,
@@ -22,7 +22,7 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 class TestTlsDHParams(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2), timeout=None, ip=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None):
         analyzer = AnalyzerDHParams()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
@@ -30,25 +30,25 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
 
     @mock.patch.object(TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError)
     def test_error_missing_key_share_extension(self, _):
-        result = self.get_result('example.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
     @mock.patch.object(AnalyzerDHParams, '_get_public_key', side_effect=StopIteration)
     def test_error_no_respoinse_during_key_reuse_check(self, _):
-        result = self.get_result('example.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.key_reuse, None)
 
     @mock.patch.object(
         AnalyzerDHParams, '_get_public_key', side_effect=StopIteration
     )
     def test_error_key_reuse_undeterminable(self, _):
-        result = self.get_result('mazda.at', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('mazda.at', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
         self.assertIsNone(result.dhparam)
         self.assertEqual(result.key_reuse, None)
 
-        result = self.get_result('openssl.org', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('openssl.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [
             TlsNamedCurve.FFDHE2048,
             TlsNamedCurve.FFDHE3072,
@@ -63,11 +63,11 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError
     )
     def test_last_key_share_extension(self, _):
-        result = self.get_result('mazda.at', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('mazda.at', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertIsNotNone(result.dhparam, None)
 
-        result = self.get_result('openssl.org', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('openssl.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
@@ -130,13 +130,13 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertFalse(self.log_stream.getvalue(), '')
 
     def test_tls_early_version(self):
-        result = self.get_result('dh480.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_0))
+        result = self.get_result('dh480.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1))
         self.assertEqual(result.groups, [])
         self.assertNotEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
 
     def test_tls_1_2_rfc_7919_support(self):
-        result = self.get_result('mazda.at', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('mazda.at', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
         self.assertEqual(result.dhparam, None)
         self.assertTrue(result.key_reuse)
@@ -158,7 +158,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         )
     )
     def test_tls_1_2_no_rfc_7919_support(self, _):
-        result = self.get_result('example.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertEqual(
             result.dhparam.parameter_numbers,
@@ -174,12 +174,12 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         )
 
     def test_tls_1_3(self):
-        result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
 
-        result = self.get_result('openssl.org', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_3))
+        result = self.get_result('openssl.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [
             TlsNamedCurve.FFDHE2048,
             TlsNamedCurve.FFDHE3072,

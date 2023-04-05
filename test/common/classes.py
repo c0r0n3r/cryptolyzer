@@ -21,7 +21,6 @@ import time
 
 import six
 
-from cryptolyzer.__main__ import main
 from cryptolyzer.common.utils import LogSingleton
 
 
@@ -48,23 +47,40 @@ class TestMainBase(unittest.TestCase):
 
         return func_arguments, cli_arguments
 
-    @staticmethod
-    def _get_test_analyzer_result(output_format, protocol, analyzer, address):
+    def _get_command_result(self, command_line_arguments, stdin=b''):
         with patch('sys.stdout', new_callable=six.StringIO) as stdout, \
                 patch('sys.stderr', new_callable=six.StringIO) as stderr, \
-                patch.object(
-                    sys, 'argv', ['cryptolyzer', '--output-format', output_format, protocol, analyzer, address]
-                ):
-            main()
+                patch.object(sys, 'stdin', io.TextIOWrapper(io.BytesIO(stdin))), \
+                patch.object(sys, 'argv', command_line_arguments):
+            self.main_func()
             return stdout.getvalue(), stderr.getvalue()
 
-    @staticmethod
-    def _get_test_analyzer_result_json(protocol, analyzer, address):
-        return TestMainBase._get_test_analyzer_result('json', protocol, analyzer, address)[0]
+    def _get_test_analyzer_result(self, output_format, protocol, analyzer, address):
+        return self._get_command_result([
+            'cryptolyzer', '--output-format', output_format, protocol, analyzer, address
+        ])
 
-    @staticmethod
-    def _get_test_analyzer_result_markdown(protocol, analyzer, address):
-        return TestMainBase._get_test_analyzer_result('markdown', protocol, analyzer, address)[0]
+    def _get_test_analyzer_result_json(self, protocol, analyzer, address):
+        return self._get_test_analyzer_result('json', protocol, analyzer, address)[0]
+
+    def _get_test_analyzer_result_markdown(self, protocol, analyzer, address):
+        return self._get_test_analyzer_result('markdown', protocol, analyzer, address)[0]
+
+    def _test_argument_error(self, argv, stderr_regexp, stdin=b''):
+        with patch.object(sys, 'stderr', new_callable=six.StringIO) as stderr, \
+                patch.object(sys, 'argv', argv), patch.object(sys, 'stdin', io.TextIOWrapper(io.BytesIO(stdin))):
+
+            with self.assertRaises(SystemExit) as context_manager:
+                self.main_func()
+            self.assertEqual(context_manager.exception.args[0], 2)
+            six.assertRegex(self, stderr.getvalue(), stderr_regexp)
+
+    def _test_argument_help(self, command):
+        devnull = six.StringIO()
+        with patch.object(sys, 'stdout', devnull), patch.object(sys, 'argv', [str(command), '-h']):
+            with self.assertRaises(SystemExit) as context_manager:
+                self.main_func()
+            self.assertEqual(context_manager.exception.args[0], 0)
 
 
 class TestThreadedServer(threading.Thread):

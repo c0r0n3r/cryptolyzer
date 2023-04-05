@@ -4,7 +4,9 @@
 import argparse
 import urllib3
 
-from cryptoparser.common.exception import InvalidDataLength, InvalidType, InvalidValue
+from cryptodatahub.common.exception import InvalidValue
+
+from cryptoparser.common.exception import InvalidDataLength, InvalidType
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.exception import NetworkError, SecurityError

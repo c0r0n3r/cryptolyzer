@@ -1,6 +1,19 @@
 Changelog
 =========
 
+0.8.5
+-----
+
+-  TLS (``tls``)
+
+  -  Simulations (``simulations``)
+
+    -  checker for client compatibility (#92)
+
+       -  `Chromium <https://en.wikipedia.org/wiki/Chromium_(web_browser)>`__
+       -  `Firefox <https://en.wikipedia.org/wiki/Firefox>`__
+       -  `Opera <https://en.wikipedia.org/wiki/Opera_(web_browser)>`__
+
 0.8.4 - 2023-01-22
 ------------------
 

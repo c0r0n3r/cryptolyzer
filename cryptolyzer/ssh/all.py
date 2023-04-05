@@ -2,7 +2,8 @@
 
 import attr
 
-from cryptoparser.common.algorithm import KeyExchange
+from cryptodatahub.common.algorithm import KeyExchange
+
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
 from cryptolyzer.common.analyzer import AnalyzerSshBase

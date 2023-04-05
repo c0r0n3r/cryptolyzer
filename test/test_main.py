@@ -20,12 +20,13 @@ import test.tls.test_extensions
 import test.tls.test_pubkeys
 import test.tls.test_pubkeyreq
 import test.tls.test_sigalgos
+import test.tls.test_simulations
 import test.tls.test_versions
 import test.tls.test_all
 
 import six
 
-from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
@@ -35,14 +36,8 @@ from cryptolyzer.ja3.generate import AnalyzerGenerate
 
 
 class TestMain(TestMainBase):
-    def _test_argument_error(self, argv, stderr_regexp):
-        with patch.object(sys, 'stderr', new_callable=six.StringIO) as stderr, \
-                patch.object(sys, 'argv', argv):
-
-            with self.assertRaises(SystemExit) as context_manager:
-                main()
-            self.assertEqual(context_manager.exception.args[0], 2)
-            six.assertRegex(self, stderr.getvalue(), stderr_regexp)
+    def setUp(self):
+        self.main_func = main
 
     def _test_runtime_error(self, argv, error_msg):
         with patch.object(sys, 'stdout', new_callable=six.StringIO) as stdout, \
@@ -52,11 +47,7 @@ class TestMain(TestMainBase):
             self.assertEqual(stdout.getvalue().split(os.linesep)[1], '* Error: ' + error_msg)
 
     def test_argument_parsing(self):
-        devnull = six.StringIO()
-        with patch.object(sys, 'stdout', devnull), patch.object(sys, 'argv', ['cryptolyzer', '-h']):
-            with self.assertRaises(SystemExit) as context_manager:
-                main()
-            self.assertEqual(context_manager.exception.args[0], 0)
+        self._test_argument_help('cryptolyzer')
 
         self._test_argument_error(
             ['cryptolyzer', 'unsupportedprotocol'],
@@ -90,7 +81,7 @@ class TestMain(TestMainBase):
 
     def test_analyzer_output_tls_ciphers(self):
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+            TlsProtocolVersion(TlsVersion.TLS1),
             'ciphers',
             'rc4-md5.badssl.com',
             443,
@@ -117,7 +108,7 @@ class TestMain(TestMainBase):
 
     def test_analyzer_output_tls_pubkeyreq(self):
         result = test.tls.test_pubkeyreq.TestTlsPublicKeyRequest.get_result(
-            'client.badssl.com', 443, TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            'client.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2)
         )
         self.assertEqual(
             self._get_test_analyzer_result_json('tls1_2', 'pubkeyreq', 'client.badssl.com:443'),
@@ -130,7 +121,7 @@ class TestMain(TestMainBase):
 
     def test_analyzer_output_tls_curves(self):
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            TlsProtocolVersion(TlsVersion.TLS1_2),
             'curves',
             'ecc256.badssl.com',
             443,
@@ -147,7 +138,7 @@ class TestMain(TestMainBase):
 
     def test_analyzer_output_tls_dhparams(self):
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            TlsProtocolVersion(TlsVersion.TLS1_2),
             'dhparams',
             'dh2048.badssl.com',
             443,
@@ -164,7 +155,7 @@ class TestMain(TestMainBase):
 
     def test_analyzer_output_tls_extensions(self):
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            TlsProtocolVersion(TlsVersion.TLS1_2),
             'extensions',
             'dh2048.badssl.com',
             443,
@@ -181,7 +172,7 @@ class TestMain(TestMainBase):
 
     def test_analyzer_output_tls_pubkeys(self):
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            TlsProtocolVersion(TlsVersion.TLS1_2),
             'pubkeys',
             'www.cloudflare.com',
             443,
@@ -198,12 +189,29 @@ class TestMain(TestMainBase):
 
     def test_analyzer_output_tls_sigalgos(self):
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            TlsProtocolVersion(TlsVersion.TLS1_2),
             'sigalgos',
             'ecc256.badssl.com',
             443,
         )
         result = test.tls.test_sigalgos.TestTlsSigAlgos.get_result(**func_arguments)
+        self.assertEqual(
+            self._get_test_analyzer_result_json(**cli_arguments),
+            result.as_json() + '\n',
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result_markdown(**cli_arguments),
+            result.as_markdown() + '\n',
+        )
+
+    def test_analyzer_output_tls_simulations(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls',
+            'simulations',
+            'tls-v1-0.badssl.com',
+            1010,
+        )
+        result = test.tls.test_simulations.TestTlsSimulations.get_result(**func_arguments)
         self.assertEqual(
             self._get_test_analyzer_result_json(**cli_arguments),
             result.as_json() + '\n',

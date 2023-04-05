@@ -24,7 +24,7 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeHelloRandom,
     TlsHandshakeServerHello,
 )
-from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -130,7 +130,7 @@ class L7ServerTlsCloseDuringHandshake(L7ServerTls):
 
 class TlsServerOneMessageInMultipleRecords(TlsServerHandshake):
     SERVER_HELLO_MESSAGE = TlsHandshakeServerHello(
-        protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+        protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
         random=TlsHandshakeHelloRandom(datetime.datetime.fromtimestamp(0)),
         cipher_suite=TlsCipherSuite.TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
         extensions=TlsExtensionsClient([]),

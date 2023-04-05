@@ -4,7 +4,7 @@ import attr
 
 import six
 
-from cryptoparser.ssh.ciphersuite import (
+from cryptodatahub.ssh.algorithm import (
     SshCompressionAlgorithm,
     SshEncryptionAlgorithm,
     SshHostKeyAlgorithm,

@@ -8,13 +8,7 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionKeyShareClient
 from cryptoparser.tls.subprotocol import TlsExtensionsClient, TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.subprotocol import SslMessageType, SslErrorType
-from cryptoparser.tls.version import (
-    SslProtocolVersion,
-    TlsProtocolVersionBase,
-    TlsProtocolVersionDraft,
-    TlsProtocolVersionFinal,
-    TlsVersion,
-)
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
@@ -35,7 +29,7 @@ from cryptolyzer.tls.exception import TlsAlert
 class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
     versions = attr.ib(
         validator=attr.validators.deep_iterable(
-            attr.validators.instance_of((SslProtocolVersion, TlsProtocolVersionBase))
+            attr.validators.instance_of(TlsProtocolVersion)
         ),
         metadata={'human_readable_name': 'Protocol Versions'},
     )
@@ -46,6 +40,12 @@ class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-publ
 
 
 class AnalyzerVersions(AnalyzerTlsBase):
+    _DRAFT_VERSIONS_IN_REVERSE_ORDER = tuple(reversed([
+        tls_protocol_version
+        for tls_protocol_version in [TlsProtocolVersion(tls_version) for tls_version in TlsVersion]
+        if tls_protocol_version.is_draft
+    ]))
+
     @classmethod
     def get_name(cls):
         return 'versions'
@@ -68,7 +68,10 @@ class AnalyzerVersions(AnalyzerTlsBase):
             pass
         else:
             if server_messages[SslMessageType.SERVER_HELLO].cipher_kinds:
-                LogSingleton().log(level=60, msg=six.u('Server offers protocol version %s') % (SslProtocolVersion(), ))
+                LogSingleton().log(
+                    level=60,
+                    msg=six.u('Server offers protocol version %s') % (TlsProtocolVersion(TlsVersion.SSL2), )
+                )
                 return True
 
         return False
@@ -92,8 +95,8 @@ class AnalyzerVersions(AnalyzerTlsBase):
     def _analyze_supported_tls_early_versions(analyzable):
         alerts_unsupported_tls_version = None
         supported_protocols = []
-        for tls_version in (TlsVersion.SSL3, TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2):
-            protocol_version = TlsProtocolVersionFinal(tls_version)
+        for tls_version in (TlsVersion.SSL3, TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2):
+            protocol_version = TlsProtocolVersion(tls_version)
             client_hello_messsages_in_order_of_probability = (
                 TlsHandshakeClientHelloAuthenticationRSA(protocol_version, analyzable.address),
                 TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, analyzable.address),
@@ -153,8 +156,8 @@ class AnalyzerVersions(AnalyzerTlsBase):
     def _analyze_supported_tls_1_3_versions(analyzable):
         alerts_unsupported_tls_version = None
         supported_protocols = []
-        checkable_protocols = [TlsProtocolVersionFinal(TlsVersion.TLS1_3), ]
-        checkable_protocols.extend([TlsProtocolVersionDraft(draft_version) for draft_version in range(28, 0, -1)])
+        checkable_protocols = [TlsProtocolVersion(TlsVersion.TLS1_3), ]
+        checkable_protocols.extend(AnalyzerVersions._DRAFT_VERSIONS_IN_REVERSE_ORDER)
         while checkable_protocols:
             client_hello = TlsHandshakeClientHelloSpecalization(
                 analyzable.address,
@@ -204,7 +207,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
         supported_protocols = []
 
         if self._is_ssl2_supported(analyzable):
-            supported_protocols.append(SslProtocolVersion())
+            supported_protocols.append(TlsProtocolVersion(TlsVersion.SSL2))
 
         supported_tls_protocols, alerts_unsupported_tls_version = \
             self._analyze_supported_tls_early_versions(analyzable)

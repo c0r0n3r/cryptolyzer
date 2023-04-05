@@ -4,9 +4,10 @@ import hashlib
 import six
 import attr
 
+from cryptodatahub.tls.algorithm import TlsECPointFormat
+
 from cryptoparser.common.parse import ComposerBinary
 
-from cryptoparser.tls.algorithm import TlsECPointFormat
 from cryptoparser.tls.extension import (
     TlsECPointFormatFactory,
     TlsExtensionType,
@@ -15,7 +16,7 @@ from cryptoparser.tls.extension import (
     TlsNamedCurveFactory,
 )
 from cryptoparser.tls.subprotocol import TlsCipherSuite, TlsCipherSuiteVector
-from cryptoparser.tls.version import TlsProtocolVersionBase, SslProtocolVersion
+from cryptoparser.tls.version import TlsProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerBase
 from cryptolyzer.common.result import AnalyzerResultBase
@@ -43,7 +44,7 @@ class JA3ClientTag(object):
 @attr.s
 class AnalyzerResultDecode(AnalyzerResultBase):
     tls_protocol_version = attr.ib(
-        validator=attr.validators.instance_of((TlsProtocolVersionBase, SslProtocolVersion)),
+        validator=attr.validators.instance_of(TlsProtocolVersion),
     )
     cipher_suites = attr.ib(
         validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsCipherSuite))
@@ -91,7 +92,7 @@ class AnalyzerDecode(AnalyzerBase):
     def analyze(self, analyzable):
         tls_protocol_version, cipher_suites, extension_types, named_curves, ec_point_formats = analyzable.tag.split(',')
 
-        tls_protocol_version = TlsProtocolVersionBase.parse_exact_size(
+        tls_protocol_version = TlsProtocolVersion.parse_exact_size(
             self._numeric_string_to_bytes(tls_protocol_version, 2)
         )
 

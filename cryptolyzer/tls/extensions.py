@@ -4,7 +4,7 @@
 import attr
 import six
 
-from cryptoparser.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
+from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
 
 from cryptoparser.tls.extension import (
     TlsExtensionApplicationLayerProtocolNegotiation,
@@ -21,7 +21,7 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeType,
     TlsSessionIdVector,
 )
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError
@@ -287,7 +287,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
     @classmethod
     def _analyze_encrypt_than_mac(cls, analyzable, protocol_version):
-        if protocol_version < TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+        if protocol_version < TlsProtocolVersion(TlsVersion.TLS1_2):
             return None
 
         client_hello = TlsHandshakeClientHelloBlockCipherModeCBC(protocol_version, analyzable.address)

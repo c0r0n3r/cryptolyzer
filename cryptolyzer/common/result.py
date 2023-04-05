@@ -7,7 +7,7 @@ import attr
 from cryptoparser.common.base import Serializable
 from cryptoparser.httpx.version import HttpVersion
 from cryptoparser.ssh.version import SshProtocolVersion
-from cryptoparser.tls.version import SslProtocolVersion, TlsProtocolVersionBase
+from cryptoparser.tls.version import TlsProtocolVersion
 
 
 @attr.s
@@ -57,7 +57,7 @@ class AnalyzerTargetHttp(AnalyzerTarget):
 class AnalyzerTargetTls(AnalyzerTarget):
     proto_version = attr.ib(
         default=None,
-        validator=attr.validators.optional(attr.validators.instance_of((SslProtocolVersion, TlsProtocolVersionBase))),
+        validator=attr.validators.optional(attr.validators.instance_of(TlsProtocolVersion)),
         metadata={'human_readable_name': 'Protocol Version'}
     )
 

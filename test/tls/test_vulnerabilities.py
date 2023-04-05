@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from cryptoparser.tls.algorithm import TlsNamedCurve
+from cryptodatahub.tls.algorithm import TlsNamedCurve
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 
 from cryptolyzer.tls.client import L7ClientTlsBase

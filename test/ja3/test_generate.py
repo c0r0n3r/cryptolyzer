@@ -6,7 +6,7 @@ from test.common.classes import TestThreadedServer, TestLoggerBase
 
 import six
 
-from cryptoparser.tls.algorithm import TlsECPointFormat
+from cryptodatahub.tls.algorithm import TlsECPointFormat
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsExtensionsClient,
@@ -15,7 +15,7 @@ from cryptoparser.tls.extension import (
     TlsNamedCurve,
 )
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello, TlsAlertDescription
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.ja3.generate import AnalyzerGenerate
@@ -78,7 +78,7 @@ class TestJA3Generate(TestLoggerBase):
 
     def test_tag_one_element_lists(self):
         hello_message = TlsHandshakeClientHello(
-            protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
             cipher_suites=[TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5],
             extensions=TlsExtensionsClient([
                 TlsExtensionECPointFormats([
@@ -98,7 +98,7 @@ class TestJA3Generate(TestLoggerBase):
 
     def test_tag_two_element_lists(self):
         hello_message = TlsHandshakeClientHello(
-            protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
             cipher_suites=[
                 TlsCipherSuite.TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA,
                 TlsCipherSuite.TLS_DH_DSS_WITH_DES_CBC_SHA,

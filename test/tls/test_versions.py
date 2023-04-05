@@ -6,7 +6,7 @@ except ImportError:
     import mock
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionDraft, TlsProtocolVersionFinal, SslProtocolVersion
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 
@@ -23,7 +23,7 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
     def get_result(host, port, protocol_version=None, timeout=None, ip=None):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
-        result = analyzer.analyze(l7_client, SslProtocolVersion())
+        result = analyzer.analyze(l7_client, None)
         return result
 
     @staticmethod
@@ -49,20 +49,20 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
         self.assertEqual(
             self.get_result('badssl.com', 443).versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
             ]
         )
 
     def test_ssl_2(self):
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[TlsProtocolVersionFinal(TlsVersion.SSL3), ],
+            protocol_versions=[TlsProtocolVersion(TlsVersion.SSL3), ],
             fallback_to_ssl=True
         ))
         self.assertEqual(
             self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions,
-            [SslProtocolVersion(), TlsProtocolVersionFinal(TlsVersion.SSL3), ]
+            [TlsProtocolVersion(TlsVersion.SSL2), TlsProtocolVersion(TlsVersion.SSL3), ]
         )
 
     def test_versions(self):
@@ -76,10 +76,10 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
         self.assertEqual(
             self.get_result('localhost', server_port).versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.SSL3),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.SSL3),
+                TlsProtocolVersion(TlsVersion.TLS1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
             ]
         )
 
@@ -88,8 +88,8 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(version)
-                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+                TlsProtocolVersion(version)
+                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
 
@@ -118,7 +118,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         result = self.get_result('tls-v1-0.badssl.com', 1010)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(TlsVersion.TLS1_0)]
+            [TlsProtocolVersion(TlsVersion.TLS1)]
         )
         self._check_log(result)
 
@@ -126,7 +126,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         result = self.get_result('tls-v1-1.badssl.com', 1011)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(TlsVersion.TLS1_1)]
+            [TlsProtocolVersion(TlsVersion.TLS1_1)]
         )
         self._check_log(result)
 
@@ -134,7 +134,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         result = self.get_result('tls-v1-2.badssl.com', 1012)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(TlsVersion.TLS1_2)]
+            [TlsProtocolVersion(TlsVersion.TLS1_2)]
         )
         self._check_log(result)
 
@@ -142,7 +142,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         result = self.get_result('badssl.com', 443)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
         self._check_log(result)
 
@@ -151,8 +151,8 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(version)
-                for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+                TlsProtocolVersion(version)
+                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
         self._check_log(result)
@@ -162,13 +162,13 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
-                TlsProtocolVersionDraft(23),
-                TlsProtocolVersionDraft(26),
-                TlsProtocolVersionDraft(28),
-                TlsProtocolVersionFinal(TlsVersion.TLS1_3),
+                TlsProtocolVersion(TlsVersion.TLS1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_23),
+                TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_26),
+                TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_28),
+                TlsProtocolVersion(TlsVersion.TLS1_3),
             ]
         )
         self._check_log(result)
@@ -177,7 +177,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         result = self.get_result('ecc256.badssl.com', 443)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
         self._check_log(result)
 
@@ -185,7 +185,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         result = self.get_result('client.badssl.com', 443)
         self.assertEqual(
             result.versions,
-            [TlsProtocolVersionFinal(version) for version in [TlsVersion.TLS1_0, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
         self._check_log(result)
 

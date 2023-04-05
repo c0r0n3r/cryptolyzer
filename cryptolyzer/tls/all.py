@@ -6,8 +6,9 @@ import itertools
 
 import attr
 
-from cryptoparser.common.algorithm import Authentication, KeyExchange
-from cryptoparser.tls.version import TlsProtocolVersionFinal, TlsVersion
+from cryptodatahub.common.algorithm import Authentication, KeyExchange
+
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase, ProtocolHandlerBase
 from cryptolyzer.common.result import AnalyzerResultAllBase, AnalyzerTargetTls
@@ -19,6 +20,7 @@ from cryptolyzer.tls.extensions import AnalyzerExtensions, AnalyzerResultExtensi
 from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest, AnalyzerResultPublicKeyRequest
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys, AnalyzerResultPublicKeys
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos, AnalyzerResultSigAlgos
+from cryptolyzer.tls.simulations import AnalyzerSimulations, AnalyzerResultSimulations
 from cryptolyzer.tls.versions import AnalyzerVersions, AnalyzerResultVersions
 from cryptolyzer.tls.vulnerabilities import AnalyzerVulnerabilities, AnalyzerResultVulnerabilities
 
@@ -54,6 +56,10 @@ class AnalyzerResultAll(AnalyzerResultAllBase):  # pylint: disable=too-few-publi
     sigalgos = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultSigAlgos)),
         metadata={'human_readable_name': 'Supported Signature Algorithms'}
+    )
+    simulations = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultSimulations)),
+        metadata={'human_readable_name': 'Simulated Clients'}
     )
     extensions = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultExtensions)),
@@ -115,7 +121,7 @@ class AnalyzerAll(AnalyzerTlsBase):
             if AnalyzerAll._is_key_exchange_supported(cipher_suite_result.cipher_suites, KeyExchange.DHE)
         ]
 
-        protocol_version_tls1_2 = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        protocol_version_tls1_2 = TlsProtocolVersion(TlsVersion.TLS1_2)
         if protocol_version_tls1_2 in cipher_suite_results.keys() and protocol_version_tls1_2 not in protocol_versions:
             protocol_versions.append(protocol_version_tls1_2)
 
@@ -139,10 +145,10 @@ class AnalyzerAll(AnalyzerTlsBase):
             return result
 
         protocol_version_min = min(protocol_versions)
-        if protocol_version_min < TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+        if protocol_version_min < TlsProtocolVersion(TlsVersion.TLS1_2):
             result = AnalyzerAll._get_result(AnalyzerDHParams, analyzable, protocol_version_min)
 
-        protocol_version_tls1_2 = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        protocol_version_tls1_2 = TlsProtocolVersion(TlsVersion.TLS1_2)
         if protocol_version_tls1_2 in protocol_versions:
             result_tls1_2 = AnalyzerAll._get_result(AnalyzerDHParams, analyzable, protocol_version_tls1_2)
             if result[analyzer_name]:
@@ -192,16 +198,23 @@ class AnalyzerAll(AnalyzerTlsBase):
 
     @staticmethod
     def get_sigalgos_result(analyzable, versions):
-        protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+        protocol_version = TlsProtocolVersion(TlsVersion.TLS1_2)
         if protocol_version not in versions:
             protocol_version = None
 
         return AnalyzerAll._get_result(AnalyzerSigAlgos, analyzable, protocol_version)
 
     @staticmethod
+    def get_simulations_result(analyzable):
+        analyzer_class = AnalyzerSimulations
+        analyzer_name = analyzer_class.get_name()
+
+        return {analyzer_name: analyzer_class().analyze(analyzable, None)}
+
+    @staticmethod
     def get_extensions_result(analyzable, versions):
         for version in reversed(versions):
-            if version <= TlsProtocolVersionFinal(TlsVersion.TLS1_2):
+            if version <= TlsProtocolVersion(TlsVersion.TLS1_2):
                 protocol_version = version
                 break
         else:
@@ -236,6 +249,7 @@ class AnalyzerAll(AnalyzerTlsBase):
         results.update(self.get_pubkeys_result(analyzable, cipher_suite_results))
         results.update(self.get_curves_result(analyzable, cipher_suite_results))
         results.update(self.get_sigalgos_result(analyzable, versions))
+        results.update(self.get_simulations_result(analyzable))
         results.update(self.get_extensions_result(analyzable, versions))
         results.update({
             AnalyzerVulnerabilities.get_name():

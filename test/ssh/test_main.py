@@ -21,7 +21,7 @@ from cryptolyzer.ssh.analyzer import ProtocolHandlerSshVersionIndependent
 from cryptolyzer.ssh.server import L7ServerSsh
 from cryptolyzer.ssh.versions import AnalyzerVersions
 
-from cryptolyzer.__main__ import get_argument_parser, get_protocol_handler_analyzer_and_uris
+from cryptolyzer.__main__ import main, get_argument_parser, get_protocol_handler_analyzer_and_uris
 
 from cryptolyzer.hassh.generate import AnalyzerGenerate
 
@@ -36,6 +36,8 @@ class TestMain(TestMainBase):
         self.host = 'localhost'
         self.port = self.threaded_server.l7_server.l4_transfer.bind_port
         self.address = '{}:{}'.format(self.host, self.port)
+
+        self.main_func = main
 
     def test_ciphers(self):
         self.assertEqual(

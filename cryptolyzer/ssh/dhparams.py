@@ -5,10 +5,12 @@ import attr
 import six
 
 
-from cryptoparser.common.algorithm import KeyExchange
+from cryptodatahub.common.algorithm import KeyExchange
+
+from cryptodatahub.ssh.algorithm import SshKexAlgorithm
+
 from cryptoparser.common.base import Serializable
 
-from cryptoparser.ssh.ciphersuite import SshKexAlgorithm
 from cryptoparser.ssh.subprotocol import (
     SshDHGroupExchangeGroup,
     SshDHGroupExchangeReply,

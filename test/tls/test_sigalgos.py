@@ -5,9 +5,9 @@ try:
 except ImportError:
     import mock
 
-from cryptoparser.tls.algorithm import TlsSignatureAndHashAlgorithm
+from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.subprotocol import TlsAlertDescription
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -19,7 +19,7 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2), timeout=None, ip=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None):
         analyzer = AnalyzerSigAlgos()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
@@ -76,7 +76,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
             L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
         )
         threaded_server.start()
-        protocol_version = TlsProtocolVersionFinal(TlsVersion.TLS1_0)
+        protocol_version = TlsProtocolVersion(TlsVersion.TLS1)
         self.assertEqual(
             self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port, protocol_version).sig_algos,
             []

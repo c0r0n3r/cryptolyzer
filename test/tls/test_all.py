@@ -9,7 +9,7 @@ from collections import OrderedDict
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsNamedCurve
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.result import AnalyzerTargetTls
 from cryptolyzer.common.dhparam import WellKnownDHParams
@@ -23,7 +23,7 @@ from .classes import TestTlsCases
 
 class TestTlsAll(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_0), timeout=None, ip=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1), timeout=None, ip=None):
         analyzer = AnalyzerAll()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
@@ -33,19 +33,19 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         target = AnalyzerTargetTls('tls', 'one.one.one.one', '1.1.1.1', 443, None)
         self.assertEqual(AnalyzerAll.is_ecdhe_supported(OrderedDict([
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersion(TlsVersion.TLS1),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
                 ], False, False)
             ),
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
                 ], False, False)
             ),
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_ECDH_anon_WITH_AES_256_CBC_SHA,
                 ], False, False)
@@ -54,42 +54,42 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
 
         self.assertEqual(AnalyzerAll.is_ecdhe_supported(OrderedDict([
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersion(TlsVersion.TLS1),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
                 ], False, False)
             ),
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
                 ], False, False)
             ),
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8,
                 ], False, False)
             ),
-        ])), TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        ])), TlsProtocolVersion(TlsVersion.TLS1_2))
 
     def test_is_public_key_supported(self):
         target = AnalyzerTargetTls('tls', 'one.one.one.one', '1.1.1.1', 443, None)
         self.assertEqual(AnalyzerAll.is_public_key_supported(OrderedDict([
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersion(TlsVersion.TLS1),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
                 ], False, False)
             ),
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
                 ], False, False)
             ),
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_ECDH_anon_WITH_AES_256_CBC_SHA,
                 ], False, False)
@@ -98,24 +98,24 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
 
         self.assertEqual(AnalyzerAll.is_public_key_supported(OrderedDict([
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_0),
+                TlsProtocolVersion(TlsVersion.TLS1),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
                 ], False, False)
             ),
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_1),
+                TlsProtocolVersion(TlsVersion.TLS1_1),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
                 ], False, False)
             ),
             (
-                TlsProtocolVersionFinal(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_2),
                 AnalyzerResultCipherSuites(target, [
                     TlsCipherSuite.TLS_ECDH_anon_WITH_AES_256_CBC_SHA,
                 ], False, False)
             ),
-        ])), TlsProtocolVersionFinal(TlsVersion.TLS1_1))
+        ])), TlsProtocolVersion(TlsVersion.TLS1_1))
 
     def test_real(self):
         result = self.get_result('dh1024.badssl.com', 443)

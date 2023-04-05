@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
 
+import math
+
 import codecs
 import collections
 import enum
 import six
 import attr
 
+from cryptodatahub.common.algorithm import NamedGroup
+
 from cryptoparser.common.base import Vector, VectorParamNumeric, Serializable
 from cryptoparser.common.parse import ParserBinary
 from cryptoparser.tls.extension import TlsNamedCurveFactory
 from cryptoparser.tls.subprotocol import TlsECCurveType
 
-from .math import is_prime, prime_precheck
+from cryptolyzer.common.curves import WellKnownECParams
+
+from .prime import is_prime, prime_precheck
 
 
 @attr.s(eq=False)
@@ -1779,6 +1785,22 @@ def get_dh_ephemeral_key_forged(prime):
     return prime // 2 + 1
 
 
+def get_ecdh_ephemeral_key_forged(named_group):
+    key_size_in_bytes = int(math.ceil(named_group.value.size / 8))
+
+    if named_group in [NamedGroup.CURVE25519, NamedGroup.CURVE448]:
+        ephemeral_public_key_bytes = key_size_in_bytes * b'\xff'
+    else:
+        well_know_ec_param = WellKnownECParams.from_named_group(named_group)
+        ephemeral_public_key_bytes = bytearray().join([
+            b'\x04',  # uncompressed point format
+            int_to_bytes(well_know_ec_param.value.parameter_numbers.x, key_size_in_bytes),
+            int_to_bytes(well_know_ec_param.value.parameter_numbers.y, key_size_in_bytes),
+        ])
+
+    return ephemeral_public_key_bytes
+
+
 def parse_tls_dh_params(param_bytes):
     parser = ParserBinary(param_bytes)
 
@@ -1809,7 +1831,7 @@ def parse_ecdh_params(param_bytes):
 class DHParameter(Serializable):
     parameter_numbers = attr.ib(validator=attr.validators.instance_of(DHParameterNumbers))
     key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
-    well_known = attr.ib(init=False, validator=attr.validators.instance_of(bool))
+    well_known = attr.ib(init=False, validator=attr.validators.in_(WellKnownDHParams))
     prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
     safe_prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
 

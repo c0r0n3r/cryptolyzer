@@ -10,7 +10,7 @@ from collections import OrderedDict
 import asn1crypto.x509
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
@@ -51,7 +51,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
         self.assertEqual(result.distinguished_names, [])
 
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersionFinal(TlsVersion.TLS1_2), timeout=None, ip=None):
+    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None):
         analyzer = AnalyzerPublicKeyRequest()
         l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
         analyzer_result = analyzer.analyze(l7_client, protocol_version)

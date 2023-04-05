@@ -2,8 +2,9 @@
 
 import unittest
 
-from cryptoparser.tls.version import TlsVersion, TlsProtocolVersionFinal
-from cryptoparser.tls.algorithm import TlsECPointFormat
+from cryptodatahub.tls.algorithm import TlsECPointFormat
+
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve
 
@@ -19,7 +20,7 @@ class TestJA3Decode(unittest.TestCase):
 
     def test_tag_empty_lists(self):
         result = self.get_result('771,,,,')
-        self.assertEqual(result.tls_protocol_version, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self.assertEqual(result.tls_protocol_version, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.cipher_suites, [])
         self.assertEqual(result.extension_types, [])
         self.assertEqual(result.named_curves, [])
@@ -27,7 +28,7 @@ class TestJA3Decode(unittest.TestCase):
 
     def test_tag_one_element_lists(self):
         result = self.get_result('771,3,2,1,0')
-        self.assertEqual(result.tls_protocol_version, TlsProtocolVersionFinal(TlsVersion.TLS1_2))
+        self.assertEqual(result.tls_protocol_version, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.cipher_suites, [TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5])
         self.assertEqual(result.extension_types, [TlsExtensionType.CLIENT_CERTIFICATE_URL])
         self.assertEqual(result.named_curves, [TlsNamedCurve.SECT163K1])
@@ -36,7 +37,7 @@ class TestJA3Decode(unittest.TestCase):
     def test_tag_two_element_lists(self):
         result = self.get_result('771,7-6,5-4,3-2,1-0')
         self.assertEqual(
-            result.tls_protocol_version, TlsProtocolVersionFinal(TlsVersion.TLS1_2)
+            result.tls_protocol_version, TlsProtocolVersion(TlsVersion.TLS1_2)
         )
         self.assertEqual(
             result.cipher_suites,
