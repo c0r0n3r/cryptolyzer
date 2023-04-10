@@ -11,7 +11,7 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptolyzer.common.dhparam import (
     DHPublicKey,
     DHPublicNumbers,
-    WellKnownDHParams,
+    DHParamWellKnown,
 )
 
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -109,7 +109,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparam.key_size, 2048)
         self.assertEqual(result.dhparam.prime, True)
         self.assertEqual(result.dhparam.safe_prime, True)
-        self.assertEqual(result.dhparam.well_known, WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP)
+        self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP)
         self.assertFalse(result.key_reuse)
 
     def test_plain_text_response(self):
@@ -152,7 +152,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         AnalyzerDHParams, '_get_public_key_tls_1_x',
         return_value=DHPublicKey(
             DHPublicNumbers(
-                0, WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.dh_param_numbers
+                0, DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.parameter_numbers
             ),
             4096
         )
@@ -162,7 +162,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.groups, [])
         self.assertEqual(
             result.dhparam.parameter_numbers,
-            WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.dh_param_numbers,
+            DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.parameter_numbers,
         )
         self.assertTrue(result.key_reuse)
         log_lines = self.get_log_lines()
