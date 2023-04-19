@@ -225,7 +225,7 @@ class AnalyzerHttpBase(object):
 
     @classmethod
     def get_default_scheme(cls):
-        return 'http'
+        return 'https'
 
     @abc.abstractmethod
     def analyze(self, analyzable, protocol_version):
