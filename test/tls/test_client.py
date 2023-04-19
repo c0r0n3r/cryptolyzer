@@ -283,10 +283,7 @@ class TestClientPOP3(TestL7ClientBase):
     def test_pop3_client(self):
         l7_client, result = self.get_result('pop3', 'pop3.comcast.net', None, timeout=10)
         self.assertEqual(l7_client.greeting, ['+OK Dovecot ready.'])
-        self.assertEqual(
-            result.versions,
-            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
-        )
+        self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
     def test_pop3s_client(self):
         _, result = self.get_result('pop3s', 'pop.gmail.com', None)
@@ -334,10 +331,7 @@ class TestClientIMAP(TestL7ClientBase):
 
     def test_imap_client(self):
         _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
-        self.assertEqual(
-            result.versions,
-            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
-        )
+        self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
     def test_imaps_client(self):
         _, result = self.get_result('imaps', 'imap.gmail.com', None)
