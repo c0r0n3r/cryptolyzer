@@ -212,15 +212,29 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
 
         leaf_certificate = certificate_chain.items[0]
         subject_matches = leaf_certificate.is_subject_matches(six.u(analyzable.address))
-        if ((sni_sent or subject_matches) and
-                certificate_chain not in [result.tls_certificate_chain for result in results]):
-            tls_public_key_params = {
-                'sni_sent': sni_sent,
-                'subject_matches': subject_matches,
-                'tls_certificate_chain': certificate_chain,
-            }
+        if sni_sent or subject_matches:
+            for result in results:
+                if certificate_chain == result.tls_certificate_chain:
+                    tls_public_key = result
+                    break
+            else:
+                tls_public_key_params = {
+                    'sni_sent': sni_sent,
+                    'subject_matches': subject_matches,
+                    'tls_certificate_chain': certificate_chain,
+                }
 
-            if TlsHandshakeType.CERTIFICATE_STATUS in server_messages:
+                tls_public_key = TlsPublicKey(**tls_public_key_params)
+                LogSingleton().log(level=60, msg=six.u('Server offers %s X.509 public key (with%s SNI)') % (
+                    tls_public_key.tls_certificate_chain.items[-1].key_type.name,
+                    '' if tls_public_key.sni_sent else 'out',
+                ))
+                results.append(tls_public_key)
+
+            # Server may send the same certificate chain independently that client hello conatins SNI exetension,
+            # however OCSP staple not necessarily sent in both cases. New status values dtored only if no one had
+            # already stored.
+            if tls_public_key.certificate_status is None and TlsHandshakeType.CERTIFICATE_STATUS in server_messages:
                 status_message = server_messages[TlsHandshakeType.CERTIFICATE_STATUS]
                 if status_message.status_type == TlsCertificateStatusType.OCSP:
                     ocsp_response = asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
@@ -228,14 +242,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                         certificate_status = CertificateStatus(
                             asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
                         )
-                        tls_public_key_params['certificate_status'] = certificate_status
-
-            tls_public_key = TlsPublicKey(**tls_public_key_params)
-            LogSingleton().log(level=60, msg=six.u('Server offers %s X.509 public key (with%s SNI)') % (
-                tls_public_key.tls_certificate_chain.items[-1].key_type.name,
-                '' if tls_public_key.sni_sent else 'out',
-            ))
-            results.append(tls_public_key)
+                        tls_public_key.certificate_status = certificate_status
 
     @staticmethod
     def _get_server_messages(l7_client, client_hello, sni_sent, client_hello_messages):
