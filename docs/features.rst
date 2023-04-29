@@ -165,6 +165,7 @@ Fingerprinting
    -  `LMTP <https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol>`__
    -  `MySQL <https://en.wikipedia.org/wiki/MySQL>`__
    -  `NNTP <https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol>`__
+   -  `OpenVPN <https://en.wikipedia.org/wiki/OpenVPN>`__
    -  `POP3 <https://en.wikipedia.org/wiki/Post_Office_Protocol>`__
    -  `PostgreSQL <https://en.wikipedia.org/wiki/PostgreSQL>`__
    -  `RDP <https://en.wikipedia.org/wiki/Remote_Desktop_Protocol>`__
