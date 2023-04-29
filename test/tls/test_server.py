@@ -16,6 +16,7 @@ import six
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.ldap import LDAPExtendedRequestStartTLS
+from cryptoparser.tls.openvpn import OpenVpnPacketControlV1, OpenVpnPacketHardResetServerV2
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptoparser.tls.record import SslRecord, TlsRecord
 from cryptoparser.tls.mysql import MySQLRecord, MySQLHandshakeSslRequest
@@ -40,13 +41,15 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeServerHello,
 )
 
-from cryptolyzer.common.transfer import L4ClientTCP
+from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP
 from cryptolyzer.tls.client import (
     ClientFTP,
     ClientLDAP,
     ClientLMTP,
     ClientMySQL,
     ClientNNTP,
+    ClientOpenVpn,
+    ClientOpenVpnTcp,
     ClientPOP3,
     ClientPostgreSQL,
     ClientRDP,
@@ -65,6 +68,8 @@ from cryptolyzer.tls.server import (
     L7ServerTlsLMTP,
     L7ServerTlsMySQL,
     L7ServerTlsNNTP,
+    L7ServerTlsOpenVpn,
+    L7ServerTlsOpenVpnTcp,
     L7ServerTlsPOP3,
     L7ServerTlsPostgreSQL,
     L7ServerTlsRDP,
@@ -89,18 +94,23 @@ class TestL7ServerBase(unittest.TestCase):
 
     @staticmethod
     def create_server(configuration=None, l7_server_class=L7ServerTls):
-        threaded_server = L7ServerTlsTest(l7_server_class('localhost', 0, timeout=2, configuration=configuration))
+        threaded_server = L7ServerTlsTest(l7_server_class('localhost', 0, timeout=5, configuration=configuration))
         threaded_server.wait_for_server_listen()
         return threaded_server
 
     @staticmethod
     def create_client(client_class, l7_server):
-        return client_class(l7_server.address, l7_server.l4_transfer.bind_port, ip=l7_server.ip)
+        return client_class(
+            l7_server.address,
+            l7_server.l4_transfer.bind_port,
+            ip=l7_server.l4_transfer.bind_address,
+            timeout=5
+        )
 
     def _assert_on_more_data(self, client):
         buffer_length = len(client.buffer)
         try:
-            client.receive(16)
+            client.receive(1)
         except NotEnoughData:
             pass
         self.assertEqual(client.buffer[buffer_length:], bytearray())
@@ -136,6 +146,7 @@ class TestL7ServerBase(unittest.TestCase):
     ):
         client_hello = TlsHandshakeClientHelloAnyAlgorithm([protocol_version, ], self.threaded_server.l7_server.address)
         l7_client = self.create_client(l7_client_class, self.threaded_server.l7_server)
+        l7_client.init_connection()
         server_messages = l7_client.do_tls_handshake(
             hello_message=client_hello,
             last_handshake_message_type=last_handshake_message_type
@@ -650,3 +661,131 @@ class TestL7ServerTlsNNTP(TestL7ServerBase):
 
     def test_tls_handshake(self):
         self._test_tls_handshake(l7_client_class=ClientNNTP)
+
+
+class TestL7ServerTlsOpenVpn(TestL7ServerBase):
+    def test_default_port(self):
+        self.assertEqual(ClientOpenVpn.get_default_port(), L7ServerTlsOpenVpn.get_default_port())
+
+    def test_scheme(self):
+        self.assertEqual(ClientOpenVpn.get_scheme(), L7ServerTlsOpenVpn.get_scheme())
+
+    def test_error_missing_hard_reset_client(self):
+        threaded_server = self.create_server(l7_server_class=L7ServerTlsOpenVpn)
+        threaded_server.l7_server.max_handshake_count = 1
+
+        l4_client = self.create_client(L4ClientUDP, threaded_server.l7_server)
+        l4_client.init_connection()
+        l4_client.send(OpenVpnPacketHardResetServerV2(1, 2, [], 0).compose())
+        self._assert_on_more_data(l4_client)
+        l4_client.close()
+
+        threaded_server.join()
+
+    def test_error_plain_text_data(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsOpenVpn)
+        self.threaded_server.l7_server.max_handshake_count = 1
+
+        l7_client = self.create_client(ClientOpenVpn, self.threaded_server.l7_server)
+        l7_client.init_connection()
+
+        l7_client.l4_transfer.send(OpenVpnPacketControlV1(
+            l7_client.session_id, [], l7_client.remote_session_id, l7_client.client_packet_id + 1, b'plain text data'
+        ).compose())
+
+        expected_error_message_bytes = TlsRecord(
+            TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR).compose(),
+            content_type=TlsContentType.ALERT,
+        ).compose()
+
+        l7_client.receive(len(expected_error_message_bytes))
+        self.assertEqual(l7_client.buffer, expected_error_message_bytes)
+
+        l7_client.l4_transfer.close()
+        self.threaded_server.join()
+
+    def test_tls_handshake(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsOpenVpn)
+        self.threaded_server.l7_server.max_handshake_count = 1
+
+        l7_client = self.create_client(ClientOpenVpn, self.threaded_server.l7_server)
+        self.assertEqual(l7_client.buffer, b'')
+        l7_client.init_connection()
+
+        self.assertEqual(l7_client.buffer, b'')
+
+        l7_client.send(
+            TlsRecord(TlsHandshakeServerHello(
+                protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+                cipher_suite=TlsCipherSuite.TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+                extensions=TlsExtensionsClient([]),
+            ).compose()).compose()
+        )
+
+        expected_error_message_bytes = TlsRecord(
+            TlsAlertMessage(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE).compose(),
+            content_type=TlsContentType.ALERT,
+        ).compose()
+        l7_client.receive(len(expected_error_message_bytes))
+        self.assertEqual(l7_client.buffer, expected_error_message_bytes)
+
+        l7_client.l4_transfer.close()
+        self.threaded_server.join()
+
+
+class TestL7ServerTlsOpenVpnTcp(TestL7ServerBase):
+    def test_default_port(self):
+        self.assertEqual(ClientOpenVpnTcp.get_default_port(), L7ServerTlsOpenVpnTcp.get_default_port())
+
+    def test_scheme(self):
+        self.assertEqual(ClientOpenVpnTcp.get_scheme(), L7ServerTlsOpenVpnTcp.get_scheme())
+
+    def test_error_plain_text_data(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsOpenVpn)
+        self.threaded_server.l7_server.max_handshake_count = 1
+
+        l7_client = self.create_client(ClientOpenVpn, self.threaded_server.l7_server)
+        l7_client.init_connection()
+
+        l7_client.l4_transfer.send(OpenVpnPacketControlV1(
+            l7_client.session_id, [], l7_client.remote_session_id, l7_client.client_packet_id + 1, b'plain text data'
+        ).compose())
+
+        expected_error_message_bytes = TlsRecord(
+            TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.DECRYPT_ERROR).compose(),
+            content_type=TlsContentType.ALERT,
+        ).compose()
+
+        l7_client.receive(len(expected_error_message_bytes))
+        self.assertEqual(l7_client.buffer, expected_error_message_bytes)
+
+        l7_client.l4_transfer.close()
+        self.threaded_server.join()
+
+    def test_tls_handshake(self):
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsOpenVpnTcp)
+        self.threaded_server.l7_server.max_handshake_count = 1
+
+        l7_client = self.create_client(ClientOpenVpnTcp, self.threaded_server.l7_server)
+        self.assertEqual(l7_client.buffer, b'')
+        l7_client.init_connection()
+
+        self.assertEqual(l7_client.buffer, b'')
+
+        l7_client.send(
+            TlsRecord(TlsHandshakeServerHello(
+                protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+                cipher_suite=TlsCipherSuite.TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+                extensions=TlsExtensionsClient([]),
+            ).compose()).compose()
+        )
+
+        expected_error_message_bytes = TlsRecord(
+            TlsAlertMessage(TlsAlertLevel.FATAL, TlsAlertDescription.UNEXPECTED_MESSAGE).compose(),
+            content_type=TlsContentType.ALERT,
+        ).compose()
+        l7_client.receive(len(expected_error_message_bytes))
+        self.assertEqual(l7_client.buffer, expected_error_message_bytes)
+
+        l7_client.l4_transfer.close()
+        self.threaded_server.join()

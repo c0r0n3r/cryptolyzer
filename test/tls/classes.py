@@ -13,6 +13,8 @@ from test.common.classes import TestThreadedServer, TestLoggerBase
 import attr
 import six
 
+from cryptoparser.common.exception import NotEnoughData
+
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionsClient
 from cryptoparser.tls.record import TlsRecord
@@ -83,39 +85,49 @@ class L7ServerTlsTest(TestThreadedServer):
 
 @attr.s
 class TlsServerMockResponse(TlsServerHandshake):
-    _message_count = attr.ib(init=False, default=0)
-
     def _get_mock_responses(self):
         raise NotImplementedError()
 
     def _init_connection(self, last_handshake_message_type):
         mock_responses = self._get_mock_responses()
-        self.l4_transfer.send(bytearray().join(mock_responses))
+        self.l7_transfer.send(bytearray().join(mock_responses))
+
+    def _parse_record(self):
+        if not self.l7_transfer.buffer:
+            raise NotEnoughData(1)
+
+        return None, len(self.l7_transfer.buffer), True
+
+    def _parse_message(self, record):
+        return None
+
+    def _process_handshake_message(self, message, last_handshake_message_type):
+        pass
 
     def _process_invalid_message(self):
         pass
 
 
 class L7ServerTlsMockResponse(L7ServerTls):
-    def _get_handshake_class(self, l4_transfer):
+    def _get_handshake_class(self):
         return TlsServerMockResponse
 
 
 class TlsServerPlainTextResponse(TlsServerHandshake):
     def _process_handshake_message(self, message, last_handshake_message_type):
-        self.l4_transfer.send(
+        self.l7_transfer.send(
             b'<!DOCTYPE html><html><body>Typical plain text response to TLS client hello message</body></html>'
         )
 
 
 class L7ServerTlsPlainTextResponse(L7ServerTls):
-    def _get_handshake_class(self, l4_transfer):
+    def _get_handshake_class(self):
         return TlsServerPlainTextResponse
 
 
 class TlsServerCloseDuringHandshake(TlsServerHandshake):
     def _process_handshake_message(self, message, last_handshake_message_type):
-        self.l4_transfer.send(
+        self.l7_transfer.send(
             TlsRecord(
                 TlsAlertMessage(TlsAlertLevel.WARNING, TlsAlertDescription.USER_CANCELED).compose(),
                 content_type=TlsContentType.ALERT,
@@ -124,7 +136,7 @@ class TlsServerCloseDuringHandshake(TlsServerHandshake):
 
 
 class L7ServerTlsCloseDuringHandshake(L7ServerTls):
-    def _get_handshake_class(self, l4_transfer):
+    def _get_handshake_class(self):
         return TlsServerCloseDuringHandshake
 
 
@@ -138,11 +150,11 @@ class TlsServerOneMessageInMultipleRecords(TlsServerHandshake):
 
     def _process_handshake_message(self, message, last_handshake_message_type):
         for hello_message_byte in self.SERVER_HELLO_MESSAGE.compose():
-            self.l4_transfer.send(TlsRecord(fragment=six.int2byte(hello_message_byte)).compose())
+            self.l7_transfer.send(TlsRecord(fragment=six.int2byte(hello_message_byte)).compose())
 
 
 class L7ServerTlsOneMessageInMultipleRecords(L7ServerTls):
-    def _get_handshake_class(self, l4_transfer):
+    def _get_handshake_class(self):
         return TlsServerOneMessageInMultipleRecords
 
 
@@ -152,11 +164,11 @@ class TlsServerAlert(TlsServerHandshake):
 
     def _process_handshake_message(self, message, last_handshake_message_type):
         handshake_message_bytes = self._get_alert_message().compose()
-        self.l4_transfer.send(TlsRecord(handshake_message_bytes + handshake_message_bytes).compose())
+        self.l7_transfer.send(TlsRecord(handshake_message_bytes + handshake_message_bytes).compose())
 
 
 class L7ServerTlsAlert(L7ServerTls):
-    def _get_handshake_class(self, l4_transfer):
+    def _get_handshake_class(self):
         return TlsServerAlert
 
 
@@ -172,7 +184,7 @@ class TlsServerLongCipherSuiteListIntolerance(TlsServerHandshake):
 
 
 class L7ServerTlsLongCipherSuiteListIntolerance(L7ServerTls):
-    def _get_handshake_class(self, l4_transfer):
+    def _get_handshake_class(self):
         return TlsServerLongCipherSuiteListIntolerance
 
 

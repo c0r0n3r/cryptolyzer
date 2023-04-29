@@ -1,6 +1,15 @@
 Changelog
 =========
 
+0.9.0
+-----
+
+-  TLS (``tls``)
+
+   -  Generic
+
+      -  `OpenVPN <https://en.wikipedia.org/wiki/OpenVPN>`__ support (#85)
+
 0.8.5 - 2023-04-02
 ------------------
 
