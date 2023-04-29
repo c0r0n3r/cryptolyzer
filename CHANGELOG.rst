@@ -15,13 +15,13 @@ Changelog
 
 -  TLS (``tls``)
 
-  -  Simulations (``simulations``)
+   -  Simulations (``simulations``)
 
-    -  checker for client compatibility (#92)
+      -  checker for client compatibility (#92)
 
-       -  `Chromium <https://en.wikipedia.org/wiki/Chromium_(web_browser)>`__
-       -  `Firefox <https://en.wikipedia.org/wiki/Firefox>`__
-       -  `Opera <https://en.wikipedia.org/wiki/Opera_(web_browser)>`__
+         -  `Chromium <https://en.wikipedia.org/wiki/Chromium_(web_browser)>`__
+         -  `Firefox <https://en.wikipedia.org/wiki/Firefox>`__
+         -  `Opera <https://en.wikipedia.org/wiki/Opera_(web_browser)>`__
 
 0.8.4 - 2023-01-22
 ------------------
@@ -31,13 +31,13 @@ Features
 
 -  TLS (``tls``)
 
-  -  Generic
+   -  Generic
 
-    -  MySQL support (#54)
+      -  MySQL support (#54)
 
-  -  Vulnerabilities (``vulns``)
+   -  Vulnerabilities (``vulns``)
 
-    -  checker for well-known vulnerabilities (#93)
+      -  checker for well-known vulnerabilities (#93)
 
       -  Anonymous Diffie-Hellman
       -  DHEat attack
@@ -60,7 +60,7 @@ Features
 
 -  TLS (``tls``)
 
-  -  Generic
+   -  Generic
 
    -  RDP hybrid mode support (#109)
 
@@ -72,69 +72,69 @@ Features
 
 -  Generic
 
-  -  Diffie-Hellman
+   -  Diffie-Hellman
 
-    -  add builtin Diffie-Hellman parameters of several application servers (#104)
-    -  add logging support to make it possible to follow up the analysis process (#58)
+      -  add builtin Diffie-Hellman parameters of several application servers (#104)
+      -  add logging support to make it possible to follow up the analysis process (#58)
 
 -  SSH (``ssh``)
 
-  -  HASSH (``hassh``)
+   -  HASSH (``hassh``)
 
-    -  tag generation support for servers (#97)
-    -  tag generation support for clients (#96)
+      -  tag generation support for servers (#97)
+      -  tag generation support for clients (#96)
 
-  -  Public Keys (``pubkeys``)
+   -  Public Keys (``pubkeys``)
 
-    -  host certificate support (#69)
+      -  host certificate support (#69)
 
 -  TLS (``tls``)
 
-  -  Diffie-Hellman (``dhparams``)
+   -  Diffie-Hellman (``dhparams``)
 
-    -  support finite field Diffie-Hellman ephemeral (FFDHE) parameter negotiation defined in RFC 7919 (#98)
+      -  support finite field Diffie-Hellman ephemeral (FFDHE) parameter negotiation defined in RFC 7919 (#98)
 
 Notable fixes
 ~~~~~~~~~~~~~
 
 -  TLS (``tls``)
 
-  -  Extensions (``extensions``)
+   -  Extensions (``extensions``)
 
-    -  Clock accuracy check works even if difference is negative (#103)
+      -  Clock accuracy check works even if difference is negative (#103)
 
-  -  Signature Algorithms (``sigalgos``)
+   -  Signature Algorithms (``sigalgos``)
 
-    -  Not supported signature algorithms are not listed anymore (#102)
+      -  Not supported signature algorithms are not listed anymore (#102)
 
 0.8.1 - 2022-03-23
 ------------------
 
 -  JA3 (``ja3``)
 
-  -  Generate (``generate``)
+   -  Generate (``generate``)
 
-    -  support NNTP clients (#83)
-    -  support SMTP/LMTP clients (#82)
-    -  support POP3 clients (#81)
-    -  support FTP clients (#80)
-    -  support Sieve clients (#79)
-    -  support PostgreSQL clients (#78)
-    -  support LDAP clients (#77)
+      -  support NNTP clients (#83)
+      -  support SMTP/LMTP clients (#82)
+      -  support POP3 clients (#81)
+      -  support FTP clients (#80)
+      -  support Sieve clients (#79)
+      -  support PostgreSQL clients (#78)
+      -  support LDAP clients (#77)
 
 0.8.0 - 2022-01-18
 ------------------
 
 -  SSH (``ssh``)
 
-  -  Public Keys (``pubkeys``)
+   -  Public Keys (``pubkeys``)
 
-    -  add analyzer for checking SSH server against used
-       `host keys <https://datatracker.ietf.org/doc/html/rfc4253#section-6.6>`__ (#34)
+      -  add analyzer for checking SSH server against used
+         `host keys <https://datatracker.ietf.org/doc/html/rfc4253#section-6.6>`__ (#34)
 
-  -  Versions (``versions``)
+   -  Versions (``versions``)
 
-    -  identify application server and version (#71)
+      -  identify application server and version (#71)
 
 0.7.3 - 2021-12-26
 ------------------
@@ -144,32 +144,32 @@ Features
 
 -  SSH (``ssh``)
 
-  -  Generic
+   -  Generic
 
-    -  Add all command to SSH
+      -  Add all command to SSH
 
 Notable fixes
 ~~~~~~~~~~~~~
 
 -  Generic
 
-  -  Diffie-Hellman
+   -  Diffie-Hellman
 
-    -  Handle Diffie-Hellman parameter q value comparision well (#74)
+      -  Handle Diffie-Hellman parameter q value comparision well (#74)
 
 -  TLS (``tls``)
 
-  -  Generic
+   -  Generic
 
-    -  Handle multi-line greeting message in the case of SMTP servers (#72)
+      -  Handle multi-line greeting message in the case of SMTP servers (#72)
 
-  -  Diffie-Hellman (``dhparams``)
+   -  Diffie-Hellman (``dhparams``)
 
-    -  Add safe prime attribute to well-known DH params as there is an RFC (5144) which defines unsafe prime (#73)
+      -  Add safe prime attribute to well-known DH params as there is an RFC (5144) which defines unsafe prime (#73)
 
-  -  Public Keys (``pubkeys``)
+   -  Public Keys (``pubkeys``)
 
-    -  Handle missing certificates message well during an anonymous Diffie-Hellman key exchange (#66)
+      -  Handle missing certificates message well during an anonymous Diffie-Hellman key exchange (#66)
 
 0.7.2 - 2021-10-07
 ------------------
@@ -179,9 +179,9 @@ Features
 
 -  SSH (``ssh``)
 
-  -  Diffie-Hellman (``dhparams``)
+   -  Diffie-Hellman (``dhparams``)
 
-    -  add group exchange algorithms supported by the server to the result (#53)
+      -  add group exchange algorithms supported by the server to the result (#53)
 
 Other
 ~~~~~
@@ -198,22 +198,22 @@ Features
 
 -  TLS (``tls``)
 
-  -  LMTP opportunistic TLS (``STARTTLS``) support (#56)
-  -  NNTP opportunistic TLS (``STARTTLS``) support (#7)
-  -  PostgreSQL opportunistic TLS (``STARTTLS``) support (#55)
+   -  LMTP opportunistic TLS (``STARTTLS``) support (#56)
+   -  NNTP opportunistic TLS (``STARTTLS``) support (#7)
+   -  PostgreSQL opportunistic TLS (``STARTTLS``) support (#55)
 
 Notable fixes
 ~~~~~~~~~~~~~
 
 -  TLS (``tls``)
 
-  -  Generic
+   -  Generic
 
-    -  Use DH ephemeral keys that are mathematically correct during a TLS 1.3 handshake to increase stability (#57)
+      -  Use DH ephemeral keys that are mathematically correct during a TLS 1.3 handshake to increase stability (#57)
 
-  -  Ciphers (``ciphers``)
+   -  Ciphers (``ciphers``)
 
-    -  No fallback mechanism is used to check cipher suites if server honors long cipher suite lists (#59)
+      -  No fallback mechanism is used to check cipher suites if server honors long cipher suite lists (#59)
 
 0.7.0 - 2021-09-02
 ------------------
@@ -223,37 +223,38 @@ Features
 
 -  TLS (``tls``)
 
-  -  Extensions (``extensions``)
+   -  Extensions (``extensions``)
 
-    -  add analyzer checking which `application-layer protocols <https://www.rfc-editor.org/rfc/rfc5077.html>`__ are
-       supported (#45)
-    -  add analyzer checking whether `encrypt-then-MAC <https://www.rfc-editor.org/rfc/rfc7366.html>`__ mode is
-       supported (#45)
-    -  add analyzer checking whether `extended master secret <https://www.rfc-editor.org/rfc/rfc7627.html>`__ is
-       supported (#45)
-    -  add analyzer checking which `next protocols <https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html>`__ are
-       supported (#45)
-    -  add analyzer checking whether `renegotiation indication <https://www.rfc-editor.org/rfc/rfc5746.html>`__ is
-       supported (#45)
-    -  add analyzer checking whether `session ticket <https://www.rfc-editor.org/rfc/rfc5077.html>`__ is supported (#45)
+      -  add analyzer checking which `application-layer protocols <https://www.rfc-editor.org/rfc/rfc5077.html>`__ are
+         supported (#45)
+      -  add analyzer checking whether `encrypt-then-MAC <https://www.rfc-editor.org/rfc/rfc7366.html>`__ mode is
+         supported (#45)
+      -  add analyzer checking whether `extended master secret <https://www.rfc-editor.org/rfc/rfc7627.html>`__ is
+         supported (#45)
+      -  add analyzer checking which `next protocols <https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html>`__
+         are supported (#45)
+      -  add analyzer checking whether `renegotiation indication <https://www.rfc-editor.org/rfc/rfc5746.html>`__ is
+         supported (#45)
+      -  add analyzer checking whether `session ticket <https://www.rfc-editor.org/rfc/rfc5077.html>`__ is supported
+         (#45)
 
-  -  Sieve opportunistic TLS (``STARTTLS``) support (#9)
+   -  Sieve opportunistic TLS (``STARTTLS``) support (#9)
 
 -  SSH (``ssh``)
 
-  -  Diffie-Hellman (``dhparams``)
+   -  Diffie-Hellman (``dhparams``)
 
-    -  check which DH parameter sizes supported by the server by group exchange (#53)
-    -  check which DH parameter sizes supported by the server by key exchange (#53)
+      -  check which DH parameter sizes supported by the server by group exchange (#53)
+      -  check which DH parameter sizes supported by the server by key exchange (#53)
 
 Notable fixes
 ~~~~~~~~~~~~~
 
 -  TLS (``tls``)
 
-  -  Generic
+   -  Generic
 
-    -  handle server long cipher suite, signature algorithm list intolerance (#52)
+      -  handle server long cipher suite, signature algorithm list intolerance (#52)
 
 0.6.0 - 2021-05-27
 ------------------
@@ -263,25 +264,25 @@ Improvements
 
 -  TLS (``tls``)
 
-  -  Ciphers (``ciphers``)
+   -  Ciphers (``ciphers``)
 
-    -  add TLS 1.3 support (#35)
+      -  add TLS 1.3 support (#35)
 
-  -  Elliptic Curves (``curves``)
+   -  Elliptic Curves (``curves``)
 
-    -  add TLS 1.3 support (#35)
+      -  add TLS 1.3 support (#35)
 
-  -  Diffie-Hellman (``dhparams``)
+   -  Diffie-Hellman (``dhparams``)
 
-    -  add TLS 1.3 support (#35)
+      -  add TLS 1.3 support (#35)
 
-  -  Signature Algorithms (``sigalgos``)
+   -  Signature Algorithms (``sigalgos``)
 
-    -  add TLS 1.3 support (#35)
+      -  add TLS 1.3 support (#35)
 
-  -  Versions (``versions``)
+   -  Versions (``versions``)
 
-    -  add TLS 1.3 support (#35)
+      -  add TLS 1.3 support (#35)
 
 0.5.0 - 2021-04-08
 ------------------
@@ -291,20 +292,20 @@ Features
 
 -  TLS (``tls``)
 
-    -  add analyzer (``all``) for running all TLS analysis at once (#40)
+   -  add analyzer (``all``) for running all TLS analysis at once (#40)
 
 -  SSH (``ssh2``)
 
-    -  add analyzer for checking SSH servers against
-       `negotiated algorithms <https://tools.ietf.org/html/rfc4253#section-7.1>`__ (#33)
+   -  add analyzer for checking SSH servers against
+      `negotiated algorithms <https://tools.ietf.org/html/rfc4253#section-7.1>`__ (#33)
 
 Usability
 ~~~~~~~~~
 
 -  Generic
 
-  -  use human readable algorithms names in Markdown output (#48)
-  -  command line interface gives error output instead of traceback on exception (#49)
+   -  use human readable algorithms names in Markdown output (#48)
+   -  command line interface gives error output instead of traceback on exception (#49)
 
 0.4.0 - 2021-01-30
 ------------------
@@ -314,31 +315,31 @@ Features
 
 -  TLS (``tls``)
 
-  -  add analyzer for checking whether TLS server requires client certificate for authentication (#36)
-  -  `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`__ support (#25)
+   -  add analyzer for checking whether TLS server requires client certificate for authentication (#36)
+   -  `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`__ support (#25)
 
 Notable fixes
 ~~~~~~~~~~~~~
 
 -  TLS (``tls``)
 
-  -  Generic
+   -  Generic
 
-    -  handle that a server indicates handshake failure by sending close notify alert (#44)
-    -  handle that a server does not respect lack of the signature algorithms extension (#43)
+      -  handle that a server indicates handshake failure by sending close notify alert (#44)
+      -  handle that a server does not respect lack of the signature algorithms extension (#43)
 
-  -  Versions (``versions``)
+   -  Versions (``versions``)
 
-    -  handle that a server supports only non-RSA public keys (#41)
+      -  handle that a server supports only non-RSA public keys (#41)
 
 Performance
 ~~~~~~~~~~~
 
 -  TLS (``tls``)
 
-  -  Cipher Suites (``ciphers``)
+   -  Cipher Suites (``ciphers``)
 
-    -  speed up TLS supported curve check (#39)
+      -  speed up TLS supported curve check (#39)
 
 0.3.1 - 2020-09-15
 ------------------
@@ -348,22 +349,22 @@ Features
 
 -  Generic
 
-  -  `Markdown <https://en.wikipedia.org/wiki/Markdown>`__ output format (#30)
+   -  `Markdown <https://en.wikipedia.org/wiki/Markdown>`__ output format (#30)
 
 -  TLS (``tls``)
 
-  -  `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`__ support (#26)
-  -  Cipher Suites (``ciphers``)
+   -  `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`__ support (#26)
+   -  Cipher Suites (``ciphers``)
 
-    -  `GOST <https://en.wikipedia.org/wiki/GOST>`__ (national standards of the Russian Federation and CIS countries)
-       support for TLS cipher suite checker (#32)
+      -  `GOST <https://en.wikipedia.org/wiki/GOST>`__ (national standards of the Russian Federation and CIS countries)
+         support for TLS cipher suite checker (#32)
 
 Notable fixes
 ~~~~~~~~~~~~~
 
 -  TLS (``tls``)
 
-  -  fix several uncertain test cases (#28)
+   -  fix several uncertain test cases (#28)
 
 Refactor
 ~~~~~~~~
@@ -379,14 +380,14 @@ Features
 
 -  TLS (``tls``)
 
-  -  RDP support (#21)
+   -  RDP support (#21)
 
 -  JA3 (``ja3``)
 
-  -  `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__ decoding
-     support (#22)
-  -  `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__
-     generatoin support (#23)
+   -  `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__
+      decoding support (#22)
+   -  `JA3 fingerprint <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__
+      generatoin support (#23)
 
 Notable fixes
 ~~~~~~~~~~~~~
@@ -406,42 +407,42 @@ Features
 
 -  TLS (``tls``)
 
-  -  Diffie-Hellman (``dhparams``)
+   -  Diffie-Hellman (``dhparams``)
 
-    -  check whether server uses `safe prime <https://en.wikipedia.org/wiki/Safe_prime>`__ as DH parameter to avoid
-       `small subgroup confinement attack <https://en.wikipedia.org/wiki/Small_subgroup_confinement_attack>`__ (#13)
-    -  check whether server uses well-known (RFC defined) DH parameter (#13)
-    -  check whether server reuse the DH parameter (#13)
+      -  check whether server uses `safe prime <https://en.wikipedia.org/wiki/Safe_prime>`__ as DH parameter to avoid
+         `small subgroup confinement attack <https://en.wikipedia.org/wiki/Small_subgroup_confinement_attack>`__ (#13)
+      -  check whether server uses well-known (RFC defined) DH parameter (#13)
+      -  check whether server reuse the DH parameter (#13)
 
-  -  FTP opportunistic TLS (``STARTTLS``) support (#8)
+   -  FTP opportunistic TLS (``STARTTLS``) support (#8)
 
 Notable Fixes
 ~~~~~~~~~~~~~
 
 -  TLS (``tls``)
 
-  -  Cipher Suites (``ciphers``)
+   -  Cipher Suites (``ciphers``)
 
-    -  handle server long cipher suite list intolerance
-    -  fix cipher suite preference order calculation (#18)
+      -  handle server long cipher suite list intolerance
+      -  fix cipher suite preference order calculation (#18)
 
-  -  Elliptic Curves (``curves``)
+   -  Elliptic Curves (``curves``)
 
-    -  fix result when server does not support named group extension
+      -  fix result when server does not support named group extension
 
-  -  Public Keys (``pubkeys``)
+   -  Public Keys (``pubkeys``)
 
-    -  handle cross signed key in the certificate chain
-    -  fix JSON output in case of expired certificates (#15)
-    -  handle the case when only a self-singed CA is served as certificate (#17)
-    -  handle the case when CA with no basic constraint is served (#20)
+      -  handle cross signed key in the certificate chain
+      -  fix JSON output in case of expired certificates (#15)
+      -  handle the case when only a self-singed CA is served as certificate (#17)
+      -  handle the case when CA with no basic constraint is served (#20)
 
-  -  handle rarely/incorrectly used TLS alerts
-  -  handle when there is no response from server (#11)
-  -  handle scheme other than tls in URL argument of the command line tool (#3)
-  -  handle plain text response to TLS handshake initiation (#19)
-  -  add default port for opportunistic TLS schemes (#6)
-  -  uniform timeout handling in TLS clients (#12)
+   -  handle rarely/incorrectly used TLS alerts
+   -  handle when there is no response from server (#11)
+   -  handle scheme other than tls in URL argument of the command line tool (#3)
+   -  handle plain text response to TLS handshake initiation (#19)
+   -  add default port for opportunistic TLS schemes (#6)
+   -  uniform timeout handling in TLS clients (#12)
 
 Other
 ^^^^^
@@ -451,11 +452,11 @@ Other
    (`coroner/cryprolyzer <https://hub.docker.com/r/coroner/cryptolyzer>`__)
 -  build packages to several Linux distributions on `Open Build Service <https://build.opensuse.org/>`__
 
-  -  Debian (10, Testing)
-  -  Raspbian (10)
-  -  Ubuntu (19.10)
-  -  Fedora (29, 30, 31, Rawhide)
-  -  Mageia (7, Cauldron)
+   -  Debian (10, Testing)
+   -  Raspbian (10)
+   -  Ubuntu (19.10)
+   -  Fedora (29, 30, 31, Rawhide)
+   -  Mageia (7, Cauldron)
 
 -  IP address can be set to hostname in command line (#10)
 -  fix several Python packaging issues
