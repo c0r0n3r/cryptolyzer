@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import abc
 import os
 
 try:
@@ -12,9 +13,15 @@ try:
 except ImportError:
     import unittest
 
+try:
+    import pathlib
+except ImportError:  # pragma: no cover
+    import pathlib2 as pathlib  # pragma: no cover
+
 import io
 import logging
 import socket
+import ssl
 import sys
 import threading
 import time
@@ -81,6 +88,72 @@ class TestMainBase(unittest.TestCase):
             with self.assertRaises(SystemExit) as context_manager:
                 self.main_func()
             self.assertEqual(context_manager.exception.args[0], 0)
+
+
+class TestHTTPRequestHandler(six.moves.SimpleHTTPServer.SimpleHTTPRequestHandler):
+    def log_message(self, fmt, *args, **kwarg):
+        pass
+
+    def version_string(self):  # pylint: disable=no-self-use
+        return 'TestThreadedServerHttp'
+
+    def date_time_string(self, timestamp=None):  # pylint: disable=no-self-use,unused-argument
+        return 'Thu, 01 Jan 1970 00:00:00 GMT'
+
+
+class TestThreadedServerHttpBase(threading.Thread):
+    def __init__(self, address, port):
+        super(TestThreadedServerHttpBase, self).__init__()
+
+        self.address = address
+        self.port = port
+        self.server = None
+
+    @abc.abstractmethod
+    def init_connection(self):
+        raise NotImplementedError()
+
+    @property
+    def bind_port(self):
+        return self.server.socket.getsockname()[1]
+
+    def run(self):
+        self.server.serve_forever()
+
+    def kill(self):
+        self.server.socket.close()
+        self.server.shutdown()
+
+
+class TestThreadedServerHttp(TestThreadedServerHttpBase):
+    def init_connection(self):
+        self.server = six.moves.socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler)
+        self.server.timeout = 5
+
+
+class TestThreadedServerHttps(TestThreadedServerHttpBase):
+    KEY_FILE_PATH = pathlib.Path(__file__).parent / 'certs' / 'snakeoil_key.pem'
+    CERT_FILE_PATH = pathlib.Path(__file__).parent / 'certs' / 'snakeoil_cert.pem'
+    CA_CERT_FILE_PATH = pathlib.Path(__file__).parent / 'certs' / 'snakeoil_ca_cert.pem'
+
+    def __init__(self, address, port):
+        super(TestThreadedServerHttps, self).__init__(address, port)
+
+        self.ssl_context = None
+
+    def init_connection(self):
+        self.server = six.moves.socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler, False)
+
+        python_version_lt_3_6 = six.PY2 or (six.PY3 and sys.version_info.minor < 6)
+        prootocol = ssl.PROTOCOL_SSLv23 if python_version_lt_3_6 else ssl.PROTOCOL_TLS_SERVER
+
+        self.ssl_context = ssl.SSLContext(prootocol)
+        self.ssl_context.load_cert_chain(certfile=str(self.CERT_FILE_PATH), keyfile=str(self.KEY_FILE_PATH))
+        self.ssl_context.set_ciphers('ALL')
+
+        self.server.socket = self.ssl_context.wrap_socket(self.server.socket, server_side=True)
+        self.server.server_bind()
+        self.server.server_activate()
 
 
 class TestThreadedServer(threading.Thread):

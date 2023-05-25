@@ -3,7 +3,7 @@
 import socket
 import unittest
 
-from test.common.classes import TestThreadedServer
+from test.common.classes import TestThreadedServer, TestThreadedServerHttp
 
 import six
 
@@ -92,6 +92,49 @@ class TestL4ClientTCP(unittest.TestCase):
         self.assertTrue(l4_client.buffer.decode('ascii').startswith('220 ' + address))
 
         l4_client.close()
+
+    def test_real(self):
+        test_http_server = TestThreadedServerHttp('127.0.0.1', 0)
+        test_http_server.init_connection()
+        test_http_server.start()
+
+        l4_client = L4ClientTCP('127.0.0.1', test_http_server.bind_port)
+        l4_client.init_connection()
+        request = b'\r\n'.join([
+            b'GET / HTTP/1.1',
+            b'Host: 127.0.0.1',
+            b'',
+            b''
+        ])
+        request_len = l4_client.send(request)
+        self.assertEqual(request_len, len(request))
+
+        l4_client.receive_line()
+        self.assertEqual(l4_client.buffer.strip(), b'HTTP/1.0 200 OK')
+
+        l4_client.flush_buffer()
+        l4_client.receive_line()
+        self.assertEqual(l4_client.buffer.strip(), b'Server: TestThreadedServerHttp')
+
+        l4_client.flush_buffer()
+        l4_client.receive_line()
+        self.assertEqual(l4_client.buffer.strip(), b'Date: Thu, 01 Jan 1970 00:00:00 GMT')
+
+        l4_client.flush_buffer()
+        l4_client.receive_line()
+        self.assertTrue(l4_client.buffer.startswith(b'Content-type: text/html; charset='))
+
+        l4_client.flush_buffer()
+        l4_client.receive_line()
+        self.assertTrue(l4_client.buffer.startswith(b'Content-Length: 1'))
+
+        l4_client.flush_buffer()
+        l4_client.receive_line()
+        self.assertEqual(l4_client.buffer.strip(), b'')
+
+        l4_client.close()
+
+        test_http_server.kill()
 
 
 class L4ServerEcho(TestThreadedServer):
@@ -186,24 +229,6 @@ class TestL4ServerTCP(unittest.TestCase):
         l4_client.close()
 
         threaded_server.join()
-
-    def test_count(self):
-        l4_client = L4ClientTCP('httpbin.org', 80)
-        l4_client.init_connection()
-        request = b'\r\n'.join([
-            b'GET /base64/SFRUUEJJTiBpcyBhd2Vzb21l HTTP/1.1',
-            b'Host: httpbin.org',
-            b'',
-            b''
-        ])
-        request_len = l4_client.send(request)
-        self.assertEqual(request_len, len(request))
-
-        response = b'HTTPBIN is awesome'
-        response_len = l4_client.receive(len(response))
-        self.assertEqual(response_len, len(response))
-
-        l4_client.close()
 
 
 class TestL4ServerUDP(unittest.TestCase):
