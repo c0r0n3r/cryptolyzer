@@ -900,9 +900,9 @@ class TestClientXMPP(TestL7ClientBase):
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
         b'<stream:stream>' +
         b'  <stream:features>' +
-        b'    <starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'></starttls>' +
+        b'    <starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"></starttls>' +
         b'  </stream:features>',
-        b'<failure xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>'
+        b'<failure xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
     ))
     def test_error_starttls_error(self, _):
         threaded_server = L7ServerTlsTest(
@@ -915,7 +915,7 @@ class TestClientXMPP(TestL7ClientBase):
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
         b'<stream:stream>' +
         b'  <stream:features>' +
-        b'    <starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'></starttls>' +
+        b'    <starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"></starttls>' +
         b'  </stream:features>',
         b'<stream:error><host-unknown/></stream:error>'
     ))
