@@ -77,7 +77,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             codecs.encode(bytes(list(key_share_extension.key_share_entry.key_exchange)), 'hex_codec'), 16
         )
 
-        public_numbers = DHPublicNumbers(y, well_known.value.dh_param_numbers)
+        public_numbers = DHPublicNumbers(y, well_known.value.parameter_numbers)
 
         return DHPublicKey(public_numbers, well_known.value.key_size)
 

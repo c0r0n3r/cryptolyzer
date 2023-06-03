@@ -12,7 +12,7 @@ from cryptoparser.tls.extension import TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.result import AnalyzerTargetTls
-from cryptolyzer.common.dhparam import WellKnownDHParams
+from cryptolyzer.common.dhparam import DHParamWellKnown
 
 from cryptolyzer.tls.all import AnalyzerAll
 from cryptolyzer.tls.ciphers import AnalyzerResultCipherSuites
@@ -143,7 +143,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         ])
         self.assertEqual(
             result.dhparams.dhparam.parameter_numbers,
-            WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP.value.dh_param_numbers
+            DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP.value.parameter_numbers
         )
 
         result = self.get_result('imagemagick.org', 443)

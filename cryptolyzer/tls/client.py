@@ -70,7 +70,7 @@ from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.dhparam import (
-    WellKnownDHParams,
+    DHParamWellKnown,
     get_dh_ephemeral_key_forged,
     get_ecdh_ephemeral_key_forged,
     int_to_bytes,
@@ -84,20 +84,20 @@ from cryptolyzer.tls.exception import TlsAlert
 
 
 NAMED_CURVE_TO_RFC7919_WELL_KNOWN = {
-    TlsNamedCurve.FFDHE2048: WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    TlsNamedCurve.FFDHE3072: WellKnownDHParams.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    TlsNamedCurve.FFDHE4096: WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    TlsNamedCurve.FFDHE6144: WellKnownDHParams.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    TlsNamedCurve.FFDHE8192: WellKnownDHParams.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+    TlsNamedCurve.FFDHE2048: DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+    TlsNamedCurve.FFDHE3072: DHParamWellKnown.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+    TlsNamedCurve.FFDHE4096: DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+    TlsNamedCurve.FFDHE6144: DHParamWellKnown.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+    TlsNamedCurve.FFDHE8192: DHParamWellKnown.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
 }
 
 
 RFC7919_WELL_KNOWN_TO_NAMED_CURVE = {
-    WellKnownDHParams.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE2048,
-    WellKnownDHParams.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE3072,
-    WellKnownDHParams.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE4096,
-    WellKnownDHParams.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE6144,
-    WellKnownDHParams.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE8192,
+    DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE2048,
+    DHParamWellKnown.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE3072,
+    DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE4096,
+    DHParamWellKnown.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE6144,
+    DHParamWellKnown.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE8192,
 }
 
 
@@ -113,7 +113,7 @@ def key_share_entry_from_named_curve(named_curve):
         return TlsKeyShareEntry(
             named_curve,
             int_to_bytes(
-                get_dh_ephemeral_key_forged(well_known_dh_param.value.dh_param_numbers.p),
+                get_dh_ephemeral_key_forged(well_known_dh_param.value.parameter_numbers.p),
                 well_known_dh_param.value.key_size // 8
             )
         )

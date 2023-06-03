@@ -13,7 +13,7 @@ from cryptodatahub.tls.client import TlsClient
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
-from cryptolyzer.common.dhparam import WellKnownDHParams
+from cryptolyzer.common.dhparam import DHParamWellKnown
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.simulations import (
@@ -101,7 +101,7 @@ class TestTlsSimulations(TestLoggerBase):
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertTrue(all(
-            analyzer_result.well_known == WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP
+            analyzer_result.well_known == DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP
             for analyzer_result in result.succeeded_clients.values()
             if analyzer_result.cipher_suite.value.key_exchange == KeyExchange.DHE
         ))

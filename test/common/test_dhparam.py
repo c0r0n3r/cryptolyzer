@@ -3,12 +3,12 @@
 import unittest
 import attr
 
+from cryptodatahub.common.parameter import DHParamWellKnown
+
 from cryptoparser.tls.extension import TlsNamedCurve
 
 from cryptolyzer.common.dhparam import (
     DHParameter,
-    DHParameterNumbers,
-    WellKnownDHParams,
     parse_ecdh_params,
 )
 
@@ -16,13 +16,13 @@ from cryptolyzer.common.dhparam import (
 class TestParse(unittest.TestCase):
     def test_parse_dh_param(self):
         dh_parameter = DHParameter(
-            WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP.value.dh_param_numbers, 2048
+            DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP.value.parameter_numbers, 2048
         )
-        self.assertEqual(dh_parameter.well_known, WellKnownDHParams.RFC3526_2048_BIT_MODP_GROUP)
+        self.assertEqual(dh_parameter.well_known, DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP)
         self.assertEqual(
             attr.asdict(
                 dh_parameter.well_known.value,
-                filter=lambda attribute, value: attribute.name != 'dh_param_numbers'
+                filter=lambda attribute, value: attribute.name != 'parameter_numbers'
             ),
             {'key_size': 2048, 'name': '2048-bit MODP Group', 'safe_prime': True, 'source': 'RFC3526/Oakley Group 14'}
         )
@@ -52,33 +52,16 @@ class TestWellKnown(unittest.TestCase):
     def test_all_well_known_dhparam(self):
         dh_params = [
             DHParameter(
-                well_known_dh_param.value.dh_param_numbers, well_known_dh_param.value.key_size
+                well_known_dh_param.value.parameter_numbers, well_known_dh_param.value.key_size
             )
-            for well_known_dh_param in WellKnownDHParams
+            for well_known_dh_param in DHParamWellKnown
         ]
         self.assertTrue(all(dh_param.well_known for dh_param in dh_params))
 
-    def test_eq(self):
-        dh_well_known_rfc5114_1024 = WellKnownDHParams.RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP
-        dh_param_number_without_q_value = DHParameterNumbers(
-            p=dh_well_known_rfc5114_1024.value.dh_param_numbers.p,
-            g=dh_well_known_rfc5114_1024.value.dh_param_numbers.g,
-        )
-        # compare without q value
-        self.assertEqual(
-            dh_param_number_without_q_value,
-            dh_well_known_rfc5114_1024.value.dh_param_numbers,
-        )
-        # compare with q value
-        self.assertNotEqual(
-            dh_well_known_rfc5114_1024.value.dh_param_numbers,
-            dh_param_number_without_q_value,
-        )
-
     def test_markdown(self):
-        dh_well_known_rfc5114_1024 = WellKnownDHParams.RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP
+        dh_well_known_rfc5114_1024 = DHParamWellKnown.RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP
         dh_param = DHParameter(
-            dh_well_known_rfc5114_1024.value.dh_param_numbers,
+            dh_well_known_rfc5114_1024.value.parameter_numbers,
             dh_well_known_rfc5114_1024.value.key_size
         )
         self.assertEqual(dh_param.as_markdown(), '\n'.join([

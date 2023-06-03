@@ -44,7 +44,7 @@ from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.dhparam import (
     DHParameter,
-    WellKnownDHParams,
+    DHParamWellKnown,
     parse_tls_dh_params,
 )
 from cryptolyzer.common.exception import ErrorParams, NetworkError, SecurityError, SecurityErrorType
@@ -84,7 +84,7 @@ class AnalyzerResultSimulationsTlsPfsNamedGroup(AnalyzerResultSimulationsTlsPfs)
 
 @attr.s
 class AnalyzerResultSimulationsTlsPfsDhWellKnown(AnalyzerResultSimulationsTlsPfs):
-    well_known = attr.ib(validator=attr.validators.in_(WellKnownDHParams))
+    well_known = attr.ib(validator=attr.validators.in_(DHParamWellKnown))
 
 
 @attr.s

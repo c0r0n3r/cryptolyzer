@@ -32,7 +32,7 @@ from cryptoparser.ssh.version import SshProtocolVersion, SshSoftwareVersionUnpar
 from cryptolyzer import __setup__
 
 from cryptolyzer.common.dhparam import (
-    WellKnownDHParams,
+    DHParamWellKnown,
     bytes_to_int,
     get_dh_ephemeral_key_forged,
     get_ecdh_ephemeral_key_forged,
@@ -274,9 +274,9 @@ class SshClientHandshake(SshHandshakeBase):
 
         record_class = SshRecordKexDH
         key_size = agreed_kex_type.value.key_size
-        for dh_param in WellKnownDHParams:
+        for dh_param in DHParamWellKnown:
             if dh_param.value.key_size == key_size:
-                ephemeral_public_key = get_dh_ephemeral_key_forged(dh_param.value.dh_param_numbers.p)
+                ephemeral_public_key = get_dh_ephemeral_key_forged(dh_param.value.parameter_numbers.p)
                 ephemeral_public_key_bytes = int_to_bytes(ephemeral_public_key, key_size).lstrip(b'\x00')
                 break
         else:
