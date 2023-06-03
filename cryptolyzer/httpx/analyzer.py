@@ -85,12 +85,12 @@ class ProtocolHandlerHttpAllSupportedVersions(ProtocolHandlerHttpBase):
     def _get_version(cls):
         raise NotImplementedError()
 
-    def analyze(self, analyzer, uri):
+    def analyze(self, analyzer, uri, timeout=None):
         results = []
         target = None
         for protocol_handler_class in get_leaf_classes(ProtocolHandlerHttpExactVersion):
             if isinstance(analyzer, protocol_handler_class.get_analyzers()):
-                result = protocol_handler_class().analyze(analyzer, uri)
+                result = protocol_handler_class().analyze(analyzer, uri, timeout)
                 target = result.target
 
                 results.append(

@@ -62,6 +62,10 @@ class TestMain(TestMainBase):
             'error: unsupported protocol: unsupportedprotocol'
         )
         self._test_argument_error(
+            ['cryptolyzer', '--socket-timeout', '-1', 'tls', 'versions', 'unsupportedprotocol://localhost'],
+            'error: argument -t/--socket-timeout: -1.0 socket timeout must be a positive integer value'
+        )
+        self._test_argument_error(
             ['cryptolyzer', 'ja3', 'decode', 'unsupportedformat://tag'],
             'error: unsupported protocol: unsupportedformat'
         )
@@ -239,7 +243,7 @@ class TestMain(TestMainBase):
         )
 
     def test_analyzer_output_tls_all(self):
-        result = test.tls.test_all.TestTlsAll.get_result('rc4-md5.badssl.com', 443, protocol_version=None)
+        result = test.tls.test_all.TestTlsAll.get_result('rc4-md5.badssl.com', 443, protocol_version=None, timeout=5)
         self.assertEqual(
             self._get_test_analyzer_result_json('tls', 'all', 'rc4-md5.badssl.com'),
             result.as_json() + '\n',
