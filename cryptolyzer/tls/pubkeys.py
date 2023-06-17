@@ -7,11 +7,13 @@ import attr
 import six
 
 import asn1crypto.ocsp
-import asn1crypto.x509
 import certvalidator
 
+from cryptodatahub.common.key import PublicKeyX509
+from cryptodatahub.common.stores import RootCertificate, RootCertificateTrustStoreOwner
+from cryptodatahub.common.utils import bytes_to_hex_string
+
 from cryptoparser.common.base import Serializable
-import cryptoparser.common.utils
 from cryptoparser.common.x509 import SignedCertificateTimestampList
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.extension import (
@@ -33,7 +35,6 @@ from cryptolyzer.tls.exception import TlsAlert
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-import cryptolyzer.common.x509
 
 
 @attr.s
@@ -60,7 +61,7 @@ class CertificateStatus(Serializable):
         if self._response_data['responder_id'].name == 'by_name':
             return self._response_data['responder_id'].chosen.native
 
-        return cryptoparser.common.utils.bytes_to_hex_string(bytes(self._response_data['responder_id'].chosen), ':')
+        return bytes_to_hex_string(bytes(self._response_data['responder_id'].chosen), ':')
 
     @property
     def produced_at(self):
@@ -121,7 +122,7 @@ class CertificateStatus(Serializable):
 @attr.s
 class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-methods
     items = attr.ib(
-        validator=attr.validators.deep_iterable(attr.validators.instance_of(cryptolyzer.common.x509.PublicKeyX509)),
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(PublicKeyX509)),
         metadata={'human_readable_name': 'Certificates in Chain'},
     )
     ordered = attr.ib(
@@ -154,7 +155,7 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
                 self.contains_anchor = True
         else:
             self.verified = True
-            validated_items = [cryptolyzer.common.x509.PublicKeyX509(item) for item in reversed(build_path)]
+            validated_items = [PublicKeyX509(item) for item in reversed(build_path)]
             self.contains_anchor = len(self.items) == len(validated_items)
             checkable_item_num = len(self.items)
             if self.contains_anchor:
@@ -209,8 +210,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         certificate_chain = []
 
         for tls_certificate in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain:
-            certificate = asn1crypto.x509.Certificate.load(tls_certificate.certificate)
-            certificate_chain.append(cryptolyzer.common.x509.PublicKeyX509(certificate))
+            certificate_chain.append(PublicKeyX509(tls_certificate.certificate))
 
         return TlsCertificateChain(items=certificate_chain)
 
