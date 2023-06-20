@@ -43,7 +43,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         AnalyzerDHParams, '_get_public_key', side_effect=StopIteration
     )
     def test_error_key_reuse_undeterminable(self, _):
-        result = self.get_result('mazda.at', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result('princeton.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
         self.assertIsNone(result.dhparam)
         self.assertEqual(result.key_reuse, None)
@@ -63,7 +63,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError
     )
     def test_last_key_share_extension(self, _):
-        result = self.get_result('mazda.at', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result('princeton.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertIsNotNone(result.dhparam, None)
 
@@ -136,7 +136,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertFalse(result.key_reuse)
 
     def test_tls_1_2_rfc_7919_support(self):
-        result = self.get_result('mazda.at', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result('princeton.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
         self.assertEqual(result.dhparam, None)
         self.assertTrue(result.key_reuse)
