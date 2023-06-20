@@ -125,7 +125,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
     @classmethod
     def _get_signature_algorithms(cls, is_tls1_3_supported, cipher_suites):
         if is_tls1_3_supported:
-            authentications_not_exist_in_tls1_3 = [Authentication.anon, Authentication.DSS]
+            authentications_not_exist_in_tls1_3 = [Authentication.ANONYMOUS, Authentication.DSS]
             signature_algorithms = [
                 signature_algorithm
                 for signature_algorithm in TlsSignatureAndHashAlgorithm
@@ -326,7 +326,7 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(  # pylint: disable=too-ma
                     Authentication.KRB5,
                     Authentication.PSK,
                     Authentication.SRP,
-                    Authentication.anon,
+                    Authentication.ANONYMOUS,
                 ])
         ]
 

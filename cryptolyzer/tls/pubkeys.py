@@ -13,7 +13,7 @@ import certvalidator
 from cryptoparser.common.base import Serializable
 import cryptoparser.common.utils
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
-from cryptoparser.tls.extension import TlsExtensionCertificateStatusRequest, TlsCertificateStatusType
+from cryptoparser.tls.extension import TlsExtensionCertificateStatusRequestClient, TlsCertificateStatusType
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.utils import LogSingleton
@@ -284,7 +284,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             for client_hello in client_hello_messages:
                 sni_sent = hostname is not None
                 client_hello.extensions.extend([
-                    TlsExtensionCertificateStatusRequest(),
+                    TlsExtensionCertificateStatusRequestClient(),
                 ])
                 try:
                     server_messages = self._get_server_messages(

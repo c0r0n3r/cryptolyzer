@@ -186,7 +186,7 @@ class AnalyzerAll(AnalyzerTlsBase):
     def is_public_key_supported(cipher_suite_results):
         for protocol_version, cipher_suite_result in cipher_suite_results.items():
             for cipher_suite in cipher_suite_result.cipher_suites:
-                if cipher_suite.value.authentication != Authentication.anon:
+                if cipher_suite.value.authentication != Authentication.ANONYMOUS:
                     return protocol_version
 
         return None
