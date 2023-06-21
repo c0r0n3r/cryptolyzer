@@ -296,11 +296,17 @@ class AnalyzerSimulations(AnalyzerTlsBase):
 
         return self._get_simulation_result(server_messages)
 
+    @staticmethod
+    def _get_tls_client_key(tls_client):
+        #  neccessary only because PY2 does not preverse the order of enums
+        tls_client_name_parts = tls_client.name.split('_')
+        return (tls_client_name_parts[0], int(tls_client_name_parts[1]))
+
     def _get_results(self, analyzable):
         succeeded_clients = []
         failed_clients = []
 
-        for tls_client in TlsClient:
+        for tls_client in sorted(TlsClient, key=self._get_tls_client_key):
             client_hello = self._get_client_hello_from_client_params(tls_client.value, analyzable.address)
 
             try:
