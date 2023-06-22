@@ -12,8 +12,14 @@ import certvalidator
 
 from cryptoparser.common.base import Serializable
 import cryptoparser.common.utils
+from cryptoparser.common.x509 import SignedCertificateTimestampList
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
-from cryptoparser.tls.extension import TlsExtensionCertificateStatusRequestClient, TlsCertificateStatusType
+from cryptoparser.tls.extension import (
+    TlsExtensionCertificateStatusRequestClient,
+    TlsExtensionSignedCertificateTimestampClient,
+    TlsExtensionType,
+    TlsCertificateStatusType,
+)
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.utils import LogSingleton
@@ -171,6 +177,11 @@ class TlsPublicKey(Serializable):
         default=None, eq=False,
         validator=attr.validators.optional(attr.validators.instance_of(CertificateStatus))
     )
+    scts = attr.ib(
+        default=None, eq=False,
+        validator=attr.validators.optional(attr.validators.instance_of(SignedCertificateTimestampList)),
+        metadata={'human_readable_name': 'Signed Certificate Timestamps'}
+    )
 
 
 @attr.s
@@ -204,6 +215,28 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         return TlsCertificateChain(items=certificate_chain)
 
     @classmethod
+    def _get_certificate_status(cls, server_messages):
+        if TlsHandshakeType.CERTIFICATE_STATUS in server_messages:
+            status_message = server_messages[TlsHandshakeType.CERTIFICATE_STATUS]
+            if status_message.status_type == TlsCertificateStatusType.OCSP:
+                ocsp_response = asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
+                if ocsp_response['response_status'].native == 'successful':
+                    return CertificateStatus(
+                        asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
+                    )
+
+        # Server may send the same certificate chain independently that client hello conatins SNI exetension, however
+        # OCSP staple not necessarily sent in both cases. New status values stored only if no one had # already stored.
+        raise KeyError()
+
+    @classmethod
+    def _get_signed_certificate_timestamps(cls, server_messages):
+        server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
+        sct_extension = server_hello.extensions.get_item_by_type(TlsExtensionType.SIGNED_CERTIFICATE_TIMESTAMP)
+
+        return sct_extension.scts
+
+    @classmethod
     def _add_tls_public_key_to_results(cls, analyzable, sni_sent, server_messages, results):
         try:
             certificate_chain = cls._get_tls_certificate_chain(server_messages)
@@ -218,31 +251,25 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                     tls_public_key = result
                     break
             else:
-                tls_public_key_params = {
-                    'sni_sent': sni_sent,
-                    'subject_matches': subject_matches,
-                    'tls_certificate_chain': certificate_chain,
-                }
-
-                tls_public_key = TlsPublicKey(**tls_public_key_params)
+                tls_public_key = TlsPublicKey(
+                    sni_sent=sni_sent,
+                    subject_matches=subject_matches,
+                    tls_certificate_chain=certificate_chain,
+                )
                 LogSingleton().log(level=60, msg=six.u('Server offers %s X.509 public key (with%s SNI)') % (
                     tls_public_key.tls_certificate_chain.items[-1].key_type.name,
                     '' if tls_public_key.sni_sent else 'out',
                 ))
                 results.append(tls_public_key)
 
-            # Server may send the same certificate chain independently that client hello conatins SNI exetension,
-            # however OCSP staple not necessarily sent in both cases. New status values dtored only if no one had
-            # already stored.
-            if tls_public_key.certificate_status is None and TlsHandshakeType.CERTIFICATE_STATUS in server_messages:
-                status_message = server_messages[TlsHandshakeType.CERTIFICATE_STATUS]
-                if status_message.status_type == TlsCertificateStatusType.OCSP:
-                    ocsp_response = asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
-                    if ocsp_response['response_status'].native == 'successful':
-                        certificate_status = CertificateStatus(
-                            asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
-                        )
-                        tls_public_key.certificate_status = certificate_status
+            try:
+                tls_public_key.certificate_status = cls._get_certificate_status(server_messages)
+            except KeyError:
+                pass
+            try:
+                tls_public_key.scts = cls._get_signed_certificate_timestamps(server_messages)
+            except KeyError:
+                pass
 
     @staticmethod
     def _get_server_messages(l7_client, client_hello, sni_sent, client_hello_messages):
@@ -285,6 +312,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 sni_sent = hostname is not None
                 client_hello.extensions.extend([
                     TlsExtensionCertificateStatusRequestClient(),
+                    TlsExtensionSignedCertificateTimestampClient(),
                 ])
                 try:
                     server_messages = self._get_server_messages(
