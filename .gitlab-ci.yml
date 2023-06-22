@@ -75,17 +75,20 @@ pypy3:
   script: tox -e pypy3
 
 coveralls:
-  image: python:3.7
+  image: python:3.11-slim
   variables:
     CI_NAME: gitlab
     CI_BUILD_NUMBER: "${CI_JOB_ID}"
     CI_BUILD_URL: "${CI_JOB_URL}"
     CI_BRANCH: "${CI_COMMIT_REF_NAME}"
+    GIT_SUBMODULE_DEPTH: 1
+    GIT_SUBMODULE_STRATEGY: recursive
+    PYTHONPATH: "submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub"
   stage: deploy
   script:
     - pip install coveralls
-    - pip install submodules/*
-    - coverage run --source=cryptolyzer setup.py test
+    - pip install -r requirements.txt
+    - coverage run -m unittest -v -f
     - coveralls
   only:
     refs:
