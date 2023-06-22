@@ -1,6 +1,6 @@
 attrs>=19.1,<22.0.1
 certvalidator
-cryptoparser>=0.9.0
+cryptoparser>=0.9.1
 pathlib2==2.3.7.post1;python_version<"3.4"
 pathlib2;python_version>="3.4"
 python-dateutil
