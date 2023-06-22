@@ -3,7 +3,8 @@
 import unittest
 import attr
 
-from cryptodatahub.common.parameter import DHParamWellKnown
+from cryptodatahub.common.entity import Entity
+from cryptodatahub.common.parameter import DHParamWellKnown, Standard
 
 from cryptoparser.tls.extension import TlsNamedCurve
 
@@ -24,7 +25,13 @@ class TestParse(unittest.TestCase):
                 dh_parameter.well_known.value,
                 filter=lambda attribute, value: attribute.name != 'parameter_numbers'
             ),
-            {'key_size': 2048, 'name': '2048-bit MODP Group', 'safe_prime': True, 'source': 'RFC3526/Oakley Group 14'}
+            {
+                'key_size': 2048,
+                'name': '2048-bit MODP Group/Oakley Group 14',
+                'safe_prime': True,
+                'source': Entity.IETF,
+                'standards': [Standard.RFC_3526]
+            }
         )
 
     def test_parse_ecdh_param_secp256r1(self):
@@ -67,7 +74,7 @@ class TestWellKnown(unittest.TestCase):
         self.assertEqual(dh_param.as_markdown(), '\n'.join([
             '* Parameter Numbers: n/a',
             '* Key Size: 1024',
-            '* Well Known: 1024-bit MODP Group with 160-bit Prime Order Subgroup (RFC5114)',
+            '* Well Known: 1024-bit MODP Group with 160-bit Prime Order Subgroup (RFC 5114)',
             '* Prime: yes',
             '* Safe Prime: no',
             '',

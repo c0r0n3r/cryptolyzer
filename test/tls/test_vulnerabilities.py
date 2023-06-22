@@ -73,7 +73,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
             TlsCipherSuite.TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
             TlsCipherSuite.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
         ], log_stream)
-        self.assertIn('Server offers well-known DH public parameter NGINX 0.7.2 builtin DH 1024-bit', log_stream)
+        self.assertIn('Server offers 1024-bit NGINX 0.7.2 builtin DH parameter', log_stream)
 
         result = self.get_result('openssl.org', 443)
         self.assertTrue(result.ciphers.lucky13)

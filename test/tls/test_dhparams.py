@@ -81,7 +81,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertFalse(result.key_reuse)
         self.assertEqual(
             self.get_log_lines(), [
-                'Server offers custom DH public parameter with size 480-bit (TLS 1.2)',
+                'Server offers 480-bit custom DH public parameter (TLS 1.2)',
             ]
         )
 
@@ -142,9 +142,9 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertTrue(result.key_reuse)
         self.assertEqual(
             self.get_log_lines(), [
-                'Server offers FFDHE public parameter with size 2048-bit (TLS 1.2)',
-                'Server offers FFDHE public parameter with size 3072-bit (TLS 1.2)',
-                'Server offers FFDHE public parameter with size 4096-bit (TLS 1.2)',
+                'Server offers 2048-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
+                'Server offers 3072-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
+                'Server offers 4096-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
             ]
         )
 
@@ -168,8 +168,8 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         log_lines = self.get_log_lines()
         self.assertEqual(
             log_lines, [
-                'Server offers FFDHE public parameter with size 4096-bit (TLS 1.2)',
-                'Server offers well-known DH public parameter 4096-bit Finite Field Diffie-Hellman group (TLS 1.2)',
+                'Server offers 4096-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
+                'Server offers 4096-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
             ]
         )
 
