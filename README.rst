@@ -83,3 +83,9 @@ The code is available under the terms of Mozilla Public License Version 2.0 (MPL
 
 A non-comprehensive, but straightforward description of MPL 2.0 can be found at
 `Choose an open source license <https://choosealicense.com/licenses#mpl-2.0>`__ website.
+
+Credits
+-------
+
+-  `NLnet Foundation <https://nlnet.nl>`__ and `NGI Assure <https://www.assure.ngi.eu>`__, supports the project part of
+   the `Next Generation Internet <https://ngi.eu>`__ initiative.
