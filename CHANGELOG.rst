@@ -1,6 +1,20 @@
 Changelog
 =========
 
+0.10.0
+------
+
+-  TLS (``tls``)
+
+   -  Public Keys (``pubkeys``)
+
+      -  validation against notable trusted root CA certificates stores (#91)
+
+         -  `Apple <https://en.wikipedia.org/wiki/Apple_Inc.>`__
+         -  `Google <https://en.wikipedia.org/wiki/Google>`__
+         -  `Microsoft <https://en.wikipedia.org/wiki/Microsoft>`__
+         -  `Mozilla <https://en.wikipedia.org/wiki/Mozilla>`__
+
 0.9.1 - 2023-06-22
 ------------------
 

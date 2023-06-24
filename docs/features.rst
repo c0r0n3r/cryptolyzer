@@ -132,9 +132,19 @@ Extensions
 Public Keys
 """""""""""
 
+-  validation against notable trusted root CA certificates stores
+
+   -  `Apple <https://en.wikipedia.org/wiki/Apple_Inc.>`__
+   -  `Google <https://en.wikipedia.org/wiki/Google>`__
+   -  `Microsoft <https://en.wikipedia.org/wiki/Microsoft>`__
+   -  `Mozilla <https://en.wikipedia.org/wiki/Mozilla>`__
+
 -  `certificate status (OCSP) <https://www.rfc-editor.org/info/rfc6960>`__
+
    - status information
+
 -  `certificate transparency (CT) <https://www.rfc-editor.org/info/rfc6962>`__
+
    - timestamp information
    - transparency log information
 
