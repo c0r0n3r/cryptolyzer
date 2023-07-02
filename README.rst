@@ -71,11 +71,6 @@ Social Media
 -  `Twitter <https://twitter.com/CryptoLyzer>`__
 -  `Facebook <https://www.facebook.com/cryptolyzer>`__
 
-Credits
--------
-
-Icons made by `Freepik <https://www.flaticon.com/authors/freepik>`__ from `Flaticon <https://www.flaticon.com/>`__.
-
 License
 -------
 
@@ -89,3 +84,4 @@ Credits
 
 -  `NLnet Foundation <https://nlnet.nl>`__ and `NGI Assure <https://www.assure.ngi.eu>`__, supports the project part of
    the `Next Generation Internet <https://ngi.eu>`__ initiative.
+-  Icons made by `Freepik <https://www.flaticon.com/authors/freepik>`__ from `Flaticon <https://www.flaticon.com/>`__.
