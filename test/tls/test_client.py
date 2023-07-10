@@ -14,6 +14,7 @@ from test.common.classes import TestLoggerBase
 
 import six
 
+from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptodatahub.common.exception import InvalidValue
 
 from cryptoparser.common.exception import NotEnoughData, InvalidType
@@ -75,6 +76,7 @@ from cryptolyzer.tls.server import (
     TlsServerHandshake,
 )
 from cryptolyzer.common.transfer import L4TransferBase, L4ClientTCP, L4ClientUDP, L7TransferBase
+from cryptolyzer.tls.dhparams import AnalyzerDHParams
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 from .classes import (
@@ -148,9 +150,16 @@ class TestTlsAlert(unittest.TestCase):
 class TestL7ClientBase(TestLoggerBase):
     @staticmethod
     def get_result(  # pylint: disable=too-many-arguments
-            proto, host, port, timeout=None, ip=None, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2)
+            proto,
+            host,
+            port,
+            timeout=None,
+            ip=None,
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            analyzer=None
     ):
-        analyzer = AnalyzerVersions()
+        if analyzer is None:
+            analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout, ip=ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return l7_client, result
@@ -1084,9 +1093,11 @@ class TestClientOpenVpn(TestL7ClientBase):
         l7_client.l4_transfer.close()
 
     def test_openvpn_tcp_client(self):
-        tls_versions = [TlsVersion.SSL3, TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3]
-        _, result = self.get_result('openvpntcp', 'public-vpn-232.opengw.net', 443)
-        self.assertEqual(result.versions, [TlsProtocolVersion(tls_version) for tls_version in tls_versions])
+        _, result = self.get_result(
+            'openvpntcp', 'vpn431396938.opengw.net', 443,
+            timeout=5, analyzer=AnalyzerDHParams()
+        )
+        self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC2539_1024_BIT_MODP_GROUP)
 
         l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'localhost')
         self.assertEqual(l7_client.port, L7ClientHTTPS.get_default_port())
@@ -1108,9 +1119,11 @@ class TestClientOpenVpn(TestL7ClientBase):
         l7_client.l4_transfer.close()
 
     def test_openvpn_udp_client(self):
-        tls_versions = [TlsVersion.SSL3, TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3]
-        _, result = self.get_result('openvpn', 'public-vpn-232.opengw.net', 1195)
-        self.assertEqual(result.versions, [TlsProtocolVersion(tls_version) for tls_version in tls_versions])
+        _, result = self.get_result(
+            'openvpn', 'vpn431396938.opengw.net', 441,
+            timeout=5, analyzer=AnalyzerDHParams()
+        )
+        self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC2539_1024_BIT_MODP_GROUP)
 
         l7_client = L7ClientTlsBase.from_scheme('openvpn', 'localhost')
         self.assertEqual(l7_client.port, 1194)
