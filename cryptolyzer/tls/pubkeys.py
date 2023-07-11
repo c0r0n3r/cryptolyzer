@@ -244,7 +244,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
             return
 
         leaf_certificate = certificate_chain.items[0]
-        subject_matches = leaf_certificate.is_subject_matches(six.u(analyzable.address))
+        subject_matches = leaf_certificate.is_subject_matches(six.ensure_str(analyzable.address))
         if sni_sent or subject_matches:
             for result in results:
                 if certificate_chain == result.tls_certificate_chain:
