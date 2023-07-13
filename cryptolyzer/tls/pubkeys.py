@@ -7,11 +7,13 @@ import attr
 import six
 
 import asn1crypto.ocsp
-import asn1crypto.x509
 import certvalidator
 
+from cryptodatahub.common.entity import Entity, EntityRole
+from cryptodatahub.common.stores import RootCertificate
+from cryptodatahub.common.utils import bytes_to_hex_string
+
 from cryptoparser.common.base import Serializable
-import cryptoparser.common.utils
 from cryptoparser.common.x509 import SignedCertificateTimestampList
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.extension import (
@@ -23,6 +25,7 @@ from cryptoparser.tls.extension import (
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.utils import LogSingleton
+from cryptolyzer.common.x509 import PublicKeyX509
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationDSS,
     TlsHandshakeClientHelloAuthenticationRSA,
@@ -33,7 +36,6 @@ from cryptolyzer.tls.exception import TlsAlert
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
-import cryptolyzer.common.x509
 
 
 @attr.s
@@ -60,7 +62,7 @@ class CertificateStatus(Serializable):
         if self._response_data['responder_id'].name == 'by_name':
             return self._response_data['responder_id'].chosen.native
 
-        return cryptoparser.common.utils.bytes_to_hex_string(bytes(self._response_data['responder_id'].chosen), ':')
+        return bytes_to_hex_string(bytes(self._response_data['responder_id'].chosen), ':')
 
     @property
     def produced_at(self):
@@ -121,7 +123,7 @@ class CertificateStatus(Serializable):
 @attr.s
 class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-methods
     items = attr.ib(
-        validator=attr.validators.deep_iterable(attr.validators.instance_of(cryptolyzer.common.x509.PublicKeyX509)),
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(PublicKeyX509)),
         metadata={'human_readable_name': 'Certificates in Chain'},
     )
     ordered = attr.ib(
@@ -129,10 +131,13 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
         default=None,
         validator=attr.validators.optional(attr.validators.instance_of(bool))
     )
-    verified = attr.ib(
+    trust_roots = attr.ib(
         init=False,
-        default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(bool))
+        default=OrderedDict([]),
+        validator=attr.validators.deep_mapping(
+            key_validator=attr.validators.instance_of(Entity),
+            value_validator=attr.validators.instance_of(bool),
+        )
     )
     contains_anchor = attr.ib(
         init=False,
@@ -140,11 +145,13 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
         validator=attr.validators.optional(attr.validators.instance_of(bool))
     )
 
-    def __attrs_post_init__(self):
-        cert_validator = certvalidator.CertificateValidator(
-            self.items[0].certificate,
-            [item.certificate for item in self.items[1:]]
-        )
+    @staticmethod
+    def _get_asn1crypto_certificate(public_key):
+        return public_key._certificate  # pylint: disable=protected-access
+
+    def build_path(self):
+        asn1crypto_certificates = list(map(self._get_asn1crypto_certificate, self.items))
+        cert_validator = certvalidator.CertificateValidator(asn1crypto_certificates[0], asn1crypto_certificates[1:])
         try:
             build_path = cert_validator.validate_usage(set())
         except certvalidator.errors.PathBuildingError:
@@ -153,13 +160,40 @@ class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-metho
             if self.items[-1].is_self_signed:
                 self.contains_anchor = True
         else:
-            self.verified = True
-            validated_items = [cryptolyzer.common.x509.PublicKeyX509(item) for item in reversed(build_path)]
+            validated_items = [PublicKeyX509(item) for item in reversed(build_path)]
             self.contains_anchor = len(self.items) == len(validated_items)
             checkable_item_num = len(self.items)
             if self.contains_anchor:
                 checkable_item_num -= 1
             self.ordered = validated_items[:checkable_item_num] = self.items[:checkable_item_num]
+            self.items = validated_items
+
+    def validate(self):
+        trust_roots = []
+        asn1crypto_certificates = list(map(self._get_asn1crypto_certificate, self.items))
+
+        for trust_store_owner in Entity.get_items_by_role(EntityRole.CA_TRUST_STORE_OWNER):
+            context = certvalidator.context.ValidationContext(trust_roots=list(map(
+                lambda root_certificate: self._get_asn1crypto_certificate(root_certificate.value.certificate),
+                RootCertificate.get_items_by_trust_owner(trust_store_owner),
+            )))
+            cert_validator = certvalidator.CertificateValidator(
+                end_entity_cert=asn1crypto_certificates[0],
+                intermediate_certs=asn1crypto_certificates[1:],
+                validation_context=context,
+            )
+            try:
+                cert_validator.validate_usage(set())
+            except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError) as e:
+                trust_roots.append((trust_store_owner, False))
+            else:
+                trust_roots.append((trust_store_owner, True))
+
+        self.trust_roots = OrderedDict(trust_roots)
+
+    def __attrs_post_init__(self):
+        self.build_path()
+        self.validate()
 
 
 @attr.s
@@ -209,8 +243,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         certificate_chain = []
 
         for tls_certificate in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain:
-            certificate = asn1crypto.x509.Certificate.load(tls_certificate.certificate)
-            certificate_chain.append(cryptolyzer.common.x509.PublicKeyX509(certificate))
+            certificate_chain.append(PublicKeyX509.from_der(tls_certificate.certificate))
 
         return TlsCertificateChain(items=certificate_chain)
 
