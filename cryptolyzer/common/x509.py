@@ -20,7 +20,8 @@ class PublicKeyX509(PublicKeyX509Base):
         return SignedCertificateTimestampList([])
 
     def _asdict(self):
-        return collections.OrderedDict([
+        items = [
+            ('version', self._certificate['tbs_certificate']['version'].native),
             ('serial_number', str(self.serial_number)),
             ('subject', self.subject),
             ('subject_alternative_names', sorted(self.subject_alternative_names)),
@@ -28,7 +29,6 @@ class PublicKeyX509(PublicKeyX509Base):
             ('key_type', self.key_type),
             ('key_size', self.key_size),
             ('signature_hash_algorithm', self.signature_hash_algorithm),
-            ('extended_validation', self.extended_validation),
             ('validity', collections.OrderedDict([
                 ('not_before', str(self.valid_not_before)),
                 ('not_after', str(self.valid_not_after)),
@@ -42,5 +42,14 @@ class PublicKeyX509(PublicKeyX509Base):
             ('signed_certificate_timestamps', self.signed_certificate_timestamps),
             ('fingerprints', self.fingerprints),
             ('public_key_pin', self.public_key_pin),
-            ('version', self._certificate['tbs_certificate']['version'].native),
-        ])
+        ]
+
+        if not self.is_ca:
+            items += [
+                ('end_entity', collections.OrderedDict([
+                    ('extended_validation', self.extended_validation),
+                    ('tls_features', list(map(lambda feature: feature.name, self.tls_features))),
+                ]))
+            ]
+
+        return collections.OrderedDict(items)
