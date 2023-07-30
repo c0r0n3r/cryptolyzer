@@ -9,14 +9,18 @@ try:
 except ImportError:
     import mock
 
-from test.common.classes import TestLoggerBase
+from test.common.classes import TestKeyBase, TestLoggerBase
 
+import asn1crypto.crl
+import asn1crypto.pem
 import asn1crypto.x509
+import certvalidator.crl_client
 
 from cryptodatahub.common.algorithm import Authentication, Hash, Signature
 
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
+from cryptolyzer.common.x509 import CertificateChainX509Validator
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
@@ -239,3 +243,118 @@ class TestPublicKeyX509(TestLoggerBase):
             result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm,
             Signature.RSA_WITH_SHA2_512
         )
+
+
+class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instance-attributes
+    def setUp(self):
+        super(TestX509CertificateChain, self).setUp()
+
+        self.trusted_root_ca = self._get_public_key_x509('rsa8192.badssl.com_root_ca.crt')
+        self.trusted_intermediate_ca = self._get_public_key_x509('rsa8192.badssl.com_intermediate_ca.crt')
+        self.trusted_certificate = self._get_public_key_x509('rsa8192.badssl.com_certificate.crt')
+
+        self.untrudted_root_ca = self._get_public_key_x509('default_company_rsa_root_ca.crt')
+        self.untrudted_intermediate_ca = self._get_public_key_x509('default_company_rsa_intermediate_ca.crt')
+        self.untrudted_intermediate_ca_crl_pem = self._get_pem_str('default_company_rsa_intermediate_ca.crl')
+        self.untrudted_certificate = self._get_public_key_x509('default_company_rsa_certificate.crt')
+        self.untrudted_certificate_revoked = self._get_public_key_x509('default_company_rsa_certificate_revoked.crt')
+
+    @mock.patch.object(
+        certvalidator.CertificateValidator, 'validate_usage', side_effect=certvalidator.errors.PathValidationError
+    )
+    def test_error_path_validation(self, _):
+        certificate_chain = CertificateChainX509Validator()([
+            self.trusted_certificate,
+            self.trusted_intermediate_ca,
+            self.trusted_root_ca,
+        ])
+
+        self.assertEqual(certificate_chain.ordered, None)
+        self.assertEqual(certificate_chain.contains_anchor, None)
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False])
+        self.assertEqual(certificate_chain.revoked, None)
+
+    def test_trusted_contains_anchor(self):
+        certificate_chain = CertificateChainX509Validator()([
+            self.trusted_certificate,
+            self.trusted_intermediate_ca,
+            self.trusted_root_ca,
+        ])
+
+        self.assertTrue(certificate_chain.ordered)
+        self.assertTrue(certificate_chain.contains_anchor)
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [True, True, True, True])
+        self.assertFalse(certificate_chain.revoked)
+
+    def test_trusted_no_anchor(self):
+        certificate_chain = CertificateChainX509Validator()([
+            self.trusted_certificate,
+            self.trusted_intermediate_ca,
+        ])
+
+        self.assertTrue(certificate_chain.ordered)
+        self.assertFalse(certificate_chain.contains_anchor)
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [True, True, True, True])
+        self.assertFalse(certificate_chain.revoked)
+
+    def test_trusted_unordered(self):
+        certificate_chain = CertificateChainX509Validator()([
+            self.trusted_intermediate_ca,
+            self.trusted_certificate,
+        ])
+
+        self.assertFalse(certificate_chain.ordered)
+        self.assertFalse(certificate_chain.contains_anchor)
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [True, True, True, True])
+        self.assertFalse(certificate_chain.revoked)
+
+    def test_untrusted_incomplete(self):
+        certificate_chain = CertificateChainX509Validator()([
+            self.untrudted_certificate,
+            self.untrudted_intermediate_ca,
+        ])
+
+        self.assertEqual(certificate_chain.ordered, None)
+        self.assertEqual(certificate_chain.contains_anchor, None)
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False])
+        self.assertFalse(certificate_chain.revoked)
+
+    def test_untrusted_ordered(self):
+        certificate_chain = CertificateChainX509Validator()([
+            self.untrudted_certificate,
+            self.untrudted_intermediate_ca,
+            self.untrudted_root_ca,
+        ])
+
+        self.assertTrue(certificate_chain.ordered)
+        self.assertTrue(certificate_chain.contains_anchor)
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False])
+        self.assertFalse(certificate_chain.revoked)
+
+    def test_untrusted_unordered(self):
+        certificate_chain = CertificateChainX509Validator()([
+            self.untrudted_root_ca,
+            self.untrudted_intermediate_ca,
+            self.untrudted_certificate,
+        ])
+
+        self.assertFalse(certificate_chain.ordered)
+        self.assertTrue(certificate_chain.contains_anchor)
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False])
+        self.assertFalse(certificate_chain.revoked)
+
+    def test_untrusted_revoked(self):
+        crl = asn1crypto.crl.CertificateList.load(asn1crypto.pem.unarmor(
+            self.untrudted_intermediate_ca_crl_pem.encode('ascii')
+        )[2])
+        with mock.patch.object(certvalidator.crl_client, '_grab_crl', return_value=crl):
+            certificate_chain = CertificateChainX509Validator()([
+                self.untrudted_certificate_revoked,
+                self.untrudted_intermediate_ca,
+                self.untrudted_root_ca,
+            ])
+
+            self.assertTrue(certificate_chain.ordered)
+            self.assertTrue(certificate_chain.contains_anchor)
+            self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False])
+            self.assertTrue(certificate_chain.revoked)

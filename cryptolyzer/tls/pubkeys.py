@@ -18,7 +18,12 @@ from cryptoparser.tls.extension import (
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.utils import LogSingleton
-from cryptolyzer.common.x509 import CertificateChainX509, CertificateStatus, PublicKeyX509
+from cryptolyzer.common.x509 import (
+    CertificateChainX509,
+    CertificateChainX509Validator,
+    CertificateStatus,
+    PublicKeyX509,
+)
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationDSS,
     TlsHandshakeClientHelloAuthenticationRSA,
@@ -40,7 +45,6 @@ class CertificateChainTls(Serializable):
     subject_matches = attr.ib(validator=attr.validators.instance_of(bool))
     certificate_chain = attr.ib(
         validator=attr.validators.instance_of(CertificateChainX509),
-        metadata={'human_readable_name': 'Certificate Chain'}
     )
     certificate_status = attr.ib(
         default=None, eq=False,
@@ -71,18 +75,6 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         return 'Check which certificate used by the server(s)'
 
     @classmethod
-    def _get_certificate_chain(cls, server_messages):
-        if TlsHandshakeType.CERTIFICATE not in server_messages:
-            raise ValueError
-
-        certificate_chain = []
-
-        for tls_certificate in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain:
-            certificate_chain.append(PublicKeyX509.from_der(tls_certificate.certificate))
-
-        return CertificateChainX509(items=certificate_chain)
-
-    @classmethod
     def _get_certificate_status(cls, server_messages):
         if TlsHandshakeType.CERTIFICATE_STATUS in server_messages:
             status_message = server_messages[TlsHandshakeType.CERTIFICATE_STATUS]
@@ -106,10 +98,23 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
 
     @classmethod
     def _add_tls_public_key_to_results(cls, analyzable, sni_sent, server_messages, results):
-        try:
-            certificate_chain = cls._get_certificate_chain(server_messages)
-        except ValueError:
+        if TlsHandshakeType.CERTIFICATE not in server_messages:
             return
+
+        x509_public_keys = [
+            PublicKeyX509.from_der(public_key_bytes.certificate)
+            for public_key_bytes in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain
+        ]
+
+        try:
+            certificate_status = cls._get_certificate_status(server_messages)
+        except KeyError:
+            certificate_status = None
+
+        certificate_chain = CertificateChainX509Validator()(
+            items=x509_public_keys,
+            certificate_status_list=[] if certificate_status is None else [certificate_status]
+        )
 
         leaf_certificate = certificate_chain.items[0]
         subject_matches = leaf_certificate.is_subject_matches(six.ensure_str(analyzable.address))
@@ -130,10 +135,8 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 ))
                 results.append(tls_public_key)
 
-            try:
-                tls_public_key.certificate_status = cls._get_certificate_status(server_messages)
-            except KeyError:
-                pass
+            tls_public_key.certificate_status = certificate_status
+
             try:
                 tls_public_key.scts = cls._get_signed_certificate_timestamps(server_messages)
             except KeyError:

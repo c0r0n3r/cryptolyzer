@@ -175,14 +175,6 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         return result
 
     @mock.patch.object(
-        AnalyzerPublicKeys, '_get_certificate_chain',
-        side_effect=[ValueError, ValueError, ValueError, ValueError]
-    )
-    def test_error_unparsable_pubkey(self, _):
-        result = self.get_result('www.cloudflare.com', 443)
-        self.assertEqual(len(result.pubkeys), 0)
-
-    @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=[
             [],
@@ -268,7 +260,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self_signed_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(self_signed_chain.items), 1)
         self.assertTrue(self_signed_chain.contains_anchor)
-        self.assertEqual(self_signed_chain.ordered, None)
+        self.assertTrue(self_signed_chain.ordered)
         self.assertEqual(
             self_signed_chain.trust_roots,
             {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
@@ -279,8 +271,8 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
 
         untrusted_root_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(untrusted_root_chain.items), 2)
-        self.assertEqual(untrusted_root_chain.contains_anchor, None)
-        self.assertEqual(untrusted_root_chain.ordered, None)
+        self.assertTrue(untrusted_root_chain.contains_anchor)
+        self.assertTrue(untrusted_root_chain.ordered)
         self.assertEqual(
             untrusted_root_chain.trust_roots,
             {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
@@ -389,6 +381,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self.assertTrue(all(pubkey.scts is None for pubkey in result.pubkeys))
 
         self.assertTrue(all(pubkey.certificate_chain.ordered for pubkey in result.pubkeys))
+        self.assertFalse(all(pubkey.certificate_chain.revoked for pubkey in result.pubkeys))
         for pubkey in result.pubkeys:
             with self.subTest(pubkey=pubkey):
                 self.assertEqual(
