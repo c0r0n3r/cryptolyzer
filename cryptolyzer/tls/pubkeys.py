@@ -1,17 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict
-
 import attr
 
 import six
 
 import asn1crypto.ocsp
-import certvalidator
-
-from cryptodatahub.common.entity import Entity, EntityRole
-from cryptodatahub.common.stores import RootCertificate
-from cryptodatahub.common.utils import bytes_to_hex_string
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.common.x509 import SignedCertificateTimestampList
@@ -25,7 +18,7 @@ from cryptoparser.tls.extension import (
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.utils import LogSingleton
-from cryptolyzer.common.x509 import PublicKeyX509
+from cryptolyzer.common.x509 import CertificateChainX509, CertificateStatus, PublicKeyX509
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationDSS,
     TlsHandshakeClientHelloAuthenticationRSA,
@@ -39,172 +32,14 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 
 
 @attr.s
-class CertificateStatus(Serializable):
-    ocsp_response = attr.ib(
-        validator=attr.validators.optional(attr.validators.instance_of(asn1crypto.ocsp.OCSPResponse))
-    )
-
-    @property
-    def _response_data(self):
-        return self.ocsp_response.basic_ocsp_response['tbs_response_data']
-
-    @property
-    def _response(self):
-        return self._response_data['responses'][0]
-
-    @property
-    def status(self):
-        cert_status = self._response['cert_status']
-        return cert_status.name.lower()
-
-    @property
-    def responder(self):
-        if self._response_data['responder_id'].name == 'by_name':
-            return self._response_data['responder_id'].chosen.native
-
-        return bytes_to_hex_string(bytes(self._response_data['responder_id'].chosen), ':')
-
-    @property
-    def produced_at(self):
-        return self._response_data['produced_at'].native
-
-    @property
-    def this_update(self):
-        return self._response['this_update'].native
-
-    @property
-    def next_update(self):
-        return self._response['next_update'].native
-
-    @property
-    def update_interval(self):
-        return self.next_update - self.this_update
-
-    @property
-    def revocation_time(self):
-        cert_status = self._response['cert_status']
-        if cert_status.name != 'revoked':
-            return None
-
-        return cert_status.chosen['revocation_time'].native
-
-    @property
-    def revocation_reason(self):
-        cert_status = self._response['cert_status']
-        if cert_status.name != 'revoked':
-            return None
-
-        return cert_status.chosen['revocation_reason'].native
-
-    @property
-    def extensions(self):
-        return [
-            extension['extn_id'].dotted
-            for extension in self._response['single_extensions']
-        ]
-
-    def _asdict(self):
-        if self.ocsp_response is None:
-            return OrderedDict()
-
-        return OrderedDict([
-           ('status', self.status),
-           ('responder', self.responder),
-           ('produced_at', str(self.produced_at)),
-           ('this_update', str(self.this_update)),
-           ('next_update', str(self.next_update)),
-           ('update_interval', str(self.update_interval)),
-           ('revocation_time', str(self.revocation_time)),
-           ('revocation_time', self.revocation_reason),
-           ('extensions', self.extensions),
-        ])
-
-
-@attr.s
-class TlsCertificateChain(Serializable):  # pylint: disable=too-few-public-methods
-    items = attr.ib(
-        validator=attr.validators.deep_iterable(attr.validators.instance_of(PublicKeyX509)),
-        metadata={'human_readable_name': 'Certificates in Chain'},
-    )
-    ordered = attr.ib(
-        init=False,
-        default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(bool))
-    )
-    trust_roots = attr.ib(
-        init=False,
-        default=OrderedDict([]),
-        validator=attr.validators.deep_mapping(
-            key_validator=attr.validators.instance_of(Entity),
-            value_validator=attr.validators.instance_of(bool),
-        )
-    )
-    contains_anchor = attr.ib(
-        init=False,
-        default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(bool))
-    )
-
-    @staticmethod
-    def _get_asn1crypto_certificate(public_key):
-        return public_key._certificate  # pylint: disable=protected-access
-
-    def build_path(self):
-        asn1crypto_certificates = list(map(self._get_asn1crypto_certificate, self.items))
-        cert_validator = certvalidator.CertificateValidator(asn1crypto_certificates[0], asn1crypto_certificates[1:])
-        try:
-            build_path = cert_validator.validate_usage(set())
-        except certvalidator.errors.PathBuildingError:
-            pass
-        except (certvalidator.errors.InvalidCertificateError, certvalidator.errors.PathValidationError):
-            if self.items[-1].is_self_signed:
-                self.contains_anchor = True
-        else:
-            validated_items = [PublicKeyX509(item) for item in reversed(build_path)]
-            self.contains_anchor = len(self.items) == len(validated_items)
-            checkable_item_num = len(self.items)
-            if self.contains_anchor:
-                checkable_item_num -= 1
-            self.ordered = validated_items[:checkable_item_num] = self.items[:checkable_item_num]
-            self.items = validated_items
-
-    def validate(self):
-        trust_roots = []
-        asn1crypto_certificates = list(map(self._get_asn1crypto_certificate, self.items))
-
-        for trust_store_owner in Entity.get_items_by_role(EntityRole.CA_TRUST_STORE_OWNER):
-            context = certvalidator.context.ValidationContext(trust_roots=list(map(
-                lambda root_certificate: self._get_asn1crypto_certificate(root_certificate.value.certificate),
-                RootCertificate.get_items_by_trust_owner(trust_store_owner),
-            )))
-            cert_validator = certvalidator.CertificateValidator(
-                end_entity_cert=asn1crypto_certificates[0],
-                intermediate_certs=asn1crypto_certificates[1:],
-                validation_context=context,
-            )
-            try:
-                cert_validator.validate_usage(set())
-            except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError) as e:
-                trust_roots.append((trust_store_owner, False))
-            else:
-                trust_roots.append((trust_store_owner, True))
-
-        self.trust_roots = OrderedDict(trust_roots)
-
-    def __attrs_post_init__(self):
-        self.build_path()
-        self.validate()
-
-
-@attr.s
-class TlsPublicKey(Serializable):
+class CertificateChainTls(Serializable):
     sni_sent = attr.ib(
         validator=attr.validators.instance_of(bool),
         metadata={'human_readable_name': 'Server Name Indication (SNI)'}
     )
     subject_matches = attr.ib(validator=attr.validators.instance_of(bool))
-    tls_certificate_chain = attr.ib(
-        validator=attr.validators.instance_of(TlsCertificateChain),
+    certificate_chain = attr.ib(
+        validator=attr.validators.instance_of(CertificateChainX509),
         metadata={'human_readable_name': 'Certificate Chain'}
     )
     certificate_status = attr.ib(
@@ -221,7 +56,7 @@ class TlsPublicKey(Serializable):
 @attr.s
 class AnalyzerResultPublicKeys(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
     pubkeys = attr.ib(
-        validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsPublicKey)),
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(CertificateChainTls)),
         metadata={'human_readable_name': 'TLS Certificates'},
     )
 
@@ -236,7 +71,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         return 'Check which certificate used by the server(s)'
 
     @classmethod
-    def _get_tls_certificate_chain(cls, server_messages):
+    def _get_certificate_chain(cls, server_messages):
         if TlsHandshakeType.CERTIFICATE not in server_messages:
             raise ValueError
 
@@ -245,7 +80,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         for tls_certificate in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain:
             certificate_chain.append(PublicKeyX509.from_der(tls_certificate.certificate))
 
-        return TlsCertificateChain(items=certificate_chain)
+        return CertificateChainX509(items=certificate_chain)
 
     @classmethod
     def _get_certificate_status(cls, server_messages):
@@ -272,7 +107,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
     @classmethod
     def _add_tls_public_key_to_results(cls, analyzable, sni_sent, server_messages, results):
         try:
-            certificate_chain = cls._get_tls_certificate_chain(server_messages)
+            certificate_chain = cls._get_certificate_chain(server_messages)
         except ValueError:
             return
 
@@ -280,17 +115,17 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         subject_matches = leaf_certificate.is_subject_matches(six.ensure_str(analyzable.address))
         if sni_sent or subject_matches:
             for result in results:
-                if certificate_chain == result.tls_certificate_chain:
+                if certificate_chain == result.certificate_chain:
                     tls_public_key = result
                     break
             else:
-                tls_public_key = TlsPublicKey(
+                tls_public_key = CertificateChainTls(
                     sni_sent=sni_sent,
                     subject_matches=subject_matches,
-                    tls_certificate_chain=certificate_chain,
+                    certificate_chain=certificate_chain,
                 )
                 LogSingleton().log(level=60, msg=six.u('Server offers %s X.509 public key (with%s SNI)') % (
-                    tls_public_key.tls_certificate_chain.items[-1].key_type.name,
+                    tls_public_key.certificate_chain.items[-1].key_type.name,
                     '' if tls_public_key.sni_sent else 'out',
                 ))
                 results.append(tls_public_key)
