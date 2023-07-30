@@ -632,7 +632,7 @@ class TestClientLDAP(TestL7ClientBase):
         self.assertEqual(result.versions, [])
 
     def test_ldap_client(self):
-        _, result = self.get_result('ldap', 'ldap.uchicago.edu', None)
+        _, result = self.get_result('ldap', 'ldap.uchicago.edu', None, timeout=10)
         self.assertEqual(result.versions, [
             TlsProtocolVersion(TlsVersion.TLS1),
             TlsProtocolVersion(TlsVersion.TLS1_1),
@@ -640,7 +640,7 @@ class TestClientLDAP(TestL7ClientBase):
         ])
 
     def test_ldaps_client(self):
-        _, result = self.get_result('ldaps', 'ldap.uchicago.edu', None)
+        _, result = self.get_result('ldaps', 'ldap.uchicago.edu', None, timeout=10)
         self.assertEqual(result.versions, [
             TlsProtocolVersion(TlsVersion.TLS1),
             TlsProtocolVersion(TlsVersion.TLS1_1),
@@ -863,7 +863,7 @@ class TestClientSieve(TestL7ClientBase):
         self.assertEqual(result.versions, [])
 
     def test_sieve_client(self):
-        _, result = self.get_result('sieve', 'mail.aa.net.uk', None)
+        _, result = self.get_result('sieve', 'mail.aa.net.uk', None, timeout=10)
         self.assertEqual(
             result.versions,
             [
@@ -1121,7 +1121,7 @@ class TestClientOpenVpn(TestL7ClientBase):
     def test_openvpn_udp_client(self):
         _, result = self.get_result(
             'openvpn', 'vpn431396938.opengw.net', 441,
-            timeout=5, analyzer=AnalyzerDHParams()
+            timeout=10, analyzer=AnalyzerDHParams()
         )
         self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC2539_1024_BIT_MODP_GROUP)
 
@@ -1164,7 +1164,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
     )
     def test_error_non_handshake_message(self, _):
         with self.assertRaises(TlsAlert) as context_manager:
-            self.get_result('https', 'badssl.com', None)
+            self.get_result('https', 'badssl.com', None, timeout=10)
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
 
     @mock.patch.object(L7ServerTlsBase, '_get_handshake_class', return_value=L7ServerTlsFatalResponse)
