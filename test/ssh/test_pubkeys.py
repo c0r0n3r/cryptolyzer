@@ -61,8 +61,8 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
     def test_real_no_gex(self):
         result = self.get_result('github.com', 22)
         self.assertEqual(
-            list(map(lambda public_key: public_key.key_type, result.public_keys)),
-            [Authentication.ECDSA, Authentication.EDDSA, Authentication.RSA],
+            list(map(lambda ssh_key: ssh_key.public_key.key_type, result.public_keys)),
+            [Authentication.ECDSA, Authentication.ED25519, Authentication.RSA],
         )
         self.assertEqual(result.public_keys[0].fingerprints, OrderedDict([
             (Hash.SHA2_256, 'SHA256:p2QAMXNIC1TJYWeIOttrVc98/R1BUFWu3/LiyKgUfQM='),
@@ -89,11 +89,11 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
     def test_host_cert(self):
         result = self.get_result('git.centos.org', 22)
         self.assertEqual(
-            list(map(lambda public_key: public_key.key_type, result.public_keys)),
-            [Authentication.ECDSA, Authentication.EDDSA, Authentication.RSA, Authentication.EDDSA],
+            list(map(lambda ssh_key: ssh_key.public_key.key_type, result.public_keys)),
+            [Authentication.ECDSA, Authentication.ED25519, Authentication.RSA, Authentication.ED25519],
         )
         self.assertEqual(
-            list(map(lambda public_key: public_key.host_key_algorithm.value.code, result.public_keys)),
+            list(map(lambda ssh_key: ssh_key.host_key_algorithm.value.code, result.public_keys)),
             ['ecdsa-sha2-nistp256', 'ssh-ed25519', 'ssh-rsa', 'ssh-ed25519-cert-v01@openssh.com'],
             [
                 SshHostKeyAlgorithm.ECDSA_SHA2_NISTP256,
