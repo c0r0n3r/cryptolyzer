@@ -18,6 +18,9 @@ Changelog
 0.9.1 - 2023-06-22
 ------------------
 
+Features
+~~~~~~~~
+
 -  TLS (``tls``)
 
    -  Public Keys (``pubkeys``)
@@ -27,6 +30,9 @@ Changelog
 0.9.0 - 2023-04-29
 ------------------
 
+Features
+~~~~~~~~
+
 -  TLS (``tls``)
 
    -  Generic
@@ -35,6 +41,9 @@ Changelog
 
 0.8.5 - 2023-04-02
 ------------------
+
+Features
+~~~~~~~~
 
 -  TLS (``tls``)
 
@@ -133,6 +142,9 @@ Notable fixes
 0.8.1 - 2022-03-23
 ------------------
 
+Features
+~~~~~~~~
+
 -  JA3 (``ja3``)
 
    -  Generate (``generate``)
@@ -147,6 +159,9 @@ Notable fixes
 
 0.8.0 - 2022-01-18
 ------------------
+
+Features
+~~~~~~~~
 
 -  SSH (``ssh``)
 
@@ -468,7 +483,7 @@ Notable Fixes
    -  uniform timeout handling in TLS clients (#12)
 
 Other
-^^^^^
+~~~~~
 
 -  improve unit tests (100% code coverage)
 -  Docker support and ready-to-use container on DockerHub
