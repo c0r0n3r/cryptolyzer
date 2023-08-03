@@ -175,14 +175,6 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         return result
 
     @mock.patch.object(
-        AnalyzerPublicKeys, '_get_tls_certificate_chain',
-        side_effect=[ValueError, ValueError, ValueError, ValueError]
-    )
-    def test_error_unparsable_pubkey(self, _):
-        result = self.get_result('www.cloudflare.com', 443)
-        self.assertEqual(len(result.pubkeys), 0)
-
-    @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=[
             [],
@@ -213,8 +205,8 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result_badssl_com = self.get_result('badssl.com', 443)
         result_wrong_host_badssl_com = self.get_result('wrong.host.badssl.com', 443)
         self.assertEqual(
-            result_badssl_com.pubkeys[0].tls_certificate_chain,
-            result_wrong_host_badssl_com.pubkeys[0].tls_certificate_chain
+            result_badssl_com.pubkeys[0].certificate_chain,
+            result_wrong_host_badssl_com.pubkeys[0].certificate_chain
         )
 
         result_expired_badssl_com = self.get_result('expired.badssl.com', 443)
@@ -222,16 +214,16 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result_untrusted_root_badssl_com = self.get_result('untrusted-root.badssl.com', 443)
         result_revoked_badssl_com = self.get_result('revoked.badssl.com', 443)
         self.assertNotEqual(
-            result_expired_badssl_com.pubkeys[0].tls_certificate_chain,
-            result_self_signed_badssl_com.pubkeys[0].tls_certificate_chain
+            result_expired_badssl_com.pubkeys[0].certificate_chain,
+            result_self_signed_badssl_com.pubkeys[0].certificate_chain
         )
         self.assertNotEqual(
-            result_expired_badssl_com.pubkeys[0].tls_certificate_chain,
-            result_untrusted_root_badssl_com.pubkeys[0].tls_certificate_chain
+            result_expired_badssl_com.pubkeys[0].certificate_chain,
+            result_untrusted_root_badssl_com.pubkeys[0].certificate_chain
         )
         self.assertNotEqual(
-            result_expired_badssl_com.pubkeys[0].tls_certificate_chain,
-            result_revoked_badssl_com.pubkeys[0].tls_certificate_chain
+            result_expired_badssl_com.pubkeys[0].certificate_chain,
+            result_revoked_badssl_com.pubkeys[0].certificate_chain
         )
 
     def test_subject_match(self):
@@ -253,7 +245,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
 
-        trusted_root_chain = result.pubkeys[0].tls_certificate_chain
+        trusted_root_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(trusted_root_chain.items), 3)
         self.assertTrue(trusted_root_chain.contains_anchor)
         self.assertEqual(
@@ -265,10 +257,10 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('self-signed.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
 
-        self_signed_chain = result.pubkeys[0].tls_certificate_chain
+        self_signed_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(self_signed_chain.items), 1)
         self.assertTrue(self_signed_chain.contains_anchor)
-        self.assertEqual(self_signed_chain.ordered, None)
+        self.assertTrue(self_signed_chain.ordered)
         self.assertEqual(
             self_signed_chain.trust_roots,
             {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
@@ -277,10 +269,10 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('untrusted-root.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
 
-        untrusted_root_chain = result.pubkeys[0].tls_certificate_chain
+        untrusted_root_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(untrusted_root_chain.items), 2)
-        self.assertEqual(untrusted_root_chain.contains_anchor, None)
-        self.assertEqual(untrusted_root_chain.ordered, None)
+        self.assertTrue(untrusted_root_chain.contains_anchor)
+        self.assertTrue(untrusted_root_chain.ordered)
         self.assertEqual(
             untrusted_root_chain.trust_roots,
             {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
@@ -291,7 +283,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         result = self.get_result('incomplete-chain.badssl.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
 
-        incomplete_chain = result.pubkeys[0].tls_certificate_chain
+        incomplete_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(incomplete_chain.items), 1)
         self.assertFalse(incomplete_chain.contains_anchor)
         self.assertEqual(incomplete_chain.ordered, None)
@@ -377,7 +369,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         for pubkey in result.pubkeys:
             with self.subTest():
                 self.assertEqual(
-                    pubkey.tls_certificate_chain.trust_roots,
+                    pubkey.certificate_chain.trust_roots,
                     {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
                 )
 
@@ -388,28 +380,29 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self.assertTrue(all(pubkey.certificate_status is not None for pubkey in result.pubkeys))
         self.assertTrue(all(pubkey.scts is None for pubkey in result.pubkeys))
 
-        self.assertTrue(all(pubkey.tls_certificate_chain.ordered for pubkey in result.pubkeys))
+        self.assertTrue(all(pubkey.certificate_chain.ordered for pubkey in result.pubkeys))
+        self.assertFalse(all(pubkey.certificate_chain.revoked for pubkey in result.pubkeys))
         for pubkey in result.pubkeys:
             with self.subTest(pubkey=pubkey):
                 self.assertEqual(
-                    pubkey.tls_certificate_chain.trust_roots,
+                    pubkey.certificate_chain.trust_roots,
                     {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: False}
                 )
-        self.assertFalse(any(pubkey.tls_certificate_chain.contains_anchor for pubkey in result.pubkeys))
+        self.assertFalse(any(pubkey.certificate_chain.contains_anchor for pubkey in result.pubkeys))
         self.assertEqual(
-            [pubkey.tls_certificate_chain.items[-2].key_type for pubkey in result.pubkeys],
+            [pubkey.certificate_chain.items[-2].key_type for pubkey in result.pubkeys],
             [Authentication.RSA, Authentication.ECDSA]
         )
         self.assertEqual(
-            [pubkey.tls_certificate_chain.items[0].key_type for pubkey in result.pubkeys],
+            [pubkey.certificate_chain.items[0].key_type for pubkey in result.pubkeys],
             [Authentication.RSA, Authentication.ECDSA]
         )
         self.assertEqual(
-            [pubkey.tls_certificate_chain.items[-2].key_size for pubkey in result.pubkeys],
+            [pubkey.certificate_chain.items[-2].key_size for pubkey in result.pubkeys],
             [2048, 256]
         )
         self.assertEqual(
-            [pubkey.tls_certificate_chain.items[0].key_size for pubkey in result.pubkeys],
+            [pubkey.certificate_chain.items[0].key_size for pubkey in result.pubkeys],
             [2048, 256]
         )
         for tls_public_key in result.pubkeys:
@@ -417,17 +410,17 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
                 self.assertEqual(tls_public_key.certificate_status.status, 'good')
                 self.assertEqual(tls_public_key.scts, None)
         for pubkey in result.pubkeys:
-            leaf_certificate = pubkey.tls_certificate_chain.items[0]
+            leaf_certificate = pubkey.certificate_chain.items[0]
             with self.subTest():
                 self.assertIn(
                     Entity.CLOUDFLARE,
                     [sct.log.operator for sct in leaf_certificate.signed_certificate_timestamps]
                 )
         for pubkey in result.pubkeys:
-            leaf_certificate = pubkey.tls_certificate_chain
+            leaf_certificate = pubkey.certificate_chain
             with self.subTest():
                 self.assertEqual(
-                    pubkey.tls_certificate_chain.trust_roots,
+                    pubkey.certificate_chain.trust_roots,
                     {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: False}
                 )
 
