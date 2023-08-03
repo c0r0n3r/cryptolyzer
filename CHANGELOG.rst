@@ -1,8 +1,11 @@
 Changelog
 =========
 
-0.10.0
-------
+0.10.0 - 2023-08-03
+-------------------
+
+Features
+~~~~~~~~
 
 -  TLS (``tls``)
 
@@ -14,6 +17,10 @@ Changelog
          -  `Google <https://en.wikipedia.org/wiki/Google>`__
          -  `Microsoft <https://en.wikipedia.org/wiki/Microsoft>`__
          -  `Mozilla <https://en.wikipedia.org/wiki/Mozilla>`__
+
+      -  revocation check using soft-fail mechanism (#89)
+
+      -  TLS feature (e.g. OCSP must staple) extension check (#87)
 
 0.9.1 - 2023-06-22
 ------------------

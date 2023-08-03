@@ -139,9 +139,15 @@ Public Keys
    -  `Microsoft <https://en.wikipedia.org/wiki/Microsoft>`__
    -  `Mozilla <https://en.wikipedia.org/wiki/Mozilla>`__
 
--  `certificate status (OCSP) <https://www.rfc-editor.org/info/rfc6960>`__
+-  revocation check
 
-   - status information
+   -  `certificate Revocation List (CRL) <https://www.rfc-editor.org/info/rfc5280>`__
+   -  `certificate status (OCSP, OCSP stapling) <https://www.rfc-editor.org/info/rfc6960>`__
+
+-  extensions
+
+   -  `TLS feature <https://www.rfc-editor.org/info/rfc7633>`__ (e.g. OCSP must staple)
+   -  `extended validation <https://en.wikipedia.org/wiki/Extended_Validation_Certificate>`__
 
 -  `certificate transparency (CT) <https://www.rfc-editor.org/info/rfc6962>`__
 
