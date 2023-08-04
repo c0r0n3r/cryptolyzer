@@ -22,6 +22,7 @@ class TestDnsRecordDnsSec(TestLoggerBase):
     def test_real(self):
         analyzer_result = self.get_result('dns://google.com#1.1.1.1')
         self.assertEqual(analyzer_result.dns_keys, [])
+        self.assertEqual(analyzer_result.digital_signatures, [])
 
         analyzer_result = self.get_result('dns://cloudflare.com#1.1.1.1')
         self.assertEqual(

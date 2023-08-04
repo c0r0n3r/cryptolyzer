@@ -2,7 +2,7 @@
 
 import attr
 
-from cryptoparser.dnsrec.record import DnsRecordDnskey
+from cryptoparser.dnsrec.record import DnsRecordDnskey, DnsRecordDs
 
 from cryptolyzer.common.analyzer import AnalyzerDnsRecordBase
 from cryptolyzer.common.result import AnalyzerResultDnsRecord, AnalyzerTargetDnsRecord
@@ -15,6 +15,12 @@ class AnalyzerResultDnsSec(AnalyzerResultDnsRecord):  # pylint: disable=too-few-
             member_validator=attr.validators.instance_of(DnsRecordDnskey),
         ),
         metadata={'human_readable_name': 'DNS Public Keys (DNSKEY)'},
+    )
+    digital_signatures = attr.ib(
+        validator=attr.validators.deep_iterable(
+            member_validator=attr.validators.instance_of(DnsRecordDs),
+        ),
+        metadata={'human_readable_name': 'Digital Signatures (DS)'},
     )
 
 
@@ -30,12 +36,15 @@ class AnalyzerDnsSec(AnalyzerDnsRecordBase):
     @staticmethod
     def _analyze_records(analyzable):
         dnskey_records = analyzable.get_dnskey_records()
-        return dnskey_records
+        ds_records = analyzable.get_ds_records()
+
+        return dnskey_records, ds_records
 
     def analyze(self, analyzable):
-        dnskey_records = self._analyze_records(analyzable)
+        dnskey_records, ds_records = self._analyze_records(analyzable)
 
         return AnalyzerResultDnsSec(
             AnalyzerTargetDnsRecord.from_l7_client(analyzable),
-            dnskey_records
+            dnskey_records,
+            ds_records,
         )
