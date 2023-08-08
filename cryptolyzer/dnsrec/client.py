@@ -11,7 +11,7 @@ from cryptodatahub.common.types import convert_url
 from cryptodatahub.dnssec.algorithm import DnsRrType
 
 from cryptoparser.common.utils import get_leaf_classes
-from cryptoparser.dnsrec.record import DnsRecordDnskey, DnsRecordDs
+from cryptoparser.dnsrec.record import DnsRecordDnskey, DnsRecordDs, DnsRecordRrsig
 
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.dnsrec.transfer import DnsHandshakeBase
@@ -101,6 +101,18 @@ class L7ClientDnsBase(object):
         )
 
         return ds_records
+
+    def get_rrsig_records(self, domain_prefix=None):
+        rrsig_records = self._get_record_list(DnsRrType.RRSIG, DnsRecordRrsig, domain_prefix)
+        self._log_records(
+            'RRSIG',
+            map(
+                lambda rrsig_record: '{} ({})'.format(rrsig_record.type_covered.value.name, rrsig_record.key_tag),
+                rrsig_records
+            )
+        )
+
+        return rrsig_records
 
 
 class L7ClientDns(L7ClientDnsBase):

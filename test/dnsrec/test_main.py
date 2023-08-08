@@ -19,3 +19,4 @@ class TestMain(TestMainBase):
         result = self._get_test_analyzer_result_markdown('dns', 'dnssec', uri, timeout=10)
         self.assertIn('* DNS Public Keys', result)
         self.assertIn('* Digital Signatures', result)
+        self.assertIn('* Resource Record Signature', result)
