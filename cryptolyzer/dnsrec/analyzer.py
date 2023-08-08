@@ -2,6 +2,8 @@
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 
+from cryptolyzer.dnsrec.dnssec import AnalyzerDnsSec
+
 
 class ProtocolHandlerDnsRecordBase(ProtocolHandlerBase):
     @classmethod
@@ -15,7 +17,9 @@ class ProtocolHandlerDnsRecordBase(ProtocolHandlerBase):
 
     @classmethod
     def get_analyzers(cls):
-        return ()
+        return (
+            AnalyzerDnsSec,
+        )
 
     @classmethod
     def get_protocol(cls):
