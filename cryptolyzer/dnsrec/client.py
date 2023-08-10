@@ -11,7 +11,7 @@ from cryptodatahub.common.types import convert_url
 from cryptodatahub.dnssec.algorithm import DnsRrType
 
 from cryptoparser.common.utils import get_leaf_classes
-from cryptoparser.dnsrec.record import DnsRecordDnskey, DnsRecordDs, DnsRecordRrsig
+from cryptoparser.dnsrec.record import DnsRecordDnskey, DnsRecordMx, DnsRecordDs, DnsRecordRrsig
 
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.dnsrec.transfer import DnsHandshakeBase
@@ -77,6 +77,18 @@ class L7ClientDnsBase(object):
         dns_client.get_records(self, record_type, domain_prefix)
 
         return list(map(record_class.parse_exact_size, dns_client.raw_records))
+
+    def get_mx_records(self, domain_prefix=None):
+        mx_records = self._get_record_list(DnsRrType.MX, DnsRecordMx, domain_prefix)
+        self._log_records(
+            'MX',
+            map(
+                lambda mx_record: '{} ({})'.format(str(mx_record.exchange), mx_record.priority),
+                mx_records
+            )
+        )
+
+        return mx_records
 
     def get_dnskey_records(self, domain_prefix=None):
         dnskey_records = self._get_record_list(DnsRrType.DNSKEY, DnsRecordDnskey, domain_prefix)
