@@ -25,3 +25,11 @@ class TestMain(TestMainBase):
         uri = 'google.com#1.1.1.1'
         result = self._get_test_analyzer_result_markdown('dns', 'mail', uri, timeout=10)
         self.assertIn('* Exchange: smtp.google.com', result)
+        self.assertIn('* Raw: v=spf1 include:_spf.google.com ~all', result)
+        self.assertIn(
+            '* Raw: v=DMARC1; p=reject; adkim=r; aspf=r; fo=0; pct=100; '
+            'rua=mailto:mailauth-reports@google.com; rf=afrf; ri=86400; sp=None',
+            result
+        )
+        self.assertIn('* Raw: v=STSv1; id=20210803T010101', result)
+        self.assertIn('* Raw: v=TLSRPTv1; rua=mailto:sts-reports@google.com', result)
