@@ -20,13 +20,13 @@ class TestMain(TestMainBase):
         self.assertIn('Name: Server', result)
         self.assertIn('Value: TestThreadedServerHttp', result)
         self.assertIn('Name: Date', result)
-        self.assertIn('Value: Thu, 01 Jan 1970 00:00:00 GMT', result)
+        self.assertIn('Value: 1970-01-01 00:00:00+00:00', result)
 
         result = self._get_test_analyzer_result_markdown('http1_1', 'headers', uri)
         self.assertIn('Name: Server', result)
         self.assertIn('Value: TestThreadedServerHttp', result)
         self.assertIn('Name: Date', result)
-        self.assertIn('Value: Thu, 01 Jan 1970 00:00:00 GMT', result)
+        self.assertIn('Value: 1970-01-01 00:00:00+00:00', result)
 
         test_http_server.kill()
 
