@@ -233,3 +233,23 @@ Headers
    -  `Strict-Transport-Security <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security>`__
    -  `X-Content-Type-Options <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options>`__
    -  `X-Frame-Options <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options>`__
+
+Features
+--------
+
+DNS
+^^^
+
+Differentiators
+"""""""""""""""
+
+-  extract (public key) and analyze (key type, size) DNSSEC signing keys
+
+Analyzers
+"""""""""
+
+-  `DNSSEC <https://www.rfc-editor.org/rfc/rfc4034>`__ records
+
+   -  `DNSKEY <https://www.rfc-editor.org/rfc/rfc4034#section-2>`__
+   -  `DS <https://www.rfc-editor.org/rfc/rfc4034#section-5>`__
+   -  `RRSIG <https://www.rfc-editor.org/rfc/rfc4034#section-3>`__

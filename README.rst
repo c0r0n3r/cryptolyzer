@@ -5,8 +5,8 @@ machine-readable (`JSON <https://en.wikipedia.org/wiki/JSON>`__) output.  It wor
 (`SSL <https://en.wikipedia.org/wiki/Transport_Layer_Security#SSL_1.0,_2.0,_and_3.0>`__/
 `TLS <https://en.wikipedia.org/wiki/Transport_Layer_Security>`__,
 `opportunistic TLS <https://en.wikipedia.org/wiki/Opportunistic_TLS>`__,
-`SSH <https://en.wikipedia.org/wiki/Secure_Shell>`__) and analyzes additional security mechanisms
-(`web security <https://infosec.mozilla.org/guidelines/web_security>`__ related
+`SSH <https://en.wikipedia.org/wiki/Secure_Shell>`__ `DNSSEC <https://www.rfc-editor.org/rfc/rfc4034>`__) and analyzes
+additional security mechanisms (`web security <https://infosec.mozilla.org/guidelines/web_security>`__ related
 `HTTP response header fields <https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Response_fields>`__,
 `JA3 tag <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__) or `HASSH
 tag <https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/>`__).
@@ -25,6 +25,7 @@ Pip
    cryptolyze tls1_2 ciphers www.example.com
    cryptolyze ssh2 ciphers www.example.com
    cryptolyze http headers www.example.com
+   cryptolyze dns dnssec example.com
 
 Docker
 ^^^^^^
@@ -35,6 +36,7 @@ Docker
    docker run --rm coroner/cryptolyzer tls1_2 ciphers www.example.com
    docker run --rm coroner/cryptolyzer ssh2 ciphers www.example.com
    docker run --rm coroner/cryptolyzer http headers www.example.com
+   docker run --rm coroner/cryptolyzer dns dnssec example.com
 
 .. code:: shell
 

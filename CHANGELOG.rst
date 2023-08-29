@@ -1,11 +1,21 @@
 Changelog
 =========
 
+0.10.1
+------
+
+-  DNS (``dns``)
+
+   -  Domain Name System Security Extensions (``dnssec``)
+
+      -  add analyzer for checking DNSSEC-related records (#95)
+
+         -  `DNSKEY <https://www.rfc-editor.org/rfc/rfc4034#section-2>`__
+         -  `DS <https://www.rfc-editor.org/rfc/rfc4034#section-5>`__
+         -  `RRSIG <https://www.rfc-editor.org/rfc/rfc4034#section-3>`__
+
 0.10.0 - 2023-08-03
 -------------------
-
-Features
-~~~~~~~~
 
 -  TLS (``tls``)
 
