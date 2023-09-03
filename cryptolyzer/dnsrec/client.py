@@ -8,9 +8,12 @@ import urllib3
 import six
 
 from cryptodatahub.common.types import convert_url
+from cryptodatahub.dnssec.algorithm import DnsRrType
 
 from cryptoparser.common.utils import get_leaf_classes
+from cryptoparser.dnsrec.record import DnsRecordDnskey, DnsRecordDs, DnsRecordRrsig
 
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.dnsrec.transfer import DnsHandshakeBase
 
 
@@ -56,6 +59,60 @@ class L7ClientDnsBase(object):
     @abc.abstractmethod
     def get_client_handshake_class(cls):
         raise NotImplementedError()
+
+    @classmethod
+    def _log_records(cls, record_name, record_values):
+        record_values = list(record_values)
+        if not record_values:
+            return
+
+        LogSingleton().log(
+            level=60,
+            msg=six.u('Server responded (%s) record(s) %s') % (record_name, ', '.join(record_values))
+        )
+
+    def _get_record_list(self, record_type, record_class, domain_prefix=None):
+        dns_client = self.get_client_handshake_class()(self.timeout)
+
+        dns_client.get_records(self, record_type, domain_prefix)
+
+        return list(map(record_class.parse_exact_size, dns_client.raw_records))
+
+    def get_dnskey_records(self, domain_prefix=None):
+        dnskey_records = self._get_record_list(DnsRrType.DNSKEY, DnsRecordDnskey, domain_prefix)
+        self._log_records(
+            'DNSKEY',
+            map(
+                lambda dnskey_record: '{} ({})'.format(dnskey_record.algorithm.value.name, dnskey_record.key_tag),
+                dnskey_records
+            )
+        )
+
+        return dnskey_records
+
+    def get_ds_records(self, domain_prefix=None):
+        ds_records = self._get_record_list(DnsRrType.DS, DnsRecordDs, domain_prefix)
+        self._log_records(
+            'DS',
+            map(
+                lambda ds_record: '{} ({})'.format(ds_record.algorithm.value.name, ds_record.key_tag),
+                ds_records
+            )
+        )
+
+        return ds_records
+
+    def get_rrsig_records(self, domain_prefix=None):
+        rrsig_records = self._get_record_list(DnsRrType.RRSIG, DnsRecordRrsig, domain_prefix)
+        self._log_records(
+            'RRSIG',
+            map(
+                lambda rrsig_record: '{} ({})'.format(rrsig_record.type_covered.value.name, rrsig_record.key_tag),
+                rrsig_records
+            )
+        )
+
+        return rrsig_records
 
 
 class L7ClientDns(L7ClientDnsBase):

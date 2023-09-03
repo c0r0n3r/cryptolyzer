@@ -163,10 +163,10 @@ class SshKeyExchangeInitHostKeyECDSA(SshKeyExchangeInitHostKeyBase):
         )
 
 
-class SshKeyExchangeInitHostKeyEDDSA(SshKeyExchangeInitHostKeyBase):
+class SshKeyExchangeInitHostKeyED25519(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
-        super(SshKeyExchangeInitHostKeyEDDSA, self).__init__(
-            SshHostKeyType.KEY, Authentication.EDDSA
+        super(SshKeyExchangeInitHostKeyED25519, self).__init__(
+            SshHostKeyType.KEY, Authentication.ED25519
         )
 
 
@@ -205,10 +205,10 @@ class SshKeyExchangeInitHostCertificateV01ECDSA(SshKeyExchangeInitHostKeyBase):
         )
 
 
-class SshKeyExchangeInitHostCertificateV01EDDSA(SshKeyExchangeInitHostKeyBase):
+class SshKeyExchangeInitHostCertificateV01ED25519(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
-        super(SshKeyExchangeInitHostCertificateV01EDDSA, self).__init__(
-            SshHostKeyType.CERTIFICATE, Authentication.EDDSA
+        super(SshKeyExchangeInitHostCertificateV01ED25519, self).__init__(
+            SshHostKeyType.CERTIFICATE, Authentication.ED25519
         )
 
 
