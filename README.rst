@@ -82,7 +82,8 @@ Detailed `documentation <https://cryptolyzer.readthedocs.io>`__ is available on 
 License
 -------
 
-The code is available under the terms of Mozilla Public License Version 2.0 (MPL 2.0).
+The `code <https://gitlab.com/coroner/cryptolyzer>`__ is available under the terms of
+`Mozilla Public License Version 2.0 <https://www.mozilla.org/en-US/MPL/2.0/>`__ (MPL 2.0).
 
 A non-comprehensive, but straightforward description of MPL 2.0 can be found at
 `Choose an open source license <https://choosealicense.com/licenses#mpl-2.0>`__ website.
