@@ -19,6 +19,7 @@ from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 from cryptoparser.common.utils import get_leaf_classes
 
 from cryptolyzer.common.utils import LogSingleton
+from cryptolyzer.dnsrec.client import L7ClientDnsBase
 from cryptolyzer.httpx.client import L7ClientHttpBase
 from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -231,4 +232,18 @@ class AnalyzerHttpBase(object):
 
     @abc.abstractmethod
     def analyze(self, analyzable, protocol_version):
+        raise NotImplementedError()
+
+
+class AnalyzerDnsRecordBase(object):
+    @classmethod
+    def get_clients(cls):
+        return list(get_leaf_classes(L7ClientDnsBase))
+
+    @classmethod
+    def get_default_scheme(cls):
+        return 'dns'
+
+    @abc.abstractmethod
+    def analyze(self, analyzable):
         raise NotImplementedError()
