@@ -73,6 +73,12 @@ Social Media
 -  `Twitter <https://twitter.com/CryptoLyzer>`__
 -  `Facebook <https://www.facebook.com/cryptolyzer>`__
 
+Documentation
+-------------
+
+Detailed `documentation <https://cryptolyzer.readthedocs.io>`__ is available on the project's
+`Read the Docs <https://readthedocs.com>`__ site.
+
 License
 -------
 
