@@ -2,15 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import colorama
 import urllib3
 
 from cryptodatahub.common.exception import InvalidValue
 
+from cryptoparser.common.base import Serializable
 from cryptoparser.common.exception import InvalidDataLength, InvalidType
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.exception import NetworkError, SecurityError
 from cryptolyzer.common.result import AnalyzerResultError
+from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
 
 from cryptolyzer import __setup__
 
@@ -61,8 +64,8 @@ def get_argument_parser():
     )
     parser.add_argument(
         '--output-format',
-        choices=['json', 'markdown'],
-        default='markdown',
+        choices=['json', 'markdown', 'highlighted'],
+        default='highlighted',
         help='format of the anlysis result (default: %(default)s)'
     )
     parser.add_argument(
@@ -104,7 +107,11 @@ def main():
         except (NetworkError, SecurityError, InvalidDataLength, InvalidType, InvalidValue) as e:
             analyzer_result = AnalyzerResultError(str(target), str(e))
 
-        if arguments.output_format == 'json':
+        if arguments.output_format == 'highlighted':
+            colorama.init(strip=False)
+            Serializable.post_text_encoder = SerializableTextEncoderHighlighted()
+            print(analyzer_result.as_markdown())
+        elif arguments.output_format == 'json':
             print(analyzer_result.as_json())
         elif arguments.output_format == 'markdown':
             print(analyzer_result.as_markdown())

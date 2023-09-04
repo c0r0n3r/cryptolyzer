@@ -24,13 +24,17 @@ import test.tls.test_simulations
 import test.tls.test_versions
 import test.tls.test_all
 
+import colorama
 import six
+
+from cryptoparser.common.base import Serializable, SerializableTextEncoder
 
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 
+from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
 from cryptolyzer.__main__ import main, get_argument_parser, get_protocol_handler_analyzer_and_uris
 from cryptolyzer.ja3.generate import AnalyzerGenerate
 
@@ -82,6 +86,25 @@ class TestMain(TestMainBase):
     def test_analyzer_uris_ipv4(self):
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_json('tls', 'versions', 'dns.google#8.8.8.8'))
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_markdown('tls', 'versions', 'dns.google#8.8.8.8'))
+
+    def test_analyzer_output_highlighted(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1_2),
+            'curves',
+            'ecc256.badssl.com',
+            443,
+            timeout=10
+        )
+        result = test.tls.test_curves.TestTlsCurves.get_result(**func_arguments)
+
+        colorama.init()
+        Serializable.post_text_encoder = SerializableTextEncoderHighlighted()
+        self.assertEqual(
+            self._get_test_analyzer_result_highlighted(**cli_arguments),
+            result.as_markdown() + '\n',
+        )
+        Serializable.post_text_encoder = SerializableTextEncoder()
+        colorama.deinit()
 
     def test_analyzer_output_tls_ciphers(self):
         func_arguments, cli_arguments = self._get_arguments(
