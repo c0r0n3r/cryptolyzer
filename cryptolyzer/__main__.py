@@ -68,7 +68,7 @@ def get_argument_parser():
     parser.add_argument(
         '-t', '--socket-timeout',
         type=parse_arg_socket_timeout,
-        default=5,
+        default=5.0,
         metavar='seconds',
         help='Maximum time to wait for server to responde (default: %(default)s seconds)'
     )

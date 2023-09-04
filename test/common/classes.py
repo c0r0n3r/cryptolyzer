@@ -36,15 +36,17 @@ from cryptolyzer.common.x509 import PublicKeyX509
 
 class TestMainBase(unittest.TestCase):
     @staticmethod
-    def _get_arguments(protocol_version, analyzer, hostname, port):
+    def _get_arguments(protocol_version, analyzer, hostname, port, timeout=None):
         ip_address = socket.gethostbyname(hostname)
 
         func_arguments = {
             'protocol_version': None if isinstance(protocol_version, str) else protocol_version,
             'host': hostname,
             'ip': ip_address,
-            'port': port
+            'port': port,
+            'timeout': timeout,
         }
+
         cli_arguments = {
             'protocol': protocol_version if isinstance(protocol_version, str) else protocol_version.identifier,
             'analyzer': analyzer,
@@ -52,7 +54,8 @@ class TestMainBase(unittest.TestCase):
                 hostname=hostname,
                 port=port,
                 ip_address=ip_address
-            )
+            ),
+            'timeout': timeout,
         }
 
         return func_arguments, cli_arguments

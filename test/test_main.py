@@ -89,6 +89,7 @@ class TestMain(TestMainBase):
             'ciphers',
             'rc4-md5.badssl.com',
             443,
+            timeout=10
         )
         result = test.tls.test_ciphers.TestTlsCiphers.get_result(**func_arguments)
         self.assertEqual(
@@ -105,6 +106,7 @@ class TestMain(TestMainBase):
             'all',
             'rc4-md5.badssl.com',
             443,
+            timeout=10
         )
         all_result = test.tls.test_all.TestTlsAll.get_result(**func_arguments)
         result_markdown = result._as_markdown_without_target(result, 0)  # pylint: disable=protected-access
@@ -112,14 +114,14 @@ class TestMain(TestMainBase):
 
     def test_analyzer_output_tls_pubkeyreq(self):
         result = test.tls.test_pubkeyreq.TestTlsPublicKeyRequest.get_result(
-            'client.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2)
+            'client.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2), timeout=10
         )
         self.assertEqual(
-            self._get_test_analyzer_result_json('tls1_2', 'pubkeyreq', 'client.badssl.com:443'),
+            self._get_test_analyzer_result_json('tls1_2', 'pubkeyreq', 'client.badssl.com:443', timeout=10),
             result.as_json() + '\n',
         )
         self.assertEqual(
-            self._get_test_analyzer_result_markdown('tls1_2', 'pubkeyreq', 'client.badssl.com:443'),
+            self._get_test_analyzer_result_markdown('tls1_2', 'pubkeyreq', 'client.badssl.com:443', timeout=10),
             result.as_markdown() + '\n',
         )
 
@@ -129,6 +131,7 @@ class TestMain(TestMainBase):
             'curves',
             'ecc256.badssl.com',
             443,
+            timeout=10
         )
         result = test.tls.test_curves.TestTlsCurves.get_result(**func_arguments)
         self.assertEqual(
@@ -146,6 +149,7 @@ class TestMain(TestMainBase):
             'dhparams',
             'dh2048.badssl.com',
             443,
+            timeout=10
         )
         result = test.tls.test_dhparams.TestTlsDHParams.get_result(**func_arguments)
         self.assertEqual(
@@ -163,6 +167,7 @@ class TestMain(TestMainBase):
             'extensions',
             'dh2048.badssl.com',
             443,
+            timeout=10
         )
         result = test.tls.test_extensions.TestTlsExtensions.get_result(**func_arguments)
         self.assertEqual(
@@ -197,6 +202,7 @@ class TestMain(TestMainBase):
             'sigalgos',
             'ecc256.badssl.com',
             443,
+            timeout=10
         )
         result = test.tls.test_sigalgos.TestTlsSigAlgos.get_result(**func_arguments)
         self.assertEqual(
@@ -214,6 +220,7 @@ class TestMain(TestMainBase):
             'simulations',
             'tls-v1-0.badssl.com',
             1010,
+            timeout=10
         )
         result = test.tls.test_simulations.TestTlsSimulations.get_result(**func_arguments)
         self.assertEqual(
@@ -231,6 +238,7 @@ class TestMain(TestMainBase):
             'versions',
             'tls-v1-0.badssl.com',
             1010,
+            timeout=10
         )
         result = test.tls.test_versions.TestTlsVersions.get_result(**func_arguments)
         self.assertEqual(
@@ -243,14 +251,14 @@ class TestMain(TestMainBase):
         )
 
     def test_analyzer_output_tls_all(self):
-        result = test.tls.test_all.TestTlsAll.get_result('rc4-md5.badssl.com', 443, protocol_version=None, timeout=5)
+        result = test.tls.test_all.TestTlsAll.get_result('rc4-md5.badssl.com', 443, protocol_version=None, timeout=10)
         self.assertEqual(
-            self._get_test_analyzer_result_json('tls', 'all', 'rc4-md5.badssl.com'),
+            self._get_test_analyzer_result_json('tls', 'all', 'rc4-md5.badssl.com', timeout=10),
             result.as_json() + '\n',
         )
 
         self.assertEqual(
-            self._get_test_analyzer_result_markdown('tls', 'all', 'rc4-md5.badssl.com'),
+            self._get_test_analyzer_result_markdown('tls', 'all', 'rc4-md5.badssl.com', timeout=10),
             result.as_markdown() + '\n',
         )
 

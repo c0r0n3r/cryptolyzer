@@ -324,7 +324,11 @@ class L4ServerUDP(L4ServerBase):
 class L7TransferBase(object):
     address = attr.ib(validator=attr.validators.instance_of(six.string_types))
     port = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
-    timeout = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((float, int))))
+    timeout = attr.ib(
+        default=None,
+        converter=attr.converters.optional(float),
+        validator=attr.validators.optional(attr.validators.instance_of(float))
+    )
     ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((
         six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
     ))))
