@@ -10,9 +10,23 @@ import six
 from cryptodatahub.common.types import convert_url
 from cryptodatahub.dnssec.algorithm import DnsRrType
 
+from cryptoparser.common.exception import InvalidType
 from cryptoparser.common.utils import get_leaf_classes
-from cryptoparser.dnsrec.record import DnsRecordDnskey, DnsRecordMx, DnsRecordDs, DnsRecordRrsig
+from cryptoparser.dnsrec.record import (
+    DnsRecordDnskey,
+    DnsRecordDs,
+    DnsRecordMx,
+    DnsRecordRrsig,
+    DnsRecordTxt,
+)
+from cryptoparser.dnsrec.txt import (
+    DnsRecordTxtValueDmarc,
+    DnsRecordTxtValueMtaSts,
+    DnsRecordTxtValueTlsRpt,
+    DnsRecordTxtValueSpf,
+)
 
+from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.dnsrec.transfer import DnsHandshakeBase
 
@@ -89,6 +103,38 @@ class L7ClientDnsBase(object):
         )
 
         return mx_records
+
+    def _get_txt_record_value(self, record_name, domain_prefix, record_value_type):
+        try:
+            txt_records = self._get_record_list(DnsRrType.TXT, DnsRecordTxt, domain_prefix)
+        except NetworkError:
+            return None
+
+        self._log_records(record_name, map(lambda record: '{}'.format(record.value), txt_records))
+
+        record_values = []
+        for txt_record in txt_records:
+            try:
+                record_values.append(record_value_type.parse_exact_size(txt_record.value.encode('ascii')))
+            except InvalidType:
+                pass
+
+        if len(record_values) != 1:
+            raise NotImplementedError()
+
+        return record_values[0]
+
+    def get_txt_record_spf_values(self):
+        return self._get_txt_record_value('SPF', None, DnsRecordTxtValueSpf)
+
+    def get_txt_record_dmarc_values(self):
+        return self._get_txt_record_value('DMARC', '_dmarc', DnsRecordTxtValueDmarc)
+
+    def get_txt_record_tls_rpt_values(self):
+        return self._get_txt_record_value('TLS-RPT', '_smtp._tls', DnsRecordTxtValueTlsRpt)
+
+    def get_txt_record_mta_sts_values(self):
+        return self._get_txt_record_value('MTA-STS', '_mta-sts', DnsRecordTxtValueMtaSts)
 
     def get_dnskey_records(self, domain_prefix=None):
         dnskey_records = self._get_record_list(DnsRrType.DNSKEY, DnsRecordDnskey, domain_prefix)

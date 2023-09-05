@@ -15,7 +15,7 @@ from cryptolyzer.common.utils import LogSingleton
 class AnalyzerResultHeaders(AnalyzerResultHttp):  # pylint: disable=too-few-public-methods
     headers = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of(HttpHeaderFieldBase)
+            member_validator=attr.validators.instance_of((HttpHeaderFieldBase, HttpHeaderFieldUnparsed))
         )
     )
 
@@ -37,7 +37,7 @@ class AnalyzerHeaders(AnalyzerHttpBase):
                 lambda header_field:
                     header_field.name
                     if isinstance(header_field, HttpHeaderFieldUnparsed)
-                    else header_field.get_canonical_name().value.normalized_name,
+                    else header_field.get_canonical_name(),
                 header_fields
             )))
         ))
