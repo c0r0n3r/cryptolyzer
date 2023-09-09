@@ -26,6 +26,7 @@ class TestParse(unittest.TestCase):
                 filter=lambda attribute, value: attribute.name != 'parameter_numbers'
             ),
             {
+                'vulnerabilities': [],
                 'key_size': 2048,
                 'name': '2048-bit MODP Group/Oakley Group 14',
                 'safe_prime': True,

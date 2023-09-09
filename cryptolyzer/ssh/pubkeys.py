@@ -46,14 +46,14 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
     _KEY_EXCHANGE_INIT_MESSAGES_BY_TYPE = OrderedDict([
         ((SshHostKeyType.KEY, Authentication.DSS), SshKeyExchangeInitHostKeyDSS()),
         ((SshHostKeyType.KEY, Authentication.ECDSA), SshKeyExchangeInitHostKeyECDSA()),
-        ((SshHostKeyType.KEY, Authentication.ED25519), SshKeyExchangeInitHostKeyED25519()),
+        ((SshHostKeyType.KEY, Authentication.EDDSA), SshKeyExchangeInitHostKeyED25519()),
         ((SshHostKeyType.KEY, Authentication.RSA), SshKeyExchangeInitHostKeyRSA()),
         ((SshHostKeyType.CERTIFICATE, Authentication.DSS), SshKeyExchangeInitHostCertificateV00DSS()),
         ((SshHostKeyType.CERTIFICATE, Authentication.RSA), SshKeyExchangeInitHostCertificateV00RSA()),
         ((SshHostKeyType.CERTIFICATE, Authentication.DSS), SshKeyExchangeInitHostCertificateV01DSS()),
         ((SshHostKeyType.CERTIFICATE, Authentication.RSA), SshKeyExchangeInitHostCertificateV01RSA()),
         ((SshHostKeyType.CERTIFICATE, Authentication.ECDSA), SshKeyExchangeInitHostCertificateV01ECDSA()),
-        ((SshHostKeyType.CERTIFICATE, Authentication.ED25519), SshKeyExchangeInitHostCertificateV01ED25519()),
+        ((SshHostKeyType.CERTIFICATE, Authentication.EDDSA), SshKeyExchangeInitHostCertificateV01ED25519()),
     ])
 
     @classmethod
@@ -76,7 +76,10 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
         analyzer_result = AnalyzerCiphers().analyze(analyzable)
         LogSingleton().disabled = False
         host_key_types = set(map(
-            lambda host_key_algorithm: (host_key_algorithm.value.key_type, host_key_algorithm.value.authentication),
+            lambda host_key_algorithm: (
+                host_key_algorithm.value.key_type,
+                host_key_algorithm.value.signature.value.key_type
+            ),
             analyzer_result.host_key_algorithms
         ))
 
