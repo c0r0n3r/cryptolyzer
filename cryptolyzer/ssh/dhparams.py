@@ -6,6 +6,7 @@ import six
 
 
 from cryptodatahub.common.algorithm import KeyExchange
+from cryptodatahub.common.key import PublicKeySize
 
 from cryptodatahub.ssh.algorithm import SshKexAlgorithm
 
@@ -34,7 +35,9 @@ class AnalyzerResultGroupExchange(object):
         attr.validators.deep_iterable(attr.validators.instance_of(SshKexAlgorithm)),
         metadata={'human_readable_name': 'Group Exchange Algorithms'}
     )
-    key_sizes = attr.ib(attr.validators.deep_iterable(attr.validators.instance_of(six.integer_types)))
+    key_sizes = attr.ib(attr.validators.deep_iterable(
+        member_validator=attr.validators.instance_of(PublicKeySize))
+    )
     bounds_tolerated = attr.ib(attr.validators.instance_of(bool))
 
 
@@ -115,7 +118,11 @@ class AnalyzerDHParams(AnalyzerSshBase):
                     )
                 )
 
-        return AnalyzerResultGroupExchange(gex_algorithms, list(sorted(gex_key_sizes)), gex_tolerates_bounds)
+        return AnalyzerResultGroupExchange(
+            gex_algorithms,
+            [PublicKeySize(KeyExchange.DHE, gex_key_size) for gex_key_size in sorted(gex_key_sizes)],
+            gex_tolerates_bounds
+        )
 
     def analyze(self, analyzable):
         LogSingleton().disabled = True

@@ -74,7 +74,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
     def test_size(self):
         result = self.get_result('dh480.badssl.com', 443)
         self.assertEqual(result.groups, [])
-        self.assertEqual(result.dhparam.key_size, 480)
+        self.assertEqual(result.dhparam.key_size.value, 480)
         self.assertEqual(result.dhparam.prime, True)
         self.assertEqual(result.dhparam.safe_prime, True)
         self.assertEqual(result.dhparam.well_known, None)
@@ -88,7 +88,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
     def test_prime(self):
         result = self.get_result('dh-composite.badssl.com', 443)
         self.assertEqual(result.groups, [])
-        self.assertEqual(result.dhparam.key_size, 2048)
+        self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, False)
         self.assertEqual(result.dhparam.safe_prime, False)
         self.assertEqual(result.dhparam.well_known, None)
@@ -97,7 +97,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
     def test_safe_prime(self):
         result = self.get_result('dh-small-subgroup.badssl.com', 443)
         self.assertEqual(result.groups, [])
-        self.assertEqual(result.dhparam.key_size, 2048)
+        self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, True)
         self.assertEqual(result.dhparam.safe_prime, False)
         self.assertEqual(result.dhparam.well_known, None)
@@ -106,7 +106,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
     def test_well_known_prime(self):
         result = self.get_result('ubuntuforums.org', 443)
         self.assertEqual(result.groups, [])
-        self.assertEqual(result.dhparam.key_size, 2048)
+        self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, True)
         self.assertEqual(result.dhparam.safe_prime, True)
         self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP)

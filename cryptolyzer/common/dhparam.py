@@ -7,7 +7,8 @@ import collections
 import six
 import attr
 
-from cryptodatahub.common.algorithm import NamedGroup
+from cryptodatahub.common.algorithm import KeyExchange, NamedGroup
+from cryptodatahub.common.key import convert_public_key_size, PublicKeySize
 from cryptodatahub.common.parameter import DHParameterNumbers, DHParamWellKnown
 
 from cryptoparser.common.base import Vector, VectorParamNumeric, Serializable
@@ -111,7 +112,10 @@ class DHParameter(Serializable):
         validator=attr.validators.instance_of(DHParameterNumbers),
         metadata={'human_friendly': False},
     )
-    key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
+    key_size = attr.ib(
+        converter=convert_public_key_size(KeyExchange.DHE),
+        validator=attr.validators.instance_of(PublicKeySize)
+    )
     well_known = attr.ib(init=False, validator=attr.validators.in_(DHParamWellKnown))
     prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
     safe_prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
@@ -124,9 +128,9 @@ class DHParameter(Serializable):
 
         # If the number is not divisible by any of the small primes, then
         # move on to the full Miller-Rabin test.
-        self.prime = is_prime(self.key_size, param_num_p)
+        self.prime = is_prime(self.key_size.value, param_num_p)
         if self.prime:
-            self.safe_prime = is_prime(self.key_size, param_num_p // 2)
+            self.safe_prime = is_prime(self.key_size.value, param_num_p // 2)
 
     def __attrs_post_init__(self):
         for well_know_public_number in DHParamWellKnown:

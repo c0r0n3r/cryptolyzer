@@ -141,8 +141,8 @@ class AnalyzerResultVulnerabilityDHParams(object):
 
     @staticmethod
     def from_dhparam(dhparam, groups):
-        logjam = dhparam is not None and dhparam.key_size <= 1024
-        dheat = ((dhparam is not None and dhparam.key_size > 4096) or
+        logjam = dhparam is not None and dhparam.key_size.value <= 1024
+        dheat = ((dhparam is not None and dhparam.key_size.value > 4096) or
                  (max([group.value.named_group.value.size for group in groups] + [0]) > 4096))
 
         return AnalyzerResultVulnerabilityDHParams(
