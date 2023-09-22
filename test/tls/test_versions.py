@@ -150,10 +150,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(
             result.versions,
-            [
-                TlsProtocolVersion(version)
-                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
-            ]
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]]
         )
         self._check_log(result)
 
