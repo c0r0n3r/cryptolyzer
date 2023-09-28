@@ -248,6 +248,14 @@ Differentiators
 Analyzers
 """""""""
 
+-  e-mail authentication, reporting related records
+
+   -  `Domain-based Message Authentication, Reporting, and Conformance <https://www.rfc-editor.org/rfc/rfc7489>`__
+      (DMARC)
+   -  `Sender Policy Framework <https://www.rfc-editor.org/rfc/rfc7208>`__ (SPF)
+   -  `SMTP MTA Strict Transport Security <https://www.rfc-editor.org/rfc/rfc8461>`__ (MTA-STS)
+   -  `SMTP TLS Reporting <https://www.rfc-editor.org/rfc/rfc8460>`__ (TLSRPT)
+
 -  `DNSSEC <https://www.rfc-editor.org/rfc/rfc4034>`__ records
 
    -  `DNSKEY <https://www.rfc-editor.org/rfc/rfc4034#section-2>`__
