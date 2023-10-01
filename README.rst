@@ -11,11 +11,12 @@ additional security mechanisms (`web security <https://infosec.mozilla.org/guide
 `JA3 tag <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__) or `HASSH
 tag <https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/>`__).
 
+-----
 Usage
 -----
 
 Pip
-^^^
+===
 
 .. code:: shell
 
@@ -28,7 +29,7 @@ Pip
    cryptolyze dns dnssec example.com
 
 Docker
-^^^^^^
+======
 
 .. code:: shell
 
@@ -51,34 +52,38 @@ Docker
    docker run -ti --rm -p 127.0.0.1:2222:4433 coroner/cryptolyzer hassh generate 127.0.0.1:2222
    openssl s_client -connect 127.0.0.1:2222
 
+-------
 Support
 -------
 
 Python implementation
-^^^^^^^^^^^^^^^^^^^^^
+=====================
 
 -  CPython (2.7, 3.3+)
 -  PyPy (2.7, 3.5+)
 
 Operating systems
-^^^^^^^^^^^^^^^^^
+=================
 
 -  Linux
 -  macOS
 -  Windows
 
+------------
 Social Media
 ------------
 
 -  `Twitter <https://twitter.com/CryptoLyzer>`__
 -  `Facebook <https://www.facebook.com/cryptolyzer>`__
 
+-------------
 Documentation
 -------------
 
 Detailed `documentation <https://cryptolyzer.readthedocs.io>`__ is available on the project's
 `Read the Docs <https://readthedocs.com>`__ site.
 
+-------
 License
 -------
 
@@ -88,6 +93,7 @@ The `code <https://gitlab.com/coroner/cryptolyzer>`__ is available under the ter
 A non-comprehensive, but straightforward description of MPL 2.0 can be found at
 `Choose an open source license <https://choosealicense.com/licenses#mpl-2.0>`__ website.
 
+-------
 Credits
 -------
 

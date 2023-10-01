@@ -1,8 +1,10 @@
+=======
 Summary
 =======
 
 .. include:: ../README.rst
 
+=======
 Details
 =======
 
@@ -26,6 +28,7 @@ Paramiko, ...).
     installation
     development
 
+=======
 History
 =======
 

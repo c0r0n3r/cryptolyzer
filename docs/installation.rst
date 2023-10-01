@@ -1,8 +1,9 @@
+------------
 Installation
 ------------
 
 Debian-based Linux Distributions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+================================
 
 .. code:: shell
 
@@ -18,7 +19,7 @@ Debian-based Linux Distributions
    cryptolyze http headers www.example.com
 
 RPM-based Linux Distributions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+=============================
 
 .. code:: shell
 

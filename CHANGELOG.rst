@@ -1,6 +1,8 @@
+=========
 Changelog
 =========
 
+-------------------
 0.10.2 - 2023-08-28
 -------------------
 
@@ -49,11 +51,12 @@ Changelog
 
       -  TLS feature (e.g. OCSP must staple) extension check (#87)
 
+------------------
 0.9.1 - 2023-06-22
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -61,11 +64,12 @@ Features
 
       -  certificate transparency (CT) log support (#47)
 
+------------------
 0.9.0 - 2023-04-29
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -73,11 +77,12 @@ Features
 
       -  `OpenVPN <https://en.wikipedia.org/wiki/OpenVPN>`__ support (#85)
 
+------------------
 0.8.5 - 2023-04-02
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -89,11 +94,12 @@ Features
          -  `Firefox <https://en.wikipedia.org/wiki/Firefox>`__
          -  `Opera <https://en.wikipedia.org/wiki/Opera_(web_browser)>`__
 
+------------------
 0.8.4 - 2023-01-22
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -118,11 +124,12 @@ Features
       -  RC4
       -  Sweet32 attack
 
+------------------
 0.8.3 - 2022-11-06
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -130,11 +137,12 @@ Features
 
    -  RDP hybrid mode support (#109)
 
+------------------
 0.8.2 - 2022-10-10
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  Generic
 
@@ -161,7 +169,7 @@ Features
       -  support finite field Diffie-Hellman ephemeral (FFDHE) parameter negotiation defined in RFC 7919 (#98)
 
 Notable fixes
-~~~~~~~~~~~~~
+=============
 
 -  TLS (``tls``)
 
@@ -173,11 +181,12 @@ Notable fixes
 
       -  Not supported signature algorithms are not listed anymore (#102)
 
+------------------
 0.8.1 - 2022-03-23
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  JA3 (``ja3``)
 
@@ -191,11 +200,12 @@ Features
       -  support PostgreSQL clients (#78)
       -  support LDAP clients (#77)
 
+------------------
 0.8.0 - 2022-01-18
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  SSH (``ssh``)
 
@@ -208,11 +218,12 @@ Features
 
       -  identify application server and version (#71)
 
+------------------
 0.7.3 - 2021-12-26
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  SSH (``ssh``)
 
@@ -221,7 +232,7 @@ Features
       -  Add all command to SSH
 
 Notable fixes
-~~~~~~~~~~~~~
+=============
 
 -  Generic
 
@@ -243,11 +254,12 @@ Notable fixes
 
       -  Handle missing certificates message well during an anonymous Diffie-Hellman key exchange (#66)
 
+------------------
 0.7.2 - 2021-10-07
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  SSH (``ssh``)
 
@@ -256,17 +268,18 @@ Features
       -  add group exchange algorithms supported by the server to the result (#53)
 
 Other
-~~~~~
+=====
 
 -  switch to Markdown format in changelog, readme and contributing
 -  update contributing to the latest version from contribution-guide.org
 -  add summary of the project to the readme
 
+------------------
 0.7.1 - 2021-09-20
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -275,7 +288,7 @@ Features
    -  PostgreSQL opportunistic TLS (``STARTTLS``) support (#55)
 
 Notable fixes
-~~~~~~~~~~~~~
+=============
 
 -  TLS (``tls``)
 
@@ -287,11 +300,12 @@ Notable fixes
 
       -  No fallback mechanism is used to check cipher suites if server honors long cipher suite lists (#59)
 
+------------------
 0.7.0 - 2021-09-02
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -320,7 +334,7 @@ Features
       -  check which DH parameter sizes supported by the server by key exchange (#53)
 
 Notable fixes
-~~~~~~~~~~~~~
+=============
 
 -  TLS (``tls``)
 
@@ -328,11 +342,12 @@ Notable fixes
 
       -  handle server long cipher suite, signature algorithm list intolerance (#52)
 
+------------------
 0.6.0 - 2021-05-27
 ------------------
 
 Improvements
-~~~~~~~~~~~~
+============
 
 -  TLS (``tls``)
 
@@ -356,11 +371,12 @@ Improvements
 
       -  add TLS 1.3 support (#35)
 
+------------------
 0.5.0 - 2021-04-08
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -372,18 +388,19 @@ Features
       `negotiated algorithms <https://tools.ietf.org/html/rfc4253#section-7.1>`__ (#33)
 
 Usability
-~~~~~~~~~
+=========
 
 -  Generic
 
    -  use human readable algorithms names in Markdown output (#48)
    -  command line interface gives error output instead of traceback on exception (#49)
 
+------------------
 0.4.0 - 2021-01-30
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -391,7 +408,7 @@ Features
    -  `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`__ support (#25)
 
 Notable fixes
-~~~~~~~~~~~~~
+=============
 
 -  TLS (``tls``)
 
@@ -405,7 +422,7 @@ Notable fixes
       -  handle that a server supports only non-RSA public keys (#41)
 
 Performance
-~~~~~~~~~~~
+===========
 
 -  TLS (``tls``)
 
@@ -413,11 +430,12 @@ Performance
 
       -  speed up TLS supported curve check (#39)
 
+------------------
 0.3.1 - 2020-09-15
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  Generic
 
@@ -432,23 +450,24 @@ Features
          support for TLS cipher suite checker (#32)
 
 Notable fixes
-~~~~~~~~~~~~~
+=============
 
 -  TLS (``tls``)
 
    -  fix several uncertain test cases (#28)
 
 Refactor
-~~~~~~~~
+========
 
 -  remove unnecessary unicode conversions (#29)
 -  switch from `cryptography <https://cryptography.io>`__ to `certvalidator <https://github.com/wbond/certvalidator>`__
 
+------------------
 0.3.0 - 2020-04-30
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -462,20 +481,21 @@ Features
       generatoin support (#23)
 
 Notable fixes
-~~~~~~~~~~~~~
+=============
 
 -  FTP server check cause Python traceback on connection close (#27)
 
 Refactor
-~~~~~~~~
+========
 
 -  use attrs to avoid boilerplates (#24)
 
+------------------
 0.2.0 - 2019-12-05
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  TLS (``tls``)
 
@@ -489,7 +509,7 @@ Features
    -  FTP opportunistic TLS (``STARTTLS``) support (#8)
 
 Notable Fixes
-~~~~~~~~~~~~~
+=============
 
 -  TLS (``tls``)
 
@@ -517,7 +537,7 @@ Notable Fixes
    -  uniform timeout handling in TLS clients (#12)
 
 Other
-~~~~~
+=====
 
 -  improve unit tests (100% code coverage)
 -  Docker support and ready-to-use container on DockerHub
@@ -537,7 +557,7 @@ Other
 ------------------
 
 Features
-~~~~~~~~
+========
 
 -  add analyzer for checking TLS server against supported
    `protocol versions <https://en.wikipedia.org/wiki/Transport_Layer_Security#History_and_development>`__
@@ -552,7 +572,7 @@ Features
    `public key certificates <https://en.wikipedia.org/wiki/Public_key_certificate>`__
 
 Improvements
-~~~~~~~~~~~~
+============
 
 -  check TLS server against used fallback (handshake without
    `SNI <https://en.wikipedia.org/wiki/Server_Name_Indication>`__) certificates
