@@ -7,7 +7,6 @@ pathlib2==2.3.7.post1;python_version<"3.4"
 pathlib2;python_version>="3.4"
 pyfakefs
 python-dateutil
-py2-ipaddress;python_version<"3.4"
 requests
 dnspython
 typing;python_version<"3.5"
