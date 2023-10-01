@@ -6,6 +6,9 @@ Changelog
 0.10.2 - 2023-08-28
 -------------------
 
+Features
+========
+
 -  DNS (``dns``)
 
    -  e-mail authentication, reporting (``mail``)
@@ -20,8 +23,12 @@ Changelog
          -  `SMTP TLS Reporting <https://www.rfc-editor.org/rfc/rfc8460>`__ (TLSRPT)
 
 
+-------------------
 0.10.1 - 2023-08-29
 -------------------
+
+Features
+========
 
 -  DNS (``dns``)
 
@@ -33,8 +40,12 @@ Changelog
          -  `DS <https://www.rfc-editor.org/rfc/rfc4034#section-5>`__
          -  `RRSIG <https://www.rfc-editor.org/rfc/rfc4034#section-3>`__
 
+-------------------
 0.10.0 - 2023-08-03
 -------------------
+
+Features
+========
 
 -  TLS (``tls``)
 
