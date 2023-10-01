@@ -234,9 +234,6 @@ Headers
    -  `X-Content-Type-Options <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options>`__
    -  `X-Frame-Options <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options>`__
 
-Features
---------
-
 DNS
 ^^^
 
