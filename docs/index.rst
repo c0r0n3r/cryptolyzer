@@ -26,6 +26,7 @@ Paramiko, ...).
 
     features
     installation
+    cli
     development
 
 =======
