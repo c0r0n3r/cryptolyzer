@@ -1,4 +1,4 @@
-attrs>=19.1,<22.0.1
+attrs>=20.3.0,<22.0.1
 certvalidator
 cryptoparser>=0.10.0
 pathlib2==2.3.7.post1;python_version<"3.4"
