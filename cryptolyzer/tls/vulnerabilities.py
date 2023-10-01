@@ -136,7 +136,7 @@ class AnalyzerResultVulnerabilityDHParams(object):
     )
     dheat = attr.ib(
         validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'DHEat attack'},
+        metadata={'human_readable_name': 'D(HE)at attack'},
     )
 
     @staticmethod
