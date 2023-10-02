@@ -14,9 +14,9 @@ However the API can provide the most complete functionality, the CLI also strive
 do that CLI provides three output formats. The first one for human analysis where the cryptographic algorithm names and
 the values of key sizes and other security-related settings are colorized according to their security strength using the
 well-known `traffic light rating system <https://en.wikipedia.org/wiki/Traffic_light_rating_system>`__. The other two
-output formats (`Markdown <https://en.wikipedia.org/wiki/Markdown>`__, `JSON <https://en.wikipedia.org/wiki/JSON>`__)
-are machine-readable, however the Markdown format even human-readable and even suitable for generating documentation in
-different formats (e.g. DOCX, PDF, ...).
+output formats (:ref:`Output Formats / Markdown`, :ref:`Output Formats / JSON`) are machine-readable, however the
+Markdown format even human-readable and even suitable for generating documentation in different formats (e.g. DOCX, PDF,
+...).
 
 .. only:: html
 

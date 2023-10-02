@@ -188,3 +188,105 @@ integrity of the transfer data are guaranteed by the TLS protocol, which can be 
 .. code:: shell
 
    cryptolyze http headers example.com
+
+--------------
+Output Formats
+--------------
+
+Highlighted
+===========
+
+The default format provides a human-readable output using the traffic light rating system, with the well-known red,
+amber (yellow), and green colors, where these colors indicate the different security levels of the cryptographic
+algorithms, (a)symmetric key sizes, or any methods that respectively considered
+
+* **insecure**: should not be used in any circumstances
+* **questionable**: should not be preferred, or may be omitted depending on the details
+* **secure**: should be used exclusively, or at least preferred
+
+This output contains not only the security level of the algorithms, key size, or methods but also states the reason,
+whether they are considered insecure or questionable. For instance, the encryption algorithm DES is insecure -- because
+it is affected by the Sweet32 attack --, or Diffie--Hellman key exchange with if larger key sizes are used questionable,
+because of the D(HE)at attack. These findings are part of the output to able the user to understand the reason and
+handle the threat properly.
+
+.. only:: html
+
+  .. raw:: html
+
+    <script async id="asciicast-618795" src="https://asciinema.org/a/618795.js"></script>
+
+
+.. _Output Formats / Markdown:
+
+Markdown
+========
+
+The output similar to the highlighted output format, except that it is not colorized.
+
+.. code:: shell
+
+    $ cryptolyze --output-format=markdown tls versions dns.google
+
+.. code:: markdown
+
+    * Target:
+        * Scheme: tls
+        * Address: dns.google
+        * IP address: 8.8.4.4
+        * Port: 443
+        * Protocol Version: n/a
+    * Protocol Versions:
+        1. TLS 1.2
+        2. TLS 1.3
+    * Alerts Unsupported TLS Version: yes
+
+As a consequence of the Markdown format, it is still human-readable, but it also makes possible the post-processing by
+document converter tools such as `Pandoc <https://pandoc.org/>`__, giving the opportunity to create a standalone
+document or insert the analysis result into a report easily.
+
+.. code:: shell
+
+    $ cryptolyze --output-format=markdown tls all example.com \
+    | pandoc --from markdown --to docx --output analysis.docx
+
+.. _Output Formats / JSON:
+
+JSON
+====
+
+The JSON output format serves the purpose of machine processing. Along with the fact that CryptoLyzer has a Python API,
+one may want to process the analysis result from other programming languages, or just simply transform it using other
+tools. One can simply pretty-print the JSON output by ``jq``,
+
+.. code:: shell
+
+    $ cryptolyze --output-format=json tls versions dns.google | jq
+
+.. code:: json
+
+    {
+        "target": {
+            "scheme": "tls",
+            "address": "dns.google",
+            "ip": "8.8.8.8",
+            "port": 443,
+            "proto_version": null
+        },
+        "versions": [
+            "tls1_2",
+            "tls1_3"
+        ],
+        "alerts_unsupported_tls_version": true
+    }
+
+or can perform more complex transformations, such as selecting the public key types of an SSH server from the analysis result.
+
+.. code:: shell
+
+    $ cryptolyze --output-format json ssh2 pubkeys github.com \
+    | jq --raw-output .public_keys[].key_type
+
+    ECDSA
+    ED25519
+    RSA
