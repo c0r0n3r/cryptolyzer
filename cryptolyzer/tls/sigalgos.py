@@ -25,6 +25,12 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultSigAlgos(AnalyzerResultTls):
+    """
+    :class: Analyzer result relates to the signature algorithms
+
+    :param certificate_types: supported signature algorithms (can be negotiated using signature algorithms extension)
+    """
+
     sig_algos = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsSignatureAndHashAlgorithm)),
         metadata={'human_readable_name': 'Signature Algorithms'}

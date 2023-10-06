@@ -29,6 +29,14 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultPublicKeyRequest(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
+    """
+    :class: Analyzer result relates to the client authentication (cerificate-based)
+
+    :param certificate_types: types of certificate accepted for authentication
+    :param signature_algorithms: signature algorithms accepted for authentication
+    :param distinguished_names: distinguished names (DN) of certificates accepted for authentication
+    """
+
     certificate_types = attr.ib(
         validator=attr.validators.optional(attr.validators.deep_iterable(
             member_validator=attr.validators.in_(TlsClientCertificateType)

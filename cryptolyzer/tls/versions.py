@@ -27,6 +27,13 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
+    """
+    :class: Analyzer result relates to protocol version.
+
+    :param versions: supported protocol versions (TLS/SSL).
+    :param alerts_unsupported_tls_version: whether unsupported protocol version alerted according to the standard.
+    """
+
     versions = attr.ib(
         validator=attr.validators.deep_iterable(
             attr.validators.instance_of(TlsProtocolVersion)

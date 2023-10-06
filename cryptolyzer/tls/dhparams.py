@@ -35,6 +35,15 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultDHParams(AnalyzerResultTls):
+    """
+    :class: Analyzer result relates to Diffie-Hellman (DH) key exchange
+
+    :param groups: supported DH named groups (can be negotiated using TLS 1.3 or TLS 1.2 with extension defined in RFC
+        7919)
+    :param dhparam: DH paramater sent by the server using TLS versions up to 1.2
+    :param key_reuse: whether DH keys are shared between different connections (not ephemeral)
+    """
+
     groups = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsNamedCurve)),
         metadata={'human_readable_name': 'Named Groups'}

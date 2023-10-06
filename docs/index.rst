@@ -27,6 +27,7 @@ Paramiko, ...).
     features
     installation
     cli
+    api
     development
 
 =======

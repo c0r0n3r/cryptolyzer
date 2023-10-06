@@ -38,6 +38,18 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 
 @attr.s
 class CertificateChainTls(Serializable):
+    """
+    :class: Analyzer result relates to a certificate chain
+
+    :param sni_sent: whether server name indication (SNI) extension is used by the client when the server sent the
+        chain.
+    :param subject_matches: whether the subject (common name) of the leaf certificate in the chain mathes the analyzed
+        server's fully qualified domain name.
+    :param certificate_chain: the list of X.509 certificates sent in the chain.
+    :param certificate_status: certificate status (OCSP staple) relate to the leaf certificate in the chain.
+    :param scts: list of signed certificate timestamp (SCT) relate to the certificate in the chain.
+    """
+
     sni_sent = attr.ib(
         validator=attr.validators.instance_of(bool),
         metadata={'human_readable_name': 'Server Name Indication (SNI)'}
@@ -59,6 +71,12 @@ class CertificateChainTls(Serializable):
 
 @attr.s
 class AnalyzerResultPublicKeys(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
+    """
+    :class: Analyzer result relates to the signature algorithms.
+
+    :param pubkeys: list of the certificate chains sent by the server.
+    """
+
     pubkeys = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of(CertificateChainTls)),
         metadata={'human_readable_name': 'TLS Certificates'},

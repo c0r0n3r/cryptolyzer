@@ -27,6 +27,13 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultCipherSuites(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
+    """
+    :class: Analyzer result relates to the negotiable cipher suites.
+
+    :param cipher_suites: the supported cipher suites.
+    :param extension_supported: whether named group extension is supported.
+    """
+
     cipher_suites = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of((TlsCipherSuite, SslCipherKind)))
     )
