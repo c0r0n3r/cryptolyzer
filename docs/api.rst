@@ -390,3 +390,42 @@ Result Classes
 
 .. automodule:: cryptolyzer.ssh.pubkeys
     :members:
+
+HTTP(S)
+=======
+
+By now, exclusively the 1.1 version of the HTTP protocol is used in practice, so CryptoLyzer supports only the 1.1
+version of the HTTP protocol. The analyses work both with the plain text version of the protocol (HTTP) and the
+TLS-secured version (HTTPS).
+
+Headers
+-------
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptolyzer.httpx.headers import AnalyzerHeaders
+    >>> from cryptolyzer.httpx.client import L7ClientHttp
+    >>>
+    >>> analyzer = AnalyzerHeaders()
+    >>> client = L7ClientHttp('https://hstspreload.org/')
+    >>> result = analyzer.analyze(client, None)
+    >>>
+    >>> header = next(filter(
+    ... lambda header: isinstance(header, HttpHeaderFieldSTS),
+    ... result.headers
+    ... ))
+    >>>
+    >>> header.value.preload.value
+    True
+    >>> header.value.max_age.value
+    datetime.timedelta(days=365)
+
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.httpx.headers
+    :members:
