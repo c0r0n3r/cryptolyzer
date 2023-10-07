@@ -14,6 +14,13 @@ from cryptolyzer.common.utils import LogSingleton
 
 @attr.s
 class AnalyzerResultVersions(AnalyzerResultSsh):  # pylint: disable=too-few-public-methods
+    """
+    :class: Analyzer result relates to protocol and software versions
+
+    :param protocol_versions: List of supported protocol versions.
+    :param software_version: Software versions (and vendor) of the server.
+    """
+
     protocol_versions = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of(SshProtocolVersion))
     )

@@ -21,6 +21,27 @@ from cryptolyzer.common.utils import LogSingleton
 
 @attr.s
 class AnalyzerResultCiphers(AnalyzerResultSsh):  # pylint: disable=too-many-instance-attributes
+    """
+    :class: Analyzer result relates to the negotiable cryptographic algorithms.
+
+    :param kex_algorithms: List of the negotiable key exchange algorithms.
+    :param host_key_algorithms: List of the negotiable host key algorithms.
+    :param encryption_algorithms_client_to_server: List of the negotiable encryption algorithms in client-to-server
+        direction.
+    :param encryption_algorithms_server_to_client: List of the negotiable encryption algorithms in server-to-client
+        direction.
+    :param mac_algorithms_client_to_server: List of the negotiable message authentication code algorithms in
+        client-to-server direction.
+    :param mac_algorithms_server_to_client: List of the negotiable message authentication code algorithms in
+        server-to-client direction.
+    :param compression_algorithms_client_to_server: List of the negotiable compression algorithms in client-to-server
+        direction.
+    :param compression_algorithms_server_to_client: List of the negotiable compression algorithms in server-to-client
+        direction.
+    :param hassh_fingerprint: `HASSH <https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/>`__
+        fingerprint of the negotiable algorithms.
+    """
+
     kex_algorithms = attr.ib(
         validator=attr.validators.deep_iterable(
             member_validator=attr.validators.instance_of((SshKexAlgorithm, ) + six.string_types)

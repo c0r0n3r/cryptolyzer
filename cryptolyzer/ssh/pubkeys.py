@@ -39,6 +39,12 @@ from cryptolyzer.ssh.client import (
 
 @attr.s
 class AnalyzerResultPublicKeys(AnalyzerResultSsh):
+    """
+    :class: Analyzer result relates to a host keys/certificates.
+
+    :param public_keys: List of host keys/certificates.
+    """
+
     public_keys = attr.ib(validator=attr.validators.deep_iterable(attr.validators.instance_of(SshPublicKeyBase)))
 
 

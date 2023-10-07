@@ -31,6 +31,14 @@ from cryptolyzer.ssh.ciphers import AnalyzerCiphers
 
 @attr.s
 class AnalyzerResultGroupExchange(object):
+    """
+    :class: Analyzer result relates to DH group exchange
+
+    :param gex_algorithms: List of the negotiable group exchange algorithms.
+    :param key_sizes: List of the negotiable key size during the group exchange.
+    :param bounds_tolerated: Whether server tolerate the range of the supported key sizes by the client.
+    """
+
     gex_algorithms = attr.ib(
         attr.validators.deep_iterable(attr.validators.instance_of(SshKexAlgorithm)),
         metadata={'human_readable_name': 'Group Exchange Algorithms'}
@@ -43,6 +51,12 @@ class AnalyzerResultGroupExchange(object):
 
 @attr.s
 class AnalyzerResultKeyExchange(Serializable):
+    """
+    :class: Analyzer result relates to DH key exchange
+
+    :param kex_algorithms: List of the negotiable key exchange algorithms.
+    """
+
     kex_algorithms = attr.ib(attr.validators.deep_iterable(attr.validators.instance_of(SshKexAlgorithm)))
 
     def _as_markdown(self, level):
@@ -54,6 +68,13 @@ class AnalyzerResultKeyExchange(Serializable):
 
 @attr.s
 class AnalyzerResultDHParams(AnalyzerResultSsh):
+    """
+    :class: Analyzer result relates to Diffie-Hellman (DH) key exchange
+
+    :param key_exchange: Key exchange related analyzer result, when supported.
+    :param group_exchange: Group exchange related analyzer result, when supported.
+    """
+
     key_exchange = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(AnalyzerResultKeyExchange))
     )
