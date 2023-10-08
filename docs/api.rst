@@ -429,3 +429,43 @@ Result Classes
 
 .. automodule:: cryptolyzer.httpx.headers
     :members:
+
+DNSSEC
+======
+
+Code Snippet
+------------
+
+.. code:: python
+
+    >>> from cryptolyzer.dnsrec.dnssec import AnalyzerDnsSec
+    >>> from cryptolyzer.dnsrec.client import L7ClientDns
+    >>>
+    >>> analyzer = AnalyzerDnsSec()
+    >>> client = L7ClientDns('cloudflare.com')
+    >>>
+    >>> result = analyzer.analyze(client)
+    >>>
+    >>> list(map(
+    ... lambda dns_key: set(map(lambda flag: flag.name, dns_key.flags)),
+    ... result.dns_keys
+    ... ))
+    [{'DNS_ZONE_KEY'}, {'DNS_ZONE_KEY'}, {'SECURE_ENTRY_POINT', 'DNS_ZONE_KEY'}]
+    >>>
+    >>> list(map(
+    ... lambda dns_key: dns_key.key_tag,
+    ... result.dns_keys
+    ... ))
+    [43038, 32553, 57355]
+    >>>
+    >>> list(map(
+    ... lambda digital_signature: digital_signature.key_tag,
+    ... result.digital_signatures
+    ... ))
+    [57355]
+
+Result Classes
+--------------
+
+.. automodule:: cryptolyzer.dnsrec.dnssec
+    :members:
