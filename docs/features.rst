@@ -157,7 +157,7 @@ Public Keys
 Vulnerabilities
 """""""""""""""
 
--  `DHEat attack <https://dheatattack.com/>`__
+-  `D(HE)at attack <https://dheatattack.com/>`__
 -  `DROWN attack <https://drownattack.com/>`__
 -  `FREAK attack <https://en.wikipedia.org/wiki/FREAK>`__
 -  `Logjam attack <https://weakdh.org/>`__
