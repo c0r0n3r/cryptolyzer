@@ -27,5 +27,4 @@ html_sidebars = {
 html_theme_options = {
     'description': 'Fast and flexible cryptographic settings analyzer library for Python with CLI',
     'fixed_sidebar': True,
-    'collapse_navigation': False,
 }
