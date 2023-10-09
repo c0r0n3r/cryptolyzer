@@ -1,6 +1,6 @@
 import datetime
 
-from cryptolyzer.__setup__ import __author__, __title__
+from cryptolyzer.__setup__ import __author__, __title__, __version__
 
 
 extensions = []
@@ -10,6 +10,7 @@ master_doc = 'index'
 
 project = __title__
 copyright = f'{datetime.datetime.now().year}, {__author__}'
+version = release = __version__
 
 exclude_patterns = ['_build']
 
