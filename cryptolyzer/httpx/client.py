@@ -7,6 +7,8 @@ import attr
 
 import six
 
+from cryptodatahub.common.types import convert_url
+
 from cryptoparser.common.utils import get_leaf_classes
 
 from cryptolyzer.httpx.transfer import HttpHandshakeBase
@@ -14,7 +16,10 @@ from cryptolyzer.httpx.transfer import HttpHandshakeBase
 
 @attr.s
 class L7ClientHttpBase(object):
-    uri = attr.ib(validator=attr.validators.instance_of(urllib3.util.url.Url))
+    uri = attr.ib(
+        converter=convert_url(),
+        validator=attr.validators.instance_of(urllib3.util.url.Url)
+    )
     timeout = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((float, int))))
 
     def __attrs_post_init__(self):
