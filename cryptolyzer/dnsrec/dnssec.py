@@ -16,11 +16,11 @@ class AnalyzerResultDnsSec(AnalyzerResultDnsRecord):  # pylint: disable=too-few-
         ),
         metadata={'human_readable_name': 'DNS Public Keys (DNSKEY)'},
     )
-    digital_signatures = attr.ib(
+    delegation_signer = attr.ib(
         validator=attr.validators.deep_iterable(
             member_validator=attr.validators.instance_of(DnsRecordDs),
         ),
-        metadata={'human_readable_name': 'Digital Signatures (DS)'},
+        metadata={'human_readable_name': 'Delegation Signers (DS)'},
     )
     resource_record_signatures = attr.ib(
         validator=attr.validators.deep_iterable(
