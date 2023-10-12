@@ -7,7 +7,7 @@ import ipaddress
 import six
 import attr
 
-from cryptodatahub.dnssec.algorithm import DnsRrType
+from cryptodatahub.dnsrec.algorithm import DnsRrType
 
 import dns.resolver
 

@@ -4,7 +4,7 @@ import unittest
 
 import urllib3
 
-from cryptodatahub.dnssec.algorithm import DnsRrType
+from cryptodatahub.dnsrec.algorithm import DnsRrType
 
 from cryptolyzer.dnsrec.client import L7ClientDns
 from cryptolyzer.dnsrec.transfer import DnsHandshakeBase

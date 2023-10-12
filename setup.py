@@ -43,7 +43,7 @@ setup(
         'Issues': __setup__.__url__ + '/-/issues',
         'Source': __setup__.__url__,
     },
-    keywords='ssl tls gost ja3 hassh https pop3 smtp imap ftp rdp xmpp jabber ldap sieve ssh hsts',
+    keywords='ssl tls gost ja3 hassh https pop3 smtp imap ftp rdp xmpp jabber ldap sieve ssh hsts dnssec',
     entry_points={
         'console_scripts': [
             'cryptolyze = cryptolyzer.__main__:main',
@@ -66,6 +66,7 @@ setup(
     packages=[
         'cryptolyzer',
         'cryptolyzer.common',
+        'cryptolyzer.dnsrec',
         'cryptolyzer.hassh',
         'cryptolyzer.httpx',
         'cryptolyzer.ja3',
