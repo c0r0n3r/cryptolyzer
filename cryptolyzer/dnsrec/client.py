@@ -8,7 +8,7 @@ import urllib3
 import six
 
 from cryptodatahub.common.types import convert_url
-from cryptodatahub.dnssec.algorithm import DnsRrType
+from cryptodatahub.dnsrec.algorithm import DnsRrType
 
 from cryptoparser.common.exception import InvalidType
 from cryptoparser.common.utils import get_leaf_classes

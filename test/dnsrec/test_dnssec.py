@@ -4,7 +4,7 @@ from test.common.classes import TestLoggerBase
 
 import urllib3
 
-from cryptodatahub.dnssec.algorithm import DnsSecAlgorithm, DnsSecDigestType
+from cryptodatahub.dnsrec.algorithm import DnsSecAlgorithm, DnsSecDigestType
 
 from cryptolyzer.dnsrec.analyzer import AnalyzerDnsSec
 from cryptolyzer.dnsrec.client import L7ClientDns

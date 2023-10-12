@@ -2,7 +2,7 @@
 
 import unittest
 
-from cryptodatahub.dnssec.algorithm import DnsRrType
+from cryptodatahub.dnsrec.algorithm import DnsRrType
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 
