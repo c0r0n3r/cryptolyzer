@@ -22,6 +22,7 @@ import test.tls.test_pubkeyreq
 import test.tls.test_sigalgos
 import test.tls.test_simulations
 import test.tls.test_versions
+import test.tls.test_vulnerabilities
 import test.tls.test_all
 
 import colorama
@@ -87,15 +88,8 @@ class TestMain(TestMainBase):
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_json('tls', 'versions', 'dns.google#8.8.8.8'))
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_markdown('tls', 'versions', 'dns.google#8.8.8.8'))
 
-    def test_analyzer_output_highlighted(self):
-        func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1_2),
-            'curves',
-            'ecc256.badssl.com',
-            443,
-            timeout=10
-        )
-        result = test.tls.test_curves.TestTlsCurves.get_result(**func_arguments)
+    def _check_higlighted_output(self, func_arguments, cli_arguments):
+        result = test.tls.test_vulnerabilities.TestTlsVulnerabilities.get_result(**func_arguments)
 
         colorama.init()
         Serializable.post_text_encoder = SerializableTextEncoderHighlighted()
@@ -105,6 +99,16 @@ class TestMain(TestMainBase):
         )
         Serializable.post_text_encoder = SerializableTextEncoder()
         colorama.deinit()
+
+    def test_analyzer_output_highlighted(self):
+        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'dh1024.badssl.com', 443, timeout=10)
+        self._check_higlighted_output(func_arguments, cli_arguments)
+
+        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'null.badssl.com', 443, timeout=10)
+        self._check_higlighted_output(func_arguments, cli_arguments)
+
+        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'rc4.badssl.com', 443, timeout=10)
+        self._check_higlighted_output(func_arguments, cli_arguments)
 
     def test_analyzer_output_tls_ciphers(self):
         func_arguments, cli_arguments = self._get_arguments(

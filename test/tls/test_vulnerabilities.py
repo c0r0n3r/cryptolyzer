@@ -29,20 +29,20 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
 
     def test_real(self):
         result = self.get_result('rc4.badssl.com', 443)
-        self.assertFalse(result.ciphers.lucky13)
-        self.assertFalse(result.ciphers.sweet32)
-        self.assertFalse(result.ciphers.freak)
-        self.assertFalse(result.ciphers.anonymous_dh)
-        self.assertFalse(result.ciphers.null_encryption)
-        self.assertTrue(result.ciphers.rc4)
-        self.assertTrue(result.ciphers.non_forward_secret)
-        self.assertFalse(result.ciphers.export_grade)
+        self.assertFalse(result.ciphers.lucky13.value)
+        self.assertFalse(result.ciphers.sweet32.value)
+        self.assertFalse(result.ciphers.freak.value)
+        self.assertFalse(result.ciphers.anonymous_dh.value)
+        self.assertFalse(result.ciphers.null_encryption.value)
+        self.assertTrue(result.ciphers.rc4.value)
+        self.assertTrue(result.ciphers.non_forward_secret.value)
+        self.assertFalse(result.ciphers.export_grade.value)
 
-        self.assertFalse(result.versions.drown)
-        self.assertTrue(result.versions.early_tls_version)
+        self.assertFalse(result.versions.drown.value)
+        self.assertTrue(result.versions.early_tls_version.value)
 
-        self.assertFalse(result.dhparams.logjam)
-        self.assertFalse(result.dhparams.dheat)
+        self.assertFalse(result.dhparams.weak_dh.value)
+        self.assertFalse(result.dhparams.dheat.value)
 
         log_stream = '\n'.join(self.pop_log_lines())
         self._check_cipher_suite_logs([
@@ -52,20 +52,20 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         self.assertNotIn('Server offers well-known DH public parameter', log_stream)
 
         result = self.get_result('3des.badssl.com', 443)
-        self.assertTrue(result.ciphers.lucky13)
-        self.assertTrue(result.ciphers.sweet32)
-        self.assertFalse(result.ciphers.freak)
-        self.assertFalse(result.ciphers.anonymous_dh)
-        self.assertFalse(result.ciphers.null_encryption)
-        self.assertFalse(result.ciphers.rc4)
-        self.assertTrue(result.ciphers.non_forward_secret)
-        self.assertFalse(result.ciphers.export_grade)
+        self.assertTrue(result.ciphers.lucky13.value)
+        self.assertTrue(result.ciphers.sweet32.value)
+        self.assertFalse(result.ciphers.freak.value)
+        self.assertFalse(result.ciphers.anonymous_dh.value)
+        self.assertFalse(result.ciphers.null_encryption.value)
+        self.assertFalse(result.ciphers.rc4.value)
+        self.assertTrue(result.ciphers.non_forward_secret.value)
+        self.assertFalse(result.ciphers.export_grade.value)
 
-        self.assertFalse(result.versions.drown)
-        self.assertTrue(result.versions.early_tls_version)
+        self.assertFalse(result.versions.drown.value)
+        self.assertTrue(result.versions.early_tls_version.value)
 
-        self.assertTrue(result.dhparams.logjam)
-        self.assertFalse(result.dhparams.dheat)
+        self.assertTrue(result.dhparams.weak_dh.value)
+        self.assertFalse(result.dhparams.dheat.value)
 
         log_stream = '\n'.join(self.pop_log_lines())
         self._check_cipher_suite_logs([
@@ -76,20 +76,20 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         self.assertIn('Server offers 1024-bit NGINX 0.7.2 builtin DH parameter', log_stream)
 
         result = self.get_result('openssl.org', 443)
-        self.assertTrue(result.ciphers.lucky13)
-        self.assertFalse(result.ciphers.sweet32)
-        self.assertFalse(result.ciphers.freak)
-        self.assertFalse(result.ciphers.anonymous_dh)
-        self.assertFalse(result.ciphers.null_encryption)
-        self.assertFalse(result.ciphers.rc4)
-        self.assertTrue(result.ciphers.non_forward_secret)
-        self.assertFalse(result.ciphers.export_grade)
+        self.assertTrue(result.ciphers.lucky13.value)
+        self.assertFalse(result.ciphers.sweet32.value)
+        self.assertFalse(result.ciphers.freak.value)
+        self.assertFalse(result.ciphers.anonymous_dh.value)
+        self.assertFalse(result.ciphers.null_encryption.value)
+        self.assertFalse(result.ciphers.rc4.value)
+        self.assertTrue(result.ciphers.non_forward_secret.value)
+        self.assertFalse(result.ciphers.export_grade.value)
 
-        self.assertFalse(result.versions.drown)
-        self.assertFalse(result.versions.early_tls_version)
+        self.assertFalse(result.versions.drown.value)
+        self.assertFalse(result.versions.early_tls_version.value)
 
-        self.assertFalse(result.dhparams.logjam)
-        self.assertTrue(result.dhparams.dheat)
+        self.assertFalse(result.dhparams.weak_dh.value)
+        self.assertTrue(result.dhparams.dheat.value)
 
         log_stream = '\n'.join(self.pop_log_lines())
         self._check_cipher_suite_logs([
