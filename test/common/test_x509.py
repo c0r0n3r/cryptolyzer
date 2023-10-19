@@ -27,14 +27,14 @@ from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys
 
 class TestPublicKeyX509(TestLoggerBase):
     @staticmethod
-    def _get_result(host, port):
+    def _get_result(host, port, timeout=None):
         analyzer = AnalyzerPublicKeys()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout)
         result = analyzer.analyze(l7_client, TlsProtocolVersion(TlsVersion.TLS1_2))
         return result
 
     def test_common_name(self):
-        result = self._get_result('no-common-name.badssl.com', 443)
+        result = self._get_result('no-common-name.badssl.com', 443, timeout=10)
         self.assertEqual(len(result.pubkeys), 1)
         self.assertEqual(len(result.pubkeys[0].certificate_chain.items), 3)
         self.assertNotEqual(result.pubkeys[0].certificate_chain.items[0].subject, OrderedDict([]))
@@ -47,11 +47,13 @@ class TestPublicKeyX509(TestLoggerBase):
             ['no-common-name.badssl.com', ]
         )
 
-        result = self._get_result('long-extended-subdomain-name-containing-many-letters-and-dashes.badssl.com', 443)
+        result = self._get_result(
+            'long-extended-subdomain-name-containing-many-letters-and-dashes.badssl.com', 443, timeout=10
+        )
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].valid_domains, ['*.badssl.com', 'badssl.com'])
 
     def test_subject_alternative_names(self):
-        result = self._get_result('no-subject.badssl.com', 443)
+        result = self._get_result('no-subject.badssl.com', 443, timeout=10)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].subject, OrderedDict([]))
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].subject_alternative_names,
@@ -62,7 +64,7 @@ class TestPublicKeyX509(TestLoggerBase):
             ['no-subject.badssl.com']
         )
 
-        result = self._get_result('badssl.com', 443)
+        result = self._get_result('badssl.com', 443, timeout=10)
         self.assertNotEqual(result.pubkeys[0].certificate_chain.items[0].subject, OrderedDict([]))
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].subject_alternative_names,
@@ -74,7 +76,7 @@ class TestPublicKeyX509(TestLoggerBase):
         )
 
     def test_no_subject(self):
-        result = self._get_result('no-subject.badssl.com', 443)
+        result = self._get_result('no-subject.badssl.com', 443, timeout=10)
         self.assertEqual(len(result.pubkeys), 1)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].subject, OrderedDict([]))
         self.assertEqual(
@@ -87,7 +89,7 @@ class TestPublicKeyX509(TestLoggerBase):
         )
 
     def test_issuer(self):
-        result = self._get_result('expired.badssl.com', 443)
+        result = self._get_result('expired.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].issuer,
             OrderedDict([
@@ -100,7 +102,7 @@ class TestPublicKeyX509(TestLoggerBase):
         )
 
     def test_crl_distribution_points(self):
-        result = self._get_result('expired.badssl.com', 443)
+        result = self._get_result('expired.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].crl_distribution_points,
             ['http://crl.comodoca.com/COMODORSADomainValidationSecureServerCA.crl']
@@ -113,14 +115,14 @@ class TestPublicKeyX509(TestLoggerBase):
         )
 
     def test_crl_distribution_points_relative_name(self):
-        result = self._get_result('expired.badssl.com', 443)
+        result = self._get_result('expired.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].crl_distribution_points,
             ['http://crl.comodoca.com/COMODORSADomainValidationSecureServerCA.crl', ]
         )
 
     def test_ocsp_responders(self):
-        result = self._get_result('expired.badssl.com', 443)
+        result = self._get_result('expired.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[1].ocsp_responders,
             ['http://ocsp.comodoca.com']
@@ -131,19 +133,19 @@ class TestPublicKeyX509(TestLoggerBase):
         return_value=None
     )
     def test_ocsp_responders_no_extension(self, _):
-        result = self._get_result('expired.badssl.com', 443)
+        result = self._get_result('expired.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[1].ocsp_responders,
             []
         )
 
     def test_is_ca(self):
-        result = self._get_result('badssl.com', 443)
+        result = self._get_result('badssl.com', 443, timeout=10)
         self.assertFalse(result.pubkeys[0].certificate_chain.items[0].is_ca)
         self.assertTrue(result.pubkeys[0].certificate_chain.items[1].is_ca)
 
     def test_validity(self):
-        result = self._get_result('expired.badssl.com', 443)
+        result = self._get_result('expired.badssl.com', 443, timeout=10)
         self.assertTrue(result.pubkeys[0].certificate_chain.items[0].expired)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].valid_not_before,
@@ -162,11 +164,11 @@ class TestPublicKeyX509(TestLoggerBase):
             None
         )
 
-        result = self._get_result('badssl.com', 443)
+        result = self._get_result('badssl.com', 443, timeout=10)
         self.assertFalse(result.pubkeys[0].certificate_chain.items[0].expired)
 
     def test_fingerprints(self):
-        result = self._get_result('expired.badssl.com', 443)
+        result = self._get_result('expired.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].fingerprints,
             {
@@ -181,39 +183,39 @@ class TestPublicKeyX509(TestLoggerBase):
         )
 
     def test_public_key_pin(self):
-        result = self._get_result('expired.badssl.com', 443)
+        result = self._get_result('expired.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].public_key_pin,
             '9SLklscvzMYj8f+52lp5ze/hY0CFHyLSPQzSpYYIBm8='
         )
 
     def test_extended_validation(self):
-        result = self._get_result('extended-validation.badssl.com', 443)
+        result = self._get_result('extended-validation.badssl.com', 443, timeout=10)
         self.assertTrue(result.pubkeys[0].certificate_chain.items[0].extended_validation)
 
-        result = self._get_result('badssl.com', 443)
+        result = self._get_result('badssl.com', 443, timeout=10)
         self.assertFalse(result.pubkeys[0].certificate_chain.items[0].extended_validation)
 
     def test_key_type_and_size(self):
-        result = self._get_result('ecc256.badssl.com', 443)
+        result = self._get_result('ecc256.badssl.com', 443, timeout=10)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, Authentication.ECDSA)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 256)
-        result = self._get_result('ecc384.badssl.com', 443)
+        result = self._get_result('ecc384.badssl.com', 443, timeout=10)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, Authentication.ECDSA)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 384)
 
-        result = self._get_result('rsa2048.badssl.com', 443)
+        result = self._get_result('rsa2048.badssl.com', 443, timeout=10)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, Authentication.RSA)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 2048)
-        result = self._get_result('rsa4096.badssl.com', 443)
+        result = self._get_result('rsa4096.badssl.com', 443, timeout=10)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, Authentication.RSA)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 4096)
-        result = self._get_result('rsa8192.badssl.com', 443)
+        result = self._get_result('rsa8192.badssl.com', 443, timeout=10)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, Authentication.RSA)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 8192)
 
     def test_signature_algorithm_unknown(self):
-        result = self._get_result('sha1-intermediate.badssl.com', 443)
+        result = self._get_result('sha1-intermediate.badssl.com', 443, timeout=10)
         with mock.patch('asn1crypto.algos.SignedDigestAlgorithmId.dotted', new_callable=mock.PropertyMock) as prop_mock:
             prop_mock.side_effect = KeyError('1.2.840.113549.1.1.2')
             self.assertEqual(
@@ -222,23 +224,23 @@ class TestPublicKeyX509(TestLoggerBase):
             )
 
     def test_signature_algorithm(self):
-        result = self._get_result('sha1-intermediate.badssl.com', 443)
+        result = self._get_result('sha1-intermediate.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[1].signature_hash_algorithm,
             Signature.RSA_WITH_SHA1
         )
 
-        result = self._get_result('sha256.badssl.com', 443)
+        result = self._get_result('sha256.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm,
             Signature.RSA_WITH_SHA2_256
         )
-        result = self._get_result('sha384.badssl.com', 443)
+        result = self._get_result('sha384.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm,
             Signature.RSA_WITH_SHA2_384
         )
-        result = self._get_result('sha512.badssl.com', 443)
+        result = self._get_result('sha512.badssl.com', 443, timeout=10)
         self.assertEqual(
             result.pubkeys[0].certificate_chain.items[0].signature_hash_algorithm,
             Signature.RSA_WITH_SHA2_512
