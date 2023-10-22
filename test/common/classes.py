@@ -27,11 +27,75 @@ import sys
 import threading
 import time
 
+import attr
+
 import pyfakefs.fake_filesystem_unittest
 import six
 
+from cryptodatahub.common.grade import Grade, GradeableComplex, GradeableSimple, GradeableVulnerabilities
+
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.common.x509 import PublicKeyX509
+
+
+@attr.s(frozen=True, eq=False)
+class TestGradeableSimple(GradeableSimple):
+    simple_grade = attr.ib(validator=attr.validators.instance_of(Grade))
+
+    @property
+    def grade(self):
+        return self.simple_grade
+
+    def __str__(self):
+        return 'TestGradeableSimple'
+
+
+@attr.s(frozen=True, eq=False)
+class TestGradeableVulnerabilities(GradeableVulnerabilities):
+    @classmethod
+    def get_gradeable_name(cls):
+        return 'TestGradeableName'
+
+    def __str__(self):
+        return 'TestGradeable'
+
+
+@attr.s(frozen=True, eq=False)
+class TestGradeableVulnerabilitiesName(GradeableVulnerabilities):
+    name = attr.ib(default='name', init=False)
+
+    @classmethod
+    def get_gradeable_name(cls):
+        return 'TestGradeableName'
+
+    def __str__(self):
+        return 'TestGradeableName'
+
+
+@attr.s(frozen=True, eq=False)
+class TestGradeableVulnerabilitiesLongName(GradeableVulnerabilities):
+    name = attr.ib(default='name', init=False)
+    long_name = attr.ib(default='long name', init=False)
+
+    @classmethod
+    def get_gradeable_name(cls):
+        return 'TestGradeableLongName'
+
+    def __str__(self):
+        return 'TestGradeableLongName'
+
+
+@attr.s(frozen=True, eq=False)
+class TestGradeableComplex(GradeableComplex):
+    def __str__(self):
+        return 'TestGradeableComplex'
+
+    @classmethod
+    def from_gradeables(cls, gradeables):
+        gradeable_multiple = cls()
+        object.__setattr__(gradeable_multiple, 'gradeables', gradeables)
+
+        return gradeable_multiple
 
 
 class TestMainBase(unittest.TestCase):
@@ -82,6 +146,9 @@ class TestMainBase(unittest.TestCase):
 
     def _get_test_analyzer_result_markdown(self, protocol, analyzer, address, timeout=None):
         return self._get_test_analyzer_result('markdown', protocol, analyzer, address, timeout)[0]
+
+    def _get_test_analyzer_result_highlighted(self, protocol, analyzer, address, timeout=None):
+        return self._get_test_analyzer_result('highlighted', protocol, analyzer, address, timeout)[0]
 
     def _test_argument_error(self, argv, stderr_regexp, stdin=b''):
         with patch.object(sys, 'stderr', new_callable=six.StringIO) as stderr, \

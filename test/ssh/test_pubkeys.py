@@ -62,7 +62,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
         result = self.get_result('github.com', 22)
         self.assertEqual(
             list(map(lambda ssh_key: ssh_key.public_key.key_type, result.public_keys)),
-            [Authentication.ECDSA, Authentication.ED25519, Authentication.RSA],
+            [Authentication.ECDSA, Authentication.EDDSA, Authentication.RSA],
         )
         self.assertEqual(result.public_keys[0].fingerprints, OrderedDict([
             (Hash.SHA2_256, 'SHA256:p2QAMXNIC1TJYWeIOttrVc98/R1BUFWu3/LiyKgUfQM='),
@@ -90,7 +90,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
         result = self.get_result('git.centos.org', 22)
         self.assertEqual(
             list(map(lambda ssh_key: ssh_key.public_key.key_type, result.public_keys)),
-            [Authentication.ECDSA, Authentication.ED25519, Authentication.RSA, Authentication.ED25519],
+            [Authentication.ECDSA, Authentication.EDDSA, Authentication.RSA, Authentication.EDDSA],
         )
         self.assertEqual(
             list(map(lambda ssh_key: ssh_key.host_key_algorithm.value.code, result.public_keys)),

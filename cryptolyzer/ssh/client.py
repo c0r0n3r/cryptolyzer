@@ -135,8 +135,10 @@ class SshKeyExchangeInitHostKeyBase(SshKeyExchangeInitAnyAlgorithm):
                 SshKexAlgorithm
             )),
             host_key_algorithms=list(filter(
-                lambda algorithm:
-                algorithm.value.authentication == authentication and algorithm.value.key_type == host_key_type,
+                lambda algorithm: (
+                    algorithm.value.signature.value.key_type == authentication and
+                    algorithm.value.key_type == host_key_type
+                ),
                 SshHostKeyAlgorithm
             ))
         )
@@ -166,7 +168,7 @@ class SshKeyExchangeInitHostKeyECDSA(SshKeyExchangeInitHostKeyBase):
 class SshKeyExchangeInitHostKeyED25519(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostKeyED25519, self).__init__(
-            SshHostKeyType.KEY, Authentication.ED25519
+            SshHostKeyType.KEY, Authentication.EDDSA
         )
 
 
@@ -208,7 +210,7 @@ class SshKeyExchangeInitHostCertificateV01ECDSA(SshKeyExchangeInitHostKeyBase):
 class SshKeyExchangeInitHostCertificateV01ED25519(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostCertificateV01ED25519, self).__init__(
-            SshHostKeyType.CERTIFICATE, Authentication.ED25519
+            SshHostKeyType.CERTIFICATE, Authentication.EDDSA
         )
 
 

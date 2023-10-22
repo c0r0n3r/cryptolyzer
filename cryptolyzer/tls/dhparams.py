@@ -5,6 +5,8 @@ import codecs
 import attr
 import six
 
+from cryptodatahub.common.algorithm import KeyExchange
+from cryptodatahub.common.key import PublicKeySize
 from cryptodatahub.tls.algorithm import TlsNamedCurve
 
 from cryptoparser.common.exception import NotEnoughData
@@ -153,7 +155,10 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             try:
                 server_messages = AnalyzerDHParams._get_server_messages(analyzable, False, client_hello)
                 dh_public_key = AnalyzerDHParams._get_public_key_tls_1_x(server_messages)
-                _dhparam = DHParameter(dh_public_key.public_numbers.parameter_numbers, dh_public_key.key_size)
+                _dhparam = DHParameter(
+                    dh_public_key.public_numbers.parameter_numbers,
+                    PublicKeySize(KeyExchange.DHE, dh_public_key.key_size)
+                )
             except StopIteration:
                 break
 

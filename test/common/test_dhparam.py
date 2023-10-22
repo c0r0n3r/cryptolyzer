@@ -26,6 +26,7 @@ class TestParse(unittest.TestCase):
                 filter=lambda attribute, value: attribute.name != 'parameter_numbers'
             ),
             {
+                'vulnerabilities': [],
                 'key_size': 2048,
                 'name': '2048-bit MODP Group/Oakley Group 14',
                 'safe_prime': True,
@@ -72,7 +73,6 @@ class TestWellKnown(unittest.TestCase):
             dh_well_known_rfc5114_1024.value.key_size
         )
         self.assertEqual(dh_param.as_markdown(), '\n'.join([
-            '* Parameter Numbers: n/a',
             '* Key Size: 1024',
             '* Well Known: 1024-bit MODP Group with 160-bit Prime Order Subgroup (RFC 5114)',
             '* Prime: yes',

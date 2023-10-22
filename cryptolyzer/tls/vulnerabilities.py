@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 
+import abc
 import itertools
 
 import attr
 
 
+from cryptodatahub.common.grade import AttackNamed, Grade, GradeableSimple
+
+from cryptoparser.common.base import Serializable
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
@@ -24,68 +28,212 @@ from cryptolyzer.tls.versions import AnalyzerVersions
 
 
 @attr.s
+class VulnerabilityResult(Serializable, GradeableSimple):
+    value = attr.ib(validator=attr.validators.instance_of(bool))
+
+    @property
+    @abc.abstractmethod
+    def grade(self):
+        raise NotImplementedError()
+
+    def __str__(self):
+        return self._markdown_result(self.value)[1]
+
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls):
+        raise NotImplementedError()
+
+
+@attr.s
+class VulnerabilityResultGraded(VulnerabilityResult):
+    @property
+    def grade(self):
+        return self._vulnerable_grade if self.value else Grade.SECURE
+
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls):
+        raise NotImplementedError()
+
+    @property
+    @abc.abstractmethod
+    def _vulnerable_grade(self):
+        raise NotImplementedError()
+
+
+@attr.s
+class VulnerabilityResultAnonymousDH(VulnerabilityResultGraded):
+    @property
+    def _vulnerable_grade(self):
+        return Grade.INSECURE
+
+    @classmethod
+    def get_name(cls):
+        return 'Anonymous Diffie-Hellman'
+
+
+@attr.s
+class VulnerabilityResultEarlyTlsVersion(VulnerabilityResultGraded):
+    @property
+    def _vulnerable_grade(self):
+        return Grade.DEPRECATED
+
+    @classmethod
+    def get_name(cls):
+        return 'Early TLS version'
+
+
+@attr.s
+class VulnerabilityResultNullEncryption(VulnerabilityResultGraded):
+    @property
+    def _vulnerable_grade(self):
+        return Grade.INSECURE
+
+    @classmethod
+    def get_name(cls):
+        return 'NULL encryption'
+
+
+@attr.s
+class VulnerabilityResultRC4(VulnerabilityResultGraded):
+    @property
+    def _vulnerable_grade(self):
+        return Grade.INSECURE
+
+    @classmethod
+    def get_name(cls):
+        return 'RC4'
+
+
+class VulnerabilityResultAttackNamed(VulnerabilityResult):
+    @property
+    def grade(self):
+        return self.get_attack_named().value.grade if self.value else Grade.SECURE
+
+    @classmethod
+    def get_name(cls):
+        return cls.get_attack_named().value.name
+
+    @classmethod
+    @abc.abstractmethod
+    def get_attack_named(cls):
+        raise NotImplementedError()
+
+
+class VulnerabilityResultDheat(VulnerabilityResultAttackNamed):
+    @classmethod
+    def get_attack_named(cls):
+        return AttackNamed.DHEAT_ATTACK
+
+
+class VulnerabilityResultDrown(VulnerabilityResultAttackNamed):
+    @classmethod
+    def get_attack_named(cls):
+        return AttackNamed.DROWN_ATTACK
+
+
+class VulnerabilityResultExportGrade(VulnerabilityResultAttackNamed):
+    @classmethod
+    def get_attack_named(cls):
+        return AttackNamed.EXPORT_GRADE
+
+
+class VulnerabilityResultFreak(VulnerabilityResultAttackNamed):
+    @classmethod
+    def get_attack_named(cls):
+        return AttackNamed.FREAK
+
+
+class VulnerabilityResultLuckyThirteen(VulnerabilityResultAttackNamed):
+    @classmethod
+    def get_attack_named(cls):
+        return AttackNamed.LUCKY13
+
+
+class VulnerabilityResultNonForwardSecret(VulnerabilityResultAttackNamed):
+    @classmethod
+    def get_attack_named(cls):
+        return AttackNamed.NOFS
+
+
+class VulnerabilityResultSweet32(VulnerabilityResultAttackNamed):
+    @classmethod
+    def get_attack_named(cls):
+        return AttackNamed.SWEET32
+
+
+class VulnerabilityResultWeakDh(VulnerabilityResultAttackNamed):
+    @classmethod
+    def get_attack_named(cls):
+        return AttackNamed.WEAK_DH
+
+
+@attr.s
 class AnalyzerResultVulnerabilityCiphers(object):  # pylint: disable=too-many-instance-attributes
     lucky13 = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'Lucky Thirteen attack'},
+        validator=attr.validators.instance_of(VulnerabilityResultLuckyThirteen),
+        metadata={'human_readable_name': VulnerabilityResultLuckyThirteen.get_name()},
     )
     sweet32 = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'Sweet32 attack'},
+        validator=attr.validators.instance_of(VulnerabilityResultSweet32),
+        metadata={'human_readable_name': VulnerabilityResultSweet32.get_name()},
     )
     freak = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'FREAK attack'},
+        validator=attr.validators.instance_of(VulnerabilityResultFreak),
+        metadata={'human_readable_name': VulnerabilityResultFreak.get_name()},
     )
     anonymous_dh = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'Anonymous Diffie-Hellman'},
+        validator=attr.validators.instance_of(VulnerabilityResultAnonymousDH),
+        metadata={'human_readable_name': VulnerabilityResultAnonymousDH.get_name()},
     )
     null_encryption = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'NULL encryption'},
+        validator=attr.validators.instance_of(VulnerabilityResultNullEncryption),
+        metadata={'human_readable_name': VulnerabilityResultNullEncryption.get_name()},
     )
     rc4 = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'RC4'},
+        validator=attr.validators.instance_of(VulnerabilityResultRC4),
+        metadata={'human_readable_name': VulnerabilityResultRC4.get_name()},
     )
     non_forward_secret = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'Non-Forward-Secret'},
+        validator=attr.validators.instance_of(VulnerabilityResultNonForwardSecret),
+        metadata={'human_readable_name': VulnerabilityResultNonForwardSecret.get_name()},
     )
     export_grade = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'Export grade ciphers'},
+        validator=attr.validators.instance_of(VulnerabilityResultExportGrade),
+        metadata={'human_readable_name': VulnerabilityResultExportGrade.get_name()},
     )
 
     @staticmethod
     def from_cipher_suites(cipher_suites):
         rc4_cipher_suites = set(TlsHandshakeClientHelloStreamCipherRC4.CIPHER_SUITES)
-        rc4 = bool(rc4_cipher_suites & set(cipher_suites))
+        rc4 = VulnerabilityResultRC4(bool(rc4_cipher_suites & set(cipher_suites)))
 
         null_encryption_cipher_suites = set(TlsHandshakeClientHelloBulkCipherNull.CIPHER_SUITES)
-        null_encryption = bool(null_encryption_cipher_suites & set(cipher_suites))
+        null_encryption = VulnerabilityResultNullEncryption(bool(null_encryption_cipher_suites & set(cipher_suites)))
 
         anonymous_dh_cipher_suites = set(TlsHandshakeClientHelloKeyExchangeAnonymousDH.CIPHER_SUITES)
-        anonymous_dh = bool(anonymous_dh_cipher_suites & set(cipher_suites))
+        anonymous_dh = VulnerabilityResultAnonymousDH(bool(anonymous_dh_cipher_suites & set(cipher_suites)))
 
         export_rsa_cipher_suites = set(TlsHandshakeClientHelloKeyExchangeAnonymousDH.CIPHER_SUITES)
-        freak = bool(export_rsa_cipher_suites & set(cipher_suites))
+        freak = VulnerabilityResultFreak(bool(export_rsa_cipher_suites & set(cipher_suites)))
 
         sweet32_cipher_suites = set(TlsHandshakeClientHelloBulkCipherBlockSize64.CIPHER_SUITES)
-        sweet32 = bool(sweet32_cipher_suites & set(cipher_suites))
+        sweet32 = VulnerabilityResultSweet32(bool(sweet32_cipher_suites & set(cipher_suites)))
 
         lucky13_cipher_suites = set(TlsHandshakeClientHelloBlockCipherModeCBC.CIPHER_SUITES)
-        lucky13 = bool(lucky13_cipher_suites & set(cipher_suites))
+        lucky13 = VulnerabilityResultLuckyThirteen(bool(lucky13_cipher_suites & set(cipher_suites)))
 
-        non_forward_secret = any(map(
+        non_forward_secret = VulnerabilityResultNonForwardSecret(any(map(
             lambda cipher_suite: (
                 cipher_suite.value.key_exchange is not None and
                 cipher_suite.value.key_exchange.value.forward_secret
             ), cipher_suites
-        ))
+        )))
 
-        export_grade = any(map(lambda cipher_suite: cipher_suite.value.export_grade, cipher_suites))
+        export_grade = VulnerabilityResultExportGrade(any(map(
+            lambda cipher_suite: cipher_suite.value.export_grade, cipher_suites
+        )))
 
         return AnalyzerResultVulnerabilityCiphers(
             rc4=rc4,
@@ -102,25 +250,25 @@ class AnalyzerResultVulnerabilityCiphers(object):  # pylint: disable=too-many-in
 @attr.s
 class AnalyzerResultVulnerabilityVersions(object):  # pylint: disable=too-few-public-methods
     drown = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'DROWN attack'},
+        validator=attr.validators.instance_of(VulnerabilityResultDrown),
+        metadata={'human_readable_name': VulnerabilityResultDrown.get_name()},
     )
     early_tls_version = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'Early TLS version'},
+        validator=attr.validators.instance_of(VulnerabilityResultEarlyTlsVersion),
+        metadata={'human_readable_name': VulnerabilityResultEarlyTlsVersion.get_name()},
     )
 
     @staticmethod
     def from_protocol_versions(protocol_versions):
-        drown = TlsProtocolVersion(TlsVersion.SSL2) in protocol_versions
+        drown = VulnerabilityResultDrown(bool(TlsProtocolVersion(TlsVersion.SSL2) in protocol_versions))
 
-        early_tls_version = any(map(
+        early_tls_version = VulnerabilityResultEarlyTlsVersion(any(map(
             lambda protocol_version: (
                 isinstance(protocol_version, TlsProtocolVersion) and
                 protocol_version < TlsProtocolVersion(TlsVersion.TLS1_2)
             ),
             protocol_versions
-        ))
+        )))
 
         return AnalyzerResultVulnerabilityVersions(
             drown=drown,
@@ -130,23 +278,25 @@ class AnalyzerResultVulnerabilityVersions(object):  # pylint: disable=too-few-pu
 
 @attr.s
 class AnalyzerResultVulnerabilityDHParams(object):
-    logjam = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'Logjam attack'},
+    weak_dh = attr.ib(
+        validator=attr.validators.instance_of(VulnerabilityResultWeakDh),
+        metadata={'human_readable_name': VulnerabilityResultWeakDh.get_name()},
     )
     dheat = attr.ib(
-        validator=attr.validators.instance_of(bool),
-        metadata={'human_readable_name': 'D(HE)at attack'},
+        validator=attr.validators.instance_of(VulnerabilityResultDheat),
+        metadata={'human_readable_name': VulnerabilityResultDheat.get_name()},
     )
 
     @staticmethod
     def from_dhparam(dhparam, groups):
-        logjam = dhparam is not None and dhparam.key_size <= 1024
-        dheat = ((dhparam is not None and dhparam.key_size > 4096) or
-                 (max([group.value.named_group.value.size for group in groups] + [0]) > 4096))
+        weak_dh = VulnerabilityResultWeakDh(dhparam is not None and dhparam.key_size.value <= 1024)
+        dheat = VulnerabilityResultDheat(
+            (dhparam is not None and dhparam.key_size.value > 4096) or
+            (max([group.value.named_group.value.size for group in groups] + [0]) > 4096)
+        )
 
         return AnalyzerResultVulnerabilityDHParams(
-            logjam=logjam,
+            weak_dh=weak_dh,
             dheat=dheat,
         )
 

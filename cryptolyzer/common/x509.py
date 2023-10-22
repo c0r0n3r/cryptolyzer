@@ -9,7 +9,7 @@ import certvalidator
 
 from cryptodatahub.common.algorithm import Hash
 from cryptodatahub.common.entity import Entity, EntityRole
-from cryptodatahub.common.key import PublicKeyX509Base
+from cryptodatahub.common.key import PublicKeyX509Base, PublicKeySize
 from cryptodatahub.common.stores import RootCertificate
 from cryptodatahub.common.utils import bytes_to_hex_string
 
@@ -35,7 +35,7 @@ class PublicKeyX509(PublicKeyX509Base):
             ('subject_alternative_names', sorted(self.subject_alternative_names)),
             ('issuer', self.issuer),
             ('key_type', self.key_type),
-            ('key_size', self.key_size),
+            ('key_size', PublicKeySize(self.key_type, self.key_size)),
             ('signature_hash_algorithm', self.signature_hash_algorithm),
             ('validity', collections.OrderedDict([
                 ('not_before', str(self.valid_not_before)),

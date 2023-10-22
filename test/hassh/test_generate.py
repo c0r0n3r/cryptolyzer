@@ -73,7 +73,7 @@ class TestHASSHGenerate(TestLoggerBase):
         )
 
         result = self.get_result(key_exchange_init_message)
-        self.assertEqual(result.target, '3cfda285775b67c360bdb6570a978e08')
+        self.assertEqual(result.target, '9319f333ef20e5419c347ed6f57017d9')
         self.assertEqual(
             self.log_stream.getvalue(),
             'Client offers SSH key exchange init which HASSH fingerprint is "{}"\n'.format(result.target)
