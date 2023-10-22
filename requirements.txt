@@ -1,3 +1,4 @@
+oscrypto @ git+https://github.com/wbond/oscrypto.git@d5f3437
 attrs>=20.3.0,<22.0.1
 certvalidator
 cryptoparser>=0.10.3

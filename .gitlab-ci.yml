@@ -6,6 +6,7 @@ stages:
 - deploy
 
 before_script:
+- apt-get update && apt-get install --no-install-recommends -y git-core
 - pip install -r dev-requirements.txt
 
 variables:
@@ -22,20 +23,10 @@ pep8:
   stage: earlytest
   script: tox -e pep8
 
-python2:
-  image: python:2.7-slim
-  stage: earlytest
-  script: tox -e py27
-
 python3:
   image: python:3.7-slim
   stage: earlytest
   script: tox -e py37
-
-python34:
-  image: python:3.4-slim
-  stage: fulltest
-  script: tox -e py34
 
 python35:
   image: python:3.5-slim
@@ -76,11 +67,6 @@ pythonrc:
   image: python:3.12-rc-slim
   stage: fulltest
   script: tox -e py312
-
-pypy:
-  image: pypy:2-slim
-  stage: fulltest
-  script: tox -e pypy
 
 pypy3:
   image: pypy:3-slim
