@@ -11,6 +11,7 @@ from cryptoparser.httpx.version import HttpVersion
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.result import AnalyzerResultHttp
+from cryptolyzer.httpx.content import AnalyzerConetnt
 from cryptolyzer.httpx.headers import AnalyzerHeaders
 
 
@@ -49,6 +50,7 @@ class ProtocolHandlerHttp11(ProtocolHandlerHttpExactVersion):
     @classmethod
     def get_analyzers(cls):
         return (
+            AnalyzerConetnt,
             AnalyzerHeaders,
         )
 
