@@ -1,15 +1,37 @@
-**CryptoLyzer** is a fast and flexible server cryptographic settings analyzer library for Python with an easy-to-use
-`command line interface <https://en.wikipedia.org/wiki/Command-line_interface>`__ with both human-readable
-(`Markdown <https://en.wikipedia.org/wiki/Markdown>`__) and
-machine-readable (`JSON <https://en.wikipedia.org/wiki/JSON>`__) output.  It works with multiple cryptographic protocols
-(`SSL <https://en.wikipedia.org/wiki/Transport_Layer_Security#SSL_1.0,_2.0,_and_3.0>`__/
-`TLS <https://en.wikipedia.org/wiki/Transport_Layer_Security>`__,
-`opportunistic TLS <https://en.wikipedia.org/wiki/Opportunistic_TLS>`__,
-`SSH <https://en.wikipedia.org/wiki/Secure_Shell>`__ `DNSSEC <https://www.rfc-editor.org/rfc/rfc4034>`__) and analyzes
-additional security mechanisms (`web security <https://infosec.mozilla.org/guidelines/web_security>`__ related
-`HTTP response header fields <https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Response_fields>`__,
-`JA3 tag <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__) or `HASSH
-tag <https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/>`__).
+**CryptoLyzer** is a fast, flexible, and comprehensive server cryptographic protocol
+(`TLS <https://en.wikipedia.org/wiki/Transport_Layer_Security>`__,
+`SSL <https://en.wikipedia.org/wiki/Transport_Layer_Security#SSL_1.0,_2.0,_and_3.0>`__,
+`SSH <https://en.wikipedia.org/wiki/Secure_Shell>`__,
+`DNSSEC <https://en.wikipedia.org/wiki/Domain_Name_System_Security_Extensions>`__) and related setting
+(`HTTP headers <https://en.wikipedia.org/wiki/List_of_HTTP_header_fields>`__,
+`DNS records <https://en.wikipedia.org/wiki/List_of_DNS_record_types>`__) analyzer and fingerprint
+(`JA3 <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__,
+`HASSH <https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/>`__ tag) generator with
+`application programming <https://en.wikipedia.org/wiki/API>`__ (API) and
+`command line <https://en.wikipedia.org/wiki/Command-line_interface>`__ (CLI) interface.
+
+However the API can provide the most complete functionality, the CLI also strives to be as comprehensive as possible. To
+do that CLI provides three output formats. The first one for human analysis where the cryptographic algorithm names and
+the values of key sizes and other security-related settings are colorized according to their security strength using the
+well-known `traffic light rating system <https://en.wikipedia.org/wiki/Traffic_light_rating_system>`__. The other two
+output formats (`Markdown <https://en.wikipedia.org/wiki/Markdown>`__, `JSON <https://en.wikipedia.org/wiki/JSON>`__)
+are machine-readable, however the Markdown format even human-readable and even suitable for generating documentation in
+different formats (e.g. DOCX, PDF, ...).
+
+.. only:: html
+
+  .. raw:: html
+
+    <script async id="asciicast-618789" src="https://asciinema.org/a/618789.js"></script>
+
+The strength of CryptoLyzer compared to its competitors is that it contains a custom implementation of cryptographic
+protocols (`CryptoParser <https://cryptoparser.readthedocs.io>`__), which are as small as absolutely necessary for the
+analysis, but as most comprehensive algorithm identifier sets of the cryptographic protocols
+(`CryptoDataHub <https://cryptodatahub.readthedocs.io>`__) as possible. The combination of the two properly makes it
+possible to check the support of rarely used, deprecated, non-standard, or experimental algorithms and methods that are
+not yet or have never been supported by the most popular cryptographic algorithms. This way of working leads to the fact
+that CryptoLyzer can recognize more TLS cipher suites than listed in total on
+`Ciphersuite Info <https://ciphersuite.info/cs/>`__.
 
 -----
 Usage
