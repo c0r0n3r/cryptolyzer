@@ -3,6 +3,19 @@ Changelog
 =========
 
 -------------------
+0.11.0 - 2023-10-28
+-------------------
+
+Features
+========
+
+-  Generic
+
+   -  colorized output based on the security strength of the cryptographic algorithms and key sizes (#94)
+   -  documentation of command-line interface (#117)
+   -  documentation of Python API (#117)
+
+-------------------
 0.10.3 - 2023-10-12
 -------------------
 
