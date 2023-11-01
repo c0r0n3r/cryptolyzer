@@ -1117,7 +1117,7 @@ class TestClientOpenVpn(TestL7ClientBase):
 
     def test_openvpn_udp_client(self):
         _, result = self.get_result(
-            'openvpn', 'vpn431396938.opengw.net', 441,
+            'openvpn', 'vpn431396938.opengw.net', 443,
             timeout=10, analyzer=AnalyzerDHParams()
         )
         self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC2539_1024_BIT_MODP_GROUP)
