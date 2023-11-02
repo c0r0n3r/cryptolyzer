@@ -108,7 +108,7 @@ def key_share_entry_from_named_curve(named_curve):
             get_ecdh_ephemeral_key_forged(named_curve.value.named_group)
         )
 
-    if named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM:
+    if named_curve.value.named_group.value.group_type == NamedGroupType.FINITE_FIELD:
         well_known_dh_param = NAMED_CURVE_TO_RFC7919_WELL_KNOWN[named_curve]
         return TlsKeyShareEntry(
             named_curve,
@@ -353,7 +353,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
         named_curve
         for named_curve in TlsNamedCurve
         if (named_curve.value.named_group is not None
-            and named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
+            and named_curve.value.named_group.value.group_type == NamedGroupType.FINITE_FIELD)
     ]
 
     def __init__(
