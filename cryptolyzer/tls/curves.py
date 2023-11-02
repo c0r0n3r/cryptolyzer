@@ -24,6 +24,13 @@ from cryptolyzer.tls.exception import TlsAlert
 
 @attr.s
 class AnalyzerResultCurves(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
+    """
+    :class: Analyzer result relates to elliptic curve Diffie-Hellman (ECDH) key exchange
+
+    :param groups: supported ECDH named groups (can be negotiated using named group extensions)
+    :param extension_supported: whether named group extension supported
+    """
+
     curves = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.in_(TlsNamedCurve)),
         metadata={'human_readable_name': 'Named Curves'},

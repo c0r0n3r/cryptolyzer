@@ -171,6 +171,25 @@ class VulnerabilityResultWeakDh(VulnerabilityResultAttackNamed):
 
 @attr.s
 class AnalyzerResultVulnerabilityCiphers(object):  # pylint: disable=too-many-instance-attributes
+    """
+    :class: Vulnerabilities relate to cipher suite algorithms. Any attribute represents an vulnerability, which value is
+        true if any of the negotiable cipher suite uses an algorithm affected by the vulnerability.
+
+    :param lucky13: `Lucky Thirteen attack <https://en.wikipedia.org/wiki/Lucky_Thirteen_attack>`__.
+    :param sweet32: `Sweet32 attack <https://sweet32.info/>`__.
+    :param freak: `FREAK attack <https://en.wikipedia.org/wiki/FREAK>`__.
+    :param anonymous_dh:
+        `Anonymous Diffie-Hellman <https://en.wikipedia.org/wiki/Key-agreement_protocol#Exponential_key_exchange>`__ key
+        exchange algorithm.
+    :param null_encryption: Cipher suite does use `no/null null <https://en.wikipedia.org/wiki/Null_encryption>`__
+        encryption
+    :param rc4: Cipher suite uses `RC4 stream ciphers <https://en.wikipedia.org/wiki/RC4#Security>`__.
+    :param non_forward_secret: Cipher suite uses key exchange algorithm which does not provide
+        `forward secrecy <https://en.wikipedia.org/wiki/Forward_secrecy>`__
+    :param export_grade: Cipher suite uses
+        `export grade <https://en.wikipedia.org/wiki/Export_of_cryptography_from_the_United_States>`__ algorithms.
+    """
+
     lucky13 = attr.ib(
         validator=attr.validators.instance_of(VulnerabilityResultLuckyThirteen),
         metadata={'human_readable_name': VulnerabilityResultLuckyThirteen.get_name()},
@@ -249,6 +268,14 @@ class AnalyzerResultVulnerabilityCiphers(object):  # pylint: disable=too-many-in
 
 @attr.s
 class AnalyzerResultVulnerabilityVersions(object):  # pylint: disable=too-few-public-methods
+    """
+    :class: Vulnerabilities relate to the protocol versions. Any attribute represents a vulnerability, which value is
+        true if any of the negotiable protocol versions uses an algorithm affected by the vulnerability.
+
+    :param drown: `DROWN attack <https://drownattack.com/>`__.
+    :param early_tls_version: -  `Early protocol versions <https://www.rfc-editor.org/rfc/rfc8996>`__ is supported.
+    """
+
     drown = attr.ib(
         validator=attr.validators.instance_of(VulnerabilityResultDrown),
         metadata={'human_readable_name': VulnerabilityResultDrown.get_name()},
@@ -278,6 +305,14 @@ class AnalyzerResultVulnerabilityVersions(object):  # pylint: disable=too-few-pu
 
 @attr.s
 class AnalyzerResultVulnerabilityDHParams(object):
+    """
+    :class: Vulnerabilities relate to the protocol versions. Any attribute represents a vulnerability, which value is
+        true if any of the negotiable protocol versions uses an algorithm affected by the vulnerability.
+
+    :param weak_dh: `Weak DH vulnerability <https://weakdh.org/>`__.
+    :param early_tls_version: `D(HE)at attack <https://dheatattack.com/>`__.
+    """
+
     weak_dh = attr.ib(
         validator=attr.validators.instance_of(VulnerabilityResultWeakDh),
         metadata={'human_readable_name': VulnerabilityResultWeakDh.get_name()},
@@ -303,6 +338,14 @@ class AnalyzerResultVulnerabilityDHParams(object):
 
 @attr.s
 class AnalyzerResultVulnerabilities(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
+    """
+    :class: Vulnerabilities relate to the server configuration.
+
+    :param cipher: Cipher suite related vulnerabilities.
+    :param dhparam: Diffie-Hellman parameter related vulnerabilities.
+    :param versions: Protocol version related vulnerabilities.
+    """
+
     ciphers = attr.ib(
         validator=attr.validators.instance_of(AnalyzerResultVulnerabilityCiphers),
         metadata={'human_readable_name': 'Cipher Suites'},

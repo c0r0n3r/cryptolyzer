@@ -58,11 +58,28 @@ from cryptolyzer.tls.curves import AnalyzerCurves
 
 @attr.s
 class AnalyzerResultSimulationsSsl(object):
+    """
+    :class: Analyzer result relates to the parameters of the SSL connection initiated between the server and the
+        simulated client application.
+
+    :param cipher_kind: cipher kind.
+    """
+
     cipher_kind = attr.ib(validator=attr.validators.instance_of(SslCipherKind))
 
 
 @attr.s
 class AnalyzerResultSimulationsTlsBase(object):
+    """
+    :class: Analyzer result relates to the parameters of the TLS connection initiated between the server and the
+        simulated client application.
+
+    :param version: protocol version.
+    :param cipher_suite: cipher suite.
+    :param compression_method: compression method.
+    :param application_layer_protocol: application layer protocol.
+    """
+
     version = attr.ib(validator=attr.validators.instance_of(TlsProtocolVersion))
     cipher_suite = attr.ib(validator=attr.validators.instance_of(TlsCipherSuite))
     compression_method = attr.ib(validator=attr.validators.instance_of(TlsCompressionMethod))
@@ -74,21 +91,49 @@ class AnalyzerResultSimulationsTlsBase(object):
 
 @attr.s
 class AnalyzerResultSimulationsTlsPfs(AnalyzerResultSimulationsTlsBase):
+    """
+    :class: Analyzer result relates to the parameters of a TLS connection -- used a forward secret key-exchange --
+        initiated between the server and the simulated client application.
+
+    :param key_size: Key size of used during the key exchange.
+    """
+
     key_size = attr.ib(validator=attr.validators.instance_of(int))
 
 
 @attr.s
 class AnalyzerResultSimulationsTlsPfsNamedGroup(AnalyzerResultSimulationsTlsPfs):
+    """
+    :class: Analyzer result relates to the parameters of a TLS connection -- used a named group during the key
+        exchange -- initiated between the server and the simulated client application.
+
+    :param named_group: Named group used during the key exchange.
+    """
+
     named_group = attr.ib(validator=attr.validators.instance_of(TlsNamedCurve))
 
 
 @attr.s
 class AnalyzerResultSimulationsTlsPfsDhWellKnown(AnalyzerResultSimulationsTlsPfs):
+    """
+    :class: Analyzer result relates to the parameters of a TLS connection -- used a Diffie-Hellman parameter during the
+        key exchange -- initiated between the server and the simulated client application.
+
+    :param well_known: the well-known Diffie-Hellman parameter used during the key exchange.
+    """
+
     well_known = attr.ib(validator=attr.validators.in_(DHParamWellKnown))
 
 
 @attr.s
 class AnalyzerResultSimulations(AnalyzerResultTls):
+    """
+    :class: Analyzer result relates to the simulated client applications.
+
+    :param succeeded_clients: the list of client applications where the connection initiation was successful,
+    :param failed_clients: the list of client applications where the connection initiation was failed.
+    """
+
     succeeded_clients = attr.ib(validator=attr.validators.deep_mapping(
         key_validator=attr.validators.instance_of(ClientVersionedParamsBase),
         value_validator=attr.validators.instance_of((AnalyzerResultSimulationsTlsBase, AnalyzerResultSimulationsSsl)),

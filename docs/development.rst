@@ -6,7 +6,8 @@ If you want to setup a development environment, you are in need of `pipenv <http
 
 .. code:: shell
 
-   git clone https://gitlab.com/coroner/cryptolyzer
+   git clone --recurse-submodules \
+   https://gitlab.com/coroner/cryptolyzer
    cd cryptolyzer
    pipenv install --dev
    pipenv run python setup.py develop

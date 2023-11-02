@@ -2,8 +2,25 @@
 Installation
 ------------
 
-Debian-based Linux Distributions
-================================
+Python Package
+==============
+
+.. code:: shell
+
+   pip install cryptolyzer
+
+Docker
+======
+
+.. code:: shell
+
+   podman pull coroner/cryptolyzer
+
+Operating System Package
+========================
+
+Deb
+---
 
 .. code:: shell
 
@@ -18,8 +35,8 @@ Debian-based Linux Distributions
    cryptolyze ssh2 ciphers www.example.com
    cryptolyze http headers www.example.com
 
-RPM-based Linux Distributions
-=============================
+RPM
+---
 
 .. code:: shell
 
