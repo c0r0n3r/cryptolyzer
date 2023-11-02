@@ -386,10 +386,9 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
             TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2))
     ]
     _NAMED_CURVES = [
-        named_curve
-        for named_curve in TlsNamedCurve
-        if (named_curve.value.named_group is not None
-            and named_curve.value.named_group.value.group_type == NamedGroupType.ELLIPTIC_CURVE)
+        curve
+        for curve, group in map(lambda curve: (curve, curve.value.named_group), TlsNamedCurve)
+        if (group is not None and group.value.group_type in (NamedGroupType.ELLIPTIC_CURVE, NamedGroupType.HYBRID_PQS))
     ]
 
     def __init__(
