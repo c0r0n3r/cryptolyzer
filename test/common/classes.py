@@ -34,8 +34,9 @@ import six
 
 from cryptodatahub.common.grade import Grade, GradeableComplex, GradeableSimple, GradeableVulnerabilities
 
+from cryptoparser.common.x509 import PublicKeyX509
+
 from cryptolyzer.common.utils import LogSingleton
-from cryptolyzer.common.x509 import PublicKeyX509
 
 
 @attr.s(frozen=True, eq=False)

@@ -34,6 +34,11 @@ from cryptolyzer.ssh.client import (
     SshKeyExchangeInitHostCertificateV01RSA,
     SshKeyExchangeInitHostCertificateV01ECDSA,
     SshKeyExchangeInitHostCertificateV01ED25519,
+    SshKeyExchangeInitX509CertificateDSS,
+    SshKeyExchangeInitX509CertificateRSA,
+    SshKeyExchangeInitX509CertificateChainDSA,
+    SshKeyExchangeInitX509CertificateChainRSA,
+    SshKeyExchangeInitX509CertificateChainECDSA,
 )
 
 
@@ -50,16 +55,21 @@ class AnalyzerResultPublicKeys(AnalyzerResultSsh):
 
 class AnalyzerPublicKeys(AnalyzerSshBase):
     _KEY_EXCHANGE_INIT_MESSAGES_BY_TYPE = OrderedDict([
-        ((SshHostKeyType.KEY, Authentication.DSS), SshKeyExchangeInitHostKeyDSS()),
-        ((SshHostKeyType.KEY, Authentication.ECDSA), SshKeyExchangeInitHostKeyECDSA()),
-        ((SshHostKeyType.KEY, Authentication.EDDSA), SshKeyExchangeInitHostKeyED25519()),
-        ((SshHostKeyType.KEY, Authentication.RSA), SshKeyExchangeInitHostKeyRSA()),
-        ((SshHostKeyType.CERTIFICATE, Authentication.DSS), SshKeyExchangeInitHostCertificateV00DSS()),
-        ((SshHostKeyType.CERTIFICATE, Authentication.RSA), SshKeyExchangeInitHostCertificateV00RSA()),
-        ((SshHostKeyType.CERTIFICATE, Authentication.DSS), SshKeyExchangeInitHostCertificateV01DSS()),
-        ((SshHostKeyType.CERTIFICATE, Authentication.RSA), SshKeyExchangeInitHostCertificateV01RSA()),
-        ((SshHostKeyType.CERTIFICATE, Authentication.ECDSA), SshKeyExchangeInitHostCertificateV01ECDSA()),
-        ((SshHostKeyType.CERTIFICATE, Authentication.EDDSA), SshKeyExchangeInitHostCertificateV01ED25519()),
+        ((SshHostKeyType.HOST_KEY, Authentication.DSS), SshKeyExchangeInitHostKeyDSS()),
+        ((SshHostKeyType.HOST_KEY, Authentication.ECDSA), SshKeyExchangeInitHostKeyECDSA()),
+        ((SshHostKeyType.HOST_KEY, Authentication.EDDSA), SshKeyExchangeInitHostKeyED25519()),
+        ((SshHostKeyType.HOST_KEY, Authentication.RSA), SshKeyExchangeInitHostKeyRSA()),
+        ((SshHostKeyType.HOST_CERTIFICATE, Authentication.DSS), SshKeyExchangeInitHostCertificateV00DSS()),
+        ((SshHostKeyType.HOST_CERTIFICATE, Authentication.RSA), SshKeyExchangeInitHostCertificateV00RSA()),
+        ((SshHostKeyType.HOST_CERTIFICATE, Authentication.DSS), SshKeyExchangeInitHostCertificateV01DSS()),
+        ((SshHostKeyType.HOST_CERTIFICATE, Authentication.RSA), SshKeyExchangeInitHostCertificateV01RSA()),
+        ((SshHostKeyType.HOST_CERTIFICATE, Authentication.ECDSA), SshKeyExchangeInitHostCertificateV01ECDSA()),
+        ((SshHostKeyType.HOST_CERTIFICATE, Authentication.EDDSA), SshKeyExchangeInitHostCertificateV01ED25519()),
+        ((SshHostKeyType.X509_CERTIFICATE, Authentication.DSS), SshKeyExchangeInitX509CertificateDSS()),
+        ((SshHostKeyType.X509_CERTIFICATE, Authentication.RSA), SshKeyExchangeInitX509CertificateRSA()),
+        ((SshHostKeyType.X509_CERTIFICATE_CHAIN, Authentication.DSS), SshKeyExchangeInitX509CertificateChainDSA()),
+        ((SshHostKeyType.X509_CERTIFICATE_CHAIN, Authentication.ECDSA), SshKeyExchangeInitX509CertificateChainECDSA()),
+        ((SshHostKeyType.X509_CERTIFICATE_CHAIN, Authentication.RSA), SshKeyExchangeInitX509CertificateChainRSA()),
     ])
 
     @classmethod
@@ -86,7 +96,10 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
                 host_key_algorithm.value.key_type,
                 host_key_algorithm.value.signature.value.key_type
             ),
-            analyzer_result.host_key_algorithms
+            filter(
+                lambda host_key_algorithm: not isinstance(host_key_algorithm, six.string_types),
+                analyzer_result.host_key_algorithms
+            )
         ))
 
         host_public_keys = []

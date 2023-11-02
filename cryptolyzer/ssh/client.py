@@ -16,6 +16,7 @@ from cryptodatahub.ssh.algorithm import (
 
 from cryptoparser.common.exception import NotEnoughData
 
+from cryptoparser.ssh.key import SshX509Certificate, SshX509CertificateChain
 from cryptoparser.ssh.record import SshRecordInit, SshRecordKexDH, SshRecordKexDHGroup
 from cryptoparser.ssh.subprotocol import (
     SshDHGroupExchangeGroup,
@@ -147,70 +148,119 @@ class SshKeyExchangeInitHostKeyBase(SshKeyExchangeInitAnyAlgorithm):
 class SshKeyExchangeInitHostKeyDSS(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostKeyDSS, self).__init__(
-            SshHostKeyType.KEY, Authentication.DSS
+            SshHostKeyType.HOST_KEY, Authentication.DSS
         )
 
 
 class SshKeyExchangeInitHostKeyRSA(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostKeyRSA, self).__init__(
-            SshHostKeyType.KEY, Authentication.RSA
+            SshHostKeyType.HOST_KEY, Authentication.RSA
         )
 
 
 class SshKeyExchangeInitHostKeyECDSA(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostKeyECDSA, self).__init__(
-            SshHostKeyType.KEY, Authentication.ECDSA
+            SshHostKeyType.HOST_KEY, Authentication.ECDSA
         )
 
 
 class SshKeyExchangeInitHostKeyED25519(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostKeyED25519, self).__init__(
-            SshHostKeyType.KEY, Authentication.EDDSA
+            SshHostKeyType.HOST_KEY, Authentication.EDDSA
         )
 
 
 class SshKeyExchangeInitHostCertificateV00DSS(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostCertificateV00DSS, self).__init__(
-            SshHostKeyType.CERTIFICATE, Authentication.DSS
+            SshHostKeyType.HOST_CERTIFICATE, Authentication.DSS
         )
 
 
 class SshKeyExchangeInitHostCertificateV00RSA(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostCertificateV00RSA, self).__init__(
-            SshHostKeyType.CERTIFICATE, Authentication.RSA
+            SshHostKeyType.HOST_CERTIFICATE, Authentication.RSA
         )
 
 
 class SshKeyExchangeInitHostCertificateV01DSS(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostCertificateV01DSS, self).__init__(
-            SshHostKeyType.CERTIFICATE, Authentication.DSS
+            SshHostKeyType.HOST_CERTIFICATE, Authentication.DSS
         )
 
 
 class SshKeyExchangeInitHostCertificateV01RSA(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostCertificateV01RSA, self).__init__(
-            SshHostKeyType.CERTIFICATE, Authentication.RSA
+            SshHostKeyType.HOST_CERTIFICATE, Authentication.RSA
         )
 
 
 class SshKeyExchangeInitHostCertificateV01ECDSA(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostCertificateV01ECDSA, self).__init__(
-            SshHostKeyType.CERTIFICATE, Authentication.ECDSA
+            SshHostKeyType.HOST_CERTIFICATE, Authentication.ECDSA
         )
 
 
 class SshKeyExchangeInitHostCertificateV01ED25519(SshKeyExchangeInitHostKeyBase):
     def __init__(self):
         super(SshKeyExchangeInitHostCertificateV01ED25519, self).__init__(
-            SshHostKeyType.CERTIFICATE, Authentication.EDDSA
+            SshHostKeyType.HOST_CERTIFICATE, Authentication.EDDSA
+        )
+
+
+class SshKeyExchangeInitX509CertificateBase(SshKeyExchangeInitAnyAlgorithm):
+    def __init__(self, ssh_x509_certificate_class, authentication):
+        super(SshKeyExchangeInitX509CertificateBase, self).__init__(
+            kex_algorithms=list(filter(
+                lambda algorithm: algorithm.value.kex in [KeyExchange.ECDHE],
+                SshKexAlgorithm
+            )),
+            host_key_algorithms=list(filter(
+                lambda algorithm: algorithm.value.signature.value.key_type == authentication,
+                ssh_x509_certificate_class.get_host_key_algorithms()
+            ))
+        )
+
+
+class SshKeyExchangeInitX509CertificateDSS(SshKeyExchangeInitX509CertificateBase):
+    def __init__(self):
+        super(SshKeyExchangeInitX509CertificateDSS, self).__init__(
+            SshX509Certificate, Authentication.DSS
+        )
+
+
+class SshKeyExchangeInitX509CertificateRSA(SshKeyExchangeInitX509CertificateBase):
+    def __init__(self):
+        super(SshKeyExchangeInitX509CertificateRSA, self).__init__(
+            SshX509Certificate, Authentication.RSA
+        )
+
+
+class SshKeyExchangeInitX509CertificateChainDSA(SshKeyExchangeInitX509CertificateBase):
+    def __init__(self):
+        super(SshKeyExchangeInitX509CertificateChainDSA, self).__init__(
+            SshX509CertificateChain, Authentication.DSS
+        )
+
+
+class SshKeyExchangeInitX509CertificateChainECDSA(SshKeyExchangeInitX509CertificateBase):
+    def __init__(self):
+        super(SshKeyExchangeInitX509CertificateChainECDSA, self).__init__(
+            SshX509CertificateChain, Authentication.ECDSA
+        )
+
+
+class SshKeyExchangeInitX509CertificateChainRSA(SshKeyExchangeInitX509CertificateBase):
+    def __init__(self):
+        super(SshKeyExchangeInitX509CertificateChainRSA, self).__init__(
+            SshX509CertificateChain, Authentication.RSA
         )
 
 
