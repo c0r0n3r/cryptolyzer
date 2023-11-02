@@ -259,3 +259,213 @@ Result Classes
 
 .. automodule:: cryptolyzer.tls.simulations
     :members:
+
+SSH
+===
+
+By now, almost exclusively the 2.0 version of the SSH protocol is used in practice, as the 1.5 versions have many
+security flaws. As a consequence CryptoLyzer supports only the 2.0 version of SSH, however, it can be recognized that a
+server supports both SSH protocol versions 1 and 2.
+
+Software and Protocol Version
+-----------------------------
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptolyzer.ssh.versions import AnalyzerVersions
+    >>> from cryptolyzer.ssh.client import L7ClientSsh
+    >>>
+    >>> analyzer = AnalyzerVersions()
+    >>> client = L7ClientSsh('git.centos.org', 22)
+    >>> result = analyzer.analyze(client)
+    >>>
+    >>> list(map(str, result.protocol_versions))
+    ['SSH 2.0']
+    >>>
+    >>> result.software_version.vendor
+    'OpenSSH'
+    >>> result.software_version.version
+    '8.0'
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.ssh.versions
+    :members:
+
+Cipher Suites
+-------------
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptolyzer.ssh.pubkeys import AnalyzerCiphers
+    >>> from cryptolyzer.ssh.client import L7ClientSsh
+    >>>
+    >>> analyzer = AnalyzerCiphers()
+    >>> client = L7ClientSsh('github.com', 22)
+    >>> result = analyzer.analyze(client)
+    >>>
+    >>> list(map(
+    ... lambda public_key: public_key.host_key_algorithm.value.code,
+    ... result.public_keys
+    ... ))
+    ['ecdsa-sha2-nistp256', 'ssh-ed25519', 'ssh-rsa']
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.ssh.ciphers
+    :members:
+
+Diffie-Hellman Parameters
+-------------------------
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptolyzer.ssh.dhparams import AnalyzerDHParams
+    >>> from cryptolyzer.ssh.client import L7ClientSsh
+    >>>
+    >>> analyzer = AnalyzerDHParams()
+    >>> client = L7ClientSsh('git.launchpad.net', 22)
+    >>> result = analyzer.analyze(client, protocol_version)
+    >>>
+    >>> list(map(
+    ... lambda key_exchange: key_exchange.value.key_size,
+    ... result.key_exchange.kex_algorithms
+    ... ))
+    [2048]
+    >>>
+    >>> result.group_exchange.key_sizes
+    [2048, 3072, 4096, 6144, 7680, 8192]
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.ssh.dhparams
+    :members:
+
+Host Keys and Certificates
+--------------------------
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptolyzer.ssh.pubkeys import AnalyzerPublicKeys
+    >>> from cryptolyzer.ssh.client import L7ClientSsh
+    >>>
+    >>> analyzer = AnalyzerPublicKeys()
+    >>> client = L7ClientSsh('git.launchpad.net', 22)
+    >>> result = analyzer.analyze(client)
+    >>>
+    >>> list(map(
+    ... lambda public_key: public_key.host_key_algorithm.value.code,
+    ... result.public_keys
+    ... ))
+    ['ssh-rsa']
+    >>>
+    >>> print(result.public_keys[0].public_key.pem)
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxBURMAQ9sntl63NklXFJ
+    pieODBdQQgd1tdTU2oqs1Y+12Z0JoFmZPVGnR1WNsAV73pXAzudTDzeaMyYxQJJ8
+    NPaz+1zESTJQDi0iFaFOg0RdbtY/JCVWPnX4gx4Xku/rIgA565m/Bxp9sUEOhCQ4
+    wF68NcefMeXmY0NDxVnSPqUU3WBr1pKR3VyhTumvf5Q8eLqPTAp3jxBov0J5Apiq
+    iwgVJWDWWEYgfJ1XntrTBdJo1fMZNayfv1D/vPe/hVxUfcPwdRD0Y4kN+WTUGSjz
+    +IrMT7cjLgkJGWO3JFq+WLMpTX7zXMhg5ztV2s2YSe9a8w6YtUZpxVwVuYvtnZts
+    uwIDAQAB
+    -----END PUBLIC KEY-----
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.ssh.pubkeys
+    :members:
+
+HTTP(S)
+=======
+
+By now, exclusively the 1.1 version of the HTTP protocol is used in practice, so CryptoLyzer supports only the 1.1
+version of the HTTP protocol. The analyses work both with the plain text version of the protocol (HTTP) and the
+TLS-secured version (HTTPS).
+
+Headers
+-------
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptolyzer.httpx.headers import AnalyzerHeaders
+    >>> from cryptolyzer.httpx.client import L7ClientHttp
+    >>>
+    >>> analyzer = AnalyzerHeaders()
+    >>> client = L7ClientHttp('https://hstspreload.org/')
+    >>> result = analyzer.analyze(client, None)
+    >>>
+    >>> header = next(filter(
+    ... lambda header: isinstance(header, HttpHeaderFieldSTS),
+    ... result.headers
+    ... ))
+    >>>
+    >>> header.value.preload.value
+    True
+    >>> header.value.max_age.value
+    datetime.timedelta(days=365)
+
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.httpx.headers
+    :members:
+
+DNSSEC
+======
+
+Code Snippet
+------------
+
+.. code:: python
+
+    >>> from cryptolyzer.dnsrec.dnssec import AnalyzerDnsSec
+    >>> from cryptolyzer.dnsrec.client import L7ClientDns
+    >>>
+    >>> analyzer = AnalyzerDnsSec()
+    >>> client = L7ClientDns('cloudflare.com')
+    >>>
+    >>> result = analyzer.analyze(client)
+    >>>
+    >>> list(map(
+    ... lambda dns_key: set(map(lambda flag: flag.name, dns_key.flags)),
+    ... result.dns_keys
+    ... ))
+    [{'DNS_ZONE_KEY'}, {'DNS_ZONE_KEY'}, {'SECURE_ENTRY_POINT', 'DNS_ZONE_KEY'}]
+    >>>
+    >>> list(map(
+    ... lambda dns_key: dns_key.key_tag,
+    ... result.dns_keys
+    ... ))
+    [43038, 32553, 57355]
+    >>>
+    >>> list(map(
+    ... lambda digital_signature: digital_signature.key_tag,
+    ... result.digital_signatures
+    ... ))
+    [57355]
+
+Result Classes
+--------------
+
+.. automodule:: cryptolyzer.dnsrec.dnssec
+    :members:

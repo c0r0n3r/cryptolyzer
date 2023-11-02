@@ -13,6 +13,12 @@ from cryptolyzer.common.utils import LogSingleton
 
 @attr.s
 class AnalyzerResultHeaders(AnalyzerResultHttp):  # pylint: disable=too-few-public-methods
+    """
+    :class: Analyzer result relates to the response headers.
+
+    :param versions: List of the response headers.
+    """
+
     headers = attr.ib(
         validator=attr.validators.deep_iterable(
             member_validator=attr.validators.instance_of((HttpHeaderFieldBase, HttpHeaderFieldUnparsed))

@@ -10,6 +10,17 @@ from cryptolyzer.common.result import AnalyzerResultDnsRecord, AnalyzerTargetDns
 
 @attr.s
 class AnalyzerResultDnsSec(AnalyzerResultDnsRecord):  # pylint: disable=too-few-public-methods
+    """
+    :class: Analyzer result relates to `DNSSEC <https://www.rfc-editor.org/rfc/rfc4034>`__ keys end signatures.
+
+    :param dns_keys: List of the public keys that can be used to verify digital signatures
+        (`DNSKEY <https://www.rfc-editor.org/rfc/rfc4034#section-2>`__).
+    :param delegation_signer: List of the signatures relate to delegation signer
+        (`DS <https://www.rfc-editor.org/rfc/rfc4034#section-5>`__).
+    :param resource_record_signatures: List of the digital signatures for the record set
+        (`RRSIG <https://www.rfc-editor.org/rfc/rfc4034#section-3>`__).
+    """
+
     dns_keys = attr.ib(
         validator=attr.validators.deep_iterable(
             member_validator=attr.validators.instance_of(DnsRecordDnskey),
