@@ -17,6 +17,7 @@ from test.common.classes import TestLoggerBase
 import urllib3
 
 from cryptodatahub.common.algorithm import Hash
+from cryptodatahub.common.grade import Grade
 from cryptodatahub.common.types import Base64Data
 from cryptodatahub.common.utils import HttpFetcher, hash_bytes
 
@@ -29,6 +30,8 @@ from cryptolyzer.httpx.content import (
     HttpTagIntegrityGetter,
     HttpTagScriptIntegrity,
     HttpTagScriptIntegrityUnparsed,
+    HttpTagSourceGetter,
+    HttpTagSourced,
 )
 
 
@@ -132,6 +135,38 @@ class TestHttpTagIntegrityGetter(unittest.TestCase):
         )
 
 
+class TestHttpTagSourceGetter(unittest.TestCase):
+    def test_empty(self):
+        self.assertEqual(HttpTagSourceGetter()(b''), set())
+
+    def test_sources(self):
+        self.assertEqual(
+            HttpTagSourceGetter()(b''.join([
+                b'<!DOCTYPE html>',
+                b'<html>',
+                b'  <body>',
+                b'    <img src="/img"/>',
+                b'    <audio src="/audio"/>',
+                b'    <iframe src="/iframe"/>',
+                b'    <link href="/link"/>',
+                b'    <link href="/link"/ rel="stylesheet">',
+                b'    <object data="/object"/>',
+                b'    <script src="/script"/>',
+                b'    <video src="/video"/>',
+                b'  </body>',
+                b'</html>',
+            ])), set([
+                HttpTagSourced('img', '/img'),
+                HttpTagSourced('audio', '/audio'),
+                HttpTagSourced('iframe', '/iframe'),
+                HttpTagSourced('link', '/link'),
+                HttpTagSourced('object', '/object'),
+                HttpTagSourced('script', '/script'),
+                HttpTagSourced('video', '/video'),
+            ])
+        )
+
+
 class TestHttpContent(TestLoggerBase):
     @classmethod
     def get_result(cls, uri, timeout=None):
@@ -141,11 +176,76 @@ class TestHttpContent(TestLoggerBase):
             client.timeout = timeout
         return analyzer.analyze(client, HttpVersion.HTTP1_1)
 
+    def test_relative_sources(self):
+        relative_links = b''.join([
+            b'<!DOCTYPE html>',
+            b'<html>',
+            b'  <body>',
+            b'    <img src="/img"/>',
+            b'    <audio src="/audio"/>',
+            b'    <iframe src="/iframe"/>',
+            b'    <link href="/link"/ rel="stylesheet">',
+            b'    <object data="/object"/>',
+            b'    <script src="/script"/>',
+            b'    <video src="/video"/>',
+            b'  </body>',
+            b'</html>',
+        ])
+
+        with mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=relative_links)):
+            analyzer_result = self.get_result('https://example.com')
+            self.assertEqual(analyzer_result.unencrypted_sources, [])
+        with mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=relative_links)):
+            analyzer_result = self.get_result('http://example.com')
+            self.assertEqual(len(analyzer_result.unencrypted_sources), 7)
+
+        absolute_links = b''.join([
+            b'<!DOCTYPE html>',
+            b'<html>',
+            b'  <body>',
+            b'    <img src="http://example.com/img"/>',
+            b'    <audio src="http://example.com/audio"/>',
+            b'    <iframe src="http://example.com/iframe"/>',
+            b'    <link href="http://example.com/link" rel="stylesheet"/>',
+            b'    <object data="http://example.com/object"/>',
+            b'    <script src="http://example.com/script"/>',
+            b'    <video src="http://example.com/video"/>',
+            b'  </body>',
+            b'</html>',
+        ])
+        with mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=absolute_links)):
+            analyzer_result = self.get_result('http://example.com')
+            self.assertEqual(len(analyzer_result.unencrypted_sources), 7)
+
     def test_real(self):
+        mime_type_html = HttpHeaderFieldValueContentTypeMimeType('html', MimeTypeRegistry.TEXT)
+
         analyzer_result = self.get_result('https://www.cloudflare.com')
-        self.assertEqual(
-            analyzer_result.mime_type,
-            HttpHeaderFieldValueContentTypeMimeType('html', MimeTypeRegistry.TEXT)
-        )
+        self.assertEqual(analyzer_result.mime_type, mime_type_html)
         self.assertEqual(len(analyzer_result.script_integrity), 1)
         self.assertTrue(analyzer_result.script_integrity[0].is_hash_correct)
+        self.assertEqual(len(analyzer_result.unencrypted_sources), 0)
+
+        analyzer_result = self.get_result('https://mixed-script.badssl.com')
+        self.assertEqual(analyzer_result.mime_type, mime_type_html)
+        self.assertEqual(analyzer_result.script_integrity, [])
+        self.assertEqual(len(analyzer_result.unencrypted_sources), 1)
+
+        unencrypted_source = analyzer_result.unencrypted_sources[0]
+        self.assertEqual(unencrypted_source.data_type.value, 'script')
+        self.assertEqual(unencrypted_source.data_type.grade, Grade.INSECURE)
+        self.assertEqual(str(unencrypted_source.source_url), 'http://mixed-script.badssl.com/nonsecure.js')
+
+        analyzer_result = self.get_result('https://very.badssl.com')
+        self.assertEqual(analyzer_result.mime_type, mime_type_html)
+        self.assertEqual(analyzer_result.script_integrity, [])
+        self.assertEqual(len(analyzer_result.unencrypted_sources), 2)
+
+        unencrypted_source = analyzer_result.unencrypted_sources[0]
+        self.assertEqual(unencrypted_source.data_type.value, 'img')
+        self.assertEqual(unencrypted_source.data_type.grade, Grade.WEAK)
+        self.assertEqual(str(unencrypted_source.source_url), 'http://very.badssl.com/image.jpg')
+        unencrypted_source = analyzer_result.unencrypted_sources[1]
+        self.assertEqual(unencrypted_source.data_type.value, 'script')
+        self.assertEqual(unencrypted_source.data_type.grade, Grade.INSECURE)
+        self.assertEqual(str(unencrypted_source.source_url), 'http://http.badssl.com/test/imported.js')
