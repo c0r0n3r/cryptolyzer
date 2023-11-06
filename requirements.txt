@@ -2,7 +2,7 @@ oscrypto @ git+https://github.com/wbond/oscrypto.git@d5f3437
 attrs>=20.3.0,<22.0.1
 certvalidator
 colorama
-cryptoparser>=0.11.0
+cryptoparser>=0.11.1
 pathlib2==2.3.7.post1;python_version<"3.4"
 pathlib2;python_version>="3.4"
 pyfakefs

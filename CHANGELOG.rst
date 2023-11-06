@@ -3,6 +3,25 @@ Changelog
 =========
 
 -------------------
+0.11.1 - 2023-11-06
+-------------------
+
+Features
+========
+
+-  TLS (``tls``)
+
+   -  Elliptic Curves (``curves``)
+
+      -  add support for post-quantum safe hybrid (Kyber) algorithms (#119)
+
+-  SSH (``ssh``)
+
+   -  Public Keys (``pubkeys``)
+
+      -  X.509 certificate and certificate chain support (#70)
+
+-------------------
 0.11.0 - 2023-10-28
 -------------------
 

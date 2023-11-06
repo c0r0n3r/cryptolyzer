@@ -9,6 +9,7 @@ Differentiators
 """""""""""""""
 
 -  checks supported Diffie-Hellman (group exchange) key sizes
+-  checks supported host certificates, X.509 certificates and chains
 -  analyzes server protocol version string to identify application server vendor and version
 
 Versions
@@ -21,15 +22,15 @@ Analyzers
 
 Supported analyzers by cryptographic protocol versions
 
-+------------------------------------------+---------+
-| Analyzers                                | SSH 2.0 |
-+==========================================+=========+
-| Cipher Suites (``ciphers``)              |    ✓    |
-+------------------------------------------+---------+
-| Diffie-Hellman parameters (``dhparams``) |    ✓    |
-+------------------------------------------+---------+
-| Host Keys/Certificates (``pubkeys``)     |    ✓    |
-+------------------------------------------+---------+
++-------------------------------------------------------------+---------+
+| Analyzers                                                   | SSH 2.0 |
++=============================================================+=========+
+| Cipher Suites (``ciphers``)                                 |    ✓    |
++-------------------------------------------------------------+---------+
+| Diffie-Hellman parameters (``dhparams``)                    |    ✓    |
++-------------------------------------------------------------+---------+
+| Host Keys, Host/X.509 Certificates and Chains (``pubkeys``) |    ✓    |
++-------------------------------------------------------------+---------+
 
 SSL/TLS
 ^^^^^^^
@@ -44,6 +45,8 @@ Differentiators
    [wolfSSL](https://www.wolfssl.com/)
 -  checks `GOST <https://en.wikipedia.org/wiki/GOST>`__ (national standards of the Russian Federation and CIS countries)
    cipher suites
+-  checks `post-quantum <https://en.wikipedia.org/wiki/Post-quantum_cryptography>`__ elliptic curves
+   (`Kyber <https://en.wikipedia.org/wiki/Kyber>`__)
 -  checks TLS 1.3 draft versions, not just finnal version
 -  checks whether Diffie-Hellman
 
