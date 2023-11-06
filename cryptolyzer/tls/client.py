@@ -108,7 +108,7 @@ def key_share_entry_from_named_curve(named_curve):
             get_ecdh_ephemeral_key_forged(named_curve.value.named_group)
         )
 
-    if named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM:
+    if named_curve.value.named_group.value.group_type == NamedGroupType.FINITE_FIELD:
         well_known_dh_param = NAMED_CURVE_TO_RFC7919_WELL_KNOWN[named_curve]
         return TlsKeyShareEntry(
             named_curve,
@@ -353,7 +353,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
         named_curve
         for named_curve in TlsNamedCurve
         if (named_curve.value.named_group is not None
-            and named_curve.value.named_group.value.group_type == NamedGroupType.DH_PARAM)
+            and named_curve.value.named_group.value.group_type == NamedGroupType.FINITE_FIELD)
     ]
 
     def __init__(
@@ -386,10 +386,9 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
             TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2))
     ]
     _NAMED_CURVES = [
-        named_curve
-        for named_curve in TlsNamedCurve
-        if (named_curve.value.named_group is not None
-            and named_curve.value.named_group.value.group_type == NamedGroupType.ELLIPTIC_CURVE)
+        curve
+        for curve, group in map(lambda curve: (curve, curve.value.named_group), TlsNamedCurve)
+        if (group is not None and group.value.group_type in (NamedGroupType.ELLIPTIC_CURVE, NamedGroupType.HYBRID_PQS))
     ]
 
     def __init__(

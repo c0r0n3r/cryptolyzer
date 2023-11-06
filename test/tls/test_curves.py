@@ -90,11 +90,20 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(
             result.curves,
-            [TlsNamedCurve.X25519, TlsNamedCurve.SECP256R1, TlsNamedCurve.SECP384R1, TlsNamedCurve.SECP521R1, ]
+            [
+                TlsNamedCurve.X25519_KYBER_512_DRAFT00,
+                TlsNamedCurve.X25519_KYBER_768_DRAFT00,
+                TlsNamedCurve.X25519,
+                TlsNamedCurve.SECP256R1,
+                TlsNamedCurve.SECP384R1,
+                TlsNamedCurve.SECP521R1,
+            ]
         )
         self.assertTrue(result.extension_supported)
         self.assertEqual(
             self.pop_log_lines(), [
+                'Server offers elliptic-curve X25519_KYBER_512_DRAFT00',
+                'Server offers elliptic-curve X25519_KYBER_768_DRAFT00',
                 'Server offers elliptic-curve CURVE25519',
                 'Server offers elliptic-curve PRIME256V1',
                 'Server offers elliptic-curve SECP384R1',
@@ -111,6 +120,8 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertEqual(
             self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves,
             [
+                TlsNamedCurve.X25519_KYBER_512_DRAFT00,
+                TlsNamedCurve.X25519_KYBER_768_DRAFT00,
                 TlsNamedCurve.X25519,
                 TlsNamedCurve.SECP256R1,
                 TlsNamedCurve.SECP384R1,
@@ -119,10 +130,25 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         )
         self.assertEqual(
             self.get_log_lines(), [
+                'Server offers elliptic-curve X25519_KYBER_512_DRAFT00',
+                'Server offers elliptic-curve X25519_KYBER_768_DRAFT00',
                 'Server offers elliptic-curve CURVE25519',
                 'Server offers elliptic-curve PRIME256V1',
                 'Server offers elliptic-curve SECP384R1',
                 'Server offers elliptic-curve SECP521R1',
+            ]
+        )
+
+    def test_pqc(self):
+        self.assertEqual(
+            self.get_result('pq.cloudflareresearch.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves,
+            [
+                TlsNamedCurve.X25519_KYBER_512_DRAFT00,
+                TlsNamedCurve.X25519_KYBER_768_DRAFT00,
+                TlsNamedCurve.X25519,
+                TlsNamedCurve.SECP256R1,
+                TlsNamedCurve.SECP384R1,
+                TlsNamedCurve.SECP521R1,
             ]
         )
 
