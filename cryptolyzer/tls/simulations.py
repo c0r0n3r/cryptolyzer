@@ -6,7 +6,8 @@ import attr
 
 import six
 
-from cryptodatahub.common.algorithm import KeyExchange
+from cryptodatahub.common.algorithm import KeyExchange, NamedGroupType
+from cryptodatahub.common.key import PublicKeySize
 
 from cryptodatahub.tls.algorithm import TlsNamedCurve
 from cryptodatahub.tls.client import ClientVersionedParamsBase, TlsClient
@@ -98,7 +99,7 @@ class AnalyzerResultSimulationsTlsPfs(AnalyzerResultSimulationsTlsBase):
     :param key_size: Key size of used during the key exchange.
     """
 
-    key_size = attr.ib(validator=attr.validators.instance_of(int))
+    key_size = attr.ib(validator=attr.validators.instance_of(PublicKeySize))
 
 
 @attr.s
@@ -274,7 +275,12 @@ class AnalyzerSimulations(AnalyzerTlsBase):
             if isinstance(key_share_extension, TlsExtensionKeyShareServer)
             else key_share_extension.selected_group
         )
-        result_params['key_size'] = result_params['named_group'].value.named_group.value.size
+        result_params['key_size'] = PublicKeySize(
+            KeyExchange.DHE
+            if result_params['named_group'].value.named_group.value.group_type == NamedGroupType.FINITE_FIELD
+            else KeyExchange.ECDHE,
+            result_params['named_group'].value.named_group.value.size
+        )
 
         return AnalyzerResultSimulationsTlsPfsNamedGroup(**result_params)
 
@@ -291,7 +297,7 @@ class AnalyzerSimulations(AnalyzerTlsBase):
             server_key_exchange = server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
             dh_public_key = parse_tls_dh_params(server_key_exchange.param_bytes)
             key_size = dh_public_key.key_size
-            result_params['key_size'] = key_size
+            result_params['key_size'] = PublicKeySize(cipher_suite.value.key_exchange, key_size)
             dh_parameter = DHParameter(dh_public_key.public_numbers.parameter_numbers, key_size)
             well_known = dh_parameter.well_known
             if well_known is None:
@@ -303,7 +309,10 @@ class AnalyzerSimulations(AnalyzerTlsBase):
             server_key_exchange = server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
             tls_named_curve = AnalyzerCurves.get_supported_curve(protocol_version, server_key_exchange)
             result_params['named_group'] = tls_named_curve
-            result_params['key_size'] = tls_named_curve.value.named_group.value.size
+            result_params['key_size'] = PublicKeySize(
+                cipher_suite.value.key_exchange,
+                tls_named_curve.value.named_group.value.size
+            )
             result = AnalyzerResultSimulationsTlsPfsNamedGroup(**result_params)
 
         return result
