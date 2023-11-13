@@ -11,6 +11,7 @@ from cryptoparser.tls.extension import (
     TlsExtensionEncryptThenMAC,
     TlsExtensionExtendedMasterSecret,
     TlsExtensionNextProtocolNegotiationClient,
+    TlsExtensionRecordSizeLimit,
     TlsExtensionRenegotiationInfo,
     TlsExtensionSessionTicket,
     TlsExtensionType,
@@ -32,6 +33,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloBlockCipherModeCBC,
     TlsHandshakeClientHelloKeyExchangeECDHx,
     TlsAlert,
+    TlsAlertDescription,
 )
 
 
@@ -58,6 +60,10 @@ class AnalyzerResultExtensions(AnalyzerResultTls):  # pylint: disable=too-many-i
     ec_point_formats = attr.ib(
         validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsECPointFormat)),
         metadata={'human_readable_name': 'EC Point Formats'}
+    )
+    record_size_limit_handled = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)))
+    record_size_limit_server = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
     )
 
 
@@ -324,6 +330,42 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return point_formats
 
+    @classmethod
+    def _analyze_record_size_limit(cls, analyzable, protocol_version):
+        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionRecordSizeLimit(1))
+
+        handled = False
+        try:
+            server_messages = analyzable.do_tls_handshake(client_hello)
+        except TlsAlert as e:
+            if e.description == TlsAlertDescription.RECORD_OVERFLOW:
+                handled = True
+        except NetworkError:
+            pass
+
+        if not handled:
+            LogSingleton().log(level=60, msg=six.u('Server does not handle record size limit'))
+            return False, None
+
+        LogSingleton().log(level=60, msg=six.u('Server handles record size limit'))
+
+        client_hello = cls._get_client_hello(analyzable, protocol_version)
+        try:
+            server_messages = analyzable.do_tls_handshake(client_hello)
+        except (TlsAlert, NetworkError):
+            return True, None
+
+        try:
+            extensions = server_messages[TlsHandshakeType.SERVER_HELLO].extensions
+            extension = extensions.get_item_by_type(TlsExtensionType.RECORD_SIZE_LIMIT)
+        except KeyError:
+            LogSingleton().log(level=60, msg=six.u('Server does not require record size limit'))
+            return True, None
+
+        LogSingleton().log(level=60, msg=six.u('Server requires record size limit %d' % (extension.record_size_limit)))
+
+        return True, extension.record_size_limit
+
     def analyze(self, analyzable, protocol_version):
         supported_protocol_names = self._analyze_alpn(analyzable, protocol_version)
         supported_next_protocol_names = self._analyze_npn(analyzable, protocol_version)
@@ -335,6 +377,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         extended_master_secret_supported = self._analyze_extended_master_secret(analyzable, protocol_version)
         encrypt_then_mac_supported = self._analyze_encrypt_than_mac(analyzable, protocol_version)
         ec_point_formats = self._analyze_ec_point_formats(analyzable, protocol_version)
+        record_size_limit_handled, record_size_limit_server = self._analyze_record_size_limit(
+            analyzable, protocol_version
+        )
 
         return AnalyzerResultExtensions(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
@@ -348,4 +393,6 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             extended_master_secret_supported,
             encrypt_then_mac_supported,
             ec_point_formats,
+            record_size_limit_handled,
+            record_size_limit_server,
         )

@@ -13,6 +13,7 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsECPointFormatVector,
     TlsExtensionApplicationLayerProtocolNegotiation,
+    TlsExtensionRecordSizeLimit,
 )
 from cryptoparser.tls.subprotocol import (
     TlsCompressionMethod,
@@ -21,7 +22,8 @@ from cryptoparser.tls.subprotocol import (
 )
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
-from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert, TlsAlertDescription
 from cryptolyzer.tls.extensions import AnalyzerExtensions
 from cryptolyzer.tls.server import L7ServerTls
 
@@ -195,6 +197,62 @@ class TestTlsExtensions(TestLoggerBase):
         self.assertTrue(result.clock_is_accurate)
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers accurate clock', log_lines)
+
+    def test_record_size_limit(self):
+        analyzer = AnalyzerExtensions()
+        l7_client = L7ClientTlsBase.from_scheme('tls', 'www.cloudflare.com', 443)
+
+        with mock.patch.object(L7ClientTlsBase, 'do_tls_handshake',
+                               side_effect=NetworkError(NetworkErrorType.NO_CONNECTION)):
+            handled, limit_server = analyzer._analyze_record_size_limit(  # pylint: disable=protected-access
+                l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
+            )
+            self.assertFalse(handled)
+            self.assertEqual(limit_server, None)
+
+        with mock.patch.object(L7ClientTlsBase, 'do_tls_handshake',
+                               side_effect=TlsAlert(TlsAlertDescription.HANDSHAKE_FAILURE)):
+            handled, limit_server = analyzer._analyze_record_size_limit(  # pylint: disable=protected-access
+                l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
+            )
+            self.assertFalse(handled)
+            self.assertEqual(limit_server, None)
+
+        with mock.patch.object(L7ClientTlsBase, 'do_tls_handshake', side_effect=[
+                    TlsAlert(TlsAlertDescription.RECORD_OVERFLOW),
+                    TlsAlert(TlsAlertDescription.HANDSHAKE_FAILURE)
+                ]):
+            handled, limit_server = analyzer._analyze_record_size_limit(  # pylint: disable=protected-access
+                l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
+            )
+            self.assertTrue(handled)
+            self.assertEqual(limit_server, None)
+
+        server_hello_message = TlsHandshakeServerHello(
+            cipher_suite=TlsCipherSuite.TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256,
+            compression_method=TlsCompressionMethod.NULL,
+            extensions=[]
+        )
+        with mock.patch.object(L7ClientTlsBase, 'do_tls_handshake', side_effect=[
+                    TlsAlert(TlsAlertDescription.RECORD_OVERFLOW),
+                    {TlsHandshakeType.SERVER_HELLO: server_hello_message},
+                ]):
+            handled, limit_server = analyzer._analyze_record_size_limit(  # pylint: disable=protected-access
+                l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
+            )
+            self.assertTrue(handled)
+            self.assertEqual(limit_server, None)
+
+        server_hello_message.extensions.append(TlsExtensionRecordSizeLimit(1024))
+        with mock.patch.object(L7ClientTlsBase, 'do_tls_handshake', side_effect=[
+                    TlsAlert(TlsAlertDescription.RECORD_OVERFLOW),
+                    {TlsHandshakeType.SERVER_HELLO: server_hello_message},
+                ]):
+            handled, limit_server = analyzer._analyze_record_size_limit(  # pylint: disable=protected-access
+                l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
+            )
+            self.assertTrue(handled)
+            self.assertEqual(limit_server, 1024)
 
     def test_renegotiation_info(self):
         result = self.get_result('www.deloton.com', 443)
