@@ -3,6 +3,36 @@ Changelog
 =========
 
 -------------------
+0.11.2 - 2023-11-13
+-------------------
+
+Features
+========
+
+-  HTTP (``http``)
+
+   -  Content (``content``)
+
+      -  checker for subresource integrity (#86)
+      -  checker for unencrypted content (#120)
+
+Improvements
+============
+
+-  TLS (``tls``)
+
+   -  Simulations (``simulations``)
+
+      -  grade key exchange sizes (#121)
+
+Notable fixes
+=============
+
+-  Generic
+
+   -  handle not graded algorithms (#122)
+
+-------------------
 0.11.1 - 2023-11-06
 -------------------
 
