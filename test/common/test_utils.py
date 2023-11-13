@@ -30,7 +30,8 @@ class TestSerializableTextEncoderHighlighted(unittest.TestCase):
 
     @staticmethod
     def _colorize(text, color):
-        return getattr(colorama.Fore, color.upper()) + text + colorama.Style.RESET_ALL
+        foreground_color = colorama.Style.RESET_ALL if color is None else getattr(colorama.Fore, color.upper())
+        return foreground_color + text + colorama.Style.RESET_ALL
 
     @staticmethod
     def _highlight(text):
@@ -38,6 +39,26 @@ class TestSerializableTextEncoderHighlighted(unittest.TestCase):
 
     def test_non_greadable(self):
         self.assertEqual(SerializableTextEncoderHighlighted()('value', 0), (False, 'value'))
+
+    def test_not_greaded(self):
+        self.assertEqual(
+            SerializableTextEncoderHighlighted()(TestGradeableComplex.from_gradeables(None), 0),
+            (False, self._colorize('TestGradeableComplex', None))
+        )
+
+        self.assertEqual(
+            SerializableTextEncoderHighlighted()(TestGradeableComplex.from_gradeables([None]), 0),
+            (False, self._colorize('TestGradeableComplex', None))
+        )
+
+        self.assertEqual(
+            SerializableTextEncoderHighlighted()(
+                TestGradeableComplex.from_gradeables([
+                    TestGradeableComplex.from_gradeables(None)
+                ]), 0
+            ),
+            (False, self._colorize('TestGradeableComplex', None))
+        )
 
     def test_greadable_simple(self):
         self.assertEqual(

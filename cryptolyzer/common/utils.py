@@ -122,7 +122,16 @@ class SerializableTextEncoderHighlighted(object):
 
     def _get_gradeable_complex_result(self, gradeable_complex, level):
         result = ''
-        for gradeable in sorted(gradeable_complex.gradeables, key=lambda gradeable: gradeable.min_grade.value):
+
+        if gradeable_complex.gradeables is None:
+            return result
+
+        graded_gradeabes = filter(
+            lambda gradeable: gradeable is not None and gradeable.min_grade is not None,
+            gradeable_complex.gradeables
+        )
+
+        for gradeable in sorted(graded_gradeabes, key=lambda gradeable: gradeable.min_grade.value):
             if isinstance(gradeable, GradeableVulnerabilities):
                 result += self._get_gradeable_vulnerabilities_result(gradeable, level)
             elif isinstance(gradeable, GradeableComplex):
