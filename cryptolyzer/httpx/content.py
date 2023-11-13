@@ -7,9 +7,11 @@ import bs4
 import urllib3
 
 from cryptodatahub.common.algorithm import Hash
-from cryptodatahub.common.types import convert_base64_data, convert_url, Base64Data
+from cryptodatahub.common.grade import Grade, GradeableSimple
+from cryptodatahub.common.types import convert_base64_data, convert_value_to_object, convert_url, Base64Data
 from cryptodatahub.common.utils import hash_bytes, HttpFetcher
 
+from cryptoparser.common.base import Serializable
 from cryptoparser.httpx.header import (
     HttpHeaderFieldValueContentType,
     HttpHeaderFieldValueContentTypeMimeType,
@@ -19,6 +21,35 @@ from cryptoparser.httpx.header import (
 from cryptolyzer.common.analyzer import AnalyzerHttpBase
 from cryptolyzer.common.result import AnalyzerResultHttp, AnalyzerTargetHttp
 from cryptolyzer.common.utils import LogSingleton
+
+
+@attr.s(frozen=True)
+class HttpTagSourceDataType(Serializable, GradeableSimple):
+    value = attr.ib(validator=attr.validators.instance_of(six.string_types))
+
+    def __str__(self):
+        return self.value
+
+    @property
+    def active(self):
+        return self.value in ('iframe', 'script', 'stylesheet')
+
+    @property
+    def grade(self):
+        return Grade.INSECURE if self.active else Grade.WEAK
+
+
+@attr.s(frozen=True)
+class HttpTagSourced(object):
+    data_type = attr.ib(
+        converter=convert_value_to_object(HttpTagSourceDataType),
+        validator=attr.validators.instance_of(HttpTagSourceDataType)
+    )
+    source_url = attr.ib(
+        converter=convert_url(),
+        validator=attr.validators.instance_of(urllib3.util.url.Url),
+        metadata={'human_readable_name': 'Source URL'}
+    )
 
 
 @attr.s(frozen=True)
@@ -66,6 +97,11 @@ class AnalyzerResultConetnt(AnalyzerResultHttp):  # pylint: disable=too-few-publ
             attr.validators.deep_iterable(member_validator=attr.validators.instance_of(HttpTagScriptBase))
         )
     )
+    unencrypted_sources = attr.ib(
+        validator=attr.validators.optional(
+            attr.validators.deep_iterable(member_validator=attr.validators.instance_of(HttpTagSourced))
+        )
+    )
 
 
 class HttpTagGetterBase(object):
@@ -81,6 +117,33 @@ class HttpTagGetterBase(object):
 
     def _get_source_as_url(self, tag):
         return urllib3.util.url.parse_url(tag.get(self._SOURCE_ATTR_NAME_BY_TAG_NAME[tag.name]))
+
+
+class HttpTagSourceGetter(HttpTagGetterBase):
+    def _is_tag_with_source(self, tag):
+        if tag.name not in self._SOURCE_ATTR_NAME_BY_TAG_NAME:
+            return False
+
+        attr_name = self._SOURCE_ATTR_NAME_BY_TAG_NAME[tag.name]
+        if not tag.has_attr(attr_name):
+            return False
+
+        attr_value = tag.get(attr_name)
+        return attr_value is not None
+
+    def __call__(self, html_data):
+        soup = bs4.BeautifulSoup(html_data, 'html.parser')
+        if soup.html is None:
+            return set()
+
+        return {
+            HttpTagSourced(
+                source_url=self._get_source_as_url(tag),
+                data_type=tag.get('rel') if tag.name == 'stylesheet' else tag.name
+            )
+            for tag in soup.html.find_all(self._is_tag_with_source)
+            if tag.name != 'link' or tag.get('rel') == ['stylesheet']
+        }
 
 
 class HttpTagIntegrityGetter(HttpTagGetterBase):
@@ -153,15 +216,25 @@ class AnalyzerConetnt(AnalyzerHttpBase):
         LogSingleton().log(level=60, msg=six.u('Server offers content with type %s') % (str(content_type.mime_type)))
 
         tags_with_integrity = None
+        tags_with_unencrypted_source = None
         if content_type.mime_type == HttpHeaderFieldValueContentTypeMimeType('html', MimeTypeRegistry.TEXT):
             html_data = http_fetcher.response_data.decode(charset)
 
             tags_with_integrity = HttpTagIntegrityGetter()(analyzable.uri, html_data)
 
-        return content_type.mime_type, tags_with_integrity
+            tags_with_source = HttpTagSourceGetter()(html_data)
+            tags_with_unencrypted_source = set(filter(
+                lambda tag: (
+                    tag.source_url.scheme == 'http' or
+                    (tag.source_url.scheme is None and tag.source_url.host is None and analyzable.uri.scheme == 'http')
+                ),
+                tags_with_source
+            ))
+
+        return content_type.mime_type, tags_with_integrity, tags_with_unencrypted_source
 
     def analyze(self, analyzable, protocol_version):
-        mime_type, tags_with_integrity = self._analyze_content(
+        mime_type, tags_with_integrity, tags_with_unencrypted_source = self._analyze_content(
             analyzable, protocol_version
         )
 
@@ -169,4 +242,5 @@ class AnalyzerConetnt(AnalyzerHttpBase):
             AnalyzerTargetHttp.from_l7_client(analyzable, protocol_version),
             mime_type,
             sorted(tags_with_integrity),
+            sorted(tags_with_unencrypted_source),
         )

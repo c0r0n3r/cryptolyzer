@@ -50,6 +50,12 @@ class TestMain(TestMainBase):
         )
         self.assertIn('Is Hash Correct: yes', result)
 
+        result = self._get_test_analyzer_result_markdown(
+            'http', 'content', uri + '/test/common/data/mixed-content.html'
+        )
+        self.assertIn('Data Type: script', result)
+        self.assertIn('Source URL: http://example.com/script.js', result)
+
         test_http_server.kill()
 
     def test_default_scheme(self):
