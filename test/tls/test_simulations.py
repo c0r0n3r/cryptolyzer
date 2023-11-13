@@ -8,6 +8,7 @@ except ImportError:
 from test.common.classes import TestLoggerBase
 
 from cryptodatahub.common.algorithm import Authentication, KeyExchange
+from cryptodatahub.common.key import PublicKeySize
 from cryptodatahub.tls.client import TlsClient
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription
@@ -88,7 +89,7 @@ class TestTlsSimulations(TestLoggerBase):
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertTrue(all(
-            analyzer_result.key_size == 2048
+            analyzer_result.key_size == PublicKeySize(KeyExchange.DHE, 2048)
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertEqual(len(result.failed_clients), 3)
@@ -120,7 +121,7 @@ class TestTlsSimulations(TestLoggerBase):
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertTrue(all(
-            analyzer_result.key_size == 256
+            analyzer_result.key_size == PublicKeySize(KeyExchange.ECDHE, 256)
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertEqual(len(result.failed_clients), 0)
@@ -137,7 +138,7 @@ class TestTlsSimulations(TestLoggerBase):
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertTrue(all(
-            analyzer_result.key_size == 256
+            analyzer_result.key_size == PublicKeySize(KeyExchange.ECDHE, 256)
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertEqual(len(result.failed_clients), 0)
