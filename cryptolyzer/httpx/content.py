@@ -12,11 +12,8 @@ from cryptodatahub.common.types import convert_base64_data, convert_value_to_obj
 from cryptodatahub.common.utils import hash_bytes, HttpFetcher
 
 from cryptoparser.common.base import Serializable
-from cryptoparser.httpx.header import (
-    HttpHeaderFieldValueContentType,
-    HttpHeaderFieldValueContentTypeMimeType,
-    MimeTypeRegistry,
-)
+from cryptoparser.common.field import FieldValueMimeType, MimeTypeRegistry
+from cryptoparser.httpx.header import HttpHeaderFieldValueContentType
 
 from cryptolyzer.common.analyzer import AnalyzerHttpBase
 from cryptolyzer.common.result import AnalyzerResultHttp, AnalyzerTargetHttp
@@ -91,7 +88,7 @@ class HttpTagScriptIntegrity(HttpTagScriptBase):
 
 @attr.s
 class AnalyzerResultConetnt(AnalyzerResultHttp):  # pylint: disable=too-few-public-methods
-    mime_type = attr.ib(validator=attr.validators.instance_of(HttpHeaderFieldValueContentTypeMimeType))
+    mime_type = attr.ib(validator=attr.validators.instance_of(FieldValueMimeType))
     script_integrity = attr.ib(
         validator=attr.validators.optional(
             attr.validators.deep_iterable(member_validator=attr.validators.instance_of(HttpTagScriptBase))
@@ -217,7 +214,7 @@ class AnalyzerConetnt(AnalyzerHttpBase):
 
         tags_with_integrity = None
         tags_with_unencrypted_source = None
-        if content_type.mime_type == HttpHeaderFieldValueContentTypeMimeType('html', MimeTypeRegistry.TEXT):
+        if content_type.mime_type == FieldValueMimeType('html', MimeTypeRegistry.TEXT):
             html_data = http_fetcher.response_data.decode(charset)
 
             tags_with_integrity = HttpTagIntegrityGetter()(analyzable.uri, html_data)
