@@ -21,8 +21,8 @@ from cryptodatahub.common.grade import Grade
 from cryptodatahub.common.types import Base64Data
 from cryptodatahub.common.utils import HttpFetcher, hash_bytes
 
+from cryptoparser.common.field import FieldValueMimeType, MimeTypeRegistry
 from cryptoparser.httpx.version import HttpVersion
-from cryptoparser.httpx.header import HttpHeaderFieldValueContentTypeMimeType, MimeTypeRegistry
 
 from cryptolyzer.httpx.client import L7ClientHttpBase
 from cryptolyzer.httpx.content import (
@@ -218,7 +218,7 @@ class TestHttpContent(TestLoggerBase):
             self.assertEqual(len(analyzer_result.unencrypted_sources), 7)
 
     def test_real(self):
-        mime_type_html = HttpHeaderFieldValueContentTypeMimeType('html', MimeTypeRegistry.TEXT)
+        mime_type_html = FieldValueMimeType('html', MimeTypeRegistry.TEXT)
 
         analyzer_result = self.get_result('https://www.cloudflare.com')
         self.assertEqual(analyzer_result.mime_type, mime_type_html)
