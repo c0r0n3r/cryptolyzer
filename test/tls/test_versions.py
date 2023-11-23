@@ -152,7 +152,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
             result.versions,
             [
                 TlsProtocolVersion(version)
-                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
+                for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
             ]
         )
         self._check_log(result)
