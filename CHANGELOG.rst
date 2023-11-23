@@ -3,6 +3,20 @@ Changelog
 =========
 
 -------------------
+0.12.0 - 2023-11-23
+-------------------
+
+Improvements
+============
+
+-  TLS (``tls``)
+
+   -  Extensions (``extensions``)
+
+      -  add analyzer checking which `record size limits <https://www.rfc-editor.org/rfc/rfc8449.html>`__ are supported
+         (#123)
+
+-------------------
 0.11.2 - 2023-11-13
 -------------------
 

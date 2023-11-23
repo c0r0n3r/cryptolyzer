@@ -2,7 +2,7 @@
 
 __title__ = 'CryptoLyzer'
 __technical_name__ = __title__.lower()
-__version__ = '0.11.2'
+__version__ = '0.12.0'
 __description__ = 'Fast and flexible cryptographic protocol analyzer'
 __author__ = 'Szilárd Pfeiffer'
 __author_email__ = 'coroner@pfeifferszilard.hu'
