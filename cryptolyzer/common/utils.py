@@ -60,13 +60,16 @@ class SerializableTextEncoderHighlighted(object):
 
     @staticmethod
     def _key_vulneravility(vulnerability):
-        return (vulnerability.grade.value, vulnerability.attack_type.value.name)
+        return (vulnerability.grade.value, vulnerability.attack_type.value.name if vulnerability.attack_type else None)
 
     @staticmethod
-    def _get_attack_name(vulnerability):
-        attack_name = vulnerability.attack_type.value.name
-        if vulnerability.named is not None:
-            attack_name += ', called {}'.format(vulnerability.named.value.name)
+    def _get_attack_result_string(vulnerability):
+        if vulnerability.attack_type is None:
+            attack_name = ''
+        else:
+            attack_name = ', due to {}'.format(vulnerability.attack_type.value.name)
+            if vulnerability.named is not None:
+                attack_name += ', called {}'.format(vulnerability.named.value.name)
 
         return attack_name
 
@@ -110,10 +113,10 @@ class SerializableTextEncoderHighlighted(object):
             indent = ' '
 
         result += os.linesep.join([
-            '{}{}, due to {}'.format(
+            '{}{}{}'.format(
                 indent,
                 self._get_colorized_text(vulnerability.grade, vulnerability.grade.value.name),
-                self._get_attack_name(vulnerability),
+                self._get_attack_result_string(vulnerability),
             )
             for vulnerability in sorted(gradeable_vulnerabilities.vulnerabilities, key=self._key_vulneravility)
         ])
