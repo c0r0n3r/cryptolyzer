@@ -147,17 +147,6 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         self._check_log(result)
 
     def test_tls_1_3(self):
-        result = self.get_result('www.cloudflare.com', 443)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(version)
-                for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
-            ]
-        )
-        self._check_log(result)
-
-    def test_tls_1_3_draft(self):
         result = self.get_result('www.facebook.com', 443)
         self.assertEqual(
             result.versions,

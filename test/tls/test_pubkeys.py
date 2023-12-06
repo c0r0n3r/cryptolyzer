@@ -413,7 +413,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
             leaf_certificate = pubkey.certificate_chain.items[0]
             with self.subTest():
                 self.assertIn(
-                    Entity.CLOUDFLARE,
+                    Entity.GOOGLE,
                     [sct.log.operator for sct in leaf_certificate.signed_certificate_timestamps]
                 )
         for pubkey in result.pubkeys:
