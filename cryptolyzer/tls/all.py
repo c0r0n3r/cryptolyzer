@@ -103,11 +103,22 @@ class AnalyzerAll(AnalyzerTlsBase):
 
     @staticmethod
     def _is_key_exchange_supported(cipher_suites, key_exchange):
-        return any(map(lambda cipher_suite: cipher_suite.value.key_exchange == key_exchange, cipher_suites))
+        return any(map(
+            lambda cipher_suite: (
+                cipher_suite.value.key_exchange is None or
+                cipher_suite.value.key_exchange == key_exchange
+            ),
+            cipher_suites
+        ))
 
     @staticmethod
     def _min_tls_version_supported(cipher_suite_results, key_exchange):
-        for protocol_version, cipher_suite_result in cipher_suite_results.items():
+        protocol_versions = sorted(filter(
+            lambda protocol_version: not protocol_version.is_draft and not protocol_version.is_google_experimental,
+            cipher_suite_results
+        ))
+        for protocol_version in protocol_versions:
+            cipher_suite_result = cipher_suite_results[protocol_version]
             if AnalyzerAll._is_key_exchange_supported(cipher_suite_result.cipher_suites, key_exchange):
                 return protocol_version
 
@@ -124,11 +135,6 @@ class AnalyzerAll(AnalyzerTlsBase):
         protocol_version_tls1_2 = TlsProtocolVersion(TlsVersion.TLS1_2)
         if protocol_version_tls1_2 in cipher_suite_results.keys() and protocol_version_tls1_2 not in protocol_versions:
             protocol_versions.append(protocol_version_tls1_2)
-
-        for protocol_version in cipher_suite_results.keys():
-            if (protocol_version > protocol_version_tls1_2 and
-                    (not protocol_versions or protocol_version > protocol_versions[-1])):
-                protocol_versions.append(protocol_version)
 
         return protocol_versions
 
@@ -151,19 +157,23 @@ class AnalyzerAll(AnalyzerTlsBase):
         protocol_version_tls1_2 = TlsProtocolVersion(TlsVersion.TLS1_2)
         if protocol_version_tls1_2 in protocol_versions:
             result_tls1_2 = AnalyzerAll._get_result(AnalyzerDHParams, analyzable, protocol_version_tls1_2)
-            if result[analyzer_name]:
-                result[analyzer_name].groups = result_tls1_2[analyzer_name].groups
-            else:
-                result = result_tls1_2
+            if result_tls1_2[analyzer_name]:
+                if result[analyzer_name]:
+                    result[analyzer_name].groups = result_tls1_2[analyzer_name].groups
+                else:
+                    result = result_tls1_2
 
         protocol_version_max = max(protocol_versions)
         if (protocol_version_max > protocol_version_tls1_2 and
                 (result[analyzer_name] is None or not result[analyzer_name].groups)):
             result_tls1_3 = AnalyzerAll._get_result(AnalyzerDHParams, analyzable, protocol_version_max)
-            if result[analyzer_name]:
-                result[analyzer_name].groups = result_tls1_3[analyzer_name].groups
+            if result_tls1_3[analyzer_name]:
+                if result[analyzer_name]:
+                    result[analyzer_name].groups = result_tls1_3[analyzer_name].groups
+                else:
+                    result = result_tls1_3
 
-        if result[analyzer_name].groups or result[analyzer_name].dhparam:
+        if (result[analyzer_name] is not None and (result[analyzer_name].groups or result[analyzer_name].dhparam)):
             return result
 
         return {analyzer_name: None}
@@ -186,7 +196,7 @@ class AnalyzerAll(AnalyzerTlsBase):
     def is_public_key_supported(cipher_suite_results):
         for protocol_version, cipher_suite_result in cipher_suite_results.items():
             for cipher_suite in cipher_suite_result.cipher_suites:
-                if cipher_suite.value.authentication != Authentication.ANONYMOUS:
+                if cipher_suite.value.authentication not in (None, Authentication.ANONYMOUS):
                     return protocol_version
 
         return None
