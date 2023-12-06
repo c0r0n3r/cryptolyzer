@@ -10,8 +10,24 @@ from cryptoparser.tls.extension import TlsNamedCurve
 
 from cryptolyzer.common.dhparam import (
     DHParameter,
+    bytes_to_int,
+    int_to_bytes,
     parse_ecdh_params,
 )
+
+
+class TestUtils(unittest.TestCase):
+    def test_int_to_bytes(self):
+        self.assertEqual(int_to_bytes(0x1, 1), b'\x01')
+        self.assertEqual(int_to_bytes(0x12, 1), b'\x12')
+        self.assertEqual(int_to_bytes(0x12, 2), b'\x00\x12')
+        self.assertEqual(int_to_bytes(0x123, 2), b'\x01\x23')
+
+    def test_bytes_to_int(self):
+        self.assertEqual(bytes_to_int(b'\x01'), 0x1)
+        self.assertEqual(bytes_to_int(b'\x12'), 0x12)
+        self.assertEqual(bytes_to_int(b'\x00\x12'), 0x12)
+        self.assertEqual(bytes_to_int(b'\x01\x23'), 0x123)
 
 
 class TestParse(unittest.TestCase):
