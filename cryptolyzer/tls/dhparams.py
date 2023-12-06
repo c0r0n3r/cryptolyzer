@@ -11,7 +11,7 @@ from cryptodatahub.tls.algorithm import TlsNamedCurve
 
 from cryptoparser.common.exception import NotEnoughData
 
-from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionKeyShareClient
+from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionKeyShareClient, TlsExtensionKeyShareReservedClient
 from cryptoparser.tls.subprotocol import TlsExtensionsClient, TlsHandshakeType, TlsAlertDescription
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
@@ -29,6 +29,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloKeyExchangeDHE,
     NAMED_CURVE_TO_RFC7919_WELL_KNOWN,
     RFC7919_WELL_KNOWN_TO_NAMED_CURVE,
+    key_share_entry_from_named_curve,
 )
 from cryptolyzer.tls.exception import TlsAlert
 
@@ -211,13 +212,6 @@ class AnalyzerDHParams(AnalyzerTlsBase):
     @staticmethod
     def _analyze_tls_1_3(analyzable, client_hello, protocol_version):
         named_groups = []
-        extensions = [
-            extension
-            for extension in client_hello.extensions
-            if extension.extension_type != TlsExtensionType.KEY_SHARE
-        ]
-        client_hello.extensions = TlsExtensionsClient(extensions + [TlsExtensionKeyShareClient([])])
-
         has_extenstion = True
         while has_extenstion:
             try:
@@ -249,6 +243,20 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             try_count = 3
             ephemeral_keys = set()
             client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, analyzable.address)
+
+            if named_groups:
+                extensions = [
+                    extension
+                    for extension in client_hello.extensions
+                    if extension.extension_type not in (TlsExtensionType.KEY_SHARE, TlsExtensionType.KEY_SHARE_RESERVED)
+                ]
+                client_hello.extensions = TlsExtensionsClient(
+                    extensions + [
+                        TlsExtensionKeyShareClient([key_share_entry_from_named_curve(named_groups[0])]),
+                        TlsExtensionKeyShareReservedClient([key_share_entry_from_named_curve(named_groups[0])]),
+                    ]
+                )
+
             for _ in range(try_count):
                 try:
                     dh_public_key = self._get_public_key(analyzable, is_tls_1_3, client_hello)

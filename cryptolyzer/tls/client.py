@@ -147,16 +147,10 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
         return signature_algorithms
 
     @classmethod
-    def _get_tls1_3_extensions(cls, protocol_versions, named_curves, signature_algorithms):
-        key_share_entries = [
-            key_share_entry_from_named_curve(named_curve)
-            for named_curve in NAMED_CURVE_TO_RFC7919_WELL_KNOWN
-            if named_curve in named_curves
-        ]
-
+    def _get_tls1_3_extensions(cls, protocol_versions, signature_algorithms):
         extensions = [
-            TlsExtensionKeyShareReservedClient(key_share_entries),
-            TlsExtensionKeyShareClient(key_share_entries),
+            TlsExtensionKeyShareReservedClient([]),
+            TlsExtensionKeyShareClient([]),
             TlsExtensionSupportedVersionsClient(protocol_versions),
         ]
 
@@ -193,7 +187,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
                 if TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2)
             ]
 
-            extensions.extend(self._get_tls1_3_extensions(protocol_versions, named_curves, signature_algorithms))
+            extensions.extend(self._get_tls1_3_extensions(protocol_versions, signature_algorithms))
         elif len(protocol_versions) > 1:
             raise NotImplementedError()
 
