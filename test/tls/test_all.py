@@ -156,6 +156,24 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         ])
         self.assertNotEqual(result.dhparams.dhparam, None)
 
+        result = self.get_result('tls13.1d.pw', 443)
+        self.assertTrue(all(map(
+            lambda version: version > TlsProtocolVersion(TlsVersion.TLS1_2), result.versions.versions
+        )))
+        self.assertEqual(set(result.ciphers[-1].cipher_suites), set([
+            TlsCipherSuite.TLS_AES_128_GCM_SHA256,
+            TlsCipherSuite.TLS_AES_256_GCM_SHA384,
+            TlsCipherSuite.TLS_CHACHA20_POLY1305_SHA256,
+        ]))
+        self.assertEqual(result.dhparams.groups, [TlsNamedCurve.FFDHE3072,])
+        self.assertEqual(result.dhparams.dhparam, None)
+        self.assertEqual(set(result.curves.curves), set([
+            TlsNamedCurve.X25519,
+            TlsNamedCurve.SECP256R1,
+            TlsNamedCurve.X25519_KYBER_768_DRAFT00,
+            TlsNamedCurve.SECP384R1,
+        ]))
+
     def test_markdown(self):
         result = self.get_result('rc4-md5.badssl.com', 443)
         markdown_result = result.as_markdown()
