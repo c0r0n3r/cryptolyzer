@@ -22,7 +22,7 @@ from cryptolyzer.common.utils import SerializableTextEncoderHighlighted, resolve
 
 
 class TestSerializableTextEncoderHighlighted(unittest.TestCase):
-    _VULNERABILITY_DEPRECATED = Vulnerability(AttackType.MITM, Grade.DEPRECATED, None)
+    _VULNERABILITY_DEPRECATED = Vulnerability(None, Grade.DEPRECATED, None)
     _VULNERABILITY_WEAK = Vulnerability(AttackType.MITM, Grade.WEAK, None)
     _VULNERABILITY_INSECURE = Vulnerability(AttackType.MITM, Grade.INSECURE, None)
     _VULNERABILITY_SECURE = Vulnerability(AttackType.MITM, Grade.SECURE, None)
@@ -127,6 +127,22 @@ class TestSerializableTextEncoderHighlighted(unittest.TestCase):
                     '* TestGradeableName is ' +
                     self._colorize('weak', 'yellow') +
                     ', due to (D)DoS attack, called D(HE)at attack'
+                ),
+            ]))
+        )
+
+    def test_greadable_vulnerabilities_no_name(self):
+        self.assertEqual(
+            SerializableTextEncoderHighlighted()(TestGradeableVulnerabilitiesName([
+                self._VULNERABILITY_DEPRECATED
+            ]), 0),
+            (False, os.linesep.join([
+                self._colorize('TestGradeableName', 'yellow'),
+                (
+                    '* TestGradeableName ' +
+                    self._highlight('name') +
+                    ' is ' +
+                    self._colorize('deprecated', 'yellow')
                 ),
             ]))
         )
