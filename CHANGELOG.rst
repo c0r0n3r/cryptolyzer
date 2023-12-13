@@ -3,6 +3,40 @@ Changelog
 =========
 
 -------------------
+0.12.1 - 2023-12-13
+-------------------
+
+Notable fixes
+=============
+
+-  TLS
+
+   -  All (``all``)
+
+      -  handle server support only 1.3 version in ``all`` analyzer (#111)
+
+   -  Simulations (``simulations``)
+
+      -  fix markdown generation in the case of TLS client versions (#80)
+
+   -  Generic
+
+      -  avoid sending large records cause unexpected response from server (#127)
+
+-  SSH
+
+   -  Ciphers (``ciphers``)
+
+      -  handle deprecated but not weak algorithms (#126)
+
+Improvements
+============
+
+-  SSH
+
+   -  handle deprecated but not weak algorithms (#126)
+
+-------------------
 0.12.0 - 2023-11-23
 -------------------
 
