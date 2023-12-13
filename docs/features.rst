@@ -40,9 +40,9 @@ Differentiators
 
 -  checks 10+ application layer protocols with `opportunistic TLS <https://en.wikipedia.org/wiki/Opportunistic_TLS>`__
    capability
--  checks 400+ cipher suites, more than discussed on [ciphersuite.info](https://ciphersuite.info), or supported by
-   [GnuTls](https://www.gnutls.org/), [LibreSSL](https://www.libressl.org/), [OpenSSL](https://www.openssl.org/), or
-   [wolfSSL](https://www.wolfssl.com/)
+-  checks 400+ cipher suites, more than discussed on `ciphersuite.info <https://ciphersuite.info>`__, or supported by
+   `GnuTls <https://www.gnutls.org>`__, `LibreSSL <https://www.libressl.org>`__, `OpenSSL <https://www.openssl.org>`__,
+   or `wolfSSL <https://www.wolfssl.com>`__
 -  checks `GOST <https://en.wikipedia.org/wiki/GOST>`__ (national standards of the Russian Federation and CIS countries)
    cipher suites
 -  checks `post-quantum <https://en.wikipedia.org/wiki/Post-quantum_cryptography>`__ elliptic curves
