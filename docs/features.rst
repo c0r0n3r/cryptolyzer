@@ -217,7 +217,9 @@ Headers
 -  generic headers
 
    -  `Content-Type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__
+   -  `NEL <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/NEL>`__ (Network Error Logging)
    -  `Server <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server>`__
+   -  `Set-Cookie <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie>`__
 
 -  caching headers
 
@@ -231,12 +233,16 @@ Headers
 
 -  security headers
 
+   -  `Content Security Policy <https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP>`__ (CSP)
+   -  `Content-Security-Policy-Report-Only <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only>`__
    -  `Expect-CT <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect-CT>`__
    -  `Expect-Staple <https://scotthelme.co.uk/designing-a-new-security-header-expect-staple>`__
+   -  `HTTP Public Key Pinning <https://en.wikipedia.org/wiki/HTTP_Public_Key_Pinning>`__ (HPKP)
    -  `Referrer-Policy <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy>`__
    -  `Strict-Transport-Security <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security>`__
    -  `X-Content-Type-Options <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options>`__
    -  `X-Frame-Options <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options>`__
+   -  `X-XSS-Protection <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection>`__
 
 DNS
 ^^^
