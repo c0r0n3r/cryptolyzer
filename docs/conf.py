@@ -68,6 +68,7 @@ else:
 
 exclude_patterns = ['_build']
 
+html_title = __title__ + ' — ' + __description__
 html_theme = 'alabaster'
 html_sidebars = {
     '**': [
