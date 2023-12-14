@@ -8,6 +8,10 @@
         DNS records) analyzer with Python API and CLI.
 
 .. meta::
+    :keywords:
+        cryptolyzer,ssl audit, ssl check,ssl checker,tls audit, tls check,tls checker,ssh audit ,ssh check,ssh checker
+
+.. meta::
     :author:
         Szilárd Pfeiffer
 
