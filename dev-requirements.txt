@@ -1,3 +1,2 @@
-sphinx
 tox
 unittest2;python_version<"3.4"
