@@ -2,6 +2,10 @@
     :google-site-verification:
         2AAgZNptPaMHxDeXJegA8i8aW1jURVBpQseacnHQr8Q
 
+.. meta::
+    :author:
+        Szilárd Pfeiffer
+
 =======
 Summary
 =======
