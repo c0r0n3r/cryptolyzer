@@ -3,6 +3,11 @@
         2AAgZNptPaMHxDeXJegA8i8aW1jURVBpQseacnHQr8Q
 
 .. meta::
+    :description:
+        Fast, flexible and comprehensive server cryptographic (TLS/SSL/SSH/DNSSEC) and related setting (HTTP headers,
+        DNS records) analyzer with Python API and CLI.
+
+.. meta::
     :author:
         Szilárd Pfeiffer
 
