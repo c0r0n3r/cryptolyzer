@@ -7,8 +7,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath('..'))
-from cryptodatahub.__setup__ import (  # noqa: E402, pylint: disable=wrong-import-position
+from cryptolyzer.__setup__ import (  # noqa: E402, pylint: disable=wrong-import-position
     __author__,
+    __description__,
     __title__,
     __version__,
 )
@@ -40,6 +41,6 @@ html_sidebars = {
     ]
 }
 html_theme_options = {
-    'description': 'Fast and flexible cryptographic settings analyzer library for Python with CLI',
+    'description': __description__,
     'fixed_sidebar': True,
 }
