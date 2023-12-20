@@ -30,7 +30,21 @@ Supported analyzers by cryptographic protocol versions
 | Diffie-Hellman parameters (``dhparams``)                    |    ✓    |
 +-------------------------------------------------------------+---------+
 | Host Keys, Host/X.509 Certificates and Chains (``pubkeys``) |    ✓    |
++-----------------------------------------------------------------------+
+| Vulnerabilities (``vulns``)                                 |    ✓    |
 +-------------------------------------------------------------+---------+
+
+Vulnerabilities
+"""""""""""""""
+
+-  `D(HE)at attack <https://dheatattack.gitlab.io/>`__
+-  `Logjam attack <https://weakdh.org/>`__
+-  `RC4 ciphers <https://en.wikipedia.org/wiki/RC4#Security>`__
+-  `Sweet32 attack <https://sweet32.info/>`__
+-  `anonymous Diffie-Hellman ciphers <https://en.wikipedia.org/wiki/Key-agreement_protocol#Exponential_key_exchange>`__
+-  `early SSH versions <https://en.wikipedia.org/wiki/Secure_Shell#SSH-1>`__
+-  `non-forward-secret ciphers <https://en.wikipedia.org/wiki/Forward_secrecy>`__
+-  `null encryption ciphers <https://en.wikipedia.org/wiki/Null_encryption>`__
 
 SSL/TLS
 ^^^^^^^
@@ -161,7 +175,7 @@ Public Keys
 Vulnerabilities
 """""""""""""""
 
--  `D(HE)at attack <https://dheatattack.com/>`__
+-  `D(HE)at attack <https://dheatattack.gitlab.io/>`__
 -  `DROWN attack <https://drownattack.com/>`__
 -  `FREAK attack <https://en.wikipedia.org/wiki/FREAK>`__
 -  `Logjam attack <https://weakdh.org/>`__
