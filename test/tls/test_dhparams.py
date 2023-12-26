@@ -48,7 +48,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertIsNone(result.dhparam)
         self.assertEqual(result.key_reuse, None)
 
-        result = self.get_result('openssl.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        result = self.get_result('fedoraproject.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [
             TlsNamedCurve.FFDHE2048,
             TlsNamedCurve.FFDHE3072,
@@ -67,7 +67,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.groups, [])
         self.assertIsNotNone(result.dhparam, None)
 
-        result = self.get_result('openssl.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        result = self.get_result('fedoraproject.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
@@ -179,7 +179,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
 
-        result = self.get_result('openssl.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        result = self.get_result('fedoraproject.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [
             TlsNamedCurve.FFDHE2048,
             TlsNamedCurve.FFDHE3072,

@@ -133,7 +133,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         self.assertFalse(result.vulns.dhparams.weak_dh.value)
         self.assertTrue(result.vulns.versions.early_tls_version.value)
 
-        result = self.get_result('openssl.org', 443)
+        result = self.get_result('fedoraproject.org', 443)
         self.assertEqual(result.dhparams.groups, [
             TlsNamedCurve.FFDHE2048,
             TlsNamedCurve.FFDHE3072,
@@ -143,7 +143,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         ])
         self.assertEqual(
             result.dhparams.dhparam.parameter_numbers,
-            DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP.value.parameter_numbers
+            DHParamWellKnown.RFC3526_4096_BIT_MODP_GROUP.value.parameter_numbers
         )
 
         result = self.get_result('imagemagick.org', 443)

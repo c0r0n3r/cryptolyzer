@@ -75,7 +75,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         ], log_stream)
         self.assertIn('Server offers 1024-bit NGINX 0.7.2 builtin DH parameter', log_stream)
 
-        result = self.get_result('openssl.org', 443)
+        result = self.get_result('fedoraproject.org', 443)
         self.assertTrue(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
