@@ -64,6 +64,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                         break
 
                 acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                    TlsAlertDescription.DECODE_ERROR,
                     TlsAlertDescription.INTERNAL_ERROR,
                 ]
                 if e.description not in acceptable_alerts:
