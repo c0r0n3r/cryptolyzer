@@ -4,6 +4,7 @@ import six
 
 import attr
 
+from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, MACMode
 from cryptodatahub.common.grade import Grade
 from cryptodatahub.common.types import convert_value_to_object
 
@@ -39,6 +40,17 @@ class VulnerabilityResultEarlySshVersion(VulnerabilityResultGraded):
 
 
 @attr.s
+class VulnerabilityResultTerrapin(VulnerabilityResultGraded):
+    @property
+    def _vulnerable_grade(self):
+        return Grade.INSECURE
+
+    @classmethod
+    def get_name(cls):
+        return 'Terrapin Attack'
+
+
+@attr.s
 class AnalyzerResultVulnerabilityAlgorithms(AnalyzerResultVulnerabilityCiphersBase):
     """
     :class: Vulnerabilities relate to cipher suite algorithms. Any attribute represents an vulnerability, which value is
@@ -50,15 +62,35 @@ class AnalyzerResultVulnerabilityAlgorithms(AnalyzerResultVulnerabilityCiphersBa
         validator=attr.validators.instance_of(VulnerabilityResultNullEncryption),
         metadata={'human_readable_name': VulnerabilityResultNullEncryption.get_name()},
     )
+    terrapin = attr.ib(
+        converter=convert_value_to_object(VulnerabilityResultTerrapin),
+        validator=attr.validators.instance_of(VulnerabilityResultTerrapin),
+        metadata={'human_readable_name': VulnerabilityResultTerrapin.get_name()},
+    )
 
     @classmethod
-    def from_ssh_algorithms(cls, kex_algorithms, encryption_algorithms):
+    def from_ssh_algorithms(cls, kex_algorithms, strict_kex_enabled, encryption_algorithms, mac_algorithms):
         bulk_cipher_algorithms = set(map(
             lambda encryption_algorithm: encryption_algorithm.value.cipher, encryption_algorithms
         ))
         key_exchange_algorithms = set(map(lambda kex_algorithm: kex_algorithm.value.kex, kex_algorithms))
 
         null_encryption = VulnerabilityResultNullEncryption(SshEncryptionAlgorithm.NONE in kex_algorithms)
+        terrapin = False
+        if not strict_kex_enabled:
+            has_chacha20 = BlockCipher.CHACHA20 in bulk_cipher_algorithms
+            if has_chacha20:
+                terrapin = True
+            else:
+                has_cbc = any(map(
+                    lambda encryption_algorithm: encryption_algorithm.value.mode == BlockCipherMode.CBC,
+                    encryption_algorithms
+                ))
+                has_etm = any(map(
+                    lambda mac_algorithm: mac_algorithm.value.mode == MACMode.ENCRYPT_THEN_MAC,
+                    mac_algorithms
+                ))
+                terrapin = has_cbc and has_etm
 
         vulnerability_ciphers = AnalyzerResultVulnerabilityCiphersBase.from_algorithms(
             key_exchange_algorithms, bulk_cipher_algorithms
@@ -70,6 +102,7 @@ class AnalyzerResultVulnerabilityAlgorithms(AnalyzerResultVulnerabilityCiphersBa
             rc4=vulnerability_ciphers.rc4,
             non_forward_secret=vulnerability_ciphers.non_forward_secret,
             null_encryption=null_encryption,
+            terrapin=terrapin,
         )
 
 
@@ -159,9 +192,14 @@ class AnalyzerVulnerabilities(AnalyzerSshBase):
             target=AnalyzerTargetSsh.from_l7_client(analyzable, None),
             algorithms=AnalyzerResultVulnerabilityAlgorithms.from_ssh_algorithms(
                 kex_algorithms=set(self._get_known_algorithms(analyzer_result_ciphers.kex_algorithms)),
+                strict_kex_enabled='kex-strict-s-v00@openssh.com' in analyzer_result_ciphers.kex_algorithms,
                 encryption_algorithms=set(
                     list(self._get_known_algorithms(analyzer_result_ciphers.encryption_algorithms_client_to_server)) +
                     list(self._get_known_algorithms(analyzer_result_ciphers.encryption_algorithms_server_to_client))
+                ),
+                mac_algorithms=set(
+                    list(self._get_known_algorithms(analyzer_result_ciphers.mac_algorithms_client_to_server)) +
+                    list(self._get_known_algorithms(analyzer_result_ciphers.mac_algorithms_server_to_client))
                 ),
             ),
             dhparams=AnalyzerResultVulnerabilityDHParams.from_key_sizes(

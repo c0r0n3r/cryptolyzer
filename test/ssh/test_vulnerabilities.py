@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from cryptodatahub.ssh.algorithm import SshKexAlgorithm
+from cryptodatahub.ssh.algorithm import SshKexAlgorithm, SshEncryptionAlgorithm, SshMacAlgorithm
 
 from cryptoparser.common.base import Serializable, SerializableTextEncoder
 
@@ -37,6 +37,61 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
         for key_size in key_sizes:
             self.assertIn('Server offers custom DH public parameter with size {}-bit'.format(key_size), log_stream)
 
+    def test_algorithms(self):
+        # Vulnerable algorithms are aprotected by strict KEX
+
+        algorithms_result = AnalyzerResultVulnerabilityAlgorithms.from_ssh_algorithms(
+            kex_algorithms=[],
+            strict_kex_enabled=True,
+            encryption_algorithms=[SshEncryptionAlgorithm.CHACHA20_POLY1305_OPENSSH_COM],
+            mac_algorithms=[],
+        )
+        self.assertFalse(algorithms_result.terrapin.value)
+
+        algorithms_result = AnalyzerResultVulnerabilityAlgorithms.from_ssh_algorithms(
+            kex_algorithms=[],
+            strict_kex_enabled=True,
+            encryption_algorithms=[SshEncryptionAlgorithm.AES256_CBC],
+            mac_algorithms=[SshMacAlgorithm.HMAC_SHA2_256_ETM_OPENSSH_COM],
+        )
+        self.assertFalse(algorithms_result.terrapin.value)
+
+        # Vulnerable algorithms can be exploited without strict KEX
+
+        algorithms_result = AnalyzerResultVulnerabilityAlgorithms.from_ssh_algorithms(
+            kex_algorithms=[],
+            strict_kex_enabled=False,
+            encryption_algorithms=[SshEncryptionAlgorithm.CHACHA20_POLY1305_OPENSSH_COM],
+            mac_algorithms=[],
+        )
+        self.assertTrue(algorithms_result.terrapin.value)
+
+        algorithms_result = AnalyzerResultVulnerabilityAlgorithms.from_ssh_algorithms(
+            kex_algorithms=[],
+            strict_kex_enabled=False,
+            encryption_algorithms=[SshEncryptionAlgorithm.AES256_CBC],
+            mac_algorithms=[SshMacAlgorithm.HMAC_SHA2_256_ETM_OPENSSH_COM],
+        )
+        self.assertTrue(algorithms_result.terrapin.value)
+
+        # Not vulnerable algorithms cannot be exploited independently from strict KEX
+
+        algorithms_result = AnalyzerResultVulnerabilityAlgorithms.from_ssh_algorithms(
+            kex_algorithms=[],
+            strict_kex_enabled=False,
+            encryption_algorithms=[SshEncryptionAlgorithm.AES256_CTR],
+            mac_algorithms=[SshMacAlgorithm.HMAC_SHA2_256_ETM_OPENSSH_COM],
+        )
+        self.assertFalse(algorithms_result.terrapin.value)
+
+        algorithms_result = AnalyzerResultVulnerabilityAlgorithms.from_ssh_algorithms(
+            kex_algorithms=[],
+            strict_kex_enabled=False,
+            encryption_algorithms=[SshEncryptionAlgorithm.AES256_CBC],
+            mac_algorithms=[SshMacAlgorithm.HMAC_SHA2_256],
+        )
+        self.assertFalse(algorithms_result.terrapin.value)
+
     def test_output(self):
         result = AnalyzerResultVulnerabilities(
             target=None,
@@ -46,6 +101,7 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
                 rc4=True,
                 non_forward_secret=True,
                 null_encryption=True,
+                terrapin=True,
             ),
             dhparams=AnalyzerResultVulnerabilityDHParams(
                 dheat=True,
@@ -69,6 +125,7 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
                 rc4=False,
                 non_forward_secret=False,
                 null_encryption=False,
+                terrapin=False,
             ),
             dhparams=AnalyzerResultVulnerabilityDHParams(
                 dheat=False,
