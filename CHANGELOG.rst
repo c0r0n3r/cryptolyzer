@@ -33,6 +33,12 @@ Notable fixes
 
       -  Handle decode error as a signal of no more algorithms. (#129)
 
+-  DNS (``dns``)
+
+   -  e-mail authentication, reporting (``mail``)
+
+      -  Handle the case when a domain has no TXT records (#132)
+
 -------------------
 0.12.1 - 2023-12-13
 -------------------
