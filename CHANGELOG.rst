@@ -23,6 +23,7 @@ Features
          -  Early SSH version
          -  Weak Diffie-Hellman
          -  DHEat attack
+         -  Terrapin attack
 
 Notable fixes
 =============

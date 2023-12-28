@@ -38,6 +38,7 @@ Vulnerabilities
 """""""""""""""
 
 -  `D(HE)at attack <https://dheatattack.gitlab.io/>`__
+-  `Terrapin attack <https://terrapin-attack.com/>`__
 -  `Logjam attack <https://weakdh.org/>`__
 -  `RC4 ciphers <https://en.wikipedia.org/wiki/RC4#Security>`__
 -  `Sweet32 attack <https://sweet32.info/>`__
