@@ -120,7 +120,7 @@ class L7ClientDnsBase(object):
                 pass
 
         if len(record_values) > 1:
-            raise NotImplementedError()
+            raise NotImplementedError(record_values)
         if not record_values:
             return None
 

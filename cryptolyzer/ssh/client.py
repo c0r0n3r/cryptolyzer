@@ -412,7 +412,7 @@ class SshClientHandshake(SshHandshakeBase):
                 elif isinstance(record.packet, SshDHGroupExchangeGroup):
                     record_class = self._process_dh_group_exchange_group(record, transfer, record_class)
                 elif isinstance(record.packet, SshNewKeys):
-                    raise NotImplementedError()
+                    raise NotImplementedError(SshNewKeys)
 
                 receivable_byte_num = record_class.HEADER_SIZE
             except NotEnoughData as e:

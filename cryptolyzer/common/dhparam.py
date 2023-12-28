@@ -70,7 +70,11 @@ def get_ecdh_ephemeral_key_forged(named_group):
     if named_group in [NamedGroup.CURVE25519, NamedGroup.CURVE448]:
         ephemeral_public_key_bytes = key_size_in_bytes * b'\xff'
     else:
-        well_know_ec_param = WellKnownECParams.from_named_group(named_group)
+        try:
+            well_know_ec_param = WellKnownECParams.from_named_group(named_group)
+        except AttributeError as e:
+            six.raise_from(NotImplementedError(named_group), e)
+
         ephemeral_public_key_bytes = bytearray().join([
             b'\x04',  # uncompressed point format
             int_to_bytes(well_know_ec_param.value.parameter_numbers.x, key_size_in_bytes),

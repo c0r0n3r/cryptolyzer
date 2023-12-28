@@ -102,6 +102,9 @@ RFC7919_WELL_KNOWN_TO_NAMED_CURVE = {
 
 
 def key_share_entry_from_named_curve(named_curve):
+    if named_curve.value.named_group is None:
+        raise NotImplementedError(named_curve)
+
     if named_curve.value.named_group.value.group_type == NamedGroupType.ELLIPTIC_CURVE:
         return TlsKeyShareEntry(
             named_curve,
@@ -189,7 +192,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
 
             extensions.extend(self._get_tls1_3_extensions(protocol_versions, signature_algorithms))
         elif len(protocol_versions) > 1:
-            raise NotImplementedError()
+            raise NotImplementedError(protocol_versions)
 
         if protocol_version_min >= TlsProtocolVersion(TlsVersion.TLS1):
             if named_curves:

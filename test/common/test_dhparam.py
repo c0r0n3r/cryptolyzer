@@ -3,6 +3,7 @@
 import unittest
 import attr
 
+from cryptodatahub.common.algorithm import NamedGroup
 from cryptodatahub.common.entity import Entity
 from cryptodatahub.common.parameter import DHParamWellKnown, Standard
 
@@ -11,6 +12,7 @@ from cryptoparser.tls.extension import TlsNamedCurve
 from cryptolyzer.common.dhparam import (
     DHParameter,
     bytes_to_int,
+    get_ecdh_ephemeral_key_forged,
     int_to_bytes,
     parse_ecdh_params,
 )
@@ -28,6 +30,18 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(bytes_to_int(b'\x12'), 0x12)
         self.assertEqual(bytes_to_int(b'\x00\x12'), 0x12)
         self.assertEqual(bytes_to_int(b'\x01\x23'), 0x123)
+
+
+class TestForge(unittest.TestCase):
+    def test_error_not_implemented(self):
+        with self.assertRaises(NotImplementedError) as context_manager:
+            get_ecdh_ephemeral_key_forged(NamedGroup.BRAINPOOLP512T1)
+        self.assertEqual(context_manager.exception.args, (NamedGroup.BRAINPOOLP512T1,))
+
+    def test_forge(self):
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.CURVE25519)), 32)
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.PRIME256V1)), 65)
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.SECP521R1)), 133)
 
 
 class TestParse(unittest.TestCase):

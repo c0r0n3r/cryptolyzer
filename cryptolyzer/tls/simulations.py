@@ -196,7 +196,7 @@ class AnalyzerSimulations(AnalyzerTlsBase):
         else:
             if extension_type in grease.extensions:
                 if extension_type == TlsExtensionType.PSK_KEY_EXCHANGE_MODES:
-                    raise NotImplementedError()
+                    raise NotImplementedError(extension_type)
 
                 grease = TlsInvalidTypeTwoByte.from_random()
                 extension_params.append(grease)
