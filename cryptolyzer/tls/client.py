@@ -343,7 +343,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
         if (cipher_suite.value.key_exchange in [KeyExchange.DHE, KeyExchange.ADH] or
             TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2))
     ]
-    _NAMED_CURVES = [
+    NAMED_CURVES = [
         named_curve
         for named_curve in TlsNamedCurve
         if (named_curve.value.named_group is not None
@@ -358,7 +358,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
             signature_algorithms=None,
     ):
         if named_curves is None:
-            named_curves = self._NAMED_CURVES
+            named_curves = self.NAMED_CURVES
 
         super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
             hostname=hostname,
@@ -379,7 +379,7 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
         if (cipher_suite.value.key_exchange in [KeyExchange.ECDHE, KeyExchange.AECDH] or
             TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2))
     ]
-    _NAMED_CURVES = [
+    NAMED_CURVES = [
         curve
         for curve, group in map(lambda curve: (curve, curve.value.named_group), TlsNamedCurve)
         if (group is not None and group.value.group_type in (NamedGroupType.ELLIPTIC_CURVE, NamedGroupType.HYBRID_PQS))
@@ -394,7 +394,7 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
     ):
 
         if named_curves is None:
-            named_curves = self._NAMED_CURVES
+            named_curves = self.NAMED_CURVES
 
         super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
             hostname=hostname,
