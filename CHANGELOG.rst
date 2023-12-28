@@ -24,6 +24,15 @@ Features
          -  Weak Diffie-Hellman
          -  DHEat attack
 
+Notable fixes
+=============
+
+-  TLS (``tls``)
+
+   -  Signature Algorithms (``sigalgos``)
+
+      -  Handle decode error as a signal of no more algorithms. (#129)
+
 -------------------
 0.12.1 - 2023-12-13
 -------------------
