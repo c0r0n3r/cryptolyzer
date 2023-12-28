@@ -38,6 +38,14 @@ class TestDnsRecordMail(TestLoggerBase):
         self.assertIsNotNone(analyzer_result.mta_sts.value)
         self.assertIsNotNone(analyzer_result.tls_rpt.value)
 
+    def test_missing_records(self):
+        analyzer_result = self.get_result('dns://t.me')
+        self.assertEqual(analyzer_result.mx, [])
+        self.assertIsNone(analyzer_result.spf.value)
+        self.assertIsNone(analyzer_result.dmarc.value)
+        self.assertIsNone(analyzer_result.mta_sts.value)
+        self.assertIsNone(analyzer_result.tls_rpt.value)
+
     def test_markdown(self):
         analyzer_result = self.get_result('dns://example.com')
         self.assertEqual(analyzer_result.as_markdown(), '\n'.join([

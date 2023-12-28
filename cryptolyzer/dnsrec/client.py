@@ -119,8 +119,10 @@ class L7ClientDnsBase(object):
             except InvalidType:
                 pass
 
-        if len(record_values) != 1:
+        if len(record_values) > 1:
             raise NotImplementedError()
+        if not record_values:
+            return None
 
         return record_values[0]
 
