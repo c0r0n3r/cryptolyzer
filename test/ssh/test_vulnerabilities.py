@@ -1,0 +1,119 @@
+# -*- coding: utf-8 -*-
+
+from cryptodatahub.ssh.algorithm import SshKexAlgorithm
+
+from cryptoparser.common.base import Serializable, SerializableTextEncoder
+
+from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
+
+from cryptolyzer.ssh.client import L7ClientSsh
+from cryptolyzer.ssh.vulnerabilities import (
+    AnalyzerResultVulnerabilities,
+    AnalyzerResultVulnerabilityAlgorithms,
+    AnalyzerResultVulnerabilityDHParams,
+    AnalyzerResultVulnerabilityVersions,
+    AnalyzerVulnerabilities,
+)
+
+from .classes import TestSshCases
+
+
+class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
+    @staticmethod
+    def get_result(host, port, timeout=None, ip=None):
+        analyzer = AnalyzerVulnerabilities()
+        l7_client = L7ClientSsh.from_scheme('ssh', host, port, timeout, ip)
+        analyzer_result = analyzer.analyze(l7_client)
+
+        return analyzer_result
+
+    def _check_kex_params(self, algorithms, log_stream):
+        for algorithm in algorithms:
+            self.assertIn('Server offers well-known DH public parameter with size {}-bit ({})'.format(
+                algorithm.value.key_size, algorithm.value.code
+            ), log_stream)
+
+    def _check_gex_params(self, key_sizes, log_stream):
+        for key_size in key_sizes:
+            self.assertIn('Server offers custom DH public parameter with size {}-bit'.format(key_size), log_stream)
+
+    def test_output(self):
+        result = AnalyzerResultVulnerabilities(
+            target=None,
+            algorithms=AnalyzerResultVulnerabilityAlgorithms(
+                sweet32=True,
+                anonymous_dh=True,
+                rc4=True,
+                non_forward_secret=True,
+                null_encryption=True,
+            ),
+            dhparams=AnalyzerResultVulnerabilityDHParams(
+                dheat=True,
+                weak_dh=True,
+            ),
+            versions=AnalyzerResultVulnerabilityVersions(
+                early_ssh_version=True,
+            ),
+        )
+        self.assertTrue(result.as_json())
+        self.assertTrue(result.as_markdown())
+        Serializable.post_text_encoder = SerializableTextEncoderHighlighted()
+        self.assertTrue(result.as_markdown())
+        Serializable.post_text_encoder = SerializableTextEncoder()
+
+        result = AnalyzerResultVulnerabilities(
+            target=None,
+            algorithms=AnalyzerResultVulnerabilityAlgorithms(
+                sweet32=False,
+                anonymous_dh=False,
+                rc4=False,
+                non_forward_secret=False,
+                null_encryption=False,
+            ),
+            dhparams=AnalyzerResultVulnerabilityDHParams(
+                dheat=False,
+                weak_dh=False,
+            ),
+            versions=AnalyzerResultVulnerabilityVersions(
+                early_ssh_version=False,
+            ),
+        )
+        self.assertTrue(result.as_json())
+        self.assertTrue(result.as_markdown())
+        Serializable.post_text_encoder = SerializableTextEncoderHighlighted()
+        self.assertTrue(result.as_markdown())
+        Serializable.post_text_encoder = SerializableTextEncoder()
+
+    def test_real(self):
+        result = self.get_result('gitlab.com', 22)
+        self.assertFalse(result.algorithms.sweet32.value)
+        self.assertFalse(result.algorithms.anonymous_dh.value)
+        self.assertFalse(result.algorithms.null_encryption.value)
+        self.assertFalse(result.algorithms.rc4.value)
+        self.assertFalse(result.algorithms.non_forward_secret.value)
+
+        self.assertFalse(result.versions.early_ssh_version.value)
+
+        self.assertFalse(result.dhparams.weak_dh.value)
+        self.assertFalse(result.dhparams.dheat.value)
+
+        log_stream = '\n'.join(self.pop_log_lines())
+        self._check_kex_params([
+            SshKexAlgorithm.DIFFIE_HELLMAN_GROUP14_SHA256,
+            SshKexAlgorithm.DIFFIE_HELLMAN_GROUP14_SHA1,
+        ], log_stream)
+
+        result = self.get_result('github.com', 22)
+        self.assertFalse(result.algorithms.sweet32.value)
+        self.assertFalse(result.algorithms.anonymous_dh.value)
+        self.assertFalse(result.algorithms.null_encryption.value)
+        self.assertFalse(result.algorithms.rc4.value)
+        self.assertFalse(result.algorithms.non_forward_secret.value)
+
+        self.assertFalse(result.versions.early_ssh_version.value)
+
+        self.assertFalse(result.dhparams.weak_dh.value)
+        self.assertTrue(result.dhparams.dheat.value)
+
+        log_stream = '\n'.join(self.pop_log_lines())
+        self._check_gex_params([2048, 3072, 4096, 6144, 8192], log_stream)

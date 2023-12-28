@@ -2,6 +2,28 @@
 Changelog
 =========
 
+------
+0.12.2
+------
+
+Features
+========
+
+-  SSH (``ssh``)
+
+   -  Vulnerabilities (``vulns``)
+
+      -  checker for well-known vulnerabilities (#130)
+
+         -  Sweet32 attack
+         -  Anonymous Diffie-Hellman
+         -  NULL encryption
+         -  RC4
+         -  Non-Forward-Secret
+         -  Early SSH version
+         -  Weak Diffie-Hellman
+         -  DHEat attack
+
 -------------------
 0.12.1 - 2023-12-13
 -------------------

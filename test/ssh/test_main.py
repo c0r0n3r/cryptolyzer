@@ -12,6 +12,7 @@ from test.common.classes import TestMainBase
 import test.ssh.test_ciphers
 import test.ssh.test_dhparams
 import test.ssh.test_versions
+import test.ssh.test_vulnerabilities
 
 import urllib3
 
@@ -60,6 +61,17 @@ class TestMain(TestMainBase):
         self.assertEqual(
             self._get_test_analyzer_result_json('ssh', 'versions', self.address),
             test.ssh.test_versions.TestSshVersions.get_result(six.u(self.host), self.port).as_json() + '\n',
+        )
+
+    def test_vulns(self):
+        result = test.ssh.test_vulnerabilities.TestSshVulnerabilities.get_result('gitlab.com', 22)
+        self.assertEqual(
+            self._get_test_analyzer_result_json('ssh', 'vulns', 'gitlab.com'),
+            result.as_json() + '\n'
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result_markdown('ssh', 'vulns', 'gitlab.com'),
+            result.as_markdown() + '\n'
         )
 
     def test_all_versions(self):

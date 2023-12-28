@@ -1,19 +1,31 @@
 # -*- coding: utf-8 -*-
 
-import abc
 import itertools
 
 import attr
 
 
-from cryptodatahub.common.grade import AttackNamed, Grade, GradeableSimple
+from cryptodatahub.common.grade import AttackNamed, Grade
 
-from cryptoparser.common.base import Serializable
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.common.utils import LogSingleton
+from cryptolyzer.common.vulnerability import (
+    AnalyzerResultVulnerabilityCiphersBase,
+    AnalyzerResultVulnerabilityDHParamsBase,
+    AnalyzerResultVulnerabilityVersionsBase,
+    VulnerabilityResultAnonymousDH,
+    VulnerabilityResultNullEncryption,
+    VulnerabilityResultRC4,
+    VulnerabilityResultAttackNamed,
+    VulnerabilityResultDheat,
+    VulnerabilityResultGraded,
+    VulnerabilityResultNonForwardSecret,
+    VulnerabilityResultSweet32,
+    VulnerabilityResultWeakDh,
+)
 
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import (
@@ -28,52 +40,6 @@ from cryptolyzer.tls.versions import AnalyzerVersions
 
 
 @attr.s
-class VulnerabilityResult(Serializable, GradeableSimple):
-    value = attr.ib(validator=attr.validators.instance_of(bool))
-
-    @property
-    @abc.abstractmethod
-    def grade(self):
-        raise NotImplementedError()
-
-    def __str__(self):
-        return self._markdown_result(self.value)[1]
-
-    @classmethod
-    @abc.abstractmethod
-    def get_name(cls):
-        raise NotImplementedError()
-
-
-@attr.s
-class VulnerabilityResultGraded(VulnerabilityResult):
-    @property
-    def grade(self):
-        return self._vulnerable_grade if self.value else Grade.SECURE
-
-    @classmethod
-    @abc.abstractmethod
-    def get_name(cls):
-        raise NotImplementedError()
-
-    @property
-    @abc.abstractmethod
-    def _vulnerable_grade(self):
-        raise NotImplementedError()
-
-
-@attr.s
-class VulnerabilityResultAnonymousDH(VulnerabilityResultGraded):
-    @property
-    def _vulnerable_grade(self):
-        return Grade.INSECURE
-
-    @classmethod
-    def get_name(cls):
-        return 'Anonymous Diffie-Hellman'
-
-
-@attr.s
 class VulnerabilityResultEarlyTlsVersion(VulnerabilityResultGraded):
     @property
     def _vulnerable_grade(self):
@@ -82,49 +48,6 @@ class VulnerabilityResultEarlyTlsVersion(VulnerabilityResultGraded):
     @classmethod
     def get_name(cls):
         return 'Early TLS version'
-
-
-@attr.s
-class VulnerabilityResultNullEncryption(VulnerabilityResultGraded):
-    @property
-    def _vulnerable_grade(self):
-        return Grade.INSECURE
-
-    @classmethod
-    def get_name(cls):
-        return 'NULL encryption'
-
-
-@attr.s
-class VulnerabilityResultRC4(VulnerabilityResultGraded):
-    @property
-    def _vulnerable_grade(self):
-        return Grade.INSECURE
-
-    @classmethod
-    def get_name(cls):
-        return 'RC4'
-
-
-class VulnerabilityResultAttackNamed(VulnerabilityResult):
-    @property
-    def grade(self):
-        return self.get_attack_named().value.grade if self.value else Grade.SECURE
-
-    @classmethod
-    def get_name(cls):
-        return cls.get_attack_named().value.name
-
-    @classmethod
-    @abc.abstractmethod
-    def get_attack_named(cls):
-        raise NotImplementedError()
-
-
-class VulnerabilityResultDheat(VulnerabilityResultAttackNamed):
-    @classmethod
-    def get_attack_named(cls):
-        return AttackNamed.DHEAT_ATTACK
 
 
 class VulnerabilityResultDrown(VulnerabilityResultAttackNamed):
@@ -151,72 +74,29 @@ class VulnerabilityResultLuckyThirteen(VulnerabilityResultAttackNamed):
         return AttackNamed.LUCKY13
 
 
-class VulnerabilityResultNonForwardSecret(VulnerabilityResultAttackNamed):
-    @classmethod
-    def get_attack_named(cls):
-        return AttackNamed.NOFS
-
-
-class VulnerabilityResultSweet32(VulnerabilityResultAttackNamed):
-    @classmethod
-    def get_attack_named(cls):
-        return AttackNamed.SWEET32
-
-
-class VulnerabilityResultWeakDh(VulnerabilityResultAttackNamed):
-    @classmethod
-    def get_attack_named(cls):
-        return AttackNamed.WEAK_DH
-
-
 @attr.s
-class AnalyzerResultVulnerabilityCiphers(object):  # pylint: disable=too-many-instance-attributes
+class AnalyzerResultVulnerabilityCiphers(AnalyzerResultVulnerabilityCiphersBase):
     """
     :class: Vulnerabilities relate to cipher suite algorithms. Any attribute represents an vulnerability, which value is
         true if any of the negotiable cipher suite uses an algorithm affected by the vulnerability.
 
     :param lucky13: `Lucky Thirteen attack <https://en.wikipedia.org/wiki/Lucky_Thirteen_attack>`__.
-    :param sweet32: `Sweet32 attack <https://sweet32.info/>`__.
     :param freak: `FREAK attack <https://en.wikipedia.org/wiki/FREAK>`__.
-    :param anonymous_dh:
-        `Anonymous Diffie-Hellman <https://en.wikipedia.org/wiki/Key-agreement_protocol#Exponential_key_exchange>`__ key
-        exchange algorithm.
-    :param null_encryption: Cipher suite does use `no/null null <https://en.wikipedia.org/wiki/Null_encryption>`__
-        encryption
-    :param rc4: Cipher suite uses `RC4 stream ciphers <https://en.wikipedia.org/wiki/RC4#Security>`__.
-    :param non_forward_secret: Cipher suite uses key exchange algorithm which does not provide
-        `forward secrecy <https://en.wikipedia.org/wiki/Forward_secrecy>`__
     :param export_grade: Cipher suite uses
         `export grade <https://en.wikipedia.org/wiki/Export_of_cryptography_from_the_United_States>`__ algorithms.
     """
 
-    lucky13 = attr.ib(
-        validator=attr.validators.instance_of(VulnerabilityResultLuckyThirteen),
-        metadata={'human_readable_name': VulnerabilityResultLuckyThirteen.get_name()},
-    )
-    sweet32 = attr.ib(
-        validator=attr.validators.instance_of(VulnerabilityResultSweet32),
-        metadata={'human_readable_name': VulnerabilityResultSweet32.get_name()},
-    )
-    freak = attr.ib(
-        validator=attr.validators.instance_of(VulnerabilityResultFreak),
-        metadata={'human_readable_name': VulnerabilityResultFreak.get_name()},
-    )
-    anonymous_dh = attr.ib(
-        validator=attr.validators.instance_of(VulnerabilityResultAnonymousDH),
-        metadata={'human_readable_name': VulnerabilityResultAnonymousDH.get_name()},
-    )
     null_encryption = attr.ib(
         validator=attr.validators.instance_of(VulnerabilityResultNullEncryption),
         metadata={'human_readable_name': VulnerabilityResultNullEncryption.get_name()},
     )
-    rc4 = attr.ib(
-        validator=attr.validators.instance_of(VulnerabilityResultRC4),
-        metadata={'human_readable_name': VulnerabilityResultRC4.get_name()},
+    lucky13 = attr.ib(
+        validator=attr.validators.instance_of(VulnerabilityResultLuckyThirteen),
+        metadata={'human_readable_name': VulnerabilityResultLuckyThirteen.get_name()},
     )
-    non_forward_secret = attr.ib(
-        validator=attr.validators.instance_of(VulnerabilityResultNonForwardSecret),
-        metadata={'human_readable_name': VulnerabilityResultNonForwardSecret.get_name()},
+    freak = attr.ib(
+        validator=attr.validators.instance_of(VulnerabilityResultFreak),
+        metadata={'human_readable_name': VulnerabilityResultFreak.get_name()},
     )
     export_grade = attr.ib(
         validator=attr.validators.instance_of(VulnerabilityResultExportGrade),
@@ -267,13 +147,13 @@ class AnalyzerResultVulnerabilityCiphers(object):  # pylint: disable=too-many-in
 
 
 @attr.s
-class AnalyzerResultVulnerabilityVersions(object):  # pylint: disable=too-few-public-methods
+class AnalyzerResultVulnerabilityVersions(AnalyzerResultVulnerabilityVersionsBase):
     """
     :class: Vulnerabilities relate to the protocol versions. Any attribute represents a vulnerability, which value is
         true if any of the negotiable protocol versions uses an algorithm affected by the vulnerability.
 
     :param drown: `DROWN attack <https://drownattack.com/>`__.
-    :param early_tls_version: -  `Early protocol versions <https://www.rfc-editor.org/rfc/rfc8996>`__ is supported.
+    :param early_tls_version: -  `Early protocol versions <https://www.rfc-editor.org/rfc/rfc8996>`__ are supported.
     """
 
     drown = attr.ib(
@@ -304,22 +184,17 @@ class AnalyzerResultVulnerabilityVersions(object):  # pylint: disable=too-few-pu
 
 
 @attr.s
-class AnalyzerResultVulnerabilityDHParams(object):
+class AnalyzerResultVulnerabilityDHParams(AnalyzerResultVulnerabilityDHParamsBase):
     """
     :class: Vulnerabilities relate to the protocol versions. Any attribute represents a vulnerability, which value is
         true if any of the negotiable protocol versions uses an algorithm affected by the vulnerability.
 
     :param weak_dh: `Weak DH vulnerability <https://weakdh.org/>`__.
-    :param early_tls_version: `D(HE)at attack <https://dheatattack.com/>`__.
     """
 
     weak_dh = attr.ib(
         validator=attr.validators.instance_of(VulnerabilityResultWeakDh),
         metadata={'human_readable_name': VulnerabilityResultWeakDh.get_name()},
-    )
-    dheat = attr.ib(
-        validator=attr.validators.instance_of(VulnerabilityResultDheat),
-        metadata={'human_readable_name': VulnerabilityResultDheat.get_name()},
     )
 
     @staticmethod
