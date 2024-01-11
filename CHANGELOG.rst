@@ -2,9 +2,9 @@
 Changelog
 =========
 
-------
-0.12.2
-------
+-------------------
+0.12.2 - 2024-01-11
+-------------------
 
 Features
 ========
@@ -24,6 +24,14 @@ Features
          -  Weak Diffie-Hellman
          -  DHEat attack
          -  Terrapin attack
+
+Improvements
+============
+
+-  Generic
+
+   -  add metadata to documentation
+
 
 Notable fixes
 =============
