@@ -20,7 +20,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationGOST,
     TlsHandshakeClientHelloAuthenticationRSA,
-    TlsHandshakeClientHelloAuthenticationRarelyUsed,
+    TlsHandshakeClientHelloAuthenticationDeprecated,
 )
 from cryptolyzer.tls.exception import TlsAlert
 
@@ -153,7 +153,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         client_hello_messsages_in_order_of_probability = (
             TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
             TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, l7_client.address),
-            TlsHandshakeClientHelloAuthenticationRarelyUsed(protocol_version, l7_client.address),
+            TlsHandshakeClientHelloAuthenticationDeprecated(protocol_version, l7_client.address),
             TlsHandshakeClientHelloAuthenticationGOST(protocol_version, l7_client.address),
         )
         for client_hello in client_hello_messsages_in_order_of_probability:

@@ -310,7 +310,7 @@ class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthentic
         )
 
 
-class TlsHandshakeClientHelloAuthenticationRarelyUsed(  # pylint: disable=too-many-ancestors
+class TlsHandshakeClientHelloAuthenticationDeprecated(  # pylint: disable=too-many-ancestors
             TlsHandshakeClientHelloSpecalization
         ):
     def __init__(self, protocol_version, hostname):
@@ -327,7 +327,7 @@ class TlsHandshakeClientHelloAuthenticationRarelyUsed(  # pylint: disable=too-ma
                 ])
         ]
 
-        super(TlsHandshakeClientHelloAuthenticationRarelyUsed, self).__init__(
+        super(TlsHandshakeClientHelloAuthenticationDeprecated, self).__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
