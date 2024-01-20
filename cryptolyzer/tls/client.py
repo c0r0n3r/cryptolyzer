@@ -245,7 +245,8 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
         _cipher_suites = [
             cipher_suite
             for cipher_suite in TlsCipherSuite
-            if cipher_suite.value.authentication in authentications
+            if cipher_suite.value.authentication in authentications or
+            TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2)
         ]
 
         super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
