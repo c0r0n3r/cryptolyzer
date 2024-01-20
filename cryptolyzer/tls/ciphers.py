@@ -150,11 +150,16 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
     @classmethod
     def _get_accepted_cipher_suites_fallback(cls, l7_client, protocol_version):
         accepted_cipher_suites = []
-        client_hello_messsages_in_order_of_probability = (
+        client_hello_messsages_in_order_of_probability = [
             TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
             TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, l7_client.address),
-            TlsHandshakeClientHelloAuthenticationDeprecated(protocol_version, l7_client.address),
-            TlsHandshakeClientHelloAuthenticationGOST(protocol_version, l7_client.address),
+        ]
+        if protocol_version <= TlsProtocolVersion(TlsVersion.TLS1_2):
+            client_hello_messsages_in_order_of_probability.append(
+                TlsHandshakeClientHelloAuthenticationDeprecated(protocol_version, l7_client.address)
+            )
+        client_hello_messsages_in_order_of_probability.append(
+            TlsHandshakeClientHelloAuthenticationGOST(protocol_version, l7_client.address)
         )
         for client_hello in client_hello_messsages_in_order_of_probability:
             accepted_cipher_suites.extend(
