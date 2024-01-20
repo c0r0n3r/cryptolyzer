@@ -82,7 +82,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         self.assertFalse(result.ciphers.anonymous_dh.value)
         self.assertFalse(result.ciphers.null_encryption.value)
         self.assertFalse(result.ciphers.rc4.value)
-        self.assertTrue(result.ciphers.non_forward_secret.value)
+        self.assertFalse(result.ciphers.non_forward_secret.value)
         self.assertFalse(result.ciphers.export_grade.value)
 
         self.assertFalse(result.versions.drown.value)
