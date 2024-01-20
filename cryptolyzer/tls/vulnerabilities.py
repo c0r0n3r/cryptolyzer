@@ -16,24 +16,18 @@ from cryptolyzer.common.vulnerability import (
     AnalyzerResultVulnerabilityCiphersBase,
     AnalyzerResultVulnerabilityDHParamsBase,
     AnalyzerResultVulnerabilityVersionsBase,
-    VulnerabilityResultAnonymousDH,
     VulnerabilityResultNullEncryption,
-    VulnerabilityResultRC4,
     VulnerabilityResultAttackNamed,
     VulnerabilityResultDheat,
     VulnerabilityResultGraded,
-    VulnerabilityResultNonForwardSecret,
-    VulnerabilityResultSweet32,
     VulnerabilityResultWeakDh,
 )
 
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloBlockCipherModeCBC,
-    TlsHandshakeClientHelloBulkCipherBlockSize64,
     TlsHandshakeClientHelloBulkCipherNull,
     TlsHandshakeClientHelloKeyExchangeAnonymousDH,
-    TlsHandshakeClientHelloStreamCipherRC4,
 )
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 from cryptolyzer.tls.versions import AnalyzerVersions
@@ -105,43 +99,38 @@ class AnalyzerResultVulnerabilityCiphers(AnalyzerResultVulnerabilityCiphersBase)
 
     @staticmethod
     def from_cipher_suites(cipher_suites):
-        rc4_cipher_suites = set(TlsHandshakeClientHelloStreamCipherRC4.CIPHER_SUITES)
-        rc4 = VulnerabilityResultRC4(bool(rc4_cipher_suites & set(cipher_suites)))
-
         null_encryption_cipher_suites = set(TlsHandshakeClientHelloBulkCipherNull.CIPHER_SUITES)
         null_encryption = VulnerabilityResultNullEncryption(bool(null_encryption_cipher_suites & set(cipher_suites)))
-
-        anonymous_dh_cipher_suites = set(TlsHandshakeClientHelloKeyExchangeAnonymousDH.CIPHER_SUITES)
-        anonymous_dh = VulnerabilityResultAnonymousDH(bool(anonymous_dh_cipher_suites & set(cipher_suites)))
 
         export_rsa_cipher_suites = set(TlsHandshakeClientHelloKeyExchangeAnonymousDH.CIPHER_SUITES)
         freak = VulnerabilityResultFreak(bool(export_rsa_cipher_suites & set(cipher_suites)))
 
-        sweet32_cipher_suites = set(TlsHandshakeClientHelloBulkCipherBlockSize64.CIPHER_SUITES)
-        sweet32 = VulnerabilityResultSweet32(bool(sweet32_cipher_suites & set(cipher_suites)))
-
         lucky13_cipher_suites = set(TlsHandshakeClientHelloBlockCipherModeCBC.CIPHER_SUITES)
         lucky13 = VulnerabilityResultLuckyThirteen(bool(lucky13_cipher_suites & set(cipher_suites)))
-
-        non_forward_secret = VulnerabilityResultNonForwardSecret(any(map(
-            lambda cipher_suite: (
-                cipher_suite.value.key_exchange is not None and
-                cipher_suite.value.key_exchange.value.forward_secret
-            ), cipher_suites
-        )))
 
         export_grade = VulnerabilityResultExportGrade(any(map(
             lambda cipher_suite: cipher_suite.value.export_grade, cipher_suites
         )))
 
+        vulnerability_ciphers = AnalyzerResultVulnerabilityCiphersBase.from_algorithms(
+            key_exchange_algorithms=set(map(
+                lambda cipher_suite: cipher_suite.value.key_exchange,
+                filter(lambda cipher_suite: cipher_suite.value.key_exchange is not None, cipher_suites)
+            )),
+            bulk_cipher_algorithms=set(map(
+                lambda cipher_suite: cipher_suite.value.bulk_cipher, cipher_suites
+            ))
+        )
+
         return AnalyzerResultVulnerabilityCiphers(
-            rc4=rc4,
+            sweet32=vulnerability_ciphers.sweet32,
+            anonymous_dh=vulnerability_ciphers.anonymous_dh,
+            rc4=vulnerability_ciphers.rc4,
+            non_forward_secret=vulnerability_ciphers.non_forward_secret,
+
             null_encryption=null_encryption,
-            anonymous_dh=anonymous_dh,
             freak=freak,
-            sweet32=sweet32,
             lucky13=lucky13,
-            non_forward_secret=non_forward_secret,
             export_grade=export_grade,
         )
 
