@@ -44,6 +44,17 @@ class VulnerabilityResultEarlyTlsVersion(VulnerabilityResultGraded):
         return 'Early TLS version'
 
 
+@attr.s
+class VulnerabilityResultSslVersion(VulnerabilityResultGraded):
+    @property
+    def _vulnerable_grade(self):
+        return Grade.INSECURE
+
+    @classmethod
+    def get_name(cls):
+        return 'SSL version'
+
+
 class VulnerabilityResultDrown(VulnerabilityResultAttackNamed):
     @classmethod
     def get_attack_named(cls):
@@ -143,6 +154,7 @@ class AnalyzerResultVulnerabilityVersions(AnalyzerResultVulnerabilityVersionsBas
 
     :param drown: `DROWN attack <https://drownattack.com/>`__.
     :param early_tls_version: -  `Early protocol versions <https://www.rfc-editor.org/rfc/rfc8996>`__ are supported.
+    :param ssl_version: -  `Insecure versions <https://www.rfc-editor.org/rfc/rfc7568>`__ are supported.
     """
 
     drown = attr.ib(
@@ -152,6 +164,10 @@ class AnalyzerResultVulnerabilityVersions(AnalyzerResultVulnerabilityVersionsBas
     early_tls_version = attr.ib(
         validator=attr.validators.instance_of(VulnerabilityResultEarlyTlsVersion),
         metadata={'human_readable_name': VulnerabilityResultEarlyTlsVersion.get_name()},
+    )
+    ssl_version = attr.ib(
+        validator=attr.validators.instance_of(VulnerabilityResultSslVersion),
+        metadata={'human_readable_name': VulnerabilityResultSslVersion.get_name()},
     )
 
     @staticmethod
@@ -165,10 +181,18 @@ class AnalyzerResultVulnerabilityVersions(AnalyzerResultVulnerabilityVersionsBas
             ),
             protocol_versions
         )))
+        ssl_version = VulnerabilityResultSslVersion(any(map(
+            lambda protocol_version: (
+                isinstance(protocol_version, TlsProtocolVersion) and
+                protocol_version < TlsProtocolVersion(TlsVersion.TLS1)
+            ),
+            protocol_versions
+        )))
 
         return AnalyzerResultVulnerabilityVersions(
             drown=drown,
             early_tls_version=early_tls_version,
+            ssl_version=ssl_version,
         )
 
 
