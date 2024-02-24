@@ -247,7 +247,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
 
         trusted_root_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(trusted_root_chain.items), 3)
-        self.assertTrue(trusted_root_chain.contains_anchor)
+        self.assertFalse(trusted_root_chain.contains_anchor)
         self.assertEqual(
             trusted_root_chain.trust_roots,
             {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: True}

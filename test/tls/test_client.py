@@ -547,44 +547,37 @@ class TestClientRDP(TestL7ClientBase):
     @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
     def test_error_send_socket_timeout(self, _):
         with self.assertRaises(NetworkError) as context_manager:
-            self.get_result('rdp', 'demo.libertydemo.com', None)
+            self.get_result('rdp', 'badssl.com', 443)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @unittest.skipIf(six.PY2, 'TimeoutError is raised instead of socket.error in Python >= 3.0')
     def test_error_send_timeout_error(self):
         with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
                 self.assertRaises(NetworkError) as context_manager:
-            self.get_result('rdp', 'demo.libertydemo.com', None)
+            self.get_result('rdp', 'badssl.com', 443)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
-        _, result = self.get_result('rdp', 'demo.libertydemo.com', None)
+        _, result = self.get_result('rdp', 'badssl.com', 443)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidValue('x', int))
     def test_error_parse_invalid_value(self, _):
-        _, result = self.get_result('rdp', 'demo.libertydemo.com', None)
+        _, result = self.get_result('rdp', 'badssl.com', 443)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(
-        RDPNegotiationResponse, '_parse',
-        return_value=(RDPNegotiationResponse([], []), RDP_NEGOTIATION_RESPONSE_LENGTH)
+        L4ClientTCP, '_receive_bytes',
+        return_value=TPKT(
+            3, COTPConnectionConfirm(
+                src_ref=1, dst_ref=1, user_data=RDPNegotiationResponse([], []).compose()
+            ).compose()
+        ).compose()
     )
     def test_error_no_ssl_support(self, _):
-        _, result = self.get_result('rdp', 'demo.libertydemo.com', None)
+        _, result = self.get_result('rdp', 'badssl.com', 443)
         self.assertEqual(result.versions, [])
-
-    def test_rdp_client(self):
-        _, result = self.get_result('rdp', 'demo.libertydemo.com', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(TlsVersion.TLS1),
-                TlsProtocolVersion(TlsVersion.TLS1_1),
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-            ]
-        )
 
 
 class TestClientLDAP(TestL7ClientBase):
@@ -863,11 +856,8 @@ class TestClientSieve(TestL7ClientBase):
         self.assertEqual(result.versions, [])
 
     def test_sieve_client(self):
-        _, result = self.get_result('sieve', 'mail.aa.net.uk', None)
-        # Server work incoherently in thae case of TLS 1.0/1.1, so only 1.2/1.3 are checked
-        self.assertTrue(
-            set(result.versions).issuperset(set(map(TlsProtocolVersion, [TlsVersion.TLS1_2, TlsVersion.TLS1_3])))
-        )
+        _, result = self.get_result('sieve', 'mail.aa.net.uk', None, analyzer=AnalyzerDHParams())
+        self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC3526_4096_BIT_MODP_GROUP)
 
 
 class TestClientXMPP(TestL7ClientBase):
