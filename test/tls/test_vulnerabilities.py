@@ -28,6 +28,23 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
                 ffdhe_param.value.named_group.value.size), log_stream)
 
     def test_real(self):
+        result = self.get_result('baidu.com', 443)
+        self.assertTrue(result.ciphers.lucky13.value)
+        self.assertFalse(result.ciphers.sweet32.value)
+        self.assertFalse(result.ciphers.freak.value)
+        self.assertFalse(result.ciphers.anonymous_dh.value)
+        self.assertFalse(result.ciphers.null_encryption.value)
+        self.assertTrue(result.ciphers.rc4.value)
+        self.assertTrue(result.ciphers.non_forward_secret.value)
+        self.assertFalse(result.ciphers.export_grade.value)
+
+        self.assertFalse(result.versions.drown.value)
+        self.assertTrue(result.versions.early_tls_version.value)
+        self.assertTrue(result.versions.ssl_version.value)
+
+        self.assertFalse(result.dhparams.weak_dh.value)
+        self.assertFalse(result.dhparams.dheat.value)
+
         result = self.get_result('rc4.badssl.com', 443)
         self.assertFalse(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
@@ -40,6 +57,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
 
         self.assertFalse(result.versions.drown.value)
         self.assertTrue(result.versions.early_tls_version.value)
+        self.assertFalse(result.versions.ssl_version.value)
 
         self.assertFalse(result.dhparams.weak_dh.value)
         self.assertFalse(result.dhparams.dheat.value)
@@ -63,6 +81,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
 
         self.assertFalse(result.versions.drown.value)
         self.assertTrue(result.versions.early_tls_version.value)
+        self.assertFalse(result.versions.ssl_version.value)
 
         self.assertTrue(result.dhparams.weak_dh.value)
         self.assertFalse(result.dhparams.dheat.value)
@@ -87,6 +106,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
 
         self.assertFalse(result.versions.drown.value)
         self.assertFalse(result.versions.early_tls_version.value)
+        self.assertFalse(result.versions.ssl_version.value)
 
         self.assertFalse(result.dhparams.weak_dh.value)
         self.assertTrue(result.dhparams.dheat.value)

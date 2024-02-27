@@ -110,6 +110,9 @@ class TestMain(TestMainBase):
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'rc4.badssl.com', 443, timeout=10)
         self._check_higlighted_output(func_arguments, cli_arguments)
 
+        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'baidu.com', 443, timeout=10)
+        self._check_higlighted_output(func_arguments, cli_arguments)
+
     def test_analyzer_output_tls_ciphers(self):
         func_arguments, cli_arguments = self._get_arguments(
             TlsProtocolVersion(TlsVersion.TLS1),
