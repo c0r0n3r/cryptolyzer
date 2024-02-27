@@ -32,7 +32,10 @@ class ProtocolHandlerSsl2(ProtocolHandlerTlsExactVersion):
 class ProtocolHandlerSsl3(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
-        return ProtocolHandlerSsl2.get_analyzers()
+        return ProtocolHandlerSsl2.get_analyzers() + (
+            AnalyzerPublicKeyRequest,
+            AnalyzerDHParams,
+        )
 
     @classmethod
     def get_protocol_version(cls):
@@ -43,9 +46,7 @@ class ProtocolHandlerTls10(ProtocolHandlerTlsExactVersion):
     @classmethod
     def get_analyzers(cls):
         return ProtocolHandlerSsl3.get_analyzers() + (
-            AnalyzerPublicKeyRequest,
             AnalyzerCurves,
-            AnalyzerDHParams,
         )
 
     @classmethod
