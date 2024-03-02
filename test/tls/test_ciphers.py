@@ -162,6 +162,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         result = self.get_result('rc4.badssl.com', 443)
         self.assertEqual(result.cipher_suites, [
             TlsCipherSuite.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
+            TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA,
         ])
 
     @mock.patch.object(
