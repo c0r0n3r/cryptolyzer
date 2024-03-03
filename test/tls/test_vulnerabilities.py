@@ -27,7 +27,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
             self.assertIn('Server offers FFDHE public parameter with size {}-bit'.format(
                 ffdhe_param.value.named_group.value.size), log_stream)
 
-    def test_real(self):
+    def test_real_versions(self):
         result = self.get_result('baidu.com', 443)
         self.assertTrue(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
@@ -45,6 +45,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         self.assertFalse(result.dhparams.weak_dh.value)
         self.assertFalse(result.dhparams.dheat.value)
 
+    def test_real_ciphers(self):
         result = self.get_result('rc4.badssl.com', 443)
         self.assertFalse(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
@@ -94,6 +95,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         ], log_stream)
         self.assertIn('Server offers 1024-bit NGINX 0.7.2 builtin DH parameter', log_stream)
 
+    def test_real_dhparams(self):
         result = self.get_result('fedoraproject.org', 443)
         self.assertTrue(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)

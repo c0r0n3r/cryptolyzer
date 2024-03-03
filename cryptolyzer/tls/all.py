@@ -2,8 +2,6 @@
 
 from collections import OrderedDict
 
-import itertools
-
 import attr
 
 from cryptodatahub.common.algorithm import Authentication, KeyExchange
@@ -238,39 +236,31 @@ class AnalyzerAll(AnalyzerTlsBase):
         }
 
         results.update(self.get_versions_result(analyzable))
-        versions = results[AnalyzerVersions.get_name()].versions
+        versions = results[AnalyzerVersions.get_name()]
+        protocol_versions = versions.versions
 
         cipher_suite_results = OrderedDict([
             (protocol_version, AnalyzerCipherSuites().analyze(analyzable, protocol_version))
-            for protocol_version in versions
+            for protocol_version in protocol_versions
         ])
 
         dhparams_result = self.get_dhparams_result(analyzable, cipher_suite_results)
         dhparams = dhparams_result[AnalyzerDHParams.get_name()]
-        if dhparams is not None:
-            dhparam = dhparams.dhparam
-            groups = dhparams.groups
-        else:
-            dhparam = None
-            groups = []
         results.update(dhparams_result)
 
-        results.update(self.get_pubkeyreq_result(analyzable, versions))
+        results.update(self.get_pubkeyreq_result(analyzable, protocol_versions))
         results.update(self.get_pubkeys_result(analyzable, cipher_suite_results))
         results.update(self.get_curves_result(analyzable, cipher_suite_results))
-        results.update(self.get_sigalgos_result(analyzable, versions))
+        results.update(self.get_sigalgos_result(analyzable, protocol_versions))
         results.update(self.get_simulations_result(analyzable))
-        results.update(self.get_extensions_result(analyzable, versions))
+        results.update(self.get_extensions_result(analyzable, protocol_versions))
         results.update({
             AnalyzerVulnerabilities.get_name():
             AnalyzerResultVulnerabilities.from_results(
                 target=analyzable,
-                protocol_versions=versions,
-                cipher_suites=set(itertools.chain.from_iterable(
-                    map(lambda cipher_suite_result: cipher_suite_result.cipher_suites, cipher_suite_results.values())
-                )),
-                dhparam=dhparam,
-                groups=groups,
+                versions=versions,
+                ciphers=cipher_suite_results.values(),
+                dhparams=dhparams,
             )
         })
         results.update({AnalyzerCipherSuites.get_name(): list(cipher_suite_results.values())})

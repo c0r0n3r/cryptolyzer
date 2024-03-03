@@ -38,6 +38,7 @@ from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
 from cryptolyzer.__main__ import main, get_argument_parser, get_protocol_handler_analyzer_and_uris
 from cryptolyzer.ja3.generate import AnalyzerGenerate
+from cryptolyzer.tls.versions import AnalyzerVersions
 
 
 class TestMain(TestMainBase):
@@ -88,8 +89,8 @@ class TestMain(TestMainBase):
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_json('tls', 'versions', 'dns.google#8.8.8.8'))
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_markdown('tls', 'versions', 'dns.google#8.8.8.8'))
 
-    def _check_higlighted_output(self, func_arguments, cli_arguments):
-        result = test.tls.test_vulnerabilities.TestTlsVulnerabilities.get_result(**func_arguments)
+    def _check_higlighted_output(self, func, func_arguments, cli_arguments):
+        result = func(**func_arguments)
 
         colorama.init()
         Serializable.post_text_encoder = SerializableTextEncoderHighlighted()
@@ -101,17 +102,23 @@ class TestMain(TestMainBase):
         colorama.deinit()
 
     def test_analyzer_output_highlighted(self):
+        func = test.tls.test_vulnerabilities.TestTlsVulnerabilities.get_result
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'dh1024.badssl.com', 443, timeout=10)
-        self._check_higlighted_output(func_arguments, cli_arguments)
+        self._check_higlighted_output(func, func_arguments, cli_arguments)
 
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'null.badssl.com', 443, timeout=10)
-        self._check_higlighted_output(func_arguments, cli_arguments)
+        self._check_higlighted_output(func, func_arguments, cli_arguments)
 
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'rc4.badssl.com', 443, timeout=10)
-        self._check_higlighted_output(func_arguments, cli_arguments)
+        self._check_higlighted_output(func, func_arguments, cli_arguments)
 
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'baidu.com', 443, timeout=10)
-        self._check_higlighted_output(func_arguments, cli_arguments)
+        self._check_higlighted_output(func, func_arguments, cli_arguments)
+
+        with patch.object(AnalyzerVersions, '_analyze_inappropriate_version_fallback', return_value=True):
+            func = test.tls.test_versions.TestTlsVersions.get_result
+            func_arguments, cli_arguments = self._get_arguments('tls', 'versions', 'badssl.com', 443, timeout=10)
+            self._check_higlighted_output(func, func_arguments, cli_arguments)
 
     def test_analyzer_output_tls_ciphers(self):
         func_arguments, cli_arguments = self._get_arguments(

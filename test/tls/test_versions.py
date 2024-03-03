@@ -26,12 +26,6 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
         result = analyzer.analyze(l7_client, None)
         return result
 
-    @staticmethod
-    def create_server(configuration=None):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=0.2, configuration=configuration))
-        threaded_server.wait_for_server_listen()
-        return threaded_server
-
     @mock.patch.object(
         L7ClientTlsBase, 'do_ssl_handshake',
         side_effect=SslError(SslErrorType.NO_CERTIFICATE_ERROR)
@@ -113,6 +107,22 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
     def _check_log(self, result):
         for version in result.versions:
             self.assertIn('Server offers protocol version {}'.format(str(version)), self.log_stream.getvalue())
+
+    def test_missing_fallback_scsv_support(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1_1), TlsProtocolVersion(TlsVersion.TLS1_2)],
+            fallback_to_ssl=False
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertTrue(result.inappropriate_version_fallback.value)
+
+    def test_undecidable_fallback_scsv_support(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1_2)],
+            fallback_to_ssl=False
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(result.inappropriate_version_fallback, None)
 
     def test_tls_1_0_only(self):
         result = self.get_result('tls-v1-0.badssl.com', 1010)

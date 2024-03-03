@@ -4,6 +4,8 @@ import six
 
 import attr
 
+from cryptodatahub.common.grade import Grade
+
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionKeyShareClient
 from cryptoparser.tls.subprotocol import TlsExtensionsClient, TlsHandshakeType, TlsAlertDescription
@@ -14,6 +16,9 @@ from cryptolyzer.common.analyzer import AnalyzerTlsBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.common.utils import LogSingleton
+from cryptolyzer.common.vulnerability import VulnerabilityResultGraded
+
+
 from cryptolyzer.tls.client import (
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
@@ -26,12 +31,26 @@ from cryptolyzer.tls.exception import TlsAlert
 
 
 @attr.s
+class VulnerabilityResultInappropriateVersionFallback(VulnerabilityResultGraded):
+    @property
+    def _vulnerable_grade(self):
+        return Grade.WEAK
+
+    @classmethod
+    def get_name(cls):
+        return 'Inappropriate Version Fallback'
+
+
+@attr.s
 class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-public-methods
     """
     :class: Analyzer result relates to protocol version.
 
     :param versions: supported protocol versions (TLS/SSL).
-    :param alerts_unsupported_tls_version: whether unsupported protocol version alerted according to the standard.
+    :param alerts_unsupported_tls_version: whether unsupported protocol version is alerted according to the
+    `standard <https://www.ietf.org/rfc/rfc2246.html#section-7.2.2>`__.
+    :param inappropriate_version_fallback: whether inappropriate version fallback is not alerted according to the
+    `standard <https://www.rfc-editor.org/rfc/rfc7507.html>`__.
     """
 
     versions = attr.ib(
@@ -44,9 +63,19 @@ class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-publ
         validator=attr.validators.optional(attr.validators.instance_of(bool)),
         metadata={'human_readable_name': 'Alerts Unsupported TLS Version'},
     )
+    inappropriate_version_fallback = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(
+            VulnerabilityResultInappropriateVersionFallback
+        )),
+    )
 
 
 class AnalyzerVersions(AnalyzerTlsBase):
+    _TLS_CLIENT_HELLO_CLASSES_IN_ORDER_OF_PROBABILITY = (
+        TlsHandshakeClientHelloAuthenticationRSA,
+        TlsHandshakeClientHelloAuthenticationECDSA,
+        TlsHandshakeClientHelloAuthenticationDeprecated,
+    )
     _DRAFT_VERSIONS_IN_REVERSE_ORDER = tuple(reversed([
         tls_protocol_version
         for tls_protocol_version in [TlsProtocolVersion(tls_version) for tls_version in TlsVersion]
@@ -98,18 +127,13 @@ class AnalyzerVersions(AnalyzerTlsBase):
         if tls_version == TlsVersion.SSL3:
             raise StopIteration(None)
 
-    @staticmethod
-    def _analyze_supported_tls_early_versions(analyzable):
+    def _analyze_supported_tls_early_versions(self, analyzable):
         alerts_unsupported_tls_version = None
         supported_protocols = []
         for tls_version in (TlsVersion.SSL3, TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2):
             protocol_version = TlsProtocolVersion(tls_version)
-            client_hello_messsages_in_order_of_probability = (
-                TlsHandshakeClientHelloAuthenticationRSA(protocol_version, analyzable.address),
-                TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, analyzable.address),
-                TlsHandshakeClientHelloAuthenticationDeprecated(protocol_version, analyzable.address),
-            )
-            for client_hello in client_hello_messsages_in_order_of_probability:
+            for client_hello_class in self._TLS_CLIENT_HELLO_CLASSES_IN_ORDER_OF_PROBABILITY:
+                client_hello = client_hello_class(protocol_version, analyzable.address)
                 try:
                     server_messages = analyzable.do_tls_handshake(
                         hello_message=client_hello,
@@ -210,6 +234,35 @@ class AnalyzerVersions(AnalyzerTlsBase):
 
         return reversed(supported_protocols), alerts_unsupported_tls_version
 
+    def _analyze_inappropriate_version_fallback(self, analyzable, supported_protocols):
+        protocol_versions_inappropriate_version_fallback = list(filter(
+            lambda tls_protocol_version: (
+                not (tls_protocol_version.is_draft or tls_protocol_version.is_google_experimental)
+                and tls_protocol_version >= TlsProtocolVersion(TlsVersion.TLS1)
+            ),
+            supported_protocols
+        ))
+        if len(protocol_versions_inappropriate_version_fallback) < 2:
+            return None
+
+        protocol_version = protocol_versions_inappropriate_version_fallback[-2]
+        for client_hello_class in self._TLS_CLIENT_HELLO_CLASSES_IN_ORDER_OF_PROBABILITY:
+            client_hello = client_hello_class(protocol_version, analyzable.address)
+            client_hello.fallback_scsv = True
+
+            try:
+                analyzable.do_tls_handshake(hello_message=client_hello)
+            except TlsAlert as e:
+                alert_description = e.description
+
+                if alert_description == TlsAlertDescription.INAPPROPRIATE_FALLBACK:
+                    return False
+
+                if alert_description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
+                    break
+
+        return True
+
     def analyze(self, analyzable, protocol_version):
         supported_protocols = []
 
@@ -224,8 +277,17 @@ class AnalyzerVersions(AnalyzerTlsBase):
             self._analyze_supported_tls_1_3_versions(analyzable)
         supported_protocols.extend(supported_tls_protocols)
 
+        inappropriate_version_fallback = self._analyze_inappropriate_version_fallback(
+            analyzable, supported_protocols
+        )
+        if inappropriate_version_fallback is not None:
+            inappropriate_version_fallback = VulnerabilityResultInappropriateVersionFallback(
+                inappropriate_version_fallback
+            )
+
         return AnalyzerResultVersions(
             AnalyzerTargetTls.from_l7_client(analyzable, None),
             supported_protocols,
             alerts_unsupported_tls_version and alerts_unsupported_tls_1_3_version,
+            inappropriate_version_fallback,
         )
