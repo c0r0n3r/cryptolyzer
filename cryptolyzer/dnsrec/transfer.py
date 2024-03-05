@@ -34,8 +34,8 @@ class DnsHandshakeBase(object):
             return []
 
         records = []
-        for record in self._answer:
-            if record.rdtype == self._record_type.value.code:
+        for rrset in self._answer.response.answer:
+            for record in list(rrset.items):
                 out = six.BytesIO()
                 record.to_wire(out)
                 records.append(out.getvalue())
@@ -74,7 +74,7 @@ class DnsHandshakeBase(object):
 
         records = None
         try:
-            records = self._resolve(dns_resolver, qname=domain, rdtype=rr_type.value.name)
+            records = self._resolve(dns_resolver, qname=domain, rdtype=rr_type.value.name, raise_on_no_answer=False)
         except dns.resolver.NXDOMAIN as e:
             six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
         except dns.resolver.Timeout as e:

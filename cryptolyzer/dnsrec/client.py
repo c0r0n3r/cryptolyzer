@@ -167,7 +167,12 @@ class L7ClientDnsBase(object):
         self._log_records(
             'RRSIG',
             map(
-                lambda rrsig_record: '{} ({})'.format(rrsig_record.type_covered.value.name, rrsig_record.key_tag),
+                lambda rrsig_record: '{} ({})'.format(
+                    rrsig_record.type_covered.value.name
+                    if isinstance(rrsig_record, DnsRrType)
+                    else rrsig_record.type_covered.value,
+                    rrsig_record.key_tag
+                ),
                 rrsig_records
             )
         )

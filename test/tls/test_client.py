@@ -26,7 +26,7 @@ from cryptoparser.tls.openvpn import (
     OpenVpnPacketHardResetServerV2,
     OpenVpnPacketWrapperTcp,
 )
-from cryptoparser.tls.rdp import RDPNegotiationResponse
+from cryptoparser.tls.rdp import COTPConnectionConfirm, TPKT, RDPNegotiationResponse
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.record import ParsableBase, TlsRecord, SslRecord
