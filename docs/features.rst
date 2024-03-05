@@ -184,7 +184,9 @@ Vulnerabilities
 -  `RC4 ciphers <https://en.wikipedia.org/wiki/RC4#Security>`__
 -  `Sweet32 attack <https://sweet32.info/>`__
 -  `anonymous Diffie-Hellman ciphers <https://en.wikipedia.org/wiki/Key-agreement_protocol#Exponential_key_exchange>`__
+-  `inappropriate version fallback <https://www.rfc-editor.org/rfc/rfc7507.html>`__
 -  `early TLS versions <https://www.rfc-editor.org/rfc/rfc8996>`__
+-  `insecure SSL versions <ihttps://www.rfc-editor.org/rfc/rfc7507.html>`__
 -  `export grade ciphers <https://en.wikipedia.org/wiki/Export_of_cryptography_from_the_United_States>`__
 -  `non-forward-secret ciphers <https://en.wikipedia.org/wiki/Forward_secrecy>`__
 -  `null encryption ciphers <https://en.wikipedia.org/wiki/Null_encryption>`__

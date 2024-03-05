@@ -3,6 +3,42 @@ Changelog
 =========
 
 -------------------
+0.12.3 - 2024-03-05
+-------------------
+
+Features
+========
+
+-  TLS (``tls``)
+
+   -  Versions (``versions``)
+
+      -  add checker for inappropriate fallback alerts (#139)
+
+   -  Vulnerabilities (``vulns``)
+
+      -  add checker for insecure protocol versions (#137)
+      -  add checker for inappropriate fallback alerts (#139)
+
+Notable fixes
+=============
+
+-  TLS (``tls``)
+
+   -  Ciphers (``ciphers``)
+
+      - fix calculation of cipher suites relates to a certain version (#138)
+      - fix cipher suite check when server does not support long cipher suite list (#135)
+
+   -  Diffie-Hellman (``dhparams``)
+
+      -  add missing SSLv3 support (#136)
+
+   -  Vulnerabilities (``vulns``)
+
+      -  fix calculation of missing forward secrecy (#134)
+
+-------------------
 0.12.2 - 2024-01-11
 -------------------
 

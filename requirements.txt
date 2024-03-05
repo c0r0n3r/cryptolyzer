@@ -3,7 +3,7 @@ attrs>=20.3.0,<22.0.1
 bs4
 certvalidator
 colorama
-cryptoparser>=0.12.2
+cryptoparser>=0.12.3
 pathlib2==2.3.7.post1;python_version<"3.4"
 pathlib2;python_version>="3.4"
 pyfakefs
