@@ -30,7 +30,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloKeyExchangeAnonymousDH,
 )
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
-from cryptolyzer.tls.versions import AnalyzerVersions
+from cryptolyzer.tls.versions import AnalyzerVersions, VulnerabilityResultInappropriateVersionFallback
 
 
 @attr.s
@@ -157,6 +157,12 @@ class AnalyzerResultVulnerabilityVersions(AnalyzerResultVulnerabilityVersionsBas
     :param ssl_version: -  `Insecure versions <https://www.rfc-editor.org/rfc/rfc7568>`__ are supported.
     """
 
+    inappropriate_version_fallback = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(
+            VulnerabilityResultInappropriateVersionFallback
+        )),
+        metadata={'human_readable_name': VulnerabilityResultInappropriateVersionFallback.get_name()},
+    )
     drown = attr.ib(
         validator=attr.validators.instance_of(VulnerabilityResultDrown),
         metadata={'human_readable_name': VulnerabilityResultDrown.get_name()},
@@ -171,7 +177,7 @@ class AnalyzerResultVulnerabilityVersions(AnalyzerResultVulnerabilityVersionsBas
     )
 
     @staticmethod
-    def from_protocol_versions(protocol_versions):
+    def from_protocol_versions(protocol_versions, inappropriate_version_fallback):
         drown = VulnerabilityResultDrown(bool(TlsProtocolVersion(TlsVersion.SSL2) in protocol_versions))
 
         early_tls_version = VulnerabilityResultEarlyTlsVersion(any(map(
@@ -190,6 +196,7 @@ class AnalyzerResultVulnerabilityVersions(AnalyzerResultVulnerabilityVersionsBas
         )))
 
         return AnalyzerResultVulnerabilityVersions(
+            inappropriate_version_fallback=inappropriate_version_fallback,
             drown=drown,
             early_tls_version=early_tls_version,
             ssl_version=ssl_version,
@@ -247,13 +254,26 @@ class AnalyzerResultVulnerabilities(AnalyzerResultTls):  # pylint: disable=too-f
         metadata={'human_readable_name': 'Protocol Versions'}
     )
 
-    @staticmethod
-    def from_results(target, protocol_versions, cipher_suites, dhparam, groups):
-        return AnalyzerResultVulnerabilities(
+    @classmethod
+    def from_results(cls, target, versions, ciphers, dhparams):
+        cipher_suites = set(itertools.chain.from_iterable(map(
+            lambda ciphers_result: ciphers_result.cipher_suites, ciphers
+        )))
+
+        if dhparams is not None:
+            dhparam = dhparams.dhparam
+            groups = dhparams.groups
+        else:
+            dhparam = None
+            groups = []
+
+        return cls(
             target=target,
             ciphers=AnalyzerResultVulnerabilityCiphers.from_cipher_suites(cipher_suites),
             dhparams=AnalyzerResultVulnerabilityDHParams.from_dhparam(dhparam, groups),
-            versions=AnalyzerResultVulnerabilityVersions.from_protocol_versions(protocol_versions),
+            versions=AnalyzerResultVulnerabilityVersions.from_protocol_versions(
+                versions.versions, versions.inappropriate_version_fallback
+            ),
         )
 
 
@@ -269,31 +289,31 @@ class AnalyzerVulnerabilities(AnalyzerTlsBase):
     def analyze(self, analyzable, protocol_version):
         LogSingleton().disabled = True
         analyzer_result_versions = AnalyzerVersions().analyze(analyzable, None)
-        cipher_suites = set(itertools.chain.from_iterable(map(
-            lambda supported_protocol_version: AnalyzerCipherSuites().analyze(
-                analyzable, supported_protocol_version
-            ).cipher_suites,
-            analyzer_result_versions.versions
-        )))
+        analyzer_results_ciphers = [
+            AnalyzerCipherSuites().analyze(analyzable, supported_protocol_version)
+            for supported_protocol_version in analyzer_result_versions.versions
+        ]
+
         for supported_protocol_version in analyzer_result_versions.versions:
             if (isinstance(supported_protocol_version, TlsProtocolVersion) and
                     supported_protocol_version <= TlsProtocolVersion(TlsVersion.TLS1_2)):
-                result = AnalyzerDHParams().analyze(analyzable, supported_protocol_version)
-                dhparam = result.dhparam
-                groups = result.groups
+                analyzer_result_dhparams = AnalyzerDHParams().analyze(analyzable, supported_protocol_version)
                 break
         else:
-            dhparam = None
-            groups = []
+            analyzer_result_dhparams = None
         tls_protocol_version_1_3 = TlsProtocolVersion(TlsVersion.TLS1_3)
-        if not groups and tls_protocol_version_1_3 in analyzer_result_versions.versions:
+        if (analyzer_result_dhparams is None or not analyzer_result_dhparams.groups and
+                tls_protocol_version_1_3 in analyzer_result_versions.versions):
             result = AnalyzerDHParams().analyze(analyzable, tls_protocol_version_1_3)
-            groups = result.groups
+            if analyzer_result_dhparams:
+                analyzer_result_dhparams.groups = result.groups
+            else:
+                analyzer_result_dhparams = result
         LogSingleton().disabled = False
 
-        return AnalyzerResultVulnerabilities(
+        return AnalyzerResultVulnerabilities.from_results(
             target=AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
-            ciphers=AnalyzerResultVulnerabilityCiphers.from_cipher_suites(cipher_suites),
-            dhparams=AnalyzerResultVulnerabilityDHParams.from_dhparam(dhparam, groups),
-            versions=AnalyzerResultVulnerabilityVersions.from_protocol_versions(analyzer_result_versions.versions)
+            versions=analyzer_result_versions,
+            ciphers=analyzer_results_ciphers,
+            dhparams=analyzer_result_dhparams,
         )

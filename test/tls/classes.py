@@ -41,6 +41,12 @@ class TestTlsCases:
         def get_result(host, port, protocol_version=None, timeout=None, ip=None):
             raise NotImplementedError()
 
+        @staticmethod
+        def create_server(configuration=None):
+            threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=0.2, configuration=configuration))
+            threaded_server.wait_for_server_listen()
+            return threaded_server
+
         @mock.patch.object(
             L7ClientTlsBase, 'do_tls_handshake',
             side_effect=SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
