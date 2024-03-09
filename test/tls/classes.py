@@ -180,7 +180,7 @@ class L7ServerTlsAlert(L7ServerTls):
 
 class TlsServerLongCipherSuiteListIntolerance(TlsServerHandshake):
     def _process_handshake_message(self, message, last_handshake_message_type):
-        if len(message.cipher_suites) >= 256:
+        if len(message.cipher_suites) >= 192:
             self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
             raise StopIteration()
 

@@ -177,13 +177,18 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         else:
             if protocol_version <= TlsProtocolVersion(TlsVersion.TLS1_2):
                 min_version = protocol_version
+                checkable_cipher_suites = [
+                    cipher_suite
+                    for cipher_suite in TlsCipherSuite
+                    if TlsProtocolVersion(cipher_suite.value.initial_version) <= min_version
+                ]
             else:
                 min_version = TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_0)
-            checkable_cipher_suites = [
-                cipher_suite
-                for cipher_suite in TlsCipherSuite
-                if TlsProtocolVersion(cipher_suite.value.initial_version) >= min_version
-            ]
+                checkable_cipher_suites = [
+                    cipher_suite
+                    for cipher_suite in TlsCipherSuite
+                    if TlsProtocolVersion(cipher_suite.value.initial_version) >= min_version
+                ]
 
         return checkable_cipher_suites
 
