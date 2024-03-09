@@ -74,7 +74,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
             L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
         )
         threaded_server.start()
-        protocol_version = TlsProtocolVersion(TlsVersion.TLS1)
+        protocol_version = TlsProtocolVersion(TlsVersion.TLS1_2)
         self.assertEqual(
             self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port, protocol_version).sig_algos,
             []

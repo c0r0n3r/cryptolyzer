@@ -126,8 +126,8 @@ def key_share_entry_from_named_curve(named_curve):
 
 class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
     @classmethod
-    def _get_signature_algorithms(cls, is_tls1_3_supported, cipher_suites):
-        if is_tls1_3_supported:
+    def _get_signature_algorithms(cls, protocol_version_min, protocol_version_max, cipher_suites):
+        if protocol_version_max > TlsProtocolVersion(TlsVersion.TLS1_2):
             authentications_not_exist_in_tls1_3 = [Authentication.ANONYMOUS, Authentication.DSS]
             signature_algorithms = [
                 signature_algorithm
@@ -135,7 +135,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
                 if (signature_algorithm.value.signature_algorithm not in authentications_not_exist_in_tls1_3 and
                     signature_algorithm.value.hash_algorithm is not None)
             ]
-        else:
+        elif protocol_version_min >= TlsProtocolVersion(TlsVersion.TLS1_2):
             authentication_algorithms = set(
                 cipher_suite.value.authentication
                 for cipher_suite in cipher_suites
@@ -146,6 +146,8 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
                 for signature_algorithm in TlsSignatureAndHashAlgorithm
                 if signature_algorithm.value.signature_algorithm in authentication_algorithms
             ]
+        else:
+            signature_algorithms = []
 
         return signature_algorithms
 
@@ -172,7 +174,8 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             extensions
     ):  # pylint: disable=too-many-arguments
         protocol_version_min = min(protocol_versions)
-        is_tls1_3_supported = max(protocol_versions) > TlsProtocolVersion(TlsVersion.TLS1_2)
+        protocol_version_max = max(protocol_versions)
+        is_tls1_3_supported = protocol_version_max > TlsProtocolVersion(TlsVersion.TLS1_2)
 
         if hostname is not None:
             extensions.append(TlsExtensionServerNameClient(hostname))
@@ -180,7 +183,9 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             named_curves = list(TlsNamedCurve)
 
         if signature_algorithms is None:
-            signature_algorithms = self._get_signature_algorithms(is_tls1_3_supported, cipher_suites)
+            signature_algorithms = self._get_signature_algorithms(
+                protocol_version_min, protocol_version_max, cipher_suites
+            )
 
         if is_tls1_3_supported:
             #  filter out non TLS 1.3 cipher suites
