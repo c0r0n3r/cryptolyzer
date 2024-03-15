@@ -174,6 +174,25 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
             TlsNamedCurve.SECP384R1,
         ]))
 
+        result = self.get_result('pq.cloudflareresearch.com', 443)
+        self.assertTrue(all(map(
+            lambda version: version >= TlsProtocolVersion(TlsVersion.TLS1), result.versions.versions
+        )))
+        self.assertEqual(set(result.ciphers[-1].cipher_suites), set([
+            TlsCipherSuite.TLS_AES_128_GCM_SHA256,
+            TlsCipherSuite.TLS_AES_256_GCM_SHA384,
+            TlsCipherSuite.TLS_CHACHA20_POLY1305_SHA256,
+        ]))
+        self.assertEqual(result.dhparams, None)
+        self.assertEqual(set(result.curves.curves), set([
+            TlsNamedCurve.X25519_KYBER_512_DRAFT00,
+            TlsNamedCurve.X25519_KYBER_768_DRAFT00,
+            TlsNamedCurve.X25519,
+            TlsNamedCurve.SECP256R1,
+            TlsNamedCurve.SECP384R1,
+            TlsNamedCurve.SECP521R1,
+        ]))
+
     def test_markdown(self):
         result = self.get_result('rc4-md5.badssl.com', 443)
         markdown_result = result.as_markdown()
