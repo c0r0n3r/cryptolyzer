@@ -9,6 +9,12 @@ Changelog
 Notable fixes
 =============
 
+-  DNS (``dns``)
+
+-  Generic
+
+   -  handle CNAME records (#142)
+
 -  TLS (``tls``)
 
    -  All (``all``)

@@ -38,6 +38,19 @@ class TestDnsHandshakeBase(unittest.TestCase):
 
         self.assertEqual(set(raw_records_with_domain_prefix), set(raw_records_without_domain_prefix))
 
+    def test_cname_record(self):
+        dns_handshake = DnsHandshakeBase(5)
+        l7_client = L7ClientDns('searchsecurity.techtarget.com')
+        dns_handshake.get_records(l7_client, DnsRrType.A)
+
+        self.assertEqual(len(list(dns_handshake.raw_records)), 2)
+
+        dns_handshake = DnsHandshakeBase(5)
+        l7_client = L7ClientDns('searchsecurity.techtarget.com')
+        dns_handshake.get_records(l7_client, DnsRrType.CNAME)
+
+        self.assertEqual(len(list(dns_handshake.raw_records)), 0)
+
     def test_error_non_existing_domain(self):
         with self.assertRaises(NetworkError) as context_manager:
             dns_handshake = DnsHandshakeBase(5)
