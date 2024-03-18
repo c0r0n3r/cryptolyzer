@@ -2,6 +2,19 @@
 Changelog
 =========
 
+------
+0.12.4
+------
+
+Notable fixes
+=============
+
+-  TLS (``tls``)
+
+   -  All (``all``)
+
+      - check curves using highest available version to recognize possibly supported PQC curves (#141)
+
 -------------------
 0.12.3 - 2024-03-05
 -------------------

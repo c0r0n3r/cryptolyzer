@@ -110,11 +110,11 @@ class AnalyzerAll(AnalyzerTlsBase):
         ))
 
     @staticmethod
-    def _min_tls_version_supported(cipher_suite_results, key_exchange):
+    def _max_tls_version_supported(cipher_suite_results, key_exchange):
         protocol_versions = sorted(filter(
             lambda protocol_version: not protocol_version.is_draft and not protocol_version.is_google_experimental,
             cipher_suite_results
-        ))
+        ), reverse=True)
         for protocol_version in protocol_versions:
             cipher_suite_result = cipher_suite_results[protocol_version]
             if AnalyzerAll._is_key_exchange_supported(cipher_suite_result.cipher_suites, key_exchange):
@@ -138,7 +138,7 @@ class AnalyzerAll(AnalyzerTlsBase):
 
     @staticmethod
     def is_ecdhe_supported(cipher_suite_results):
-        return AnalyzerAll._min_tls_version_supported(cipher_suite_results, KeyExchange.ECDHE)
+        return AnalyzerAll._max_tls_version_supported(cipher_suite_results, KeyExchange.ECDHE)
 
     @staticmethod
     def get_dhparams_result(analyzable, cipher_suite_results):
