@@ -35,6 +35,9 @@ class DnsHandshakeBase(object):
 
         records = []
         for rrset in self._answer.response.answer:
+            if rrset.rdtype == DnsRrType.CNAME.value.code:
+                continue
+
             for record in list(rrset.items):
                 out = six.BytesIO()
                 record.to_wire(out)
