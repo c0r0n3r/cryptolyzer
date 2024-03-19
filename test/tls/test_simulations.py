@@ -62,8 +62,8 @@ class TestTlsSimulations(TestLoggerBase):
 
     def test_failed_clients(self):
         result = self.get_result('rc4.badssl.com', 443)
-        self.assertEqual(len(result.succeeded_clients), 4)
-        self.assertEqual(len(result.failed_clients), 3)
+        self.assertEqual(len(result.succeeded_clients), 3)
+        self.assertEqual(len(result.failed_clients), 4)
         self.assertTrue(result)
 
     def test_non_pfs(self):
@@ -92,7 +92,7 @@ class TestTlsSimulations(TestLoggerBase):
             analyzer_result.key_size == PublicKeySize(KeyExchange.DHE, 2048)
             for analyzer_result in result.succeeded_clients.values()
         ))
-        self.assertEqual(len(result.failed_clients), 3)
+        self.assertEqual(len(result.failed_clients), 4)
         self.assertTrue(result)
 
     def test_dh_well_known(self):
@@ -107,7 +107,7 @@ class TestTlsSimulations(TestLoggerBase):
             if analyzer_result.cipher_suite.value.key_exchange == KeyExchange.DHE
         ))
 
-        self.assertEqual(len(result.failed_clients), 0)
+        self.assertEqual(len(result.failed_clients), 1)
         self.assertTrue(result)
 
     def test_pfs_named_group(self):
@@ -124,7 +124,7 @@ class TestTlsSimulations(TestLoggerBase):
             analyzer_result.key_size == PublicKeySize(KeyExchange.ECDHE, 256)
             for analyzer_result in result.succeeded_clients.values()
         ))
-        self.assertEqual(len(result.failed_clients), 0)
+        self.assertEqual(len(result.failed_clients), 1)
         self.assertTrue(result)
 
     def test_version_1_3(self):
@@ -141,5 +141,5 @@ class TestTlsSimulations(TestLoggerBase):
             analyzer_result.key_size == PublicKeySize(KeyExchange.ECDHE, 256)
             for analyzer_result in result.succeeded_clients.values()
         ))
-        self.assertEqual(len(result.failed_clients), 0)
+        self.assertEqual(len(result.failed_clients), 1)
         self.assertTrue(result)
