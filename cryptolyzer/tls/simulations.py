@@ -334,12 +334,11 @@ class AnalyzerSimulations(AnalyzerTlsBase):
 
         return result
 
-    def _simulate_tls_client(self, analyzable, client_hello):
+    def _simulate_tls_client(self, analyzable, tls_client, address):
+        client_hello = self._get_client_hello_from_client_params(tls_client, address)
+
         try:
-            server_messages = analyzable.do_tls_handshake(
-                hello_message=client_hello,
-                last_handshake_message_type=None,
-            )
+            server_messages = analyzable.do_tls_handshake(hello_message=client_hello, last_handshake_message_type=None)
         except TlsAlert as e:
             if e.description == TlsAlertDescription.PROTOCOL_VERSION:
                 six.raise_from(SecurityError(SecurityErrorType.NO_SHARED_VERSION), e)
@@ -347,6 +346,11 @@ class AnalyzerSimulations(AnalyzerTlsBase):
                 six.raise_from(SecurityError(SecurityErrorType.NO_SHARED_CIPHER), e)
             else:
                 six.raise_from(SecurityError(SecurityErrorType.UNKNOWN_ERROR), e)
+        else:
+            server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
+            protocol_versions = list(map(TlsProtocolVersion, tls_client.capabilities.tls_versions))
+            if server_hello.protocol_version not in protocol_versions:
+                raise SecurityError(SecurityErrorType.NO_SHARED_VERSION)
 
         return self._get_simulation_result(server_messages)
 
@@ -361,10 +365,8 @@ class AnalyzerSimulations(AnalyzerTlsBase):
         failed_clients = []
 
         for tls_client in sorted(TlsClient, key=self._get_tls_client_key):
-            client_hello = self._get_client_hello_from_client_params(tls_client.value, analyzable.address)
-
             try:
-                simulation_result = self._simulate_tls_client(analyzable, client_hello)
+                simulation_result = self._simulate_tls_client(analyzable, tls_client.value, analyzable.address)
             except (NetworkError, SecurityError) as e:
                 failed_clients.append((tls_client.value.meta, e.error.value))
                 LogSingleton().log(

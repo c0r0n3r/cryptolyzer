@@ -19,7 +19,11 @@ Notable fixes
 
    -  All (``all``)
 
-      - check curves using highest available version to recognize possibly supported PQC curves (#141)
+      -  check curves using highest available version to recognize possibly supported PQC curves (#141)
+
+   -  Simulations (``simulations``)
+
+      -  consider protocol versions supported by the clients (#143)
 
 -------------------
 0.12.3 - 2024-03-05

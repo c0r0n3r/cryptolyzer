@@ -202,6 +202,7 @@ class HandshakeToCapabilitiesTls(HandshakeToCapabilitiesBase):
         self._update_extensions_simple(TlsExtensionType.TOKEN_BINDING, "protocol_version", str, True)
 
         return ClientCapabilities(
+            tls_versions=[],
             cipher_suites=cipher_suites,
             compression_methods=list(self.client_hello.compression_methods),
             fallback_scsv=self.client_hello.fallback_scsv,
