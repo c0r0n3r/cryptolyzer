@@ -7,16 +7,15 @@ import collections
 import six
 import attr
 
+from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.common.algorithm import KeyExchange, NamedGroup
 from cryptodatahub.common.key import convert_public_key_size, PublicKeySize
-from cryptodatahub.common.parameter import DHParameterNumbers, DHParamWellKnown
+from cryptodatahub.common.parameter import DHParameterNumbers, DHParamWellKnown, ECParamWellKnown
 
 from cryptoparser.common.base import Vector, VectorParamNumeric, Serializable
 from cryptoparser.common.parse import ParserBinary
 from cryptoparser.tls.extension import TlsNamedCurveFactory
 from cryptoparser.tls.subprotocol import TlsECCurveType
-
-from cryptolyzer.common.curves import WellKnownECParams
 
 from .prime import is_prime, prime_precheck
 
@@ -71,8 +70,8 @@ def get_ecdh_ephemeral_key_forged(named_group):
         ephemeral_public_key_bytes = key_size_in_bytes * b'\xff'
     else:
         try:
-            well_know_ec_param = WellKnownECParams.from_named_group(named_group)
-        except AttributeError as e:
+            well_know_ec_param = ECParamWellKnown.from_named_group(named_group)
+        except InvalidValue as e:
             six.raise_from(NotImplementedError(named_group), e)
 
         ephemeral_public_key_bytes = bytearray().join([

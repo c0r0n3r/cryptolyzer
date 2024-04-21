@@ -35,8 +35,8 @@ class TestUtils(unittest.TestCase):
 class TestForge(unittest.TestCase):
     def test_error_not_implemented(self):
         with self.assertRaises(NotImplementedError) as context_manager:
-            get_ecdh_ephemeral_key_forged(NamedGroup.BRAINPOOLP512T1)
-        self.assertEqual(context_manager.exception.args, (NamedGroup.BRAINPOOLP512T1,))
+            get_ecdh_ephemeral_key_forged(NamedGroup.C2ONB191V4)
+        self.assertEqual(context_manager.exception.args, (NamedGroup.C2ONB191V4,))
 
     def test_forge(self):
         self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.CURVE25519)), 32)
