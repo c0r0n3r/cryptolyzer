@@ -222,6 +222,10 @@ class TestHttpContent(TestLoggerBase):
 
         analyzer_result = self.get_result('https://www.cloudflare.com')
         self.assertEqual(analyzer_result.mime_type, mime_type_html)
+        self.assertEqual(len(analyzer_result.script_integrity), 0)
+
+        analyzer_result = self.get_result('https://php.net')
+        self.assertEqual(analyzer_result.mime_type, mime_type_html)
         self.assertEqual(len(analyzer_result.script_integrity), 1)
         self.assertTrue(analyzer_result.script_integrity[0].is_hash_correct)
         self.assertEqual(len(analyzer_result.unencrypted_sources), 0)

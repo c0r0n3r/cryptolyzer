@@ -148,7 +148,6 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
                 TlsNamedCurve.X25519,
                 TlsNamedCurve.SECP256R1,
                 TlsNamedCurve.SECP384R1,
-                TlsNamedCurve.SECP521R1,
             ]
         )
 
