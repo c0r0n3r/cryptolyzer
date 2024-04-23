@@ -61,13 +61,33 @@ ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES = (  # pylint: disable=protected-access
     AnalyzerCipherSuites._next_accepted_cipher_suites  # pylint: disable=protected-access
 )
 
-INTERNAL_ERROR_ALREADY_RAISED = False
+INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE = None
 
 
 def _wrapped_next_accepted_cipher_suites_internal_error_once(
         l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
-    if not globals()['INTERNAL_ERROR_ALREADY_RAISED']:
-        globals()['INTERNAL_ERROR_ALREADY_RAISED'] = True
+    if globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] is None:
+        globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] = True
+    elif globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] is True:
+        globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] = False
+        raise TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
+
+    return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
+        l7_client,
+        protocol_version,
+        remaining_cipher_suites,
+        accepted_cipher_suites
+    )
+
+
+INTERNAL_ERROR_SHOULD_BE_RAISED = False
+
+
+def _wrapped_next_accepted_cipher_suites_internal_error_multiple(
+        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
+    if not globals()['INTERNAL_ERROR_SHOULD_BE_RAISED']:
+        globals()['INTERNAL_ERROR_SHOULD_BE_RAISED'] = True
+    else:
         raise TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
 
     return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
@@ -130,10 +150,9 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         side_effect=TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
     )
     def test_error_internal_error(self, mocked_next_accepted_cipher_suites):
-        with self.assertRaises(TlsAlert) as context_manager:
-            self.get_result('badssl.com', 443)
-        self.assertEqual(context_manager.exception.description, TlsAlertDescription.INTERNAL_ERROR)
-        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 2)
+        result = self.get_result('badssl.com', 443)
+        self.assertEqual(len(result.cipher_suites), 0)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 5)
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
@@ -164,6 +183,15 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
             TlsCipherSuite.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
             TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA,
         ])
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        wraps=_wrapped_next_accepted_cipher_suites_internal_error_multiple
+    )
+    @mock.patch('time.sleep', return_value=None)
+    def test_error_internal_error_multiple(self, _, __):
+        result = self.get_result('rc4.badssl.com', 443)
+        self.assertEqual(result.cipher_suites, [])
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',

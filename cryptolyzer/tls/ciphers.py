@@ -55,11 +55,11 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         if len(checkable_cipher_suites) == len(remaining_cipher_suites):
             if alert.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]:
                 return [], []
-            if alert.description == TlsAlertDescription.DECODE_ERROR:
+            if alert.description in (TlsAlertDescription.DECODE_ERROR, TlsAlertDescription.INTERNAL_ERROR):
                 return [], remaining_cipher_suites
         if alert.description == TlsAlertDescription.INTERNAL_ERROR:  # maybe too many handshake request
             if retried_internal_error:
-                raise alert
+                return [], []
 
             time.sleep(5)
             raise OverflowError
