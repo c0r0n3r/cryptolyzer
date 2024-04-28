@@ -202,17 +202,17 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self.assertEqual(len(result.pubkeys), 0)
 
     def test_eq(self):
-        result_badssl_com = self.get_result('badssl.com', 443)
-        result_wrong_host_badssl_com = self.get_result('wrong.host.badssl.com', 443)
+        result_badssl_com = self.get_result('badssl.com', 443, timeout=10)
+        result_wrong_host_badssl_com = self.get_result('wrong.host.badssl.com', 443, timeout=10)
         self.assertEqual(
             result_badssl_com.pubkeys[0].certificate_chain,
             result_wrong_host_badssl_com.pubkeys[0].certificate_chain
         )
 
-        result_expired_badssl_com = self.get_result('expired.badssl.com', 443)
-        result_self_signed_badssl_com = self.get_result('self-signed.badssl.com', 443)
-        result_untrusted_root_badssl_com = self.get_result('untrusted-root.badssl.com', 443)
-        result_revoked_badssl_com = self.get_result('revoked.badssl.com', 443)
+        result_expired_badssl_com = self.get_result('expired.badssl.com', 443, timeout=10)
+        result_self_signed_badssl_com = self.get_result('self-signed.badssl.com', 443, timeout=10)
+        result_untrusted_root_badssl_com = self.get_result('untrusted-root.badssl.com', 443, timeout=10)
+        result_revoked_badssl_com = self.get_result('revoked.badssl.com', 443, timeout=10)
         self.assertNotEqual(
             result_expired_badssl_com.pubkeys[0].certificate_chain,
             result_self_signed_badssl_com.pubkeys[0].certificate_chain
@@ -227,14 +227,16 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         )
 
     def test_subject_match(self):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, timeout=10)
         self.assertTrue(result.pubkeys[0].subject_matches)
 
-        result = self.get_result('wrong.host.badssl.com', 443)
+        result = self.get_result('wrong.host.badssl.com', 443, timeout=10)
         self.assertFalse(result.pubkeys[0].subject_matches)
 
     def test_fallback_certificate(self):
-        result = self.get_result('unexisting-hostname-to-get-wildcard-certificate-without-sni.badssl.com', 443)
+        result = self.get_result(
+            'unexisting-hostname-to-get-wildcard-certificate-without-sni.badssl.com', 443, timeout=10
+        )
         self.assertEqual(len(result.pubkeys), 1)
         self.assertEqual(
             'Server offers RSA X.509 public key (with SNI)\n',
@@ -242,7 +244,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         )
 
     def test_certificate_chain(self):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, timeout=10)
         self.assertEqual(len(result.pubkeys), 1)
 
         trusted_root_chain = result.pubkeys[0].certificate_chain
@@ -254,7 +256,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         )
         self.assertTrue(trusted_root_chain.ordered)
 
-        result = self.get_result('self-signed.badssl.com', 443)
+        result = self.get_result('self-signed.badssl.com', 443, timeout=10)
         self.assertEqual(len(result.pubkeys), 1)
 
         self_signed_chain = result.pubkeys[0].certificate_chain
@@ -266,7 +268,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
             {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
         )
 
-        result = self.get_result('untrusted-root.badssl.com', 443)
+        result = self.get_result('untrusted-root.badssl.com', 443, timeout=10)
         self.assertEqual(len(result.pubkeys), 1)
 
         untrusted_root_chain = result.pubkeys[0].certificate_chain
@@ -280,7 +282,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
 
         self.assertNotEqual(self_signed_chain.items[0], untrusted_root_chain.items[1])
 
-        result = self.get_result('incomplete-chain.badssl.com', 443)
+        result = self.get_result('incomplete-chain.badssl.com', 443, timeout=10)
         self.assertEqual(len(result.pubkeys), 1)
 
         incomplete_chain = result.pubkeys[0].certificate_chain
@@ -365,7 +367,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         )
 
     def test_untrusted(self):
-        result = self.get_result('untrusted.badssl.com', 443)
+        result = self.get_result('untrusted.badssl.com', 443, timeout=10)
         for pubkey in result.pubkeys:
             with self.subTest():
                 self.assertEqual(
@@ -425,14 +427,14 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
                 )
 
     def test_json(self):
-        result = self.get_result('expired.badssl.com', 443)
+        result = self.get_result('expired.badssl.com', 443, timeout=10)
         self.assertTrue(result.as_json())
 
-        result = self.get_result('self-signed.badssl.com', 443)
+        result = self.get_result('self-signed.badssl.com', 443, timeout=10)
         self.assertTrue(result.as_json())
 
-        result = self.get_result('untrusted-root.badssl.com', 443)
+        result = self.get_result('untrusted-root.badssl.com', 443, timeout=10)
         self.assertTrue(result.as_json())
 
-        result = self.get_result('revoked.badssl.com', 443)
+        result = self.get_result('revoked.badssl.com', 443, timeout=10)
         self.assertTrue(result.as_json())

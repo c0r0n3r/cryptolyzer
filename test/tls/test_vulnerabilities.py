@@ -46,7 +46,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         self.assertFalse(result.dhparams.dheat.value)
 
     def test_real_ciphers(self):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, timeout=10)
         self.assertFalse(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
@@ -70,7 +70,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         ], log_stream)
         self.assertNotIn('Server offers well-known DH public parameter', log_stream)
 
-        result = self.get_result('3des.badssl.com', 443)
+        result = self.get_result('3des.badssl.com', 443, timeout=10)
         self.assertTrue(result.ciphers.lucky13.value)
         self.assertTrue(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
