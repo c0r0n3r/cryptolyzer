@@ -140,16 +140,13 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         )
 
     def test_pqc(self):
-        self.assertEqual(
-            self.get_result('pq.cloudflareresearch.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves,
-            [
-                TlsNamedCurve.X25519_KYBER_512_DRAFT00,
-                TlsNamedCurve.X25519_KYBER_768_DRAFT00,
-                TlsNamedCurve.X25519,
-                TlsNamedCurve.SECP256R1,
-                TlsNamedCurve.SECP384R1,
-            ]
-        )
+        curves = self.get_result('pq.cloudflareresearch.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves
+
+        # different instances run with different configuration, the following is the common subset
+        self.assertIn(TlsNamedCurve.X25519_KYBER_512_DRAFT00, curves)
+        self.assertIn(TlsNamedCurve.X25519_KYBER_768_DRAFT00, curves)
+        self.assertIn(TlsNamedCurve.X25519, curves)
+        self.assertIn(TlsNamedCurve.SECP256R1, curves)
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
