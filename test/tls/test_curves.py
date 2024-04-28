@@ -91,8 +91,9 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertEqual(
             result.curves,
             [
-                TlsNamedCurve.X25519_KYBER_512_DRAFT00,
-                TlsNamedCurve.X25519_KYBER_768_DRAFT00,
+                TlsNamedCurve.X25519_KYBER_512_R3_CLOUDFLARE,
+                TlsNamedCurve.X25519_KYBER_768_R3,
+                TlsNamedCurve.X25519_KYBER_768_R3_CLOUDFLARE,
                 TlsNamedCurve.X25519,
                 TlsNamedCurve.SECP256R1,
                 TlsNamedCurve.SECP384R1,
@@ -102,8 +103,9 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertTrue(result.extension_supported)
         self.assertEqual(
             self.pop_log_lines(), [
-                'Server offers elliptic-curve X25519_KYBER_512_DRAFT00',
-                'Server offers elliptic-curve X25519_KYBER_768_DRAFT00',
+                'Server offers elliptic-curve X25519_KYBER_512_R3',
+                'Server offers elliptic-curve X25519_KYBER_768_R3',
+                'Server offers elliptic-curve X25519_KYBER_768_R3',
                 'Server offers elliptic-curve CURVE25519',
                 'Server offers elliptic-curve PRIME256V1',
                 'Server offers elliptic-curve SECP384R1',
@@ -120,8 +122,9 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertEqual(
             self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves,
             [
-                TlsNamedCurve.X25519_KYBER_512_DRAFT00,
-                TlsNamedCurve.X25519_KYBER_768_DRAFT00,
+                TlsNamedCurve.X25519_KYBER_512_R3_CLOUDFLARE,
+                TlsNamedCurve.X25519_KYBER_768_R3,
+                TlsNamedCurve.X25519_KYBER_768_R3_CLOUDFLARE,
                 TlsNamedCurve.X25519,
                 TlsNamedCurve.SECP256R1,
                 TlsNamedCurve.SECP384R1,
@@ -130,8 +133,9 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         )
         self.assertEqual(
             self.get_log_lines(), [
-                'Server offers elliptic-curve X25519_KYBER_512_DRAFT00',
-                'Server offers elliptic-curve X25519_KYBER_768_DRAFT00',
+                'Server offers elliptic-curve X25519_KYBER_512_R3',
+                'Server offers elliptic-curve X25519_KYBER_768_R3',
+                'Server offers elliptic-curve X25519_KYBER_768_R3',
                 'Server offers elliptic-curve CURVE25519',
                 'Server offers elliptic-curve PRIME256V1',
                 'Server offers elliptic-curve SECP384R1',
@@ -143,8 +147,9 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         curves = self.get_result('pq.cloudflareresearch.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves
 
         # different instances run with different configuration, the following is the common subset
-        self.assertIn(TlsNamedCurve.X25519_KYBER_512_DRAFT00, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_768_DRAFT00, curves)
+        self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3, curves)
+        self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3_CLOUDFLARE, curves)
+        self.assertIn(TlsNamedCurve.X25519_KYBER_512_R3_CLOUDFLARE, curves)
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 
