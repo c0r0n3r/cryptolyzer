@@ -7,6 +7,7 @@ import attr
 import six
 
 from cryptodatahub.common.algorithm import KeyExchange, NamedGroupType
+from cryptodatahub.common.entity import ClientType
 from cryptodatahub.common.key import PublicKeySize
 
 from cryptodatahub.tls.algorithm import TlsNamedCurve
@@ -135,17 +136,21 @@ class AnalyzerResultSimulations(AnalyzerResultTls):
     :param failed_clients: the list of client applications where the connection initiation was failed.
     """
 
-    succeeded_clients = attr.ib(validator=attr.validators.deep_mapping(
+    succeeded_clients = attr.ib(attr.validators.optional(validator=attr.validators.deep_mapping(
         key_validator=attr.validators.instance_of(ClientVersionedParamsBase),
         value_validator=attr.validators.instance_of((AnalyzerResultSimulationsTlsBase, AnalyzerResultSimulationsSsl)),
-    ))
-    failed_clients = attr.ib(validator=attr.validators.deep_mapping(
+    )))
+    failed_clients = attr.ib(attr.validators.optional(validator=attr.validators.deep_mapping(
         key_validator=attr.validators.instance_of(ClientVersionedParamsBase),
         value_validator=attr.validators.instance_of(ErrorParams),
-    ))
+    )))
 
 
 class AnalyzerSimulations(AnalyzerTlsBase):
+    _CLIENT_TYPE_SCHEME_MAP = {
+        'https': (ClientType.WEB_BROWSER,),
+    }
+
     @classmethod
     def get_name(cls):
         return 'simulations'
@@ -349,7 +354,13 @@ class AnalyzerSimulations(AnalyzerTlsBase):
         else:
             server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
             protocol_versions = list(map(TlsProtocolVersion, tls_client.capabilities.tls_versions))
-            if server_hello.protocol_version not in protocol_versions:
+            try:
+                extension = server_hello.extensions.get_item_by_type(TlsExtensionType.SUPPORTED_VERSIONS)
+            except KeyError:
+                protocol_version = server_hello.protocol_version
+            else:
+                protocol_version = extension.selected_version
+            if protocol_version not in protocol_versions:
                 raise SecurityError(SecurityErrorType.NO_SHARED_VERSION)
 
         return self._get_simulation_result(server_messages)
@@ -364,7 +375,11 @@ class AnalyzerSimulations(AnalyzerTlsBase):
         succeeded_clients = []
         failed_clients = []
 
-        for tls_client in sorted(TlsClient, key=self._get_tls_client_key):
+        tls_clients = sorted(
+            filter(lambda client: self._CLIENT_TYPE_SCHEME_MAP.get(analyzable.get_scheme(), None), TlsClient),
+            key=self._get_tls_client_key
+        )
+        for tls_client in tls_clients:
             try:
                 simulation_result = self._simulate_tls_client(analyzable, tls_client.value, analyzable.address)
             except (NetworkError, SecurityError) as e:

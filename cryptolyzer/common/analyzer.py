@@ -156,7 +156,7 @@ class AnalyzerTlsBase(object):
 
     @classmethod
     def get_default_scheme(cls):
-        return 'tls'
+        return 'https'
 
     @abc.abstractmethod
     def analyze(self, analyzable, protocol_version):

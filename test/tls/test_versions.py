@@ -20,9 +20,11 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 class TestSslVersions(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=None, timeout=None, ip=None):
+    def get_result(
+            host, port, protocol_version=None, timeout=None, ip=None, scheme='tls'
+    ):  # pylint: disable=too-many-arguments
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
         result = analyzer.analyze(l7_client, None)
         return result
 
@@ -97,9 +99,11 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         self.assertEqual(self.get_result('badssl.com', 443).versions, [])
 
     @staticmethod
-    def get_result(host, port, protocol_version=None, timeout=None, ip=None):
+    def get_result(
+            host, port, protocol_version=None, timeout=None, ip=None, scheme='tls'
+    ):  # pylint: disable=too-many-arguments
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
         analyzer_result = analyzer.analyze(l7_client, protocol_version)
 
         return analyzer_result

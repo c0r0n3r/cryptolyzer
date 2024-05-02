@@ -51,9 +51,11 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
         self.assertEqual(result.distinguished_names, [])
 
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None):
+    def get_result(
+            host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None, scheme='tls'
+    ):  # pylint: disable=too-many-arguments
         analyzer = AnalyzerPublicKeyRequest()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port)
         analyzer_result = analyzer.analyze(l7_client, protocol_version)
 
         return analyzer_result

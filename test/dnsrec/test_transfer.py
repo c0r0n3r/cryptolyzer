@@ -47,9 +47,12 @@ class TestDnsHandshakeBase(unittest.TestCase):
 
         dns_handshake = DnsHandshakeBase(5)
         l7_client = L7ClientDns('searchsecurity.techtarget.com')
-        dns_handshake.get_records(l7_client, DnsRrType.CNAME)
 
+        dns_handshake.get_records(l7_client, DnsRrType.CNAME)
         self.assertEqual(len(list(dns_handshake.raw_records)), 0)
+
+        dns_handshake.get_records(l7_client, DnsRrType.A)
+        self.assertEqual(len(list(dns_handshake.raw_records)), 2)
 
     def test_error_non_existing_domain(self):
         with self.assertRaises(NetworkError) as context_manager:
