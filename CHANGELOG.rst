@@ -2,6 +2,21 @@
 Changelog
 =========
 
+------
+0.12.5
+------
+
+-  TLS (``tls``)
+
+   -  Elliptic Curves (``curves``)
+
+      -  add missing PQC named curves (#145)
+
+         | ``KYBER_512_R3``, ``KYBER_768_R3``, ``KYBER_1024_R3``,
+         | ``SECP256R1_KYBER_512_R3``, ``SECP256R1_KYBER_768_R3``,
+         | ``SECP384R1_KYBER_768_R3``, ``SECP521R1_KYBER_1024_R3``,
+         | ``X25519_KYBER_512_R3``, ``X25519_KYBER_768_R3``
+
 -------------------
 0.12.4 - 2024-04-28
 -------------------
@@ -197,6 +212,8 @@ Features
    -  Elliptic Curves (``curves``)
 
       -  add support for post-quantum safe hybrid (Kyber) algorithms (#119)
+
+         | ``X25519_KYBER_512_R3_CLOUDFLARE``, ``X25519_KYBER_768_R3_CLOUDFLARE``
 
 -  SSH (``ssh``)
 

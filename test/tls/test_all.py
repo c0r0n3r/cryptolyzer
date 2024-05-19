@@ -170,7 +170,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         self.assertEqual(set(result.curves.curves), set([
             TlsNamedCurve.X25519,
             TlsNamedCurve.SECP256R1,
-            TlsNamedCurve.X25519_KYBER_768_DRAFT00,
+            TlsNamedCurve.X25519_KYBER_768_R3,
             TlsNamedCurve.SECP384R1,
         ]))
 
@@ -186,8 +186,9 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparams, None)
         curves = result.curves.curves
         # different instances run with different configuration, the following is the common subset
-        self.assertIn(TlsNamedCurve.X25519_KYBER_512_DRAFT00, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_768_DRAFT00, curves)
+        self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3, curves)
+        self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3_CLOUDFLARE, curves)
+        self.assertIn(TlsNamedCurve.X25519_KYBER_512_R3_CLOUDFLARE, curves)
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 

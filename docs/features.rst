@@ -137,6 +137,16 @@ or STARTTLS) is an extension of an application layer protocol, whichs
 offer a way to upgrade a plain text connection to an encrypted ione
 without using a separate port.
 
+Curves
+""""""
+
+-  check `post-quantum <https://en.wikipedia.org/wiki/Post-quantum_cryptography>`__ (PQC) algorithms
+
+   | ``KYBER_512_R3``, ``KYBER_768_R3``, ``KYBER_1024_R3``,
+   | ``SECP256R1_KYBER_512_R3``, ``SECP256R1_KYBER_768_R3``,
+   | ``SECP384R1_KYBER_768_R3``, ``SECP521R1_KYBER_1024_R3``,
+   | ``X25519_KYBER_512_R3``, ``X25519_KYBER_768_R3``
+
 Extensions
 """"""""""
 
