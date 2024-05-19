@@ -295,9 +295,6 @@ class AnalyzerSimulations(AnalyzerTlsBase):
         cipher_suite = server_hello.cipher_suite
         result_params = AnalyzerSimulations._get_result_base_params(protocol_version, server_hello)
 
-        if not cipher_suite.value.key_exchange.value.forward_secret:
-            return AnalyzerResultSimulationsTlsBase(**result_params)
-
         if cipher_suite.value.key_exchange in [KeyExchange.DHE, KeyExchange.ADH]:
             server_key_exchange = server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
             dh_public_key = parse_tls_dh_params(server_key_exchange.param_bytes)
@@ -319,6 +316,8 @@ class AnalyzerSimulations(AnalyzerTlsBase):
                 tls_named_curve.value.named_group.value.size
             )
             result = AnalyzerResultSimulationsTlsPfsNamedGroup(**result_params)
+        else:
+            return AnalyzerResultSimulationsTlsBase(**result_params)
 
         return result
 
