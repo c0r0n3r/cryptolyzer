@@ -101,7 +101,9 @@ class TestGradeableComplex(GradeableComplex):
 
 class TestMainBase(unittest.TestCase):
     @staticmethod
-    def _get_arguments(protocol_version, analyzer, hostname, port, timeout=None):
+    def _get_arguments(
+            protocol_version, analyzer, hostname, port, timeout=None, scheme=None
+    ):  # pylint: disable=too-many-arguments
         ip_address = socket.gethostbyname(hostname)
 
         func_arguments = {
@@ -111,11 +113,14 @@ class TestMainBase(unittest.TestCase):
             'port': port,
             'timeout': timeout,
         }
+        if scheme is not None:
+            func_arguments['scheme'] = scheme
 
         cli_arguments = {
             'protocol': protocol_version if isinstance(protocol_version, str) else protocol_version.identifier,
             'analyzer': analyzer,
-            'address': '{hostname}:{port}#{ip_address}'.format(
+            'address': '{scheme}{hostname}:{port}#{ip_address}'.format(
+                scheme='' if scheme is None else scheme + '://',
                 hostname=hostname,
                 port=port,
                 ip_address=ip_address

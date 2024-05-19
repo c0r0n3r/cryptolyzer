@@ -11,9 +11,11 @@ from .classes import TestTlsCases
 
 class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=None, timeout=None, ip=None):
+    def get_result(
+            host, port, protocol_version=None, timeout=None, ip=None, scheme='tls'
+    ):  # pylint: disable=too-many-arguments
         analyzer = AnalyzerVulnerabilities()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
         analyzer_result = analyzer.analyze(l7_client, None)
 
         return analyzer_result

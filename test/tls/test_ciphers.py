@@ -40,9 +40,11 @@ class TestSslCiphers(unittest.TestCase):
         return threaded_server
 
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.SSL2), timeout=None, ip=None):
+    def get_result(
+            host, port, protocol_version=TlsProtocolVersion(TlsVersion.SSL2), timeout=None, ip=None, scheme='tls'
+    ):  # pylint: disable=too-many-arguments
         analyzer = AnalyzerCipherSuites()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 
@@ -113,9 +115,11 @@ def _wrapped_next_accepted_cipher_suites_response_error(
 
 class TestTlsCiphers(TestTlsCases.TestTlsBase):
     @staticmethod
-    def get_result(host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1), timeout=None, ip=None):
+    def get_result(
+            host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1), timeout=None, ip=None, scheme='tls'
+    ):  # pylint: disable=too-many-arguments
         analyzer = AnalyzerCipherSuites()
-        l7_client = L7ClientTlsBase.from_scheme('tls', host, port)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 

@@ -103,21 +103,25 @@ class TestMain(TestMainBase):
 
     def test_analyzer_output_highlighted(self):
         func = test.tls.test_vulnerabilities.TestTlsVulnerabilities.get_result
-        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'dh1024.badssl.com', 443, timeout=10)
+        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'dh1024.badssl.com', 443, timeout=10,
+                                                            scheme='https')
         self._check_higlighted_output(func, func_arguments, cli_arguments)
 
-        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'null.badssl.com', 443, timeout=10)
+        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'null.badssl.com', 443, timeout=10,
+                                                            scheme='https')
         self._check_higlighted_output(func, func_arguments, cli_arguments)
 
-        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'rc4.badssl.com', 443, timeout=10)
+        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'rc4.badssl.com', 443, timeout=10,
+                                                            scheme='https')
         self._check_higlighted_output(func, func_arguments, cli_arguments)
 
-        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'novell.com', 443)
+        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'novell.com', 443, scheme='https')
         self._check_higlighted_output(func, func_arguments, cli_arguments)
 
         with patch.object(AnalyzerVersions, '_analyze_inappropriate_version_fallback', return_value=True):
             func = test.tls.test_versions.TestTlsVersions.get_result
-            func_arguments, cli_arguments = self._get_arguments('tls', 'versions', 'badssl.com', 443, timeout=10)
+            func_arguments, cli_arguments = self._get_arguments('tls', 'versions', 'badssl.com', 443, timeout=10,
+                                                                scheme='https')
             self._check_higlighted_output(func, func_arguments, cli_arguments)
 
     def test_analyzer_output_tls_ciphers(self):
@@ -126,7 +130,8 @@ class TestMain(TestMainBase):
             'ciphers',
             'rc4-md5.badssl.com',
             443,
-            timeout=10
+            timeout=10,
+            scheme='tls'
         )
         result = test.tls.test_ciphers.TestTlsCiphers.get_result(**func_arguments)
         self.assertEqual(
@@ -150,15 +155,21 @@ class TestMain(TestMainBase):
         self.assertTrue(result_markdown in all_result.as_markdown())
 
     def test_analyzer_output_tls_pubkeyreq(self):
-        result = test.tls.test_pubkeyreq.TestTlsPublicKeyRequest.get_result(
-            'client.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2), timeout=10
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1_2),
+            'pubkeyreq',
+            'client.badssl.com',
+            443,
+            timeout=10,
+            scheme='tls'
         )
+        result = test.tls.test_pubkeyreq.TestTlsPublicKeyRequest.get_result(**func_arguments)
         self.assertEqual(
-            self._get_test_analyzer_result_json('tls1_2', 'pubkeyreq', 'client.badssl.com:443', timeout=10),
+            self._get_test_analyzer_result_json(**cli_arguments),
             result.as_json() + '\n',
         )
         self.assertEqual(
-            self._get_test_analyzer_result_markdown('tls1_2', 'pubkeyreq', 'client.badssl.com:443', timeout=10),
+            self._get_test_analyzer_result_markdown(**cli_arguments),
             result.as_markdown() + '\n',
         )
 
@@ -168,7 +179,8 @@ class TestMain(TestMainBase):
             'curves',
             'ecc256.badssl.com',
             443,
-            timeout=10
+            timeout=10,
+            scheme='tls'
         )
         result = test.tls.test_curves.TestTlsCurves.get_result(**func_arguments)
         self.assertEqual(
@@ -186,7 +198,8 @@ class TestMain(TestMainBase):
             'dhparams',
             'dh2048.badssl.com',
             443,
-            timeout=10
+            timeout=10,
+            scheme='tls'
         )
         result = test.tls.test_dhparams.TestTlsDHParams.get_result(**func_arguments)
         self.assertEqual(
@@ -204,7 +217,8 @@ class TestMain(TestMainBase):
             'extensions',
             'dh2048.badssl.com',
             443,
-            timeout=10
+            timeout=10,
+            scheme='tls'
         )
         result = test.tls.test_extensions.TestTlsExtensions.get_result(**func_arguments)
         self.assertEqual(
@@ -222,6 +236,7 @@ class TestMain(TestMainBase):
             'pubkeys',
             'www.cloudflare.com',
             443,
+            scheme='tls'
         )
         result = test.tls.test_pubkeys.TestTlsPubKeys.get_result(**func_arguments)
         self.assertEqual(
@@ -239,7 +254,8 @@ class TestMain(TestMainBase):
             'sigalgos',
             'ecc256.badssl.com',
             443,
-            timeout=10
+            timeout=10,
+            scheme='tls'
         )
         result = test.tls.test_sigalgos.TestTlsSigAlgos.get_result(**func_arguments)
         self.assertEqual(
@@ -257,7 +273,8 @@ class TestMain(TestMainBase):
             'simulations',
             'tls-v1-0.badssl.com',
             1010,
-            timeout=10
+            timeout=10,
+            scheme='tls'
         )
         result = test.tls.test_simulations.TestTlsSimulations.get_result(**func_arguments)
         self.assertEqual(
@@ -275,7 +292,8 @@ class TestMain(TestMainBase):
             'versions',
             'tls-v1-0.badssl.com',
             1010,
-            timeout=10
+            timeout=10,
+            scheme='tls'
         )
         result = test.tls.test_versions.TestTlsVersions.get_result(**func_arguments)
         self.assertEqual(
@@ -288,14 +306,22 @@ class TestMain(TestMainBase):
         )
 
     def test_analyzer_output_tls_all(self):
-        result = test.tls.test_all.TestTlsAll.get_result('rc4-md5.badssl.com', 443, protocol_version=None, timeout=10)
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls',
+            'all',
+            'rc4-md5.badssl.com',
+            443,
+            timeout=10,
+            scheme='https'
+        )
+        result = test.tls.test_all.TestTlsAll.get_result(**func_arguments)
         self.assertEqual(
-            self._get_test_analyzer_result_json('tls', 'all', 'rc4-md5.badssl.com', timeout=10),
+            self._get_test_analyzer_result_json(**cli_arguments),
             result.as_json() + '\n',
         )
 
         self.assertEqual(
-            self._get_test_analyzer_result_markdown('tls', 'all', 'rc4-md5.badssl.com', timeout=10),
+            self._get_test_analyzer_result_markdown(**cli_arguments),
             result.as_markdown() + '\n',
         )
 
