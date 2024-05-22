@@ -120,6 +120,14 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.inappropriate_version_fallback.value)
 
+        threaded_server = self.create_server(TlsServerConfiguration(
+            protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1_1), TlsProtocolVersion(TlsVersion.TLS1_2)],
+            fallback_to_ssl=False,
+            close_on_error=True,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertTrue(result.inappropriate_version_fallback.value)
+
     def test_undecidable_fallback_scsv_support(self):
         threaded_server = self.create_server(TlsServerConfiguration(
             protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1_2)],

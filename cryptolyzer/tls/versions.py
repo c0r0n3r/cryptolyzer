@@ -260,6 +260,9 @@ class AnalyzerVersions(AnalyzerTlsBase):
 
                 if alert_description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
                     break
+            except NetworkError as e:
+                if e.error == NetworkErrorType.NO_RESPONSE:
+                    break
 
         return True
 
