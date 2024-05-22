@@ -2,6 +2,13 @@
 
 import unittest
 
+import dns.resolver
+
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
+
 from cryptodatahub.dnsrec.algorithm import DnsRrType
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
@@ -68,9 +75,10 @@ class TestDnsHandshakeBase(unittest.TestCase):
             dns_handshake.get_records(l7_client, DnsRrType.A)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_RESPONSE)
 
-    def test_error_nameserver_timeout(self):
+    @patch.object(DnsHandshakeBase, '_resolve', side_effect=dns.resolver.Timeout)
+    def test_error_nameserver_timeout(self, _):
         with self.assertRaises(NetworkError) as context_manager:
-            dns_handshake = DnsHandshakeBase(0.001)
-            l7_client = L7ClientDns('one.one.one.one#1.1.1.1', 0.001)
+            dns_handshake = DnsHandshakeBase(1000)
+            l7_client = L7ClientDns('one.one.one.one#1.1.1.1', 1000)
             dns_handshake.get_records(l7_client, DnsRrType.A)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_RESPONSE)
