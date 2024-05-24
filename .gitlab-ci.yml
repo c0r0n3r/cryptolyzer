@@ -24,9 +24,9 @@ pep8:
   script: tox -e pep8
 
 python3:
-  image: python:3.7-slim
+  image: python:3.11-slim
   stage: earlytest
-  script: tox -e py37
+  script: tox -e py311
 
 python36:
   image: python:3.6-slim
