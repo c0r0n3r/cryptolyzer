@@ -28,11 +28,6 @@ python3:
   stage: earlytest
   script: tox -e py37
 
-python35:
-  image: python:3.5-slim
-  stage: fulltest
-  script: tox -e py35
-
 python36:
   image: python:3.6-slim
   stage: fulltest
