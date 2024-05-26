@@ -106,7 +106,7 @@ dockerhub:
       - $CI_COMMIT_REF_NAME == "master"
 
 obs:
-  image: coroner/cryptolyzer:obs
+  image: coroner/python_obs
   stage: deploy
   variables:
     GIT_SUBMODULE_DEPTH: 1
