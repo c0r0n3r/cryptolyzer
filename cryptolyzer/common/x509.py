@@ -86,15 +86,15 @@ class CertificateStatus(Serializable):
             return collections.OrderedDict()
 
         return collections.OrderedDict([
-           ('status', self.status),
-           ('responder', self.responder),
-           ('produced_at', str(self.produced_at)),
-           ('this_update', str(self.this_update)),
-           ('next_update', str(self.next_update)),
-           ('update_interval', str(self.update_interval)),
-           ('revocation_time', str(self.revocation_time)),
-           ('revocation_time', self.revocation_reason),
-           ('extensions', self.extensions),
+            ('status', self.status),
+            ('responder', self.responder),
+            ('produced_at', str(self.produced_at)),
+            ('this_update', str(self.this_update)),
+            ('next_update', str(self.next_update)),
+            ('update_interval', str(self.update_interval)),
+            ('revocation_time', str(self.revocation_time)),
+            ('revocation_time', self.revocation_reason),
+            ('extensions', self.extensions),
         ])
 
 

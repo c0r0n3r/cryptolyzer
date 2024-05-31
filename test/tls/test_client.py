@@ -946,7 +946,7 @@ class TestClientDoH(TestL7ClientBase):
 class TestClientOpenVpn(TestL7ClientBase):
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
        OpenVpnPacketWrapperTcp(OpenVpnPacketHardResetServerV2(
-           session_id=1, packet_id_array=[0x58585858], remote_session_id=0xffffffffffffffff, packet_id=0,
+            session_id=1, packet_id_array=[0x58585858], remote_session_id=0xffffffffffffffff, packet_id=0,
        ).compose()).compose(),
     ))
     def test_error_invalid_session_id_tcp(self, _):
@@ -957,7 +957,7 @@ class TestClientOpenVpn(TestL7ClientBase):
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
        OpenVpnPacketHardResetServerV2(
-           session_id=1, packet_id_array=[0x58585858], remote_session_id=0xffffffffffffffff, packet_id=0,
+            session_id=1, packet_id_array=[0x58585858], remote_session_id=0xffffffffffffffff, packet_id=0,
        ).compose(),
     ))
     def test_error_invalid_session_id_udp(self, _):
