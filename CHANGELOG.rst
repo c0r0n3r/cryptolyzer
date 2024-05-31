@@ -6,6 +6,9 @@ Changelog
 0.12.5 - 2024-05-25
 -------------------
 
+Features
+========
+
 -  TLS (``tls``)
 
    -  Elliptic Curves (``curves``)
@@ -16,6 +19,15 @@ Changelog
          | ``SECP256R1_KYBER_512_R3``, ``SECP256R1_KYBER_768_R3``,
          | ``SECP384R1_KYBER_768_R3``, ``SECP521R1_KYBER_1024_R3``,
          | ``X25519_KYBER_512_R3``, ``X25519_KYBER_768_R3``
+
+Improvements
+============
+
+-  TLS (``tls``)
+
+   -  Simulations (``simulations``)
+
+      -  Consider scheme during TLS client simulation (#146)
 
 -------------------
 0.12.4 - 2024-04-28
