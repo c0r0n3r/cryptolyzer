@@ -9,35 +9,18 @@ except ImportError:  # pragma: no cover
 
 from test.common.classes import TestMainBase
 
-from cryptodatahub.tls.algorithm import (
-    TlsCipherSuite,
-    TlsNamedCurve,
-    TlsSignatureAndHashAlgorithm,
-    TlsTokenBindingParamater,
-    TlsVersion,
-)
+from cryptodatahub.tls.algorithm import TlsVersion
 
 from cryptoparser.common.utils import bytes_to_hex_string
 
-from cryptoparser.tls.extension import (
-    TlsExtensionRecordSizeLimit,
-    TlsExtensionTokenBinding,
-    TlsExtensionType,
-    TlsExtensionUnparsed,
-    TlsTokenBindingProtocolVersion,
-)
-from cryptoparser.tls.grease import TlsInvalidTypeTwoByte
 from cryptoparser.tls.record import TlsRecord
 from cryptoparser.tls.version import TlsProtocolVersion
 
-from cryptolyzer.tls.client import (
-    TlsHandshakeClientHelloAnyAlgorithm,
-    TlsHandshakeClientHelloKeyExchangeECDHx,
-    TlsHandshakeClientHelloSpecalization,
-    TlsHandshakeClientHelloStreamCipherRC4,
-)
+from cryptolyzer.common.utils import HandshakeToCapabilitiesTls
 
-from tools.handshake_to_capabilities import main, HandshakeToCapabilitiesTls
+from cryptolyzer.tls.client import TlsHandshakeClientHelloStreamCipherRC4
+
+from tools.handshake_to_capabilities import main
 
 
 class TestTlsClientBase(TestMainBase):
@@ -83,16 +66,6 @@ class TestMain(TestTlsClientBase):
 
 
 class TestTShark(TestTlsClientBase):
-    @staticmethod
-    def _get_tshark_json_bytes(parsable):
-        json_string = ''.join([
-            '[{"_source": {"layers": {"tcp": {"tcp.payload": "',
-            bytes_to_hex_string(parsable.compose()),
-            '"}}}}]'
-        ])
-
-        return json_string
-
     def test_error_not_tshark_json_structure(self):
         self._test_argument_error(
             [self.script_path, '--protocol', 'tls', '--format', 'tshark'],
@@ -174,83 +147,3 @@ class TestTShark(TestTlsClientBase):
         )
         self.assertEqual(stdout, capability_json + '\n')
         self.assertEqual(stderr, '')
-
-    def test_tls1_2(self):
-        client_hello = TlsHandshakeClientHelloAnyAlgorithm([TlsProtocolVersion(TlsVersion.TLS1_2), ], 'hostname')
-        tshark_json = self._get_tshark_json_bytes(TlsRecord(client_hello.compose()))
-        tls_json_object = HandshakeToCapabilitiesTls.from_tshark(tshark_json).to_capabilities()
-
-        self.assertEqual(list(client_hello.cipher_suites), tls_json_object.cipher_suites)
-        self.assertEqual(
-            list(map(lambda extension: extension.extension_type, client_hello.extensions)),
-            tls_json_object.extension_types
-        )
-        self.assertFalse(tls_json_object.grease.cipher_suites)
-        self.assertFalse(tls_json_object.grease.extension_types)
-        self.assertEqual(tls_json_object.grease.extensions, [])
-
-    def test_tls1_3(self):
-        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(TlsProtocolVersion(TlsVersion.TLS1_3), 'hostname')
-        tshark_json = self._get_tshark_json_bytes(TlsRecord(client_hello.compose()))
-        tls_json_object = HandshakeToCapabilitiesTls.from_tshark(tshark_json).to_capabilities()
-
-        self.assertEqual(list(client_hello.cipher_suites), tls_json_object.cipher_suites)
-        self.assertEqual(
-            list(map(lambda extension: extension.extension_type, client_hello.extensions)),
-            tls_json_object.extension_types
-        )
-        self.assertFalse(tls_json_object.grease.cipher_suites)
-        self.assertFalse(tls_json_object.grease.extension_types)
-        self.assertEqual(tls_json_object.grease.extensions, [])
-
-    def test_tls_extensions(self):
-        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(TlsProtocolVersion(TlsVersion.TLS1_2), 'hostname')
-        client_hello.extensions.append(TlsExtensionRecordSizeLimit(5))
-        client_hello.extensions.append(TlsExtensionTokenBinding(
-            TlsTokenBindingProtocolVersion(1, 2), [TlsTokenBindingParamater.RSA2048_PSS, ]
-        ))
-
-        tshark_json = self._get_tshark_json_bytes(TlsRecord(client_hello.compose()))
-        tls_json_object = HandshakeToCapabilitiesTls.from_tshark(tshark_json).to_capabilities()
-
-        self.assertEqual(list(client_hello.cipher_suites), tls_json_object.cipher_suites)
-        self.assertEqual(
-            list(map(lambda extension: extension.extension_type, client_hello.extensions)),
-            tls_json_object.extension_types
-        )
-        self.assertFalse(tls_json_object.grease.cipher_suites)
-        self.assertFalse(tls_json_object.grease.extension_types)
-        self.assertEqual(tls_json_object.grease.extensions, [])
-
-    def test_tls_grease(self):
-        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(TlsProtocolVersion(TlsVersion.TLS1_2), 'hostname')
-        client_hello.cipher_suites.append(TlsInvalidTypeTwoByte.from_random())
-        client_hello.extensions.append(TlsExtensionUnparsed(TlsInvalidTypeTwoByte.from_random(), b''))
-
-        tshark_json = self._get_tshark_json_bytes(TlsRecord(client_hello.compose()))
-        tls_json_object = HandshakeToCapabilitiesTls.from_tshark(tshark_json).to_capabilities()
-
-        self.assertTrue(tls_json_object.grease.cipher_suites)
-        self.assertTrue(tls_json_object.grease.extension_types)
-        self.assertEqual(tls_json_object.grease.extensions, [])
-
-        grease_value = TlsInvalidTypeTwoByte.from_random()
-        client_hello = TlsHandshakeClientHelloSpecalization(
-            hostname='hostname',
-            protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1_2), ],
-            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA, ],
-            named_curves=[TlsNamedCurve.X25519, grease_value, ],
-            signature_algorithms=[TlsSignatureAndHashAlgorithm.RSA_SHA1, grease_value],
-            extensions=[
-            ]
-        )
-
-        tshark_json = self._get_tshark_json_bytes(TlsRecord(client_hello.compose()))
-        tls_json_object = HandshakeToCapabilitiesTls.from_tshark(tshark_json).to_capabilities()
-
-        self.assertFalse(tls_json_object.grease.cipher_suites)
-        self.assertFalse(tls_json_object.grease.extension_types)
-        self.assertEqual(tls_json_object.grease.extensions, [
-            TlsExtensionType.SIGNATURE_ALGORITHMS,
-            TlsExtensionType.SUPPORTED_GROUPS,
-        ])
