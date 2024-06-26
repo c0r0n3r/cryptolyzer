@@ -340,14 +340,18 @@ class HandshakeToCapabilitiesTls(HandshakeToCapabilitiesBase):
             return
 
         extension_name = extension_type.name.lower()
-        parameters, has_grease = self._get_non_grease_vaules(getattr(extension, parameter_name))
-        if parameter_converter:
-            converted_parameters = []
-            for parameter in parameters:
-                converted_parameter = parameter_converter(parameter)
-                if converted_parameter:
-                    converted_parameters.append(converted_parameter)
-            parameters = converted_parameters
+        if parameter_name is not None:
+            parameters, has_grease = self._get_non_grease_vaules(getattr(extension, parameter_name))
+            if parameter_converter:
+                converted_parameters = []
+                for parameter in parameters:
+                    converted_parameter = parameter_converter(parameter)
+                    if converted_parameter:
+                        converted_parameters.append(converted_parameter)
+                parameters = converted_parameters
+        else:
+            parameters = []
+            has_grease = False
 
         self.extensions.update(collections.OrderedDict([(extension_name, parameters)]))
 
@@ -378,6 +382,7 @@ class HandshakeToCapabilitiesTls(HandshakeToCapabilitiesBase):
             TlsExtensionType.KEY_SHARE_RESERVED, "key_share_entries",
             lambda key_share_entry: None if self._is_grease(key_share_entry.group) else key_share_entry.group.name
         )
+        self._update_extensions_iterable(TlsExtensionType.POST_HANDSHAKE_AUTH, None)
         self._update_extensions_iterable(TlsExtensionType.PSK_KEY_EXCHANGE_MODES, "key_exchange_modes")
         self._update_extensions_simple(TlsExtensionType.RECORD_SIZE_LIMIT, "record_size_limit")
         self._update_extensions_iterable(TlsExtensionType.SIGNATURE_ALGORITHMS, "hash_and_signature_algorithms")
