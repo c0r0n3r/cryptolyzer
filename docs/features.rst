@@ -271,6 +271,11 @@ Headers
    -  `X-Frame-Options <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options>`__
    -  `X-XSS-Protection <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection>`__
 
+-  content security
+
+   -  `subresource integrity <https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity>`__
+   -  `mixed content <https://developer.mozilla.org/en-US/docs/Web/Security/Mixed_content>`__
+
 DNS
 ^^^
 
