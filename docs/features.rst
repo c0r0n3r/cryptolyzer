@@ -99,6 +99,24 @@ Supported analyzers by cryptographic protocol versions
 | Simulations (``simulations``)             | n/a | n/a | n/a | n/a | n/a | n/a |
 +-------------------------------------------+-----+-----+-----+-----+-----+-----+
 
+`Opportunistic TLS <https://en.wikipedia.org/wiki/Opportunistic_TLS>`__ or STARTTLS) which is an extension of an application
+layer protocol -- offering a way to upgrade a plain text connection to an encrypted ione without using a separate port - is
+supported in the case of the following application layer protocols.
+
+   -  `FTP <https://en.wikipedia.org/wiki/File_Transfer_Protocol>`__
+   -  `IMAP <https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol>`__
+   -  `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`__
+   -  `LMTP <https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol>`__
+   -  `MySQL <https://en.wikipedia.org/wiki/MySQL>`__
+   -  `NNTP <https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol>`__
+   -  `OpenVPN <https://en.wikipedia.org/wiki/OpenVPN>`__
+   -  `POP3 <https://en.wikipedia.org/wiki/Post_Office_Protocol>`__
+   -  `PostgreSQL <https://en.wikipedia.org/wiki/PostgreSQL>`__
+   -  `RDP <https://en.wikipedia.org/wiki/Remote_Desktop_Protocol>`__
+   -  `Sieve <https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language)>`__
+   -  `SMTP <https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol>`__
+   -  `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`__
+
 Versions
 """"""""
 
@@ -115,27 +133,6 @@ Versions
       -  `TLS 1.1 <https://tools.ietf.org/html/rfc4346>`__
       -  `TLS 1.2 <https://tools.ietf.org/html/rfc5246>`__
       -  `TLS 1.3 <https://tools.ietf.org/html/rfc8446>`__
-
--  Application Layer
-
-   -  `FTP <https://en.wikipedia.org/wiki/File_Transfer_Protocol>`__
-   -  `IMAP <https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol>`__
-   -  `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`__
-   -  `LMTP <https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol>`__
-   -  `MySQL <https://en.wikipedia.org/wiki/MySQL>`__
-   -  `NNTP <https://en.wikipedia.org/wiki/Network_News_Transfer_Protocol>`__
-   -  `OpenVPN <https://en.wikipedia.org/wiki/OpenVPN>`__
-   -  `POP3 <https://en.wikipedia.org/wiki/Post_Office_Protocol>`__
-   -  `PostgreSQL <https://en.wikipedia.org/wiki/PostgreSQL>`__
-   -  `RDP <https://en.wikipedia.org/wiki/Remote_Desktop_Protocol>`__
-   -  `Sieve <https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language)>`__
-   -  `SMTP <https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol>`__
-   -  `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`__
-
-`Opportunistic TLS <https://en.wikipedia.org/wiki/Opportunistic_TLS>`__
-or STARTTLS) is an extension of an application layer protocol, whichs
-offer a way to upgrade a plain text connection to an encrypted ione
-without using a separate port.
 
 Curves
 """"""
