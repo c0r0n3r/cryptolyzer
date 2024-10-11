@@ -99,6 +99,21 @@ help, which contains the interpreted part of the URI and their possible values.
 
    cryptolyze tls versions tls://dns.google:443#8.8.4.4
 
+Additional parameters may required for some analysis -- for instance query string should be given to get the necessary
+response for HTTP header analysis -- can be given as follows.
+
+.. code:: shell
+
+    cryptolyze http headers https://example.com/?parameter=value
+
+The same method is used when the protocol is not HTTP, but the client requires additional parameters for the analysis,
+an example of which is the [to stream attribute](://datatracker.ietf.org/doc/html/rfc6120#section-4.7.2) in the case of
+the XMPP protocol, which can be given as follows.
+
+.. code:: shell
+
+    cryptolyze tls versions xmpp://xmpp.igniterealtime.org/?stream_to=igniterealtime.org
+
 The command-line interface makes available to give multiple analyzable target as arguments, when the targets are analyzed one after another.
 
 .. code:: shell

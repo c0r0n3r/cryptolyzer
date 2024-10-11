@@ -12,6 +12,8 @@ except ImportError:
 
 from test.common.classes import TestLoggerBase
 
+import urllib3
+
 import six
 
 from cryptodatahub.common.parameter import DHParamWellKnown
@@ -49,6 +51,7 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptolyzer.tls.client import (
     ClientIMAP,
     ClientOpenVpnBase,
+    ClientXMPP,
     L7ClientHTTPS,
     L7ClientTls,
     L7ClientTlsBase,
@@ -62,6 +65,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloKeyExchangeAnonymousDH,
     TlsHandshakeClientHelloStreamCipherRC4,
 )
+from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.exception import (
     NetworkError,
     NetworkErrorType,
@@ -991,8 +995,40 @@ class TestClientXMPP(TestL7ClientBase):
             ]
         )
 
+    def test_stream_open_message(self):
+        self.assertEqual(
+            ClientXMPP._get_stream_open_message('address', None),  # pylint: disable=protected-access
+            b'<stream:stream xmlns="jabber:client" ' +
+            b'xmlns:stream="http://etherx.jabber.org/streams" ' +
+            b'xmlns:tls="http://www.ietf.org/rfc/rfc2595.txt" ' +
+            b'to="address" ' +
+            b'xml:lang="en" ' +
+            b'version="1.0">'
+        )
+
+        self.assertEqual(
+            ClientXMPP._get_stream_open_message('address', 'stream_to'),  # pylint: disable=protected-access
+            b'<stream:stream xmlns="jabber:client" ' +
+            b'xmlns:stream="http://etherx.jabber.org/streams" ' +
+            b'xmlns:tls="http://www.ietf.org/rfc/rfc2595.txt" ' +
+            b'to="stream_to" ' +
+            b'xml:lang="en" ' +
+            b'version="1.0">'
+        )
+
     def test_xmpp_client(self):
         _, result = self.get_result('xmpp', 'xmpp.co', None)
+        self.assertEqual(
+            result.versions,
+            [
+                TlsProtocolVersion(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_3),
+            ]
+        )
+
+        analyzer = AnalyzerVersions()
+        handler = ProtocolHandlerBase.from_protocol('tls')
+        result = handler.analyze(analyzer, urllib3.util.parse_url('xmpp://xmpp.co/?stream_to=xmpp.co'))
         self.assertEqual(
             result.versions,
             [

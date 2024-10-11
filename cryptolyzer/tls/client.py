@@ -1159,6 +1159,11 @@ class ClientXMPP(L7ClientStartTlsBase):
         b'<proceed xmlns=["\']urn:ietf:params:xml:ns:xmpp-tls["\'] */>'
     )
 
+    stream_to = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(six.string_types))
+    )
+
     @classmethod
     def get_scheme(cls):
         return 'xmpp'
@@ -1168,8 +1173,15 @@ class ClientXMPP(L7ClientStartTlsBase):
         return 5222
 
     @staticmethod
-    def _init_xmpp(l4_transfer, address):
-        stream_open_message = ClientXMPP._STREAM_OPEN.format(address).encode("utf-8")
+    def _get_stream_open_message(address, stream_to):
+        if stream_to is None:
+            stream_to = address
+
+        return ClientXMPP._STREAM_OPEN.format(stream_to).encode("utf-8")
+
+    def _init_xmpp(self, l4_transfer, address):
+        stream_open_message = self._get_stream_open_message(address, self.stream_to)
+
         l4_transfer.send(stream_open_message)
 
         l4_transfer.receive_until(b'<stream:')
@@ -1181,18 +1193,18 @@ class ClientXMPP(L7ClientStartTlsBase):
         if b'stream:features' not in l4_transfer.buffer:
             l4_transfer.receive_until(b'</stream:features>')
 
-        if not ClientXMPP._STARTTLS_RESPONSE_FEATURE_PATTERN.match(l4_transfer.buffer):
+        if not self._STARTTLS_RESPONSE_FEATURE_PATTERN.match(l4_transfer.buffer):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
         l4_transfer.flush_buffer()
 
-        l4_transfer.send(ClientXMPP._STARTTLS_REQUEST)
+        l4_transfer.send(self._STARTTLS_REQUEST)
         l4_transfer.receive_until(b'>')
 
         if b'stream:error' in l4_transfer.buffer:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-        if not ClientXMPP._STARTTLS_RESPONSE_PROCEED_PATTERN.match(l4_transfer.buffer):
+        if not self._STARTTLS_RESPONSE_PROCEED_PATTERN.match(l4_transfer.buffer):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
         l4_transfer.flush_buffer()

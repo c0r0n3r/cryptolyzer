@@ -5,6 +5,7 @@ import glob
 import importlib
 import ipaddress
 import pkgutil
+import urllib
 
 try:
     import pathlib
@@ -94,6 +95,9 @@ class ProtocolHandlerBase(object):
                 pass
             else:
                 kwargs['ip'] = uri.fragment
+
+        if uri.query is not None:
+            kwargs.update(dict(urllib.parse.parse_qsl(uri.query)))
 
         for analyzer_class in cls.get_analyzers():
             for client_class in analyzer_class.get_clients():
