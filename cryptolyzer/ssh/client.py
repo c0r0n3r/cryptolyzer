@@ -93,7 +93,7 @@ class SshKeyExchangeInitAnyAlgorithm(SshKeyExchangeInit):
             mac_algorithms_server_to_client=tuple(SshMacAlgorithm),
             compression_algorithms_client_to_server=tuple(SshCompressionAlgorithm),
             compression_algorithms_server_to_client=tuple(SshCompressionAlgorithm),
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
 
         super(SshKeyExchangeInitAnyAlgorithm, self).__init__(
             kex_algorithms=kex_algorithms,
@@ -385,7 +385,7 @@ class SshClientHandshake(SshHandshakeBase):
             key_exchange_init_message,
             gex_params,
             last_message_type,
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self.server_messages = self.do_key_exchange_init(
             transfer, protocol_message, key_exchange_init_message, last_message_type
         )

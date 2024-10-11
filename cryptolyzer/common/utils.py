@@ -184,7 +184,7 @@ def resolve_address(address, port, ip=None):
         except ValueError as e:
             six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
 
-    return family, ip
+    return family, ip  # pylint: disable=possibly-used-before-assignment
 
 
 def buffer_is_plain_text(buffer):

@@ -103,7 +103,7 @@ class TestMainBase(unittest.TestCase):
     @staticmethod
     def _get_arguments(
             protocol_version, analyzer, hostname, port, timeout=None, scheme=None
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         ip_address = socket.gethostbyname(hostname)
 
         func_arguments = {
@@ -140,7 +140,7 @@ class TestMainBase(unittest.TestCase):
 
     def _get_test_analyzer_result(
             self, output_format, protocol, analyzer, address, timeout=None
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         command_line_arguments = ['cryptolyzer']
         if timeout:
             command_line_arguments.extend(['--socket-timeout', str(timeout)])

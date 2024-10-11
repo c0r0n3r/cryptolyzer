@@ -29,7 +29,7 @@ class TestTlsSimulations(TestLoggerBase):
     @staticmethod
     def get_result(
             host, port, protocol_version=None, timeout=None, ip=None, scheme='https'
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerSimulations()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)

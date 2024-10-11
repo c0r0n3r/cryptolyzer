@@ -371,7 +371,14 @@ class L7TransferBase(object):
         return {leaf_cls.get_scheme() for leaf_cls in get_leaf_classes(cls)}
 
     @classmethod
-    def from_scheme(cls, scheme, address, port=None, timeout=None, ip=None):  # pylint: disable=too-many-arguments
+    def from_scheme(
+            cls,
+            scheme,
+            address,
+            port=None,
+            timeout=None,
+            ip=None
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         for transfer_class in get_leaf_classes(cls):
             if transfer_class.get_scheme() == scheme:
                 port = transfer_class.get_default_port() if port is None else port

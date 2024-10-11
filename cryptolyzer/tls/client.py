@@ -172,7 +172,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             named_curves,
             signature_algorithms,
             extensions
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         protocol_version_min = min(protocol_versions)
         protocol_version_max = max(protocol_versions)
         is_tls1_3_supported = protocol_version_max > TlsProtocolVersion(TlsVersion.TLS1_2)
@@ -246,7 +246,7 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             authentications,
             named_curves,
             signature_algorithms,
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         _cipher_suites = [
             cipher_suite
             for cipher_suite in TlsCipherSuite

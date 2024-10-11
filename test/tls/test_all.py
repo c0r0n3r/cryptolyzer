@@ -25,7 +25,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1), timeout=None, ip=None, scheme='tls'
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerAll()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
         result = analyzer.analyze(l7_client, protocol_version)

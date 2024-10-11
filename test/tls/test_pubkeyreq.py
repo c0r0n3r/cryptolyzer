@@ -53,7 +53,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None, scheme='tls'
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerPublicKeyRequest()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port)
         analyzer_result = analyzer.analyze(l7_client, protocol_version)

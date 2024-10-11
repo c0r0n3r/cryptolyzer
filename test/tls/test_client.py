@@ -149,7 +149,7 @@ class TestTlsAlert(unittest.TestCase):
 
 class TestL7ClientBase(TestLoggerBase):
     @staticmethod
-    def get_result(  # pylint: disable=too-many-arguments
+    def get_result(  # pylint: disable=too-many-arguments,too-many-positional-arguments
             proto,
             host,
             port,
