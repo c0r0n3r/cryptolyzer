@@ -51,7 +51,8 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptolyzer.tls.client import (
     ClientIMAP,
     ClientOpenVpnBase,
-    ClientXMPP,
+    ClientXMPPClient,
+    ClientXMPPServer,
     L7ClientHTTPS,
     L7ClientTls,
     L7ClientTlsBase,
@@ -871,7 +872,9 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        _, result = self.get_result(
+            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+        )
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -882,7 +885,9 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        _, result = self.get_result(
+            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+        )
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -894,7 +899,9 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        _, result = self.get_result(
+            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+        )
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -909,7 +916,9 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        _, result = self.get_result(
+            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+        )
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -924,7 +933,9 @@ class TestClientXMPP(TestL7ClientBase):
             L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
         )
         threaded_server.start()
-        _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
+        _, result = self.get_result(
+            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+        )
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
@@ -935,7 +946,7 @@ class TestClientXMPP(TestL7ClientBase):
         b'<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
     ))
     def test_empty_starttls(self, _):
-        _, result = self.get_result('xmpp', 'xmpp.co', None)
+        _, result = self.get_result('xmppclient', 'xmpp.co', None)
         self.assertEqual(
             result.versions,
             [
@@ -952,7 +963,7 @@ class TestClientXMPP(TestL7ClientBase):
         b'<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
     ))
     def test_empty_starttls_short(self, _):
-        _, result = self.get_result('xmpp', 'xmpp.co', None)
+        _, result = self.get_result('xmppclient', 'xmpp.co', None)
         self.assertEqual(
             result.versions,
             [
@@ -969,7 +980,7 @@ class TestClientXMPP(TestL7ClientBase):
         b'<proceed xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>'
     ))
     def test_starttls_apostrophe(self, _):
-        _, result = self.get_result('xmpp', 'xmpp.co', None)
+        _, result = self.get_result('xmppclient', 'xmpp.co', None)
         self.assertEqual(
             result.versions,
             [
@@ -986,7 +997,7 @@ class TestClientXMPP(TestL7ClientBase):
         b'<proceed xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\' />'
     ))
     def test_starttls_whitespace(self, _):
-        _, result = self.get_result('xmpp', 'xmpp.co', None)
+        _, result = self.get_result('xmppclient', 'xmpp.co', None)
         self.assertEqual(
             result.versions,
             [
@@ -997,7 +1008,7 @@ class TestClientXMPP(TestL7ClientBase):
 
     def test_stream_open_message(self):
         self.assertEqual(
-            ClientXMPP._get_stream_open_message('address', None),  # pylint: disable=protected-access
+            ClientXMPPClient._get_stream_open_message('address', None),  # pylint: disable=protected-access
             b'<stream:stream xmlns="jabber:client" ' +
             b'xmlns:stream="http://etherx.jabber.org/streams" ' +
             b'xmlns:tls="http://www.ietf.org/rfc/rfc2595.txt" ' +
@@ -1007,8 +1018,8 @@ class TestClientXMPP(TestL7ClientBase):
         )
 
         self.assertEqual(
-            ClientXMPP._get_stream_open_message('address', 'stream_to'),  # pylint: disable=protected-access
-            b'<stream:stream xmlns="jabber:client" ' +
+            ClientXMPPServer._get_stream_open_message('address', 'stream_to'),  # pylint: disable=protected-access
+            b'<stream:stream xmlns="jabber:server" ' +
             b'xmlns:stream="http://etherx.jabber.org/streams" ' +
             b'xmlns:tls="http://www.ietf.org/rfc/rfc2595.txt" ' +
             b'to="stream_to" ' +
@@ -1017,7 +1028,7 @@ class TestClientXMPP(TestL7ClientBase):
         )
 
     def test_xmpp_client(self):
-        _, result = self.get_result('xmpp', 'xmpp.co', None)
+        _, result = self.get_result('xmppclient', 'xmpp.co', None)
         self.assertEqual(
             result.versions,
             [
@@ -1028,7 +1039,7 @@ class TestClientXMPP(TestL7ClientBase):
 
         analyzer = AnalyzerVersions()
         handler = ProtocolHandlerBase.from_protocol('tls')
-        result = handler.analyze(analyzer, urllib3.util.parse_url('xmpp://xmpp.co/?stream_to=xmpp.co'))
+        result = handler.analyze(analyzer, urllib3.util.parse_url('xmppclient://xmpp.co/?stream_to=xmpp.co'))
         self.assertEqual(
             result.versions,
             [

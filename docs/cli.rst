@@ -112,7 +112,7 @@ the XMPP protocol, which can be given as follows.
 
 .. code:: shell
 
-    cryptolyze tls versions xmpp://xmpp.igniterealtime.org/?stream_to=igniterealtime.org
+    cryptolyze tls versions xmppclient://xmpp.igniterealtime.org/?stream_to=igniterealtime.org
 
 The command-line interface makes available to give multiple analyzable target as arguments, when the targets are analyzed one after another.
 
