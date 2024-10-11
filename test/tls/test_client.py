@@ -923,6 +923,74 @@ class TestClientXMPP(TestL7ClientBase):
         _, result = self.get_result('xmpp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2)
         self.assertEqual(result.versions, [])
 
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b'<stream:stream>' +
+        b'  <stream:features>' +
+        b'    <starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"></starttls>' +
+        b'  </stream:features>',
+        b'<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
+    ))
+    def test_empty_starttls(self, _):
+        _, result = self.get_result('xmpp', 'xmpp.co', None)
+        self.assertEqual(
+            result.versions,
+            [
+                TlsProtocolVersion(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_3),
+            ]
+        )
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b'<stream:stream>' +
+        b'  <stream:features>' +
+        b'    <starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>' +
+        b'  </stream:features>',
+        b'<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
+    ))
+    def test_empty_starttls_short(self, _):
+        _, result = self.get_result('xmpp', 'xmpp.co', None)
+        self.assertEqual(
+            result.versions,
+            [
+                TlsProtocolVersion(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_3),
+            ]
+        )
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b'<stream:stream>' +
+        b'  <stream:features>' +
+        b'    <starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>' +
+        b'  </stream:features>',
+        b'<proceed xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>'
+    ))
+    def test_starttls_apostrophe(self, _):
+        _, result = self.get_result('xmpp', 'xmpp.co', None)
+        self.assertEqual(
+            result.versions,
+            [
+                TlsProtocolVersion(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_3),
+            ]
+        )
+
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
+        b'<stream:stream>' +
+        b'  <stream:features>' +
+        b'    <starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\' />' +
+        b'  </stream:features>',
+        b'<proceed xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\' />'
+    ))
+    def test_starttls_whitespace(self, _):
+        _, result = self.get_result('xmpp', 'xmpp.co', None)
+        self.assertEqual(
+            result.versions,
+            [
+                TlsProtocolVersion(TlsVersion.TLS1_2),
+                TlsProtocolVersion(TlsVersion.TLS1_3),
+            ]
+        )
+
     def test_xmpp_client(self):
         _, result = self.get_result('xmpp', 'xmpp.co', None)
         self.assertEqual(

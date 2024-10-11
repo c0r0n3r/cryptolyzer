@@ -7,6 +7,7 @@ import ftplib
 import imaplib
 
 import collections
+import re
 import socket
 
 import attr
@@ -1150,7 +1151,13 @@ class ClientXMPP(L7ClientStartTlsBase):
         '<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" '
         'xmlns:tls="http://www.ietf.org/rfc/rfc2595.txt" to="{}" xml:lang="en" version="1.0">'
     )
-    _STARTTLS = b'<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
+    _STARTTLS_REQUEST = b'<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
+    _STARTTLS_RESPONSE_FEATURE_PATTERN = re.compile(
+        b'.*<starttls xmlns=["\']urn:ietf:params:xml:ns:xmpp-tls["\'] */?>.*'
+    )
+    _STARTTLS_RESPONSE_PROCEED_PATTERN = re.compile(
+        b'<proceed xmlns=["\']urn:ietf:params:xml:ns:xmpp-tls["\'] */>'
+    )
 
     @classmethod
     def get_scheme(cls):
@@ -1174,18 +1181,18 @@ class ClientXMPP(L7ClientStartTlsBase):
         if b'stream:features' not in l4_transfer.buffer:
             l4_transfer.receive_until(b'</stream:features>')
 
-        if b'<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls">' not in l4_transfer.buffer.replace(b'\'', b'"'):
+        if not ClientXMPP._STARTTLS_RESPONSE_FEATURE_PATTERN.match(l4_transfer.buffer):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
         l4_transfer.flush_buffer()
 
-        l4_transfer.send(ClientXMPP._STARTTLS)
+        l4_transfer.send(ClientXMPP._STARTTLS_REQUEST)
         l4_transfer.receive_until(b'>')
 
         if b'stream:error' in l4_transfer.buffer:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
-        if l4_transfer.buffer.replace(b'\'', b'"') != b'<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>':
+        if not ClientXMPP._STARTTLS_RESPONSE_PROCEED_PATTERN.match(l4_transfer.buffer):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
         l4_transfer.flush_buffer()
