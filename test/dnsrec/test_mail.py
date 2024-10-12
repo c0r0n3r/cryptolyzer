@@ -5,7 +5,15 @@ from test.common.classes import TestLoggerBase
 import urllib3
 
 from cryptoparser.dnsrec.record import DnsRecordMx
-from cryptoparser.dnsrec.txt import DnsRecordTxtValueSpf, DnsRecordTxtValueSpfDirectiveAll, SpfQualifier
+from cryptoparser.dnsrec.txt import (
+    DmarcAlignment,
+    DmarcPolicyOption,
+    DmarcPolicyVersion,
+    DnsRecordTxtValueDmarc,
+    DnsRecordTxtValueSpf,
+    DnsRecordTxtValueSpfDirectiveAll,
+    SpfQualifier,
+)
 
 from cryptolyzer.dnsrec.analyzer import AnalyzerDnsMail
 from cryptolyzer.dnsrec.client import L7ClientDns
@@ -27,7 +35,16 @@ class TestDnsRecordMail(TestLoggerBase):
             analyzer_result.spf.value,
             DnsRecordTxtValueSpf([DnsRecordTxtValueSpfDirectiveAll(SpfQualifier.FAIL)])
         )
-        self.assertIsNone(analyzer_result.dmarc.value)
+        self.assertEqual(
+            analyzer_result.dmarc.value,
+            DnsRecordTxtValueDmarc(
+                version=DmarcPolicyVersion.DMARC1,
+                policy=DmarcPolicyOption.REJECT,
+                alignment_dkim=DmarcAlignment.STRICT,
+                alignment_aspf=DmarcAlignment.STRICT,
+                subdomain_policy=DmarcPolicyOption.REJECT,
+            )
+        )
         self.assertIsNone(analyzer_result.mta_sts.value)
         self.assertIsNone(analyzer_result.tls_rpt.value)
 
@@ -64,7 +81,20 @@ class TestDnsRecordMail(TestLoggerBase):
             '        * Terms:',
             '            * All:',
             '                * Qualifier: Fail',
-            '* Domain-based Message Authentication, Reporting, and Conformance (DMARC): n/a',
+            '* Domain-based Message Authentication, Reporting, and Conformance (DMARC):',
+            '    * Raw: v=DMARC1; p=reject; adkim=s; aspf=s; fo=0; pct=100; rf=afrf; ri=86400; sp=reject',
+            '    * Parsed:',
+            '        * Version: DMARC1',
+            '        * Policy: reject',
+            '        * DKIM Alignment: Strict',
+            '        * ASPF Alignment: Strict',
+            '        * Failure Option: All Failure',
+            '        * Percent: 100',
+            '        * Aggregated Reporting URL: n/a',
+            '        * Failure Reporting URL: n/a',
+            '        * Reporting Format: Authentication Failure Reporting Format (AFRF)',
+            '        * Reporting Interval: 86400',
+            '        * Subdomain Policy: reject',
             '* SMTP MTA Strict Transport Security (MTA-STS): n/a',
             '* SMTP TLS Reporting: n/a',
             '',

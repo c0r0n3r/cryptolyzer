@@ -390,9 +390,9 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
             with self.subTest(pubkey=pubkey):
                 self.assertEqual(
                     pubkey.certificate_chain.trust_roots,
-                    {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: False}
+                    {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: True}
                 )
-        self.assertFalse(any(pubkey.certificate_chain.contains_anchor for pubkey in result.pubkeys))
+        self.assertTrue(all(pubkey.certificate_chain.contains_anchor for pubkey in result.pubkeys))
         self.assertEqual(
             [pubkey.certificate_chain.items[-2].key_type for pubkey in result.pubkeys],
             [Authentication.RSA, Authentication.ECDSA]
@@ -425,7 +425,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
             with self.subTest():
                 self.assertEqual(
                     pubkey.certificate_chain.trust_roots,
-                    {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: False}
+                    {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: True}
                 )
 
     def test_json(self):

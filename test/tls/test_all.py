@@ -170,10 +170,13 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparams.groups, [TlsNamedCurve.FFDHE3072,])
         self.assertEqual(result.dhparams.dhparam, None)
         self.assertEqual(set(result.curves.curves), set([
-            TlsNamedCurve.X25519,
             TlsNamedCurve.SECP256R1,
-            TlsNamedCurve.X25519_KYBER_768_R3,
+            TlsNamedCurve.SECP256R1_KYBER_768_R3,
             TlsNamedCurve.SECP384R1,
+            TlsNamedCurve.SECP384R1_KYBER_768_R3,
+            TlsNamedCurve.SECP521R1,
+            TlsNamedCurve.X25519,
+            TlsNamedCurve.X25519_KYBER_768_R3,
         ]))
 
         result = self.get_result('pq.cloudflareresearch.com', 443)
@@ -189,8 +192,6 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         curves = result.curves.curves
         # different instances run with different configuration, the following is the common subset
         self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3_CLOUDFLARE, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_512_R3_CLOUDFLARE, curves)
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 

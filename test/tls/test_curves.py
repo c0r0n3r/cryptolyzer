@@ -93,16 +93,12 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         curves = result.curves
         # different instances run with different configuration, the following is the common subset
         self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3_CLOUDFLARE, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_512_R3_CLOUDFLARE, curves)
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 
         self.assertTrue(result.extension_supported)
 
         curve_log_lines = self.pop_log_lines()
-        self.assertIn('Server offers elliptic-curve X25519_KYBER_512_R3', curve_log_lines)
-        self.assertIn('Server offers elliptic-curve X25519_KYBER_768_R3', curve_log_lines)
         self.assertIn('Server offers elliptic-curve X25519_KYBER_768_R3', curve_log_lines)
         self.assertIn('Server offers elliptic-curve CURVE25519', curve_log_lines)
         self.assertIn('Server offers elliptic-curve PRIME256V1', curve_log_lines)
@@ -116,14 +112,10 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         curves = self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves
         # different instances run with different configuration, the following is the common subset
         self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3_CLOUDFLARE, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_512_R3_CLOUDFLARE, curves)
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 
         curve_log_lines = self.pop_log_lines()
-        self.assertIn('Server offers elliptic-curve X25519_KYBER_512_R3', curve_log_lines)
-        self.assertIn('Server offers elliptic-curve X25519_KYBER_768_R3', curve_log_lines)
         self.assertIn('Server offers elliptic-curve X25519_KYBER_768_R3', curve_log_lines)
         self.assertIn('Server offers elliptic-curve CURVE25519', curve_log_lines)
         self.assertIn('Server offers elliptic-curve PRIME256V1', curve_log_lines)
@@ -133,8 +125,6 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
 
         # different instances run with different configuration, the following is the common subset
         self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3_CLOUDFLARE, curves)
-        self.assertIn(TlsNamedCurve.X25519_KYBER_512_R3_CLOUDFLARE, curves)
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 

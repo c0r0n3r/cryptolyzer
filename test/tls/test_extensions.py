@@ -70,7 +70,7 @@ class TestTlsExtensions(TestLoggerBase):
         )
 
     def test_application_layer_protocols(self):
-        result = self.get_result('www.mail.ru', 443)
+        result = self.get_result('tls-v1-0.badssl.com', 1010)
         self.assertEqual(result.application_layer_protocols, [])
 
         result = self.get_result('badssl.com', 443)
