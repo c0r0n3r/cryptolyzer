@@ -1146,9 +1146,9 @@ class ClientRDP(L7ClientStartTlsBase):
 
 
 @attr.s
-class ClientXMPP(L7ClientStartTlsBase):
+class ClientXMPPBase(L7ClientStartTlsBase):
     _STREAM_OPEN = (
-        '<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" '
+        '<stream:stream xmlns="jabber:{}" xmlns:stream="http://etherx.jabber.org/streams" '
         'xmlns:tls="http://www.ietf.org/rfc/rfc2595.txt" to="{}" xml:lang="en" version="1.0">'
     )
     _STARTTLS_REQUEST = b'<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
@@ -1165,19 +1165,24 @@ class ClientXMPP(L7ClientStartTlsBase):
     )
 
     @classmethod
+    @abc.abstractmethod
+    def _get_connection_type(cls):
+        raise NotImplementedError()
+
+    @classmethod
     def get_scheme(cls):
-        return 'xmpp'
+        return 'xmpp' + cls._get_connection_type()
 
     @classmethod
     def get_default_port(cls):
         return 5222
 
-    @staticmethod
-    def _get_stream_open_message(address, stream_to):
+    @classmethod
+    def _get_stream_open_message(cls, address, stream_to):
         if stream_to is None:
             stream_to = address
 
-        return ClientXMPP._STREAM_OPEN.format(stream_to).encode("utf-8")
+        return cls._STREAM_OPEN.format(cls._get_connection_type(), stream_to).encode("utf-8")
 
     def _init_xmpp(self, l4_transfer, address):
         stream_open_message = self._get_stream_open_message(address, self.stream_to)
@@ -1221,6 +1226,20 @@ class ClientXMPP(L7ClientStartTlsBase):
 
     def _deinit_l7(self):
         pass
+
+
+@attr.s
+class ClientXMPPClient(ClientXMPPBase):
+    @classmethod
+    def _get_connection_type(cls):
+        return 'client'
+
+
+@attr.s
+class ClientXMPPServer(ClientXMPPBase):
+    @classmethod
+    def _get_connection_type(cls):
+        return 'server'
 
 
 class L7ClientLDAPS(L7ClientTlsBase):
