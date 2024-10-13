@@ -377,12 +377,13 @@ class L7TransferBase(object):
             address,
             port=None,
             timeout=None,
-            ip=None
+            ip=None,
+            **kwargs
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         for transfer_class in get_leaf_classes(cls):
             if transfer_class.get_scheme() == scheme:
                 port = transfer_class.get_default_port() if port is None else port
-                return transfer_class(address=address, port=port, timeout=timeout, ip=ip)
+                return transfer_class(address=address, port=port, timeout=timeout, ip=ip, **kwargs)
 
         raise ValueError(scheme)
 
