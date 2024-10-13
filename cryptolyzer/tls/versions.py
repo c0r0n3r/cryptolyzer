@@ -179,7 +179,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
             TlsExtensionType.SUPPORTED_VERSIONS
         ).selected_version
         supported_protocols.append(selected_version)
-        LogSingleton().log(level=60, msg=six.u('Server offers protocol version %s supported') % (selected_version, ))
+        LogSingleton().log(level=60, msg=six.u('Server offers protocol version %s') % (selected_version, ))
         while checkable_protocols and checkable_protocols[0] >= selected_version:
             del checkable_protocols[0]
 
