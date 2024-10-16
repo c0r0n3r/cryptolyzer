@@ -4,6 +4,7 @@ from cryptodatahub.ssh.algorithm import SshKexAlgorithm, SshEncryptionAlgorithm,
 
 from cryptoparser.common.base import Serializable, SerializableTextEncoder
 
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
 
 from cryptolyzer.ssh.client import L7ClientSsh
@@ -20,9 +21,9 @@ from .classes import TestSshCases
 
 class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port, timeout=None, ip=None):
+    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(), ip=None):
         analyzer = AnalyzerVulnerabilities()
-        l7_client = L7ClientSsh.from_scheme('ssh', host, port, timeout, ip)
+        l7_client = L7ClientSsh.from_scheme('ssh', host, port, l4_socket_params, ip)
         analyzer_result = analyzer.analyze(l7_client)
 
         return analyzer_result

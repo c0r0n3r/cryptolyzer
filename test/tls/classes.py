@@ -29,6 +29,7 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.server import L7ServerTls, L7ServerStartTlsTextBase, TlsServerHandshake
@@ -38,12 +39,14 @@ class TestTlsCases:
     class TestTlsBase(TestLoggerBase):
         @staticmethod
         @abc.abstractmethod
-        def get_result(host, port, protocol_version=None, timeout=None, ip=None):
+        def get_result(host, port, protocol_version=None, l4_socket_params=None, ip=None):
             raise NotImplementedError()
 
         @staticmethod
         def create_server(configuration=None):
-            threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=0.2, configuration=configuration))
+            threaded_server = L7ServerTlsTest(L7ServerTls(
+                'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=configuration
+            ))
             threaded_server.wait_for_server_listen()
             return threaded_server
 

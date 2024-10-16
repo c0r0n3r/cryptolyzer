@@ -11,6 +11,7 @@ from cryptodatahub.common.types import convert_url
 
 from cryptoparser.common.utils import get_leaf_classes
 
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.httpx.transfer import HttpHandshakeBase
 
 
@@ -20,11 +21,16 @@ class L7ClientHttpBase(object):
         converter=convert_url(),
         validator=attr.validators.instance_of(urllib3.util.url.Url)
     )
-    timeout = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((float, int))))
+    l4_socket_params = attr.ib(
+        default=L4TransferSocketParams(),
+        validator=attr.validators.instance_of(L4TransferSocketParams),
+    )
 
     def __attrs_post_init__(self):
-        if self.timeout is None:
-            self.timeout = self.get_default_timeout()
+        if self.l4_socket_params.timeout is None:
+            self.l4_socket_params = L4TransferSocketParams(
+                self.get_default_timeout(), self.l4_socket_params.http_proxy
+            )
 
     @classmethod
     def get_default_timeout(cls):
@@ -76,7 +82,7 @@ class L7ClientHttp(L7ClientHttpBase):
         return {'http': L7ClientHttp}
 
     def do_handshake(self):
-        http_client = HttpClientHandshake(self.timeout)
+        http_client = HttpClientHandshake(self.l4_socket_params)
 
         http_client.do_handshake(self)
 
@@ -97,7 +103,7 @@ class L7ClientHttps(L7ClientHttpBase):
         return {'https': L7ClientHttps}
 
     def do_handshake(self):
-        http_client = HttpsClientHandshake(self.timeout)
+        http_client = HttpsClientHandshake(self.l4_socket_params)
 
         http_client.do_handshake(self)
 

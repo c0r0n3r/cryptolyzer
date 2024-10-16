@@ -23,6 +23,7 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert, TlsAlertDescription
 from cryptolyzer.tls.extensions import AnalyzerExtensions
 from cryptolyzer.tls.server import L7ServerTls
@@ -33,10 +34,11 @@ from .classes import L7ServerTlsTest
 class TestTlsExtensions(TestLoggerBase):
     @staticmethod
     def get_result(
-            host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None, scheme='tls'
+            host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerExtensions()
-        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 
@@ -193,7 +195,7 @@ class TestTlsExtensions(TestLoggerBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server does not offer accurate clock', log_lines)
 
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, timeout=0.5),)
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.5)),)
         threaded_server.start()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.clock_is_accurate)

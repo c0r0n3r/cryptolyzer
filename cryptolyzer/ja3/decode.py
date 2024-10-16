@@ -37,7 +37,7 @@ class JA3ClientTag(object):
         return 'tag'
 
     @classmethod
-    def from_scheme(cls, scheme, address):  # pylint: disable=unused-argument
+    def from_scheme(cls, scheme, address, l4_socket_params):  # pylint: disable=unused-argument
         return JA3ClientTag(address)
 
 

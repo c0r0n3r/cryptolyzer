@@ -285,7 +285,7 @@ class L7ClientSsh(L7TransferBase):
         return {'ssh': L7ClientSsh}
 
     def _init_connection(self):
-        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+        self.l4_transfer = L4ClientTCP(self.address, self.port, self.l4_socket_params, self.ip)
         self.l4_transfer.init_connection()
 
     def do_handshake(

@@ -18,6 +18,8 @@ import urllib3
 
 import six
 
+from cryptolyzer.common.transfer import L4TransferSocketParams
+
 from cryptolyzer.ssh.analyzer import ProtocolHandlerSshVersionIndependent
 from cryptolyzer.ssh.server import L7ServerSsh
 from cryptolyzer.ssh.versions import AnalyzerVersions
@@ -31,7 +33,7 @@ from .classes import L7ServerSshTest
 
 class TestMain(TestMainBase):
     def setUp(self):
-        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, timeout=2))
+        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=2)))
         self.threaded_server.start()
 
         self.host = 'localhost'

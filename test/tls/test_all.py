@@ -12,6 +12,7 @@ from cryptoparser.tls.extension import TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.result import AnalyzerTargetTls
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.dhparam import DHParamWellKnown
 
 from cryptolyzer.tls.all import AnalyzerAll
@@ -24,10 +25,15 @@ from .classes import TestTlsCases
 class TestTlsAll(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(
-            host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1), timeout=None, ip=None, scheme='tls'
+            host,
+            port,
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            l4_socket_params=L4TransferSocketParams(),
+            ip=None,
+            scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerAll()
-        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 

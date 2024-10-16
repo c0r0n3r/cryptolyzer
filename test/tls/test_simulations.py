@@ -15,6 +15,7 @@ from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.dhparam import DHParamWellKnown
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.simulations import (
@@ -28,10 +29,10 @@ from cryptolyzer.tls.simulations import (
 class TestTlsSimulations(TestLoggerBase):
     @staticmethod
     def get_result(
-            host, port, protocol_version=None, timeout=None, ip=None, scheme='https'
+            host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='https'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerSimulations()
-        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 
