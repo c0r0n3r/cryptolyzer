@@ -48,7 +48,7 @@ def parse_arg_socket_timeout(value):
     value = float(value)
 
     if value <= 0:
-        raise argparse.ArgumentTypeError("%s socket timeout must be a positive integer value" % value)
+        raise argparse.ArgumentTypeError('%s socket timeout must be a positive integer value' % value)
 
     return value
 
