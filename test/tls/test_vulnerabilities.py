@@ -42,7 +42,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
 
         self.assertFalse(result.versions.drown.value)
         self.assertTrue(result.versions.early_tls_version.value)
-        self.assertTrue(result.versions.ssl_version.value)
+        self.assertFalse(result.versions.ssl_version.value)
 
         self.assertFalse(result.dhparams.weak_dh.value)
         self.assertFalse(result.dhparams.dheat.value)

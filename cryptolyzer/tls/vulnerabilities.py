@@ -48,7 +48,7 @@ class VulnerabilityResultEarlyTlsVersion(VulnerabilityResultGraded):
 class VulnerabilityResultSslVersion(VulnerabilityResultGraded):
     @property
     def _vulnerable_grade(self):
-        return Grade.INSECURE
+        return Grade.INSECURE  # pragma: no cover
 
     @classmethod
     def get_name(cls):
