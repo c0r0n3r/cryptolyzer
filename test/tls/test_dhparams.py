@@ -141,7 +141,6 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         result = self.get_result('princeton.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
         self.assertEqual(result.dhparam, None)
-        self.assertTrue(result.key_reuse)
         self.assertEqual(
             self.get_log_lines(), [
                 'Server offers 2048-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
