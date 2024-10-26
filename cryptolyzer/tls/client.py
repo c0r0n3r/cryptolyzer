@@ -572,7 +572,7 @@ class L7ClientTlsBase(L7TransferBase):
         raise NotImplementedError()
 
     def _init_connection(self):
-        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+        self.l4_transfer = L4ClientTCP(self.address, self.port, self.l4_socket_params, self.ip)
         self.l4_transfer.init_connection()
 
     def _do_handshake(
@@ -637,7 +637,7 @@ class L7ClientStartTlsBase(L7ClientTlsBase):
         raise NotImplementedError()
 
     def _init_connection(self):
-        self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+        self.l4_transfer = L4ClientTCP(self.address, self.port, self.l4_socket_params, self.ip)
 
         try:
             self._init_l7()
@@ -753,7 +753,7 @@ class L7ClientStartTlsTextBase(L7ClientStartTlsBase):
 
     def _init_l7(self):
         try:
-            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client = L7ClientTls(self.address, self.port, self.l4_socket_params)
             self._l7_client.init_connection()
             self.l4_transfer = self._l7_client.l4_transfer
 
@@ -870,7 +870,7 @@ class ClientMySQL(L7ClientStartTlsBase):
         return 3306
 
     def _init_l7(self):
-        self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+        self._l7_client = L7ClientTls(self.address, self.port, self.l4_socket_params)
         self._l7_client.init_connection()
         self.l4_transfer = self._l7_client.l4_transfer
 
@@ -927,7 +927,7 @@ class ClientPostgreSQL(L7ClientStartTlsBase):
 
     def _init_l7(self):
         try:
-            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client = L7ClientTls(self.address, self.port, self.l4_socket_params)
             self._l7_client.init_connection()
             self.l4_transfer = self._l7_client.l4_transfer
 
@@ -1022,14 +1022,14 @@ class L7ClientIMAPS(L7ClientTlsBase):
 
 
 class IMAP4(imaplib.IMAP4, object):
-    def __init__(self, host, port, timeout):
-        self.timeout = timeout
+    def __init__(self, host, port, l4_socket_params):
+        self.l4_socket_params = l4_socket_params
         super(IMAP4, self).__init__(host, port)
 
     def open(self, *args, **kwargs):  # pylint: disable=arguments-differ,signature-differs,unused-argument
         self.host = args[0]
         self.port = args[1]
-        self.sock = socket.create_connection((self.host, self.port), self.timeout)
+        self.sock = socket.create_connection((self.host, self.port), self.l4_socket_params.timeout)
         self.file = self.sock.makefile('rb')
 
 
@@ -1048,7 +1048,7 @@ class ClientIMAP(L7ClientStartTlsBase):
 
     def _init_l7(self):
         try:
-            self._l7_client = IMAP4(self.ip, self.port, self.timeout)
+            self._l7_client = IMAP4(self.ip, self.port, self.l4_socket_params)
             self.l4_transfer.init_connection(self._l7_client.socket())
 
             if 'STARTTLS' not in self._capabilities:
@@ -1088,7 +1088,7 @@ class ClientFTP(L7ClientStartTlsBase):
     def _init_l7(self):
         try:
             self._l7_client = ftplib.FTP()
-            response = self._l7_client.connect(self.address, self.port, self.timeout)
+            response = self._l7_client.connect(self.address, self.port, self.l4_socket_params.timeout)
             self.l4_transfer.init_connection(self._l7_client.sock)
             if not response.startswith('220'):
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
@@ -1120,7 +1120,7 @@ class ClientRDP(L7ClientStartTlsBase):
 
     def _init_l7(self):
         try:
-            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client = L7ClientTls(self.address, self.port, self.l4_socket_params)
             self._l7_client.init_connection()
             self.l4_transfer = self._l7_client.l4_transfer
 
@@ -1215,7 +1215,7 @@ class ClientXMPPBase(L7ClientStartTlsBase):
         l4_transfer.flush_buffer()
 
     def _init_l7(self):
-        self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+        self._l7_client = L7ClientTls(self.address, self.port, self.l4_socket_params)
         self._l7_client.init_connection()
         self.l4_transfer = self._l7_client.l4_transfer
 
@@ -1264,7 +1264,7 @@ class ClientLDAP(L7ClientStartTlsBase):
 
     def _init_l7(self):
         try:
-            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client = L7ClientTls(self.address, self.port, self.l4_socket_params)
             self._l7_client.init_connection()
             self.l4_transfer = self._l7_client.l4_transfer
 
@@ -1359,7 +1359,7 @@ class ClientSieve(L7ClientStartTlsBase):
 
     def _init_l7(self):
         try:
-            self._l7_client = L7ClientTls(self.address, self.port, self.timeout)
+            self._l7_client = L7ClientTls(self.address, self.port, self.l4_socket_params)
             self._l7_client.init_connection()
             self.l4_transfer = self._l7_client.l4_transfer
 
@@ -1651,9 +1651,9 @@ class ClientOpenVpnBase(L7ClientTlsBase, L7OpenVpnBase):
 
     def _init_connection(self):
         if self._is_tcp():
-            self.l4_transfer = L4ClientTCP(self.address, self.port, self.timeout, self.ip)
+            self.l4_transfer = L4ClientTCP(self.address, self.port, self.l4_socket_params, self.ip)
         else:
-            self.l4_transfer = L4ClientUDP(self.address, self.port, self.timeout, self.ip)
+            self.l4_transfer = L4ClientUDP(self.address, self.port, self.l4_socket_params, self.ip)
         self.l4_transfer.init_connection()
 
         try:

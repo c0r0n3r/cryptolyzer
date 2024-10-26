@@ -5,6 +5,7 @@ try:
 except ImportError:
     from mock import patch
 
+import argparse
 import sys
 import os
 
@@ -27,6 +28,7 @@ import test.tls.test_all
 
 import colorama
 import six
+import urllib3
 
 from cryptoparser.common.base import Serializable, SerializableTextEncoder
 
@@ -36,7 +38,13 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 
 from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
-from cryptolyzer.__main__ import main, get_argument_parser, get_protocol_handler_analyzer_and_uris
+from cryptolyzer.__main__ import (
+    get_argument_parser,
+    get_protocol_handler_analyzer_and_uris,
+    main,
+    parse_arg_socket_timeout,
+    parse_arg_http_proxy,
+)
 from cryptolyzer.ja3.generate import AnalyzerGenerate
 from cryptolyzer.tls.versions import AnalyzerVersions
 
@@ -52,7 +60,7 @@ class TestMain(TestMainBase):
             main()
             self.assertEqual(stdout.getvalue().split(os.linesep)[1], '* Error: ' + error_msg)
 
-    def test_argument_parsing(self):
+    def test_error_argument_parsing(self):
         self._test_argument_help('cryptolyzer')
 
         self._test_argument_error(
@@ -72,9 +80,33 @@ class TestMain(TestMainBase):
             'error: argument -t/--socket-timeout: -1.0 socket timeout must be a positive integer value'
         )
         self._test_argument_error(
+            ['cryptolyzer', '--http-proxy', 'https://proxy', 'tls', 'versions', 'unsupportedprotocol://localhost'],
+            'cryptolyze: error: argument -p/--http-proxy: only HTTP proxy is supported'
+        )
+        self._test_argument_error(
             ['cryptolyzer', 'ja3', 'decode', 'unsupportedformat://tag'],
             'error: unsupported protocol: unsupportedformat'
         )
+
+        with self.assertRaises(argparse.ArgumentTypeError) as context_manager:
+            parse_arg_socket_timeout(-1)
+        self.assertEqual(
+            context_manager.exception.args,
+            ('-1.0 socket timeout must be a positive integer value',)
+        )
+
+        with self.assertRaises(argparse.ArgumentTypeError) as context_manager:
+            parse_arg_http_proxy('https://proxy')
+        self.assertEqual(
+            context_manager.exception.args,
+            ('only HTTP proxy is supported',)
+        )
+
+    def test_argument_parsing(self):
+        self.assertEqual(parse_arg_http_proxy('proxy'), urllib3.util.parse_url('http://proxy'))
+        self.assertEqual(parse_arg_http_proxy('http://proxy'), urllib3.util.parse_url('http://proxy'))
+
+        self.assertEqual(parse_arg_socket_timeout(1), 1.0)
 
     def test_runtime_error(self):
         self._test_runtime_error(
@@ -148,7 +180,7 @@ class TestMain(TestMainBase):
             'all',
             'rc4-md5.badssl.com',
             443,
-            timeout=10
+            timeout=10,
         )
         all_result = test.tls.test_all.TestTlsAll.get_result(**func_arguments)
         result_markdown = result._as_markdown_without_target(result, 0)  # pylint: disable=protected-access

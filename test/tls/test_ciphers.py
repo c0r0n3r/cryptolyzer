@@ -14,6 +14,7 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
@@ -33,18 +34,25 @@ class TestSslCiphers(unittest.TestCase):
 
     @staticmethod
     def create_server():
-        threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, timeout=0.5, configuration=TlsServerConfiguration(fallback_to_ssl=True))
-        )
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=0.5),
+            configuration=TlsServerConfiguration(fallback_to_ssl=True)
+        ))
         threaded_server.wait_for_server_listen()
         return threaded_server
 
     @staticmethod
     def get_result(
-            host, port, protocol_version=TlsProtocolVersion(TlsVersion.SSL2), timeout=None, ip=None, scheme='tls'
+            host,
+            port,
+            protocol_version=TlsProtocolVersion(TlsVersion.SSL2),
+            l4_socket_params=L4TransferSocketParams(),
+            ip=None,
+            scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerCipherSuites()
-        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 
@@ -116,7 +124,12 @@ def _wrapped_next_accepted_cipher_suites_response_error(
 class TestTlsCiphers(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(
-            host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1), timeout=None, ip=None, scheme='tls'
+            host,
+            port,
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            l4_socket_params=L4TransferSocketParams(),
+            ip=None,
+            scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerCipherSuites()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port)
@@ -209,7 +222,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         self.assertFalse(self.get_result('8.8.8.8', 443).long_cipher_suite_list_intolerance)
 
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsLongCipherSuiteListIntolerance('localhost', 0, timeout=0.2),
+            L7ServerTlsLongCipherSuiteListIntolerance('localhost', 0, L4TransferSocketParams(timeout=0.2)),
         )
         threaded_server.start()
 
@@ -302,7 +315,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
+            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.2)),
         )
         threaded_server.start()
         self.assertEqual(

@@ -3,6 +3,7 @@
 from cryptodatahub.tls.algorithm import TlsNamedCurve
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.vulnerabilities import AnalyzerVulnerabilities
 
@@ -12,10 +13,10 @@ from .classes import TestTlsCases
 class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(
-            host, port, protocol_version=None, timeout=None, ip=None, scheme='tls'
+            host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerVulnerabilities()
-        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
         analyzer_result = analyzer.analyze(l7_client, None)
 
         return analyzer_result
@@ -48,7 +49,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         self.assertFalse(result.dhparams.dheat.value)
 
     def test_real_ciphers(self):
-        result = self.get_result('rc4.badssl.com', 443, timeout=10)
+        result = self.get_result('rc4.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertFalse(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
@@ -72,7 +73,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         ], log_stream)
         self.assertNotIn('Server offers well-known DH public parameter', log_stream)
 
-        result = self.get_result('3des.badssl.com', 443, timeout=10)
+        result = self.get_result('3des.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertTrue(result.ciphers.lucky13.value)
         self.assertTrue(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)

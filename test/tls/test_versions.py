@@ -9,6 +9,7 @@ from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
+from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.tls.client import L7ClientTlsBase, SslError
 from cryptolyzer.tls.exception import TlsAlert
@@ -21,10 +22,10 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 class TestSslVersions(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(
-            host, port, protocol_version=None, timeout=None, ip=None, scheme='tls'
+            host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
         result = analyzer.analyze(l7_client, None)
         return result
 
@@ -63,7 +64,7 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
 
     def test_versions(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, timeout=0.5),
+            L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
 
@@ -100,10 +101,10 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
 
     @staticmethod
     def get_result(
-            host, port, protocol_version=None, timeout=None, ip=None, scheme='tls'
+            host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, timeout, ip)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
         analyzer_result = analyzer.analyze(l7_client, protocol_version)
 
         return analyzer_result
@@ -202,7 +203,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
+            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.2)),
         )
         threaded_server.start()
         self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions, [])

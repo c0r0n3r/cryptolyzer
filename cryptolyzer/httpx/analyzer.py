@@ -11,6 +11,7 @@ from cryptoparser.httpx.version import HttpVersion
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.result import AnalyzerResultHttp
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.httpx.content import AnalyzerConetnt
 from cryptolyzer.httpx.headers import AnalyzerHeaders
 
@@ -30,11 +31,13 @@ class ProtocolHandlerHttpBase(ProtocolHandlerBase):
         return ([], {'protocol_version': cls._get_version()})
 
     @classmethod
-    def _l7_client_from_uri(cls, uri):
+    def _l7_client_from_params(cls, uri, socket_params):
         for analyzer_class in cls.get_analyzers():
             for client_class in analyzer_class.get_clients():
                 if client_class.get_scheme() == uri.scheme:
-                    return client_class.from_uri(uri)
+                    client = client_class.from_uri(uri)
+                    client.l4_socket_params = socket_params
+                    return client
 
         raise NotImplementedError()
 
@@ -87,12 +90,12 @@ class ProtocolHandlerHttpAllSupportedVersions(ProtocolHandlerHttpBase):
     def _get_version(cls):
         raise NotImplementedError()
 
-    def analyze(self, analyzer, uri, timeout=None):
+    def analyze(self, analyzer, uri, socket_params=L4TransferSocketParams()):
         results = []
         target = None
         for protocol_handler_class in get_leaf_classes(ProtocolHandlerHttpExactVersion):
             if isinstance(analyzer, protocol_handler_class.get_analyzers()):
-                result = protocol_handler_class().analyze(analyzer, uri, timeout)
+                result = protocol_handler_class().analyze(analyzer, uri, socket_params)
                 target = result.target
 
                 results.append(

@@ -13,6 +13,7 @@ from cryptoparser.common.exception import InvalidDataLength, InvalidType
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.exception import NetworkError, SecurityError
 from cryptolyzer.common.result import AnalyzerResultError
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
 
 from cryptolyzer import __setup__
@@ -53,6 +54,18 @@ def parse_arg_socket_timeout(value):
     return value
 
 
+def parse_arg_http_proxy(value):
+    proxy_url = urllib3.util.parse_url(value)
+
+    if proxy_url.scheme is None:
+        proxy_url = urllib3.util.parse_url('http://' + str(proxy_url))
+
+    if proxy_url.scheme != 'http':
+        raise argparse.ArgumentTypeError('only HTTP proxy is supported')
+
+    return proxy_url
+
+
 def get_argument_parser():
     parser = argparse.ArgumentParser(prog='cryptolyze')
     parser.add_argument('--version', '-v', action='version', version='%(prog)s ' + __setup__.__version__)
@@ -74,6 +87,14 @@ def get_argument_parser():
         default=5.0,
         metavar='seconds',
         help='Maximum time to wait for server to responde (default: %(default)s seconds)'
+    )
+    parser.add_argument(
+        '-p', '--http-proxy',
+        type=parse_arg_http_proxy,
+        help='Tunnel the traffic through a HTTP CONNECT proxy given in the format "http://USER:PW@HOST:PORT/"'
+        '(considered only if in the case of TCP connections)',
+        dest="http_proxy",
+        default=None,
     )
 
     parsers_analyzer = parser.add_subparsers(title='protocol', dest='protocol')
@@ -101,9 +122,14 @@ def main():
     arguments = parser.parse_args()
     protocol_handler, analyzer, targets = get_protocol_handler_analyzer_and_uris(parser, arguments)
 
+    l4_socket_params = L4TransferSocketParams(
+        timeout=arguments.socket_timeout,
+        http_proxy=arguments.http_proxy if arguments.http_proxy else None,
+    )
+
     for target in targets:
         try:
-            analyzer_result = protocol_handler.analyze(analyzer, target, arguments.socket_timeout)
+            analyzer_result = protocol_handler.analyze(analyzer, target, l4_socket_params)
         except (NetworkError, SecurityError, InvalidDataLength, InvalidType, InvalidValue) as e:
             analyzer_result = AnalyzerResultError(str(target), str(e))
 

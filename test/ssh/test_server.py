@@ -12,7 +12,7 @@ from cryptoparser.ssh.record import SshRecordInit
 from cryptoparser.ssh.subprotocol import SshDisconnectMessage, SshProtocolMessage, SshSoftwareVersionUnparsed
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
-from cryptolyzer.common.transfer import L4ClientTCP
+from cryptolyzer.common.transfer import L4ClientTCP, L4TransferSocketParams
 
 from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.ssh.exception import SshReasonCode
@@ -24,9 +24,9 @@ from .classes import L7ServerSshTest
 
 class TestL7ServerBase(unittest.TestCase):
     @staticmethod
-    def get_result(host, port, timeout=None, ip=None):
+    def get_result(host, port, l4_socket_params=L4TransferSocketParams(), ip=None):
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientSsh(host, port, timeout, ip=ip)
+        l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)
         return result
 
@@ -42,7 +42,7 @@ class TestSshServerDefaults(TestL7ServerBase):
 
 class TestSshServerHandshake(TestL7ServerBase):
     def setUp(self):
-        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, timeout=0.5))
+        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.5)))
         self.threaded_server.start()
         self.l7_client = L7ClientSsh('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
 

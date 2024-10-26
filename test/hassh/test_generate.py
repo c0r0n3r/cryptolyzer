@@ -15,6 +15,7 @@ from cryptodatahub.ssh.algorithm import (
 )
 
 from cryptolyzer.common.exception import NetworkError
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.hassh.generate import AnalyzerGenerate
 from cryptolyzer.ssh.client import L7ClientSsh, SshKeyExchangeInitAnyAlgorithm
 from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
@@ -51,7 +52,7 @@ class TestHASSHGenerate(TestLoggerBase):
     def test_error_no_connection(self):
         with six.assertRaisesRegex(self, NetworkError, 'connection to target cannot be established'):
             configuration = SshServerConfiguration()
-            l7_server = L7ServerSsh('localhost', 0, configuration=configuration, timeout=0.1)
+            l7_server = L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.1), configuration=configuration)
             l7_server.init_connection()
             analyzer = AnalyzerGenerate()
             analyzer.analyze(l7_server)

@@ -13,6 +13,7 @@ from cryptodatahub.ssh.algorithm import SshHostKeyAlgorithm
 from cryptoparser.ssh.subprotocol import SshReasonCode
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.ssh.client import L7ClientSsh, SshClientHandshake, SshDisconnect
 from cryptolyzer.ssh.pubkeys import AnalyzerPublicKeys
@@ -22,9 +23,9 @@ from .classes import TestSshCases
 
 class TestSshPubkeys(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, timeout=None, ip=None):
+    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(), ip=None):
         analyzer = AnalyzerPublicKeys()
-        l7_client = L7ClientSsh(host, port, timeout, ip=ip)
+        l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)
         return result
 

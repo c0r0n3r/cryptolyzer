@@ -73,6 +73,7 @@ from cryptolyzer.common.exception import (
     SecurityError,
     SecurityErrorType
 )
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.server import (
     L7ServerTls,
     L7ServerTlsBase,
@@ -158,21 +159,21 @@ class TestL7ClientBase(TestLoggerBase):
             proto,
             host,
             port,
-            timeout=None,
+            l4_socket_params=L4TransferSocketParams(),
             ip=None,
             protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
             analyzer=None
     ):
         if analyzer is None:
             analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsBase.from_scheme(proto, host, port, timeout, ip=ip)
+        l7_client = L7ClientTlsBase.from_scheme(proto, host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client, protocol_version)
         return l7_client, result
 
     @staticmethod
     def _start_mock_server():
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
 
@@ -228,7 +229,7 @@ class TestL7ClientTlsBase(TestL7ClientBase):
     ])
     def test_different_content_types_in_one_message(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
 
@@ -333,7 +334,7 @@ class TestClientPOP3(TestL7ClientBase):
         self.assertEqual(result.versions, [])
 
     def test_pop3_client(self):
-        l7_client, result = self.get_result('pop3', 'pop3.comcast.net', None, timeout=10)
+        l7_client, result = self.get_result('pop3', 'pop3.comcast.net', None, L4TransferSocketParams(timeout=10))
         self.assertEqual(l7_client.greeting, ['+OK Dovecot ready.'])
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
@@ -364,12 +365,12 @@ class TestClientIMAP(TestL7ClientBase):
         create=True
     )
     def test_error_unsupported_starttls(self):
-        _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
+        _, result = self.get_result('imap', 'imap.comcast.net', None, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(imaplib.IMAP4, '__init__', side_effect=imaplib.IMAP4.error)
     def test_error_imap_error(self, _):
-        _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
+        _, result = self.get_result('imap', 'imap.comcast.net', None, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(
@@ -378,11 +379,11 @@ class TestClientIMAP(TestL7ClientBase):
     )
     @mock.patch.object(imaplib.IMAP4, 'shutdown', side_effect=imaplib.IMAP4.error)
     def test_error_starttls_error(self, _, __):
-        _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
+        _, result = self.get_result('imap', 'imap.comcast.net', None, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.versions, [])
 
     def test_imap_client(self):
-        _, result = self.get_result('imap', 'imap.comcast.net', None, timeout=10)
+        _, result = self.get_result('imap', 'imap.comcast.net', None, L4TransferSocketParams(timeout=10))
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
     def test_imaps_client(self):
@@ -612,7 +613,7 @@ class TestClientLDAP(TestL7ClientBase):
     )
     def test_ldap_header_not_received(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result('ldap', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
@@ -621,7 +622,7 @@ class TestClientLDAP(TestL7ClientBase):
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'\x30\x03\x02\x01\x01', ))
     def test_ldap_no_starttls_support(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(  # pylint: disable = expression-not-assigned
@@ -630,7 +631,7 @@ class TestClientLDAP(TestL7ClientBase):
         self.assertEqual(result.versions, [])
 
     def test_ldap_client(self):
-        _, result = self.get_result('ldap', 'ldap.uchicago.edu', None, timeout=10)
+        _, result = self.get_result('ldap', 'ldap.uchicago.edu', None, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.versions, [
             TlsProtocolVersion(TlsVersion.TLS1),
             TlsProtocolVersion(TlsVersion.TLS1_1),
@@ -638,7 +639,7 @@ class TestClientLDAP(TestL7ClientBase):
         ])
 
     def test_ldaps_client(self):
-        _, result = self.get_result('ldaps', 'ldap.uchicago.edu', None, timeout=10)
+        _, result = self.get_result('ldaps', 'ldap.uchicago.edu', None, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.versions, [
             TlsProtocolVersion(TlsVersion.TLS1),
             TlsProtocolVersion(TlsVersion.TLS1_1),
@@ -759,7 +760,7 @@ class TestClientMySQL(TestL7ClientBase):
         self.assertEqual(l7_client.port, 3306)
 
     def test_mysql_client(self):
-        _, result = self.get_result('mysql', 'db4free.net', None, timeout=10)
+        _, result = self.get_result('mysql', 'db4free.net', None, L4TransferSocketParams(timeout=10))
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
 
@@ -796,7 +797,7 @@ class TestClientSieve(TestL7ClientBase):
     )
     def test_no_starttls_response(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(  # pylint: disable = expression-not-assigned
@@ -811,7 +812,7 @@ class TestClientSieve(TestL7ClientBase):
     )
     def test_starttls_responses_error(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(  # pylint: disable = expression-not-assigned
@@ -826,7 +827,7 @@ class TestClientSieve(TestL7ClientBase):
     )
     def test_response_not_ascii(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(  # pylint: disable = expression-not-assigned
@@ -841,7 +842,7 @@ class TestClientSieve(TestL7ClientBase):
     )
     def test_response_no_valid_response(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(  # pylint: disable = expression-not-assigned
@@ -852,7 +853,7 @@ class TestClientSieve(TestL7ClientBase):
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'OK\r\n', ))
     def test_no_starttls_support(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(  # pylint: disable = expression-not-assigned
@@ -869,11 +870,12 @@ class TestClientXMPP(TestL7ClientBase):
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'<stream:error>', ))
     def test_error_stream_error(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(
-            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+            'xmppclient', 'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
         )
         self.assertEqual(result.versions, [])
 
@@ -882,11 +884,12 @@ class TestClientXMPP(TestL7ClientBase):
     ))
     def test_error_no_features(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(
-            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+            'xmppclient', 'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
         )
         self.assertEqual(result.versions, [])
 
@@ -896,11 +899,12 @@ class TestClientXMPP(TestL7ClientBase):
     ))
     def test_error_no_tls_feature(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(
-            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+            'xmppclient', 'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
         )
         self.assertEqual(result.versions, [])
 
@@ -913,11 +917,12 @@ class TestClientXMPP(TestL7ClientBase):
     ))
     def test_error_starttls_error(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(
-            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+            'xmppclient', 'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
         )
         self.assertEqual(result.versions, [])
 
@@ -930,11 +935,12 @@ class TestClientXMPP(TestL7ClientBase):
     ))
     def test_error_host_unknown(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, timeout=0.5),
+            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
         _, result = self.get_result(
-            'xmppclient', 'localhost', threaded_server.l7_server.l4_transfer.bind_port, timeout=0.2
+            'xmppclient', 'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
         )
         self.assertEqual(result.versions, [])
 
@@ -1197,7 +1203,7 @@ class TestClientOpenVpn(TestL7ClientBase):
     def test_openvpn_tcp_client(self):
         _, result = self.get_result(
             'openvpntcp', 'gr1.vpnjantit.com', 992,
-            timeout=5, analyzer=AnalyzerDHParams()
+            L4TransferSocketParams(timeout=5), analyzer=AnalyzerDHParams()
         )
         self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC2539_1024_BIT_MODP_GROUP)
 
@@ -1223,7 +1229,7 @@ class TestClientOpenVpn(TestL7ClientBase):
     def test_openvpn_udp_client(self):
         _, result = self.get_result(
             'openvpn', 'gr1.vpnjantit.com', 1194,
-            timeout=10, analyzer=AnalyzerDHParams()
+            L4TransferSocketParams(timeout=10), analyzer=AnalyzerDHParams()
         )
         self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC2539_1024_BIT_MODP_GROUP)
 
@@ -1234,7 +1240,7 @@ class TestClientOpenVpn(TestL7ClientBase):
 class TestTlsClientHandshake(TestL7ClientBase):
     def test_error_connection_closed_during_the_handshake(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsCloseDuringHandshake('localhost', 0, timeout=0.2),
+            L7ServerTlsCloseDuringHandshake('localhost', 0, L4TransferSocketParams(timeout=0.2)),
         )
         threaded_server.start()
 
@@ -1248,7 +1254,10 @@ class TestTlsClientHandshake(TestL7ClientBase):
 
     def test_error_always_alert_wargning(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, timeout=0.2, configuration=TlsServerConfiguration(protocol_versions=[])),
+            L7ServerTls(
+                'localhost', 0,
+                L4TransferSocketParams(timeout=0.2), configuration=TlsServerConfiguration(protocol_versions=[])
+            ),
         )
         threaded_server.start()
 
@@ -1266,13 +1275,13 @@ class TestTlsClientHandshake(TestL7ClientBase):
     )
     def test_error_non_handshake_message(self, _):
         with self.assertRaises(TlsAlert) as context_manager:
-            self.get_result('https', 'badssl.com', None, timeout=10)
+            self.get_result('https', 'badssl.com', None, L4TransferSocketParams(timeout=10))
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
 
     @mock.patch.object(L7ServerTlsBase, '_get_handshake_class', return_value=L7ServerTlsFatalResponse)
     def test_error_fatal_alert(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, timeout=0.2),
+            L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.2)),
         )
         threaded_server.wait_for_server_listen()
         l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', threaded_server.l7_server.l4_transfer.bind_port)
@@ -1285,7 +1294,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
     @mock.patch.object(L7ServerTlsBase, '_get_handshake_class', return_value=L7ServerSslPlainTextResponse)
     def test_error_plain_text_response(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, timeout=0.2),
+            L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.2)),
         )
         threaded_server.start()
         l7_client = L7ClientTls('localhost', threaded_server.l7_server.l4_transfer.bind_port)
@@ -1297,7 +1306,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
 
     def test_one_message_in_multiple_records(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsOneMessageInMultipleRecords('localhost', 0, timeout=0.5),
+            L7ServerTlsOneMessageInMultipleRecords('localhost', 0, L4TransferSocketParams(timeout=0.5)),
         )
         threaded_server.start()
 

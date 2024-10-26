@@ -8,11 +8,13 @@ from cryptolyzer.dnsrec.mail import AnalyzerDnsMail
 
 class ProtocolHandlerDnsRecordBase(ProtocolHandlerBase):
     @classmethod
-    def _l7_client_from_uri(cls, uri):
+    def _l7_client_from_params(cls, uri, socket_params):
         for analyzer_class in cls.get_analyzers():
             for client_class in analyzer_class.get_clients():
                 if client_class.get_scheme() == uri.scheme:
-                    return client_class.from_uri(uri)
+                    client = client_class.from_uri(uri)
+                    client.l4_socket_params = socket_params
+                    return client
 
         raise NotImplementedError()
 

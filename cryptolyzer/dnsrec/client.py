@@ -27,6 +27,7 @@ from cryptoparser.dnsrec.txt import (
 )
 
 from cryptolyzer.common.exception import NetworkError
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.dnsrec.transfer import DnsHandshakeBase
 
@@ -37,11 +38,16 @@ class L7ClientDnsBase(object):
         converter=convert_url(),
         validator=attr.validators.instance_of(urllib3.util.url.Url)
     )
-    timeout = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((float, int))))
+    l4_socket_params = attr.ib(
+        default=L4TransferSocketParams(),
+        validator=attr.validators.instance_of(L4TransferSocketParams),
+    )
 
     def __attrs_post_init__(self):
-        if self.timeout is None:
-            self.timeout = self.get_default_timeout()
+        if self.l4_socket_params.timeout is None:
+            self.l4_socket_params = L4TransferSocketParams(
+                self.get_default_timeout(), self.l4_socket_params.http_proxy
+            )
 
     @classmethod
     def get_default_timeout(cls):
@@ -86,7 +92,7 @@ class L7ClientDnsBase(object):
         )
 
     def _get_record_list(self, record_type, record_class, domain_prefix=None):
-        dns_client = self.get_client_handshake_class()(self.timeout)
+        dns_client = self.get_client_handshake_class()(self.l4_socket_params)
 
         dns_client.get_records(self, record_type, domain_prefix)
 

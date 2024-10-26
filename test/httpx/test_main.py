@@ -18,13 +18,13 @@ class TestMain(TestMainBase):
 
         result = self._get_test_analyzer_result_markdown('http', 'headers', uri)
         self.assertIn('Name: Server', result)
-        self.assertIn('Value: TestThreadedServerHttp', result)
+        self.assertIn('Value: TestHTTPRequestHandler', result)
         self.assertIn('Name: Date', result)
         self.assertIn('Value: 1970-01-01 00:00:00+00:00', result)
 
         result = self._get_test_analyzer_result_markdown('http1_1', 'headers', uri)
         self.assertIn('Name: Server', result)
-        self.assertIn('Value: TestThreadedServerHttp', result)
+        self.assertIn('Value: TestHTTPRequestHandler', result)
         self.assertIn('Name: Date', result)
         self.assertIn('Value: 1970-01-01 00:00:00+00:00', result)
 

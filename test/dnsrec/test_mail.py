@@ -21,11 +21,11 @@ from cryptolyzer.dnsrec.client import L7ClientDns
 
 class TestDnsRecordMail(TestLoggerBase):
     @classmethod
-    def get_result(cls, uri, timeout=None):
+    def get_result(cls, uri, l4_socket_params=None):
         analyzer = AnalyzerDnsMail()
         client = L7ClientDns.from_uri(urllib3.util.parse_url(uri))
-        if timeout:
-            client.timeout = timeout
+        if l4_socket_params:
+            client.l4_socket_params = l4_socket_params.timeout
         return analyzer.analyze(client)
 
     def test_real(self):

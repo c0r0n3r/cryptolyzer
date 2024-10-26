@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import abc
+import http.client
 import socket
 
 import ipaddress
 import attr
 import six
+import urllib3
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.common.utils import get_leaf_classes
@@ -15,10 +17,26 @@ from cryptolyzer.common.utils import buffer_flush, buffer_is_plain_text, resolve
 
 
 @attr.s
+class L4TransferSocketParams(object):
+    timeout = attr.ib(
+        default=None,
+        converter=attr.converters.optional(float),
+        validator=attr.validators.optional(attr.validators.instance_of((int, float)))
+    )
+    http_proxy = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(urllib3.util.url.Url))
+    )
+
+
+@attr.s
 class L4TransferBase(object):
     address = attr.ib(validator=attr.validators.instance_of(six.string_types))
     port = attr.ib(validator=attr.validators.instance_of(int))
-    timeout = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((int, float))))
+    socket_params = attr.ib(
+        default=L4TransferSocketParams(),
+        validator=attr.validators.instance_of(L4TransferSocketParams),
+    )
     ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((
         six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
     ))))
@@ -30,8 +48,11 @@ class L4TransferBase(object):
     )
 
     def __attrs_post_init__(self):
-        if self.timeout is None:
-            self.timeout = self.get_default_timeout()
+        if self.socket_params.timeout is None:
+            self.socket_params = L4TransferSocketParams(
+                self.get_default_timeout(), self.socket_params.http_proxy
+            )
+
         self._family, self.ip = resolve_address(self.address, self.port, self.ip)
         self._buffer = bytearray()
 
@@ -159,16 +180,41 @@ class L4ClientBase(L4TransferBase):
         return self._socket.send(sendable_bytes)
 
 
+class HTTPConnectionRaw(http.client.HTTPConnection):
+    def close(self):
+        pass
+
+
 class L4ClientTCP(L4ClientBase):
-    def _init_connection(self):
-        self._buffer = bytearray()
+    @staticmethod
+    def _create_connection(func, *args, **kwargs):
         try:
-            self._socket = socket.create_connection((str(self.ip), self.port), self.timeout)
+            return func(*args, **kwargs)
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, (socket.error, socket.timeout)):
                 six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
 
             raise e
+
+    def _init_connection(self):
+        if self.socket_params.http_proxy:
+            host = '{}:{}'.format(self.ip, self.port)
+            conn = HTTPConnectionRaw(
+                self.socket_params.http_proxy.host,
+                self.socket_params.http_proxy.port,
+                timeout=self.socket_params.timeout,
+            )
+            self._create_connection(conn.request, "CONNECT", host, headers={'Proxy-Connection': 'Keep-Alive'})
+            self._socket = conn.sock
+
+            response = conn.getresponse()
+            if response.status != http.HTTPStatus.OK:
+                raise NetworkError(NetworkErrorType.NO_RESPONSE)
+        else:
+            self._buffer = bytearray()
+            self._socket = self._create_connection(
+                socket.create_connection, (str(self.ip), self.port), self.socket_params.timeout
+            )
 
     def _receive_bytes(self, receivable_byte_num, flags):
         return self._receive_bytes_from_tcp_socket(self._socket, receivable_byte_num, flags)
@@ -182,7 +228,7 @@ class L4ClientUDP(L4ClientBase):
     def _init_connection(self):
         self._buffer = bytearray()
         self._socket = socket.socket(self._family, socket.SOCK_DGRAM)
-        self._socket.settimeout(self.timeout)
+        self._socket.settimeout(self.socket_params.timeout)
         self._socket.connect((str(self.ip), self.port))
 
     def _receive_bytes(self, receivable_byte_num, flags):
@@ -226,7 +272,7 @@ class L4ServerBase(L4TransferBase):
         try:
             self._socket = socket.socket(self._family, socket_type)
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self._socket.settimeout(self.timeout)
+            self._socket.settimeout(self.socket_params.timeout)
             self._socket.bind((str(self.address), self.port))
             if socket_type == socket.SOCK_STREAM:
                 self._socket.listen(self.backlog)
@@ -324,10 +370,9 @@ class L4ServerUDP(L4ServerBase):
 class L7TransferBase(object):
     address = attr.ib(validator=attr.validators.instance_of(six.string_types))
     port = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
-    timeout = attr.ib(
-        default=None,
-        converter=attr.converters.optional(float),
-        validator=attr.validators.optional(attr.validators.instance_of(float))
+    l4_socket_params = attr.ib(
+        default=L4TransferSocketParams(),
+        validator=attr.validators.instance_of(L4TransferSocketParams),
     )
     ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((
         six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
@@ -340,8 +385,10 @@ class L7TransferBase(object):
     def __attrs_post_init__(self):
         if self.port is None:
             self.port = self.get_default_port()
-        if self.timeout is None:
-            self.timeout = self.get_default_timeout()
+        if self.l4_socket_params.timeout is None:
+            self.l4_socket_params = L4TransferSocketParams(
+                self.get_default_timeout(), self.l4_socket_params.http_proxy
+            )
 
         self._family, self.ip = resolve_address(self.address, self.port, self.ip)
         self.l4_transfer = None
@@ -376,14 +423,14 @@ class L7TransferBase(object):
             scheme,
             address,
             port=None,
-            timeout=None,
+            l4_socket_params=L4TransferSocketParams(),
             ip=None,
             **kwargs
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         for transfer_class in get_leaf_classes(cls):
             if transfer_class.get_scheme() == scheme:
                 port = transfer_class.get_default_port() if port is None else port
-                return transfer_class(address=address, port=port, timeout=timeout, ip=ip, **kwargs)
+                return transfer_class(address=address, port=port, l4_socket_params=l4_socket_params, ip=ip, **kwargs)
 
         raise ValueError(scheme)
 

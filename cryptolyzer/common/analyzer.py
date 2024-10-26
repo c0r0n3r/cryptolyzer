@@ -19,6 +19,7 @@ from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 from cryptoparser.common.utils import get_leaf_classes
 
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.dnsrec.client import L7ClientDnsBase
 from cryptolyzer.httpx.client import L7ClientHttpBase
@@ -83,8 +84,8 @@ class ProtocolHandlerBase(object):
         raise NotImplementedError()
 
     @classmethod
-    def _l7_client_from_uri(cls, uri):
-        kwargs = {'scheme': uri.scheme, 'address': uri.host}
+    def _l7_client_from_params(cls, uri, socket_params):
+        kwargs = {'scheme': uri.scheme, 'address': uri.host, 'l4_socket_params': socket_params}
 
         if uri.port:
             kwargs['port'] = int(uri.port)
@@ -106,14 +107,12 @@ class ProtocolHandlerBase(object):
 
         raise NotImplementedError()
 
-    def analyze(self, analyzer, uri, timeout=None):
+    def analyze(self, analyzer, uri, socket_params=L4TransferSocketParams()):
         LogSingleton().log(level=60, msg=six.u('Analysis started; protocol="%s", analyzer="%s"') % (
             self.get_protocol(), analyzer.get_name(),
         ))
 
-        l7_client = self._l7_client_from_uri(uri)
-        if timeout is not None:
-            l7_client.timeout = timeout
+        l7_client = self._l7_client_from_params(uri, socket_params)
         args, kwargs = self._get_analyzer_args()
         return analyzer.analyze(l7_client, *args, **kwargs)
 

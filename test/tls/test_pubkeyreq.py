@@ -12,6 +12,7 @@ import asn1crypto.x509
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest
@@ -52,7 +53,8 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
 
     @staticmethod
     def get_result(
-            host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2), timeout=None, ip=None, scheme='tls'
+            host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerPublicKeyRequest()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port)
@@ -86,7 +88,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, timeout=0.2),
+            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.2)),
         )
         threaded_server.start()
 

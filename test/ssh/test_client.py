@@ -16,6 +16,7 @@ from cryptoparser.ssh.subprotocol import (
 )
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.ssh.client import (
     L7ClientSsh,
     SshKeyExchangeInitKeyExchangeDHE,
@@ -37,9 +38,9 @@ class TestSshDisconnect(unittest.TestCase):
 
 class TestL7ClientBase(unittest.TestCase):
     @staticmethod
-    def get_result(host, port=22, timeout=None, ip=None):
+    def get_result(host, port=22, l4_socket_params=L4TransferSocketParams(), ip=None):
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientSsh(host, port, timeout, ip=ip)
+        l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)
         return result
 
@@ -47,12 +48,14 @@ class TestL7ClientBase(unittest.TestCase):
 class TestSshClientHandshake(TestL7ClientBase):
     @mock.patch('cryptolyzer.ssh.client.SSH_KEX_ALGORITHMS_TO_NAMED_GROUP', {})
     def test_error_kex_not_implemented(self):
-        l7_client = L7ClientSsh('github.com', timeout=0.5)
+        l7_client = L7ClientSsh('github.com', l4_socket_params=L4TransferSocketParams(timeout=0.5))
         with self.assertRaises(NotImplementedError):
             l7_client.do_handshake(key_exchange_init_message=SshKeyExchangeInitKeyExchangeECDHE(), last_message_type=-1)
 
     def test_error_disconnect(self):
-        threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, timeout=0.2))
+        threaded_server = L7ServerSshTest(L7ServerSsh(
+            'localhost', 0, l4_socket_params=L4TransferSocketParams(timeout=0.2)
+        ))
         threaded_server.start()
 
         l7_client = L7ClientSsh('localhost', threaded_server.l7_server.l4_transfer.bind_port)
@@ -98,7 +101,7 @@ class TestSshClientHandshake(TestL7ClientBase):
         self.assertIn(SshDHKeyExchangeReply, server_messages.keys())
 
     def test_ssh_client(self):
-        threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, timeout=0.2))
+        threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.2)))
         threaded_server.start()
 
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)

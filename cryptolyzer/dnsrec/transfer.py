@@ -12,11 +12,15 @@ from cryptodatahub.dnsrec.algorithm import DnsRrType
 import dns.resolver
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.transfer import L4TransferSocketParams
 
 
 @attr.s
 class DnsHandshakeBase(object):
-    timeout = attr.ib(validator=attr.validators.instance_of((float, int)))
+    l4_socket_params = attr.ib(
+        default=L4TransferSocketParams(),
+        validator=attr.validators.instance_of(L4TransferSocketParams),
+    )
     _answer = attr.ib(
         init=False,
         default=None,
@@ -47,7 +51,7 @@ class DnsHandshakeBase(object):
 
     def _create_resolver(self, nameservers):
         dns_resolver = dns.resolver.Resolver()
-        dns_resolver.lifetime = self.timeout
+        dns_resolver.lifetime = self.l4_socket_params.timeout
 
         if nameservers:
             nameserver_ips = []

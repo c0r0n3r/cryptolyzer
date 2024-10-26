@@ -9,7 +9,7 @@ from cryptodatahub.common.exception import InvalidValue
 from cryptoparser.common.exception import NotEnoughData, InvalidType
 
 from cryptolyzer.common.exception import NetworkError
-from cryptolyzer.common.transfer import L4TransferBase, L7TransferBase, L4ServerTCP
+from cryptolyzer.common.transfer import L7TransferBase, L4ServerTCP
 
 
 class L7ServerConfigurationBase(object):
@@ -23,9 +23,6 @@ class L7ServerBase(L7TransferBase):
         validator=attr.validators.optional(attr.validators.instance_of(L7ServerConfigurationBase))
     )
     max_handshake_count = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
-    l4_transfer = attr.ib(
-        init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(L4TransferBase))
-    )
 
     @classmethod
     @abc.abstractmethod
@@ -39,7 +36,9 @@ class L7ServerBase(L7TransferBase):
 
     def _init_connection(self):
         l4_transfer_class = self._get_transfer_class()
-        self.l4_transfer = l4_transfer_class(self.address, self.port, self.timeout, self.ip)
+        self.l4_transfer = l4_transfer_class(
+            self.address, self.port, self.l4_socket_params, self.ip
+        )
         self.l4_transfer.init_connection()
 
     @classmethod

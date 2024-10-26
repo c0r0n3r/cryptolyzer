@@ -18,6 +18,7 @@ from cryptoparser.tls.subprotocol import TlsHandshakeClientHello, TlsAlertDescri
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import NetworkError
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.ja3.generate import AnalyzerGenerate
 
 from cryptolyzer.tls.client import L7ClientTls, TlsAlert
@@ -61,7 +62,7 @@ class TestJA3Generate(TestLoggerBase):
     def test_error_no_connection(self):
         with six.assertRaisesRegex(self, NetworkError, 'connection to target cannot be established'):
             configuration = TlsServerConfiguration(protocol_versions=[])
-            l7_server = L7ServerTls('localhost', 0, configuration=configuration, timeout=0.1)
+            l7_server = L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.1), configuration=configuration)
             l7_server.init_connection()
             analyzer = AnalyzerGenerate()
             analyzer.analyze(l7_server)

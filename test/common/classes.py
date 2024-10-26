@@ -28,6 +28,7 @@ import threading
 import time
 
 import attr
+import urllib3
 
 import pyfakefs.fake_filesystem_unittest
 import six
@@ -36,6 +37,7 @@ from cryptodatahub.common.grade import Grade, GradeableComplex, GradeableSimple,
 
 from cryptoparser.common.x509 import PublicKeyX509
 
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
 
 
@@ -102,7 +104,7 @@ class TestGradeableComplex(GradeableComplex):
 class TestMainBase(unittest.TestCase):
     @staticmethod
     def _get_arguments(
-            protocol_version, analyzer, hostname, port, timeout=None, scheme=None
+            protocol_version, analyzer, hostname, port, timeout=None, scheme=None, proxy=None
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         ip_address = socket.gethostbyname(hostname)
 
@@ -111,7 +113,7 @@ class TestMainBase(unittest.TestCase):
             'host': hostname,
             'ip': ip_address,
             'port': port,
-            'timeout': timeout,
+            'l4_socket_params': L4TransferSocketParams(timeout=timeout, http_proxy=proxy),
         }
         if scheme is not None:
             func_arguments['scheme'] = scheme
@@ -126,6 +128,7 @@ class TestMainBase(unittest.TestCase):
                 ip_address=ip_address
             ),
             'timeout': timeout,
+            'proxy': proxy,
         }
 
         return func_arguments, cli_arguments
@@ -139,22 +142,30 @@ class TestMainBase(unittest.TestCase):
             return stdout.getvalue(), stderr.getvalue()
 
     def _get_test_analyzer_result(
-            self, output_format, protocol, analyzer, address, timeout=None
+            self, output_format, protocol, analyzer, address, timeout=None, proxy=None
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         command_line_arguments = ['cryptolyzer']
         if timeout:
             command_line_arguments.extend(['--socket-timeout', str(timeout)])
+        if proxy:
+            command_line_arguments.extend(['--http-proxy', str(proxy)])
         command_line_arguments.extend(['--output-format', output_format, protocol, analyzer, address])
         return self._get_command_result(command_line_arguments)
 
-    def _get_test_analyzer_result_json(self, protocol, analyzer, address, timeout=None):
-        return self._get_test_analyzer_result('json', protocol, analyzer, address, timeout)[0]
+    def _get_test_analyzer_result_json(
+        self, protocol, analyzer, address, timeout=None, proxy=None
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        return self._get_test_analyzer_result('json', protocol, analyzer, address, timeout, proxy)[0]
 
-    def _get_test_analyzer_result_markdown(self, protocol, analyzer, address, timeout=None):
-        return self._get_test_analyzer_result('markdown', protocol, analyzer, address, timeout)[0]
+    def _get_test_analyzer_result_markdown(
+        self, protocol, analyzer, address, timeout=None, proxy=None
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        return self._get_test_analyzer_result('markdown', protocol, analyzer, address, timeout, proxy)[0]
 
-    def _get_test_analyzer_result_highlighted(self, protocol, analyzer, address, timeout=None):
-        return self._get_test_analyzer_result('highlighted', protocol, analyzer, address, timeout)[0]
+    def _get_test_analyzer_result_highlighted(
+        self, protocol, analyzer, address, timeout=None, proxy=None
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        return self._get_test_analyzer_result('highlighted', protocol, analyzer, address, timeout, proxy)[0]
 
     def _test_argument_error(self, argv, stderr_regexp, stdin=b''):
         with patch.object(sys, 'stderr', new_callable=six.StringIO) as stderr, \
@@ -173,15 +184,42 @@ class TestMainBase(unittest.TestCase):
             self.assertEqual(context_manager.exception.args[0], 0)
 
 
-class TestHTTPRequestHandler(six.moves.SimpleHTTPServer.SimpleHTTPRequestHandler):
+class TestHTTPRequestHandlerBase(six.moves.SimpleHTTPServer.SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args, **kwarg):
         pass
 
-    def version_string(self):  # pylint: disable=no-self-use
-        return 'TestThreadedServerHttp'
+    def version_string(self):
+        return self.__class__.__name__
 
     def date_time_string(self, timestamp=None):  # pylint: disable=no-self-use,unused-argument
         return 'Thu, 01 Jan 1970 00:00:00 GMT'
+
+
+class TestHTTPProxyRequestHandler(TestHTTPRequestHandlerBase):
+    _RESPONSE_TEMPLATE = "{} {} Connection established\r\n\r\n"
+
+    @staticmethod
+    def _get_response_code():
+        return 200
+
+    def do_CONNECT(self):  # pylint: disable=invalid-name
+        server_url = urllib3.util.parse_url(self.path)
+        response_code = self._get_response_code()
+        _server_socket = socket.create_connection((str(server_url.host), server_url.port))
+        response = self._RESPONSE_TEMPLATE.format(self.protocol_version, response_code)
+        self.connection.send(response.encode("ascii"))
+
+        while response_code == 200:
+            try:
+                bytes_received = self.connection.recv(1024)
+                _server_socket.send(bytes_received)
+
+                bytes_received = _server_socket.recv(1024)
+                self.connection.send(bytes_received)
+            except socket.error:
+                break
+
+        _server_socket.close()
 
 
 class TestThreadedServerHttpBase(threading.Thread):
@@ -206,6 +244,16 @@ class TestThreadedServerHttpBase(threading.Thread):
     def kill(self):
         self.server.socket.close()
         self.server.shutdown()
+
+
+class TestHTTPRequestHandler(TestHTTPRequestHandlerBase):
+    pass
+
+
+class TestThreadedServerHttpProxy(TestThreadedServerHttpBase):
+    def init_connection(self):
+        self.server = six.moves.socketserver.TCPServer((self.address, self.port), TestHTTPProxyRequestHandler)
+        self.server.timeout = 5
 
 
 class TestThreadedServerHttp(TestThreadedServerHttpBase):

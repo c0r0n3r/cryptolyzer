@@ -6,12 +6,14 @@ from test.common.classes import TestThreadedServer, TestLoggerBase
 
 from cryptoparser.ssh.subprotocol import SshMessageBase
 
+from cryptolyzer.common.transfer import L4TransferSocketParams
+
 
 class TestSshCases:
     class TestSshClientBase(TestLoggerBase):
         @staticmethod
         @abc.abstractmethod
-        def get_result(host, port, timeout=None, ip=None):
+        def get_result(host, port, l4_socket_params=L4TransferSocketParams(), ip=None):
             raise NotImplementedError()
 
 

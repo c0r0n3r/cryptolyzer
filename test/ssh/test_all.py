@@ -9,6 +9,7 @@ from cryptodatahub.ssh.algorithm import SshKexAlgorithm
 from cryptoparser.ssh.version import SshVersion, SshProtocolVersion
 
 from cryptolyzer.common.result import AnalyzerTargetSsh
+from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.ssh.all import AnalyzerAll
 from cryptolyzer.ssh.ciphers import AnalyzerResultCiphers
@@ -19,9 +20,9 @@ from .classes import TestSshCases
 
 class TestSshAll(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port, timeout=None, ip=None):
+    def get_result(host, port, l4_socket_params=L4TransferSocketParams(), ip=None):
         analyzer = AnalyzerAll()
-        l7_client = L7ClientSsh.from_scheme('ssh', host, port, timeout, ip)
+        l7_client = L7ClientSsh.from_scheme('ssh', host, port, l4_socket_params, ip)
         result = analyzer.analyze(l7_client)
         return result
 

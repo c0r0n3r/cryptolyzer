@@ -41,7 +41,7 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeServerHello,
 )
 
-from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP
+from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP, L4TransferSocketParams
 from cryptolyzer.tls.client import (
     ClientFTP,
     ClientLDAP,
@@ -94,7 +94,9 @@ class TestL7ServerBase(unittest.TestCase):
 
     @staticmethod
     def create_server(configuration=None, l7_server_class=L7ServerTls):
-        threaded_server = L7ServerTlsTest(l7_server_class('localhost', 0, timeout=5, configuration=configuration))
+        threaded_server = L7ServerTlsTest(l7_server_class(
+            'localhost', 0, L4TransferSocketParams(timeout=5), configuration=configuration
+        ))
         threaded_server.wait_for_server_listen()
         return threaded_server
 
@@ -103,8 +105,8 @@ class TestL7ServerBase(unittest.TestCase):
         return client_class(
             l7_server.address,
             l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=5),
             ip=l7_server.l4_transfer.bind_address,
-            timeout=5
         )
 
     def _assert_on_more_data(self, client):
