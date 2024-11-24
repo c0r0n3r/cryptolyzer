@@ -15,33 +15,19 @@ variables:
   PYTHONPATH: "submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub"
 
 pylint:
-  image: python:3.11-slim
+  image: python:3.12-slim
   stage: earlytest
   script: tox -e pylint
 
 pep8:
+  image: python:3.12-slim
   stage: earlytest
   script: tox -e pep8
 
 python3:
-  image: python:3.11-slim
+  image: python:3.12-slim
   stage: earlytest
-  script: tox -e py311
-
-python36:
-  image: python:3.6-slim
-  stage: fulltest
-  script: tox -e py36
-
-python37:
-  image: python:3.7-slim
-  stage: fulltest
-  script: tox -e py37
-
-python38:
-  image: python:3.8-slim
-  stage: fulltest
-  script: tox -e py38
+  script: tox -e py312
 
 python39:
   image: python:3.9-slim
@@ -53,13 +39,23 @@ python310:
   stage: fulltest
   script: tox -e py310
 
-pythonrc:
-  image: python:3.12-rc-slim
+python311:
+  image: python:3.11-slim
   stage: fulltest
-  script: tox -e py312
+  script: tox -e py311
+
+python313:
+  image: python:3.13-slim
+  stage: fulltest
+  script: tox -e py313
+
+pythonrc:
+  image: python:3.14-rc-slim
+  stage: fulltest
+  script: tox -e py314
 
 coveralls:
-  image: python:3.11-slim
+  image: python:3.12-slim
   variables:
     CI_NAME: gitlab
     CI_BUILD_NUMBER: "${CI_JOB_ID}"
@@ -110,7 +106,7 @@ obs:
     - obs.sh
   only:
     refs:
-      - branches
+      - master
       - tags
     variables:
       - $CI_COMMIT_TAG =~ /^v\d+.\d+.\d+$/
