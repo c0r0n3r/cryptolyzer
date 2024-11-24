@@ -63,7 +63,7 @@ class AnalyzerResultExtensions(AnalyzerResultTls):  # pylint: disable=too-many-i
     )
     record_size_limit_handled = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)))
     record_size_limit_server = attr.ib(
-        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+        validator=attr.validators.optional(attr.validators.instance_of(int))
     )
 
 

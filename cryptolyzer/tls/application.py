@@ -28,15 +28,15 @@ class L7OpenVpnBase():
 
     session_id = attr.ib(
         init=False, default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+        validator=attr.validators.optional(attr.validators.instance_of(int))
     )
     client_packet_id = attr.ib(
         init=False, default=0x00000000,
-        validator=attr.validators.instance_of(six.integer_types)
+        validator=attr.validators.instance_of(int)
     )
     remote_session_id = attr.ib(
         init=False, default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+        validator=attr.validators.optional(attr.validators.instance_of(int))
     )
     _buffer = attr.ib(init=False)
 

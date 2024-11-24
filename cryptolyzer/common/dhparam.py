@@ -23,7 +23,7 @@ from .prime import is_prime, prime_precheck
 @attr.s
 class DHPublicNumbers():
     y = attr.ib(  # pylint: disable=invalid-name
-        validator=attr.validators.instance_of(six.integer_types),
+        validator=attr.validators.instance_of(int),
         metadata={'human_readable_name': 'y'},
     )
     parameter_numbers = attr.ib(validator=attr.validators.instance_of(DHParameterNumbers))
@@ -32,7 +32,7 @@ class DHPublicNumbers():
 @attr.s
 class DHPublicKey():
     public_numbers = attr.ib(validator=attr.validators.instance_of(DHPublicNumbers))
-    key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
+    key_size = attr.ib(validator=attr.validators.instance_of(int))
 
 
 class TlsDHParamVector(Vector):  # pylint: disable=too-many-ancestors
