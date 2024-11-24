@@ -60,7 +60,7 @@ from cryptolyzer.tls.curves import AnalyzerCurves
 
 
 @attr.s
-class AnalyzerResultSimulationsSsl(object):
+class AnalyzerResultSimulationsSsl():
     """
     :class: Analyzer result relates to the parameters of the SSL connection initiated between the server and the
         simulated client application.
@@ -72,7 +72,7 @@ class AnalyzerResultSimulationsSsl(object):
 
 
 @attr.s
-class AnalyzerResultSimulationsTlsBase(object):
+class AnalyzerResultSimulationsTlsBase():
     """
     :class: Analyzer result relates to the parameters of the TLS connection initiated between the server and the
         simulated client application.

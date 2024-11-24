@@ -23,7 +23,7 @@ from cryptoparser.tls.record import TlsRecord
 
 
 @attr.s
-class HandshakeToCapabilitiesBase(object):
+class HandshakeToCapabilitiesBase():
     handshake_data = attr.ib(validator=attr.validators.instance_of((bytes, bytearray)))
 
     @abc.abstractmethod

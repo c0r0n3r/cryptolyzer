@@ -37,7 +37,7 @@ class HttpTagSourceDataType(Serializable, GradeableSimple):
 
 
 @attr.s(frozen=True)
-class HttpTagSourced(object):
+class HttpTagSourced():
     data_type = attr.ib(
         converter=convert_value_to_object(HttpTagSourceDataType),
         validator=attr.validators.instance_of(HttpTagSourceDataType)
@@ -50,7 +50,7 @@ class HttpTagSourced(object):
 
 
 @attr.s(frozen=True)
-class HttpTagScriptBase(object):
+class HttpTagScriptBase():
     source_url = attr.ib(
         validator=attr.validators.instance_of(urllib3.util.url.Url),
         metadata={'human_readable_name': 'Source URL'}
@@ -101,7 +101,7 @@ class AnalyzerResultConetnt(AnalyzerResultHttp):  # pylint: disable=too-few-publ
     )
 
 
-class HttpTagGetterBase(object):
+class HttpTagGetterBase():
     _SOURCE_ATTR_NAME_BY_TAG_NAME = {
         'img': 'src',
         'audio': 'src',

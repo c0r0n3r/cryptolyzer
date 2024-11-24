@@ -9,7 +9,7 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 
 
 @attr.s
-class HttpHandshakeBase(object):
+class HttpHandshakeBase():
     l4_socket_params = attr.ib(
         default=L4TransferSocketParams(),
         validator=attr.validators.instance_of(L4TransferSocketParams),

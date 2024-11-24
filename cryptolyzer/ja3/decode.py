@@ -23,7 +23,7 @@ from cryptolyzer.common.result import AnalyzerResultBase
 
 
 @attr.s
-class JA3ClientTag(object):
+class JA3ClientTag():
     tag = attr.ib(validator=attr.validators.instance_of(six.string_types))
 
     @classmethod

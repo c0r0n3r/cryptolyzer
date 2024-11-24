@@ -28,7 +28,7 @@ from cryptolyzer.tls.client import L7ClientTlsBase
 
 
 @six.add_metaclass(abc.ABCMeta)
-class ProtocolHandlerBase(object):
+class ProtocolHandlerBase():
     @classmethod
     def import_plugins(cls):
         plugin_root_dir_parts = pathlib.PurePath(*pathlib.PurePath(__file__).parts[:-2])  # remove common/analyzer.py
@@ -130,7 +130,7 @@ class ProtocolHandlerBase(object):
         return analyzer_list[0]()
 
 
-class AnalyzerBase(object):
+class AnalyzerBase():
     @classmethod
     @abc.abstractmethod
     def get_name(cls):
@@ -145,7 +145,7 @@ class AnalyzerResultBase(Serializable):
     pass
 
 
-class AnalyzerTlsBase(object):
+class AnalyzerTlsBase():
     _ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS = [
         TlsAlertDescription.HANDSHAKE_FAILURE,  # no matching algorithms
         TlsAlertDescription.CLOSE_NOTIFY,  # no matching algorithms
@@ -210,7 +210,7 @@ class ProtocolHandlerSshExactVersion(ProtocolHandlerSshBase):
         raise NotImplementedError()
 
 
-class AnalyzerSshBase(object):
+class AnalyzerSshBase():
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientSsh))
@@ -224,7 +224,7 @@ class AnalyzerSshBase(object):
         raise NotImplementedError()
 
 
-class AnalyzerHttpBase(object):
+class AnalyzerHttpBase():
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientHttpBase))
@@ -238,7 +238,7 @@ class AnalyzerHttpBase(object):
         raise NotImplementedError()
 
 
-class AnalyzerDnsRecordBase(object):
+class AnalyzerDnsRecordBase():
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientDnsBase))

@@ -16,7 +16,7 @@ from cryptolyzer.httpx.transfer import HttpHandshakeBase
 
 
 @attr.s
-class L7ClientHttpBase(object):
+class L7ClientHttpBase():
     uri = attr.ib(
         converter=convert_url(),
         validator=attr.validators.instance_of(urllib3.util.url.Url)

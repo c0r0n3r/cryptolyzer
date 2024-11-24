@@ -23,7 +23,7 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType, Securit
 
 
 @attr.s(init=False)
-class L7OpenVpnBase(object):
+class L7OpenVpnBase():
     _FRAGMENT_LENGHT = 100
 
     session_id = attr.ib(

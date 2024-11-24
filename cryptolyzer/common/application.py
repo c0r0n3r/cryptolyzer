@@ -12,7 +12,7 @@ from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.transfer import L7TransferBase, L4ServerTCP
 
 
-class L7ServerConfigurationBase(object):
+class L7ServerConfigurationBase():
     pass
 
 
@@ -76,7 +76,7 @@ class L7ServerBase(L7TransferBase):
 
 
 @attr.s
-class L7ServerHandshakeBase(object):
+class L7ServerHandshakeBase():
     l7_transfer = attr.ib(validator=attr.validators.instance_of(L7TransferBase))
     configuration = attr.ib(validator=attr.validators.instance_of(L7ServerConfigurationBase))
     _last_processed_message_type = attr.ib(init=False, default=None)

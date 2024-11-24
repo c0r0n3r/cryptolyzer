@@ -44,7 +44,7 @@ class LogSingleton(logging.Logger):
 
 
 @attr.s
-class SerializableTextEncoderHighlighted(object):
+class SerializableTextEncoderHighlighted():
     _COLOR_SCHEMES = {
         None: colorama.Style.RESET_ALL,
         Grade.INSECURE: colorama.Fore.RED,

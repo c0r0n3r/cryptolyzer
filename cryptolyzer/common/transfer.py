@@ -17,7 +17,7 @@ from cryptolyzer.common.utils import buffer_flush, buffer_is_plain_text, resolve
 
 
 @attr.s
-class L4TransferSocketParams(object):
+class L4TransferSocketParams():
     timeout = attr.ib(
         default=None,
         converter=attr.converters.optional(float),
@@ -30,7 +30,7 @@ class L4TransferSocketParams(object):
 
 
 @attr.s
-class L4TransferBase(object):
+class L4TransferBase():
     address = attr.ib(validator=attr.validators.instance_of(six.string_types))
     port = attr.ib(validator=attr.validators.instance_of(int))
     socket_params = attr.ib(
@@ -367,7 +367,7 @@ class L4ServerUDP(L4ServerBase):
 
 
 @attr.s
-class L7TransferBase(object):
+class L7TransferBase():
     address = attr.ib(validator=attr.validators.instance_of(six.string_types))
     port = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
     l4_socket_params = attr.ib(

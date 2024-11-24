@@ -30,7 +30,7 @@ from cryptolyzer.ssh.ciphers import AnalyzerCiphers
 
 
 @attr.s
-class AnalyzerResultGroupExchange(object):
+class AnalyzerResultGroupExchange():
     """
     :class: Analyzer result relates to DH group exchange
 

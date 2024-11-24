@@ -1021,7 +1021,7 @@ class L7ClientIMAPS(L7ClientTlsBase):
         return 993
 
 
-class IMAP4(imaplib.IMAP4, object):
+class IMAP4(imaplib.IMAP4):
     def __init__(self, host, port, l4_socket_params):
         self.l4_socket_params = l4_socket_params
         super(IMAP4, self).__init__(host, port)
@@ -1383,7 +1383,7 @@ class ClientSieve(L7ClientStartTlsBase):
         pass
 
 
-class TlsClient(object):
+class TlsClient():
     _last_processed_message_type = attr.ib(init=False, default=None)
     server_messages = attr.ib(init=False, default={})
 

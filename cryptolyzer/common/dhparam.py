@@ -21,7 +21,7 @@ from .prime import is_prime, prime_precheck
 
 
 @attr.s
-class DHPublicNumbers(object):
+class DHPublicNumbers():
     y = attr.ib(  # pylint: disable=invalid-name
         validator=attr.validators.instance_of(six.integer_types),
         metadata={'human_readable_name': 'y'},
@@ -30,7 +30,7 @@ class DHPublicNumbers(object):
 
 
 @attr.s
-class DHPublicKey(object):
+class DHPublicKey():
     public_numbers = attr.ib(validator=attr.validators.instance_of(DHPublicNumbers))
     key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
 

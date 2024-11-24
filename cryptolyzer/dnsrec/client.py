@@ -33,7 +33,7 @@ from cryptolyzer.dnsrec.transfer import DnsHandshakeBase
 
 
 @attr.s
-class L7ClientDnsBase(object):
+class L7ClientDnsBase():
     domain = attr.ib(
         converter=convert_url(),
         validator=attr.validators.instance_of(urllib3.util.url.Url)
