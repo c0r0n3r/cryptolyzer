@@ -170,8 +170,8 @@ class AnalyzerDHParams(AnalyzerSshBase):
         for algorithm in kex_algorithms:
             LogSingleton().log(level=60, msg=six.u(
                 'Server offers well-known DH public parameter with size %s-bit (%s)') % (
-                    'unknown' if isinstance(algorithm, six.string_types) else str(algorithm.value.key_size),
-                    algorithm if isinstance(algorithm, six.string_types) else algorithm.value.code,
+                    'unknown' if isinstance(algorithm, str) else str(algorithm.value.key_size),
+                    algorithm if isinstance(algorithm, str) else algorithm.value.code,
                 )
             )
 

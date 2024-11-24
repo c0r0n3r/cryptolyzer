@@ -12,8 +12,8 @@ from cryptoparser.tls.version import TlsProtocolVersion
 
 @attr.s
 class AnalyzerTargetBase(Serializable):
-    scheme = attr.ib(validator=attr.validators.instance_of(six.string_types))
-    address = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    scheme = attr.ib(validator=attr.validators.instance_of(str))
+    address = attr.ib(validator=attr.validators.instance_of(str))
 
     @classmethod
     def _from_l7_client(cls, l7_client, **kwargs):
@@ -28,7 +28,7 @@ class AnalyzerTargetBase(Serializable):
 class AnalyzerTarget(AnalyzerTargetBase):
     ip = attr.ib(
         validator=attr.validators.instance_of((
-            six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
+            str, ipaddress.IPv4Address, ipaddress.IPv6Address
         )),
         metadata={'human_readable_name': 'IP address'}
     )
@@ -47,7 +47,7 @@ class AnalyzerTarget(AnalyzerTargetBase):
 class AnalyzerTargetHttp(AnalyzerTarget):
     path = attr.ib(
         default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(six.string_types)),
+        validator=attr.validators.optional(attr.validators.instance_of(str)),
     )
     proto_version = attr.ib(
         default=HttpVersion.HTTP1_1,
@@ -85,7 +85,7 @@ class AnalyzerTargetSsh(AnalyzerTarget):
 
 @attr.s
 class AnalyzerTargetDnsRecord(AnalyzerTargetBase):
-    server = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(six.string_types)))
+    server = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
 
     @classmethod
     def _from_l7_client(cls, l7_client, **kwargs):
@@ -114,7 +114,7 @@ class AnalyzerResultBase(Serializable):
 
 @attr.s
 class AnalyzerResultError(AnalyzerResultBase):
-    error = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    error = attr.ib(validator=attr.validators.instance_of(str))
 
 
 @attr.s

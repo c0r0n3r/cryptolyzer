@@ -44,53 +44,53 @@ class AnalyzerResultCiphers(AnalyzerResultSsh):  # pylint: disable=too-many-inst
 
     kex_algorithms = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshKexAlgorithm, ) + six.string_types)
+            member_validator=attr.validators.instance_of((SshKexAlgorithm, str))
         ),
         metadata={'human_readable_name': 'KEX Algorithms'}
     )
     host_key_algorithms = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshHostKeyAlgorithm, ) + six.string_types)
+            member_validator=attr.validators.instance_of((SshHostKeyAlgorithm, str))
         ),
     )
     encryption_algorithms_client_to_server = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshEncryptionAlgorithm, ) + six.string_types)
+            member_validator=attr.validators.instance_of((SshEncryptionAlgorithm, str))
         ),
         metadata={'human_readable_name': 'Encryption Algorithms Client to Server'}
     )
     encryption_algorithms_server_to_client = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshEncryptionAlgorithm, ) + six.string_types)
+            member_validator=attr.validators.instance_of((SshEncryptionAlgorithm, str))
         ),
         metadata={'human_readable_name': 'Encryption Algorithms Server to Client'}
     )
     mac_algorithms_client_to_server = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshMacAlgorithm, ) + six.string_types)
+            member_validator=attr.validators.instance_of((SshMacAlgorithm, str))
         ),
         metadata={'human_readable_name': 'MAC Algorithms Client to Server'}
     )
     mac_algorithms_server_to_client = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshMacAlgorithm, ) + six.string_types)
+            member_validator=attr.validators.instance_of((SshMacAlgorithm, str))
         ),
         metadata={'human_readable_name': 'MAC Algorithms Server to Client'}
     )
     compression_algorithms_client_to_server = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshCompressionAlgorithm, ) + six.string_types)
+            member_validator=attr.validators.instance_of((SshCompressionAlgorithm, str))
         ),
         metadata={'human_readable_name': 'Compression Algorithms Client to Server'}
     )
     compression_algorithms_server_to_client = attr.ib(
         validator=attr.validators.deep_iterable(
-            member_validator=attr.validators.instance_of((SshCompressionAlgorithm, ) + six.string_types)
+            member_validator=attr.validators.instance_of((SshCompressionAlgorithm, str))
         ),
         metadata={'human_readable_name': 'Compression Algorithms Server to Client'}
     )
     hassh_fingerprint = attr.ib(
-        validator=attr.validators.instance_of(six.string_types),
+        validator=attr.validators.instance_of(str),
         metadata={'human_readable_name': 'HASSH fingerprint'}
     )
 
@@ -112,7 +112,7 @@ class AnalyzerCiphers(AnalyzerSshBase):
         LogSingleton().log(level=60, msg=six.u('Server offers %s %s (%s)') % (
             algorithm_name,
             ', '.join(list(map(
-                lambda algorithm: algorithm if isinstance(algorithm, six.string_types) else algorithm.value.code,
+                lambda algorithm: algorithm if isinstance(algorithm, str) else algorithm.value.code,
                 getattr(key_exchange_init_message, message_attr_name)
             ))),
             protocol_version,

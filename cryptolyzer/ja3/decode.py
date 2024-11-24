@@ -24,7 +24,7 @@ from cryptolyzer.common.result import AnalyzerResultBase
 
 @attr.s
 class JA3ClientTag():
-    tag = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    tag = attr.ib(validator=attr.validators.instance_of(str))
 
     @classmethod
     def get_supported_schemes(cls):

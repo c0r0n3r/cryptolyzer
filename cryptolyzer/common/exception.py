@@ -9,8 +9,8 @@ import attr
 
 @attr.s
 class ErrorParams():
-    short_description = attr.ib(validator=attr.validators.instance_of(six.string_types))
-    long_description = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    short_description = attr.ib(validator=attr.validators.instance_of(str))
+    long_description = attr.ib(validator=attr.validators.instance_of(str))
 
 
 class NetworkErrorType(enum.Enum):

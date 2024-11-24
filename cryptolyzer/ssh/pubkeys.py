@@ -97,7 +97,7 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
                 host_key_algorithm.value.signature.value.key_type
             ),
             filter(
-                lambda host_key_algorithm: not isinstance(host_key_algorithm, six.string_types),
+                lambda host_key_algorithm: not isinstance(host_key_algorithm, str),
                 analyzer_result.host_key_algorithms
             )
         ))

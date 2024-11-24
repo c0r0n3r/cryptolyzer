@@ -1161,7 +1161,7 @@ class ClientXMPPBase(L7ClientStartTlsBase):
 
     stream_to = attr.ib(
         default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(six.string_types))
+        validator=attr.validators.optional(attr.validators.instance_of(str))
     )
 
     @classmethod

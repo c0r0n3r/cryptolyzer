@@ -22,7 +22,7 @@ from cryptolyzer.common.utils import LogSingleton
 
 @attr.s(frozen=True)
 class HttpTagSourceDataType(Serializable, GradeableSimple):
-    value = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    value = attr.ib(validator=attr.validators.instance_of(str))
 
     def __str__(self):
         return self.value
@@ -59,12 +59,12 @@ class HttpTagScriptBase():
 
 @attr.s(frozen=True)
 class HttpTagScriptIntegrityUnparsed(HttpTagScriptBase):
-    integrity = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    integrity = attr.ib(validator=attr.validators.instance_of(str))
 
 
 @attr.s(frozen=True)
 class HttpTagScriptIntegrity(HttpTagScriptBase):
-    hash_algorithm = attr.ib(validator=attr.validators.instance_of((Hash, six.string_types)))
+    hash_algorithm = attr.ib(validator=attr.validators.instance_of((Hash, str)))
     hash_value = attr.ib(converter=convert_base64_data(), validator=attr.validators.instance_of(Base64Data))
     is_hash_correct = attr.ib(validator=attr.validators.instance_of(bool))
 

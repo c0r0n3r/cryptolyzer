@@ -78,7 +78,7 @@ class HandshakeToCapabilitiesBase():
             except (KeyError, TypeError) as e:
                 six.raise_from(ValueError('Missing TCP payload in TShark JSON data'), e)
 
-            if not isinstance(payload, six.string_types):
+            if not isinstance(payload, str):
                 raise ValueError('Invalid TCP payload in TShark JSON data')
             try:
                 payload_bytes = bytes_from_hex_string(payload, separator=':')

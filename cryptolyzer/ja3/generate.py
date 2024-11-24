@@ -18,7 +18,7 @@ from cryptolyzer.tls.server import L7ServerTlsBase
 
 @attr.s
 class AnalyzerResultGenerate(AnalyzerResultBase):
-    target_hash = attr.ib(init=False, validator=attr.validators.instance_of(six.string_types))
+    target_hash = attr.ib(init=False, validator=attr.validators.instance_of(str))
 
     def __attrs_post_init__(self):
         tag_hash = hashlib.md5()
