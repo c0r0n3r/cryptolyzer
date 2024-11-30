@@ -50,7 +50,7 @@ class TestHASSHGenerate(TestLoggerBase):
         return analyzer_thread.result
 
     def test_error_no_connection(self):
-        with six.assertRaisesRegex(self, NetworkError, 'connection to target cannot be established'):
+        with self.assertRaisesRegex(NetworkError, 'connection to target cannot be established'):
             configuration = SshServerConfiguration()
             l7_server = L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.1), configuration=configuration)
             l7_server.init_connection()

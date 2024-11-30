@@ -60,7 +60,7 @@ class TestJA3Generate(TestLoggerBase):
         return analyzer_thread.result
 
     def test_error_no_connection(self):
-        with six.assertRaisesRegex(self, NetworkError, 'connection to target cannot be established'):
+        with self.assertRaisesRegex(NetworkError, 'connection to target cannot be established'):
             configuration = TlsServerConfiguration(protocol_versions=[])
             l7_server = L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.1), configuration=configuration)
             l7_server.init_connection()

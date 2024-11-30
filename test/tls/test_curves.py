@@ -58,7 +58,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         side_effect=NotImplementedError('cryptolyzer.tls.curves.parse_ecdh_params')
     )
     def test_error_not_implemented_other(self, _):
-        with six.assertRaisesRegex(self, NotImplementedError, 'cryptolyzer.tls.curves.parse_ecdh_params'):
+        with self.assertRaisesRegex(NotImplementedError, 'cryptolyzer.tls.curves.parse_ecdh_params'):
             self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
 
     @mock.patch.object(
