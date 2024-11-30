@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import io
 import sys
 
 import ipaddress
@@ -43,7 +44,7 @@ class DnsHandshakeBase():
                 continue
 
             for record in list(rrset.items):
-                out = six.BytesIO()
+                out = io.BytesIO()
                 record.to_wire(out)
                 records.append(out.getvalue())
 

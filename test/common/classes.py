@@ -134,8 +134,8 @@ class TestMainBase(unittest.TestCase):
         return func_arguments, cli_arguments
 
     def _get_command_result(self, command_line_arguments, stdin=b''):
-        with patch('sys.stdout', new_callable=six.StringIO) as stdout, \
-                patch('sys.stderr', new_callable=six.StringIO) as stderr, \
+        with patch('sys.stdout', new_callable=io.StringIO) as stdout, \
+                patch('sys.stderr', new_callable=io.StringIO) as stderr, \
                 patch.object(sys, 'stdin', io.TextIOWrapper(io.BytesIO(stdin))), \
                 patch.object(sys, 'argv', command_line_arguments):
             self._get_main_func()()
@@ -168,7 +168,7 @@ class TestMainBase(unittest.TestCase):
         return self._get_test_analyzer_result('highlighted', protocol, analyzer, address, timeout, proxy)[0]
 
     def _test_argument_error(self, argv, stderr_regexp, stdin=b''):
-        with patch.object(sys, 'stderr', new_callable=six.StringIO) as stderr, \
+        with patch.object(sys, 'stderr', new_callable=io.StringIO) as stderr, \
                 patch.object(sys, 'argv', argv), patch.object(sys, 'stdin', io.TextIOWrapper(io.BytesIO(stdin))):
 
             with self.assertRaises(SystemExit) as context_manager:
@@ -177,7 +177,7 @@ class TestMainBase(unittest.TestCase):
             six.assertRegex(self, stderr.getvalue(), stderr_regexp)
 
     def _test_argument_help(self, command):
-        devnull = six.StringIO()
+        devnull = io.StringIO()
         with patch.object(sys, 'stdout', devnull), patch.object(sys, 'argv', [str(command), '-h']):
             with self.assertRaises(SystemExit) as context_manager:
                 self._get_main_func()()
