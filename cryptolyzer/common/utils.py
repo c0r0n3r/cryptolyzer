@@ -171,7 +171,7 @@ def resolve_address(address, port, ip=None):
             for addrinfo in socket.getaddrinfo(address, port, 0, socket.SOCK_STREAM)
         ]
     except socket.gaierror as e:
-        six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
+        raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
     if not addresses:
         raise NetworkError(NetworkErrorType.NO_ADDRESS)
 
@@ -182,7 +182,7 @@ def resolve_address(address, port, ip=None):
         try:
             family = socket.AF_INET if ipaddress.ip_address(six.text_type(ip)).version == 4 else socket.AF_INET6
         except ValueError as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
+            raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
 
     return family, ip  # pylint: disable=possibly-used-before-assignment
 

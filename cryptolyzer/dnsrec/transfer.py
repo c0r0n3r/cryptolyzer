@@ -83,9 +83,9 @@ class DnsHandshakeBase():
         try:
             records = self._resolve(dns_resolver, qname=domain, rdtype=rr_type.value.name, raise_on_no_answer=False)
         except dns.resolver.NXDOMAIN as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
+            raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
         except dns.resolver.Timeout as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
         except (dns.resolver.NoNameservers, dns.resolver.NoAnswer):
             pass
 

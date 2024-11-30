@@ -72,7 +72,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
         try:
             extension = server_hello.extensions.get_item_by_type(TlsExtensionType.KEY_SHARE)
         except KeyError as e:
-            six.raise_from(StopIteration(), e)
+            raise StopIteration() from e
 
         return extension
 

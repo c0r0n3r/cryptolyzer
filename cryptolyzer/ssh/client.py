@@ -344,7 +344,7 @@ class SshClientHandshake(SshHandshakeBase):
         try:
             named_group = SSH_KEX_ALGORITHMS_TO_NAMED_GROUP[agreed_kex_type]
         except KeyError as e:
-            six.raise_from(NotImplementedError(), e)
+            raise NotImplementedError() from e
 
         ephemeral_public_key_bytes = get_ecdh_ephemeral_key_forged(named_group)
         transfer.send(record_class(SshDHKeyExchangeInit(ephemeral_public_key_bytes)).compose())
@@ -424,4 +424,4 @@ class SshClientHandshake(SshHandshakeBase):
             try:
                 transfer.receive(receivable_byte_num)
             except NotEnoughData as e:
-                six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                raise NetworkError(NetworkErrorType.NO_RESPONSE) from e

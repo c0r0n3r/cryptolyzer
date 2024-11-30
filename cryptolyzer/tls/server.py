@@ -107,7 +107,7 @@ class L7ServerTlsBase(L7ServerBase):
             try:
                 self.receive(TlsRecord.HEADER_SIZE)
             except NotEnoughData as e:
-                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
             try:
                 TlsRecord.parse_header(self.buffer)
@@ -780,7 +780,7 @@ class L7ServerStartTlsOpenVpnBase(L7ServerStartTlsBase, L7OpenVpnBase):
         try:
             self._reset_session()
         except (InvalidValue, InvalidType, NotEnoughData) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def send(self, sendable_bytes):
         return self._send_bytes(self.l4_transfer, sendable_bytes)

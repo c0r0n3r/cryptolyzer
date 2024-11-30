@@ -148,7 +148,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
                 client_hello, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
             )
         except (TlsAlert, NetworkError) as e:
-            six.raise_from(KeyError, e)
+            raise KeyError from e
 
         return server_messages
 

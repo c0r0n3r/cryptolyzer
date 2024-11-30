@@ -92,9 +92,9 @@ class L7OpenVpnBase():
                 l4_transfer.receive(receivable_byte_num)
             except NotEnoughData as e:
                 if l4_transfer.buffer:
-                    six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                    raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
-                six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
         return packets
 
@@ -120,7 +120,7 @@ class L7OpenVpnBase():
         try:
             packets = self._receive_packets(l4_transfer)
         except (InvalidType, InvalidValue, NotEnoughData) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
         received_bytes = bytearray()
         for packet in packets:

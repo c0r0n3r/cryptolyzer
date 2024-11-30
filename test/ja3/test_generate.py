@@ -52,7 +52,7 @@ class TestJA3Generate(TestLoggerBase):
             l7_client.do_tls_handshake(hello_message=hello_message)
         except TlsAlert as e:
             if e.description != TlsAlertDescription.PROTOCOL_VERSION:
-                six.raise_from(ValueError, e)
+                raise ValueError from e
         else:
             raise ValueError
 

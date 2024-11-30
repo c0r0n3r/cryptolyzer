@@ -192,7 +192,7 @@ class L4ClientTCP(L4ClientBase):
             return func(*args, **kwargs)
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, (socket.error, socket.timeout)):
-                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
             raise e
 
@@ -277,11 +277,11 @@ class L4ServerBase(L4TransferBase):
             if socket_type == socket.SOCK_STREAM:
                 self._socket.listen(self.backlog)
         except KeyboardInterrupt as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
         except OverflowError as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
+            raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
         except (OSError, socket.error) as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+            raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
     @property
     def bind_address(self):
@@ -310,7 +310,7 @@ class L4ServerTCP(L4ServerBase):
         try:
             self._client_socket, _ = self._socket.accept()
         except BaseException as e:  # pylint: disable=broad-except
-            six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+            raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
         self._client_socket.settimeout(self.get_default_timeout())
         self.flush_buffer()

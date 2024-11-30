@@ -72,7 +72,7 @@ def get_ecdh_ephemeral_key_forged(named_group):
         try:
             well_know_ec_param = ECParamWellKnown.from_named_group(named_group)
         except InvalidValue as e:
-            six.raise_from(NotImplementedError(named_group), e)
+            raise NotImplementedError(named_group) from e
 
         ephemeral_public_key_bytes = bytearray().join([
             b'\x04',  # uncompressed point format

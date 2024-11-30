@@ -96,17 +96,17 @@ class AnalyzerCurves(AnalyzerTlsBase):
                 ]
                 if e.description in acceptable_alerts:
                     extension_supported = None
-                    six.raise_from(StopIteration(extension_supported), e)
+                    raise StopIteration(extension_supported) from e
 
             if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
-                six.raise_from(StopIteration(extension_supported), e)
+                raise StopIteration(extension_supported) from e
 
             raise e
         except SecurityError as e:
             if checkable_curves is None:
                 extension_supported = None
 
-            six.raise_from(StopIteration(extension_supported), e)
+            raise StopIteration(extension_supported) from e
         finally:
             del client_hello.extensions[-1]
 

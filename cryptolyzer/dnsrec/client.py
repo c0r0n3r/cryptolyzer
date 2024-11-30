@@ -61,7 +61,7 @@ class L7ClientDnsBase():
                 get_leaf_classes(cls)
             )))(uri)
         except StopIteration as e:
-            six.raise_from(ValueError(uri.scheme), e)
+            raise ValueError(uri.scheme) from e
 
         return transfer
 

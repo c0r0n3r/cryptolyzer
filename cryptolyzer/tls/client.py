@@ -642,10 +642,10 @@ class L7ClientStartTlsBase(L7ClientTlsBase):
         try:
             self._init_l7()
         except NotEnoughData as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'TimeoutError' or isinstance(e, socket.timeout):
-                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
             raise e
 
@@ -772,9 +772,9 @@ class L7ClientStartTlsTextBase(L7ClientStartTlsBase):
             else:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except UnicodeDecodeError as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
         except NotEnoughData as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         pass
@@ -885,7 +885,7 @@ class ClientMySQL(L7ClientStartTlsBase):
             self.l4_transfer.flush_buffer(parsed_length)
             initial_handshake, _ = MySQLHandshakeV10.parse_immutable(record.packet_bytes)
         except (InvalidValue, InvalidType, NotEnoughData) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
         capabilities = set()
         if MySQLCapability.CLIENT_SSL in initial_handshake.capabilities:
@@ -937,7 +937,7 @@ class ClientPostgreSQL(L7ClientStartTlsBase):
             Sync.parse_exact_size(self.l4_transfer.buffer)
             self.l4_transfer.flush_buffer(Sync.MESSAGE_SIZE)
         except (InvalidValue, InvalidType) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         pass
@@ -1057,7 +1057,7 @@ class ClientIMAP(L7ClientStartTlsBase):
             if response != 'OK':
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except imaplib.IMAP4.error as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         try:
@@ -1097,7 +1097,7 @@ class ClientFTP(L7ClientStartTlsBase):
             if not response.startswith('234'):
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except ftplib.all_errors as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         try:
@@ -1136,7 +1136,7 @@ class ClientRDP(L7ClientStartTlsBase):
             neg_rsp = RDPNegotiationResponse.parse_exact_size(cotp.user_data)
             self.l4_transfer.flush_buffer(len(request_bytes))
         except (InvalidValue, InvalidType) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
         if not set(self._SUPPORTED_MODES) & set(neg_rsp.protocol):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
@@ -1222,7 +1222,7 @@ class ClientXMPPBase(L7ClientStartTlsBase):
         try:
             self._init_xmpp(self.l4_transfer, self.address)
         except NotEnoughData as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         pass
@@ -1286,7 +1286,7 @@ class ClientLDAP(L7ClientStartTlsBase):
             ext_response, parsed_length = LDAPExtendedResponseStartTLS.parse_immutable(self.l4_transfer.buffer)
             self.l4_transfer.flush_buffer(parsed_length)
         except (InvalidValue, InvalidType) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
         if ext_response.result_code != LDAPResultCode.SUCCESS:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
@@ -1375,9 +1375,9 @@ class ClientSieve(L7ClientStartTlsBase):
             else:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except UnicodeDecodeError as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
         except NotEnoughData as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         pass
@@ -1449,7 +1449,7 @@ class TlsClientHandshake(TlsClient):
             transfer.send(tls_record_bytes)
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'TimeoutError' or isinstance(e, socket.timeout):
-                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
             raise e
 
@@ -1503,9 +1503,9 @@ class TlsClientHandshake(TlsClient):
                 transfer.receive(receivable_byte_num)
             except NotEnoughData as e:
                 if transfer.buffer:
-                    six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                    raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
-                six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
 
 @attr.s
@@ -1568,11 +1568,11 @@ class SslClientHandshake(TlsClient):
                                         TlsAlertDescription.CLOSE_NOTIFY,
                                         TlsAlertDescription.INTERNAL_ERROR,
                                     ]:
-                                six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                                raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
-                        six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                        raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
                 else:
-                    six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                    raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
 
 @attr.s
@@ -1659,7 +1659,7 @@ class ClientOpenVpnBase(L7ClientTlsBase, L7OpenVpnBase):
         try:
             self._reset_session()
         except (InvalidValue, InvalidType, NotEnoughData) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def send(self, sendable_bytes):
         return self._send_bytes(self.l4_transfer, sendable_bytes)
@@ -1670,7 +1670,7 @@ class ClientOpenVpnBase(L7ClientTlsBase, L7OpenVpnBase):
             try:
                 actual_received_bytes = self._receive_packet_bytes(self.l4_transfer, receivable_byte_num)
             except NotEnoughData as e:
-                six.raise_from(NotEnoughData(receivable_byte_num - total_received_byte_num), e)
+                raise NotEnoughData(receivable_byte_num - total_received_byte_num) from e
             self._buffer += actual_received_bytes
             total_received_byte_num += len(actual_received_bytes)
 

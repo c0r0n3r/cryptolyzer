@@ -172,7 +172,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         except TlsAlert as e:
             if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
                 if sni_sent:
-                    six.raise_from(StopIteration, e)
+                    raise StopIteration from e
             elif e.description not in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
                     TlsAlertDescription.PROTOCOL_VERSION,
                     TlsAlertDescription.INTERNAL_ERROR,
@@ -184,7 +184,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 raise e
         except SecurityError as e:
             if e.error != SecurityErrorType.UNPARSABLE_MESSAGE and client_hello == client_hello_messages[0]:
-                six.raise_from(StopIteration, e)
+                raise StopIteration from e
 
         return server_messages
 

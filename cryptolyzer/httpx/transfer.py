@@ -45,9 +45,9 @@ class HttpHandshakeBase():
         try:
             self.response = requests.head(transfer.uri, **requests_kwargs)
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+            raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
         except requests.exceptions.HTTPError as e:
             # HTTP request returned an unsuccessful status code
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
         except requests.exceptions.TooManyRedirects as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
