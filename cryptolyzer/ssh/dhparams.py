@@ -133,8 +133,7 @@ class AnalyzerDHParams(AnalyzerSshBase):
 
             if dh_public_key.key_size not in gex_key_sizes:
                 gex_key_sizes.add(dh_public_key.key_size)
-                LogSingleton().log(level=60, msg=six.u(
-                    'Server offers custom DH public parameter with size %d-bit (%s)') % (
+                LogSingleton().log(level=60, msg='Server offers custom DH public parameter with size %d-bit (%s)' % (
                         dh_public_key.key_size, SshProtocolVersion(SshVersion.SSH2),
                     )
                 )
@@ -168,8 +167,7 @@ class AnalyzerDHParams(AnalyzerSshBase):
                 kex_algorithms.append(kex_algorithm)
 
         for algorithm in kex_algorithms:
-            LogSingleton().log(level=60, msg=six.u(
-                'Server offers well-known DH public parameter with size %s-bit (%s)') % (
+            LogSingleton().log(level=60, msg='Server offers well-known DH public parameter with size %s-bit (%s)' % (
                     'unknown' if isinstance(algorithm, str) else str(algorithm.value.key_size),
                     algorithm if isinstance(algorithm, str) else algorithm.value.code,
                 )

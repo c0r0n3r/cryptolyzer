@@ -38,7 +38,7 @@ class AnalyzerHeaders(AnalyzerHttpBase):
     @staticmethod
     def _analyze_headers(analyzable, version):  # pylint: disable=unused-argument
         header_fields = HttpHeaderFields.parse_exact_size(analyzable.do_handshake())
-        LogSingleton().log(level=60, msg=six.u('Server offers headers %s') % (
+        LogSingleton().log(level=60, msg='Server offers headers %s' % (
             ', '.join(list(map(
                 lambda header_field:
                     header_field.name

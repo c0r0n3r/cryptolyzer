@@ -181,27 +181,27 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                 if not has_extenstion or named_group in named_groups:
                     dhparam = _dhparam
                     named_groups = []
-                    LogSingleton().log(level=60, msg=six.u('Server offers %s (%s)') % (
+                    LogSingleton().log(level=60, msg='Server offers %s (%s)' % (
                         dhparam.well_known.value, client_hello.protocol_version,
                     ))
                     break
 
                 has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_group)
                 named_groups.append(named_group)
-                LogSingleton().log(level=60, msg=six.u('Server offers %s (%s)') % (
+                LogSingleton().log(level=60, msg='Server offers %s (%s)' % (
                     _dhparam.well_known.value, client_hello.protocol_version,
                 ))
             else:
                 # no extension support, so only one DH parameter is possible
                 dhparam = _dhparam
                 if dhparam.well_known:
-                    LogSingleton().log(level=60, msg=six.u('Server offers %s (%s)') % (
+                    LogSingleton().log(level=60, msg='Server offers %s (%s)' % (
                         dhparam.well_known.value, client_hello.protocol_version,
                     ))
                 else:
                     LogSingleton().log(
                         level=60,
-                        msg=six.u('Server offers %s-bit custom DH public parameter (%s)') % (
+                        msg='Server offers %s-bit custom DH public parameter (%s)' % (
                             dhparam.key_size, client_hello.protocol_version,
                         )
                     )
@@ -222,7 +222,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
             named_groups.append(named_group)
             has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_group)
-            LogSingleton().log(level=60, msg=six.u('Server offers FFDHE public parameter with size %d-bit (%s)') % (
+            LogSingleton().log(level=60, msg='Server offers FFDHE public parameter with size %d-bit (%s)' % (
                 named_group.value.named_group.value.size, protocol_version,
             ))
 

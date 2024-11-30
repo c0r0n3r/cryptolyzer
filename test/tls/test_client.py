@@ -284,7 +284,7 @@ class TestL7ClientStartTlsTextBase(TestL7ClientBase):
         b''.join([
             b'+OK Server ready.\r\n',
             b'+OK\r\n',
-            six.u('αβγ').encode('utf-8'),
+            'αβγ'.encode('utf-8'),
             b'\r\n',
             b'.\r\n',
         ]),
@@ -823,7 +823,7 @@ class TestClientSieve(TestL7ClientBase):
     @mock.patch.object(
         TlsServerMockResponse,
         '_get_mock_responses',
-        return_value=(six.u('αβγ').encode('utf-8') + b'\r\n', )
+        return_value=('αβγ'.encode('utf-8') + b'\r\n', )
     )
     def test_response_not_ascii(self, _):
         threaded_server = L7ServerTlsTest(

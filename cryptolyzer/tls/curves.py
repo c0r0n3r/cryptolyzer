@@ -148,7 +148,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
                 extension_supported = False
                 break
 
-            LogSingleton().log(level=60, msg=six.u('Server offers elliptic-curve %s') % (
+            LogSingleton().log(level=60, msg='Server offers elliptic-curve %s' % (
                 supported_curve.value.named_group.name,
             ))
             supported_curves.update([(supported_curve.name, supported_curve), ])

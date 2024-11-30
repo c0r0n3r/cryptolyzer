@@ -108,7 +108,7 @@ class ProtocolHandlerBase():
         raise NotImplementedError()
 
     def analyze(self, analyzer, uri, socket_params=L4TransferSocketParams()):
-        LogSingleton().log(level=60, msg=six.u('Analysis started; protocol="%s", analyzer="%s"') % (
+        LogSingleton().log(level=60, msg='Analysis started; protocol="%s", analyzer="%s"' % (
             self.get_protocol(), analyzer.get_name(),
         ))
 

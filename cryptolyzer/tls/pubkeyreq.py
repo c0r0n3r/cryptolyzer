@@ -103,7 +103,7 @@ class AnalyzerPublicKeyRequest(AnalyzerTlsBase):
                             except ValueError:
                                 pass
 
-                    LogSingleton().log(level=60, msg=six.u('Server requests X.509 for client authentication'))
+                    LogSingleton().log(level=60, msg='Server requests X.509 for client authentication')
                     return (
                         list(certificate_request.certificate_types),
                         list(certificate_request.supported_signature_algorithms),

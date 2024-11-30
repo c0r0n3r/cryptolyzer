@@ -135,7 +135,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         )
 
         leaf_certificate = certificate_chain.items[0]
-        subject_matches = leaf_certificate.is_subject_matches(six.ensure_str(analyzable.address))
+        subject_matches = leaf_certificate.is_subject_matches(analyzable.address)
         if sni_sent or subject_matches:
             for result in results:
                 if certificate_chain == result.certificate_chain:
@@ -147,7 +147,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                     subject_matches=subject_matches,
                     certificate_chain=certificate_chain,
                 )
-                LogSingleton().log(level=60, msg=six.u('Server offers %s X.509 public key (with%s SNI)') % (
+                LogSingleton().log(level=60, msg='Server offers %s X.509 public key (with%s SNI)' % (
                     tls_public_key.certificate_chain.items[-1].key_type.name,
                     '' if tls_public_key.sni_sent else 'out',
                 ))

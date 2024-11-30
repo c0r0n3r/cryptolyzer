@@ -88,7 +88,7 @@ class L7ClientDnsBase():
 
         LogSingleton().log(
             level=60,
-            msg=six.u('Server responded (%s) record(s) %s') % (record_name, ', '.join(record_values))
+            msg='Server responded (%s) record(s) %s' % (record_name, ', '.join(record_values))
         )
 
     def _get_record_list(self, record_type, record_class, domain_prefix=None):

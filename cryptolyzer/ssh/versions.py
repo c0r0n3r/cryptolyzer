@@ -43,7 +43,7 @@ class AnalyzerVersions(AnalyzerSshBase):
         protocol_message = server_messages[SshProtocolMessage]
         supported_protocols = protocol_message.protocol_version.supported_versions
         ssh_protocol_versions = [SshProtocolVersion(supported_protocol) for supported_protocol in supported_protocols]
-        LogSingleton().log(level=60, msg=six.u('Server offers protocol version %s') % (
+        LogSingleton().log(level=60, msg='Server offers protocol version %s' % (
             ', '.join([str(ssh_protocol_version) for ssh_protocol_version in ssh_protocol_versions]),
         ))
 

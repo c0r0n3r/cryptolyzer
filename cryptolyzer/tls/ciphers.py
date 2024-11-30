@@ -113,7 +113,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 cls._next_accepted_cipher_suites(
                     l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites
                 )
-                LogSingleton().log(level=60, msg=six.u('Server offers cipher suite %s (%s)') % (
+                LogSingleton().log(level=60, msg='Server offers cipher suite %s (%s)' % (
                     accepted_cipher_suites[-1].name, protocol_version,
                 ))
             except StopIteration:
