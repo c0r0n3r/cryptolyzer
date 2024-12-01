@@ -82,7 +82,7 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
 
     @classmethod
     def _get_dh_key_exchange_reply_message_class(cls, server_messages):
-        return six.next(iter(filter(
+        return next(iter(filter(
             lambda server_message: issubclass(server_message, SshDHKeyExchangeReplyBase),
             server_messages
         )))
