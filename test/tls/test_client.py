@@ -488,7 +488,7 @@ class TestClientSMTP(TestL7ClientBase):
     def test_smtp_client(self):
         l7_client, result = self.get_result('smtp', 'smtp.gmail.com', None)
         self.assertEqual(len(l7_client.greeting), 1)
-        six.assertRegex(self, l7_client.greeting[0], '220 smtp.gmail.com')
+        self.assertRegex(l7_client.greeting[0], '220 smtp.gmail.com')
         self.assertEqual(
             result.versions,
             [

@@ -174,7 +174,7 @@ class TestMainBase(unittest.TestCase):
             with self.assertRaises(SystemExit) as context_manager:
                 self._get_main_func()()
             self.assertEqual(context_manager.exception.args[0], 2)
-            six.assertRegex(self, stderr.getvalue(), stderr_regexp)
+            self.assertRegex(stderr.getvalue(), stderr_regexp)
 
     def _test_argument_help(self, command):
         devnull = io.StringIO()
