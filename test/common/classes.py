@@ -19,9 +19,11 @@ except ImportError:  # pragma: no cover
     import pathlib2 as pathlib  # pragma: no cover
 
 import codecs
+import http.server
 import io
 import logging
 import socket
+import socketserver
 import ssl
 import sys
 import threading
@@ -184,8 +186,8 @@ class TestMainBase(unittest.TestCase):
             self.assertEqual(context_manager.exception.args[0], 0)
 
 
-class TestHTTPRequestHandlerBase(six.moves.SimpleHTTPServer.SimpleHTTPRequestHandler):
-    def log_message(self, fmt, *args, **kwarg):
+class TestHTTPRequestHandlerBase(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):  # pylint: disable=redefined-builtin
         pass
 
     def version_string(self):
@@ -252,13 +254,13 @@ class TestHTTPRequestHandler(TestHTTPRequestHandlerBase):
 
 class TestThreadedServerHttpProxy(TestThreadedServerHttpBase):
     def init_connection(self):
-        self.server = six.moves.socketserver.TCPServer((self.address, self.port), TestHTTPProxyRequestHandler)
+        self.server = socketserver.TCPServer((self.address, self.port), TestHTTPProxyRequestHandler)
         self.server.timeout = 5
 
 
 class TestThreadedServerHttp(TestThreadedServerHttpBase):
     def init_connection(self):
-        self.server = six.moves.socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler)
+        self.server = socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler)
         self.server.timeout = 5
 
 
@@ -273,7 +275,7 @@ class TestThreadedServerHttps(TestThreadedServerHttpBase):
         self.ssl_context = None
 
     def init_connection(self):
-        self.server = six.moves.socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler, False)
+        self.server = socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler, False)
 
         python_version_lt_3_6 = six.PY2 or (six.PY3 and sys.version_info.minor < 6)
         prootocol = ssl.PROTOCOL_SSLv23 if python_version_lt_3_6 else ssl.PROTOCOL_TLS_SERVER
