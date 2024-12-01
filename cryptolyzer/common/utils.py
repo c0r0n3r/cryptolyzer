@@ -180,7 +180,7 @@ def resolve_address(address, port, ip=None):
         ip = addresses[0][1]
     else:
         try:
-            family = socket.AF_INET if ipaddress.ip_address(six.text_type(ip)).version == 4 else socket.AF_INET6
+            family = socket.AF_INET if ipaddress.ip_address(str(ip)).version == 4 else socket.AF_INET6
         except ValueError as e:
             raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
 
