@@ -159,7 +159,7 @@ class TlsServerOneMessageInMultipleRecords(TlsServerHandshake):
 
     def _process_handshake_message(self, message, last_handshake_message_type):
         for hello_message_byte in self.SERVER_HELLO_MESSAGE.compose():
-            self.l7_transfer.send(TlsRecord(fragment=six.int2byte(hello_message_byte)).compose())
+            self.l7_transfer.send(TlsRecord(fragment=bytes((hello_message_byte,))).compose())
 
 
 class L7ServerTlsOneMessageInMultipleRecords(L7ServerTls):
