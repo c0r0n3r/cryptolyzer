@@ -234,7 +234,7 @@ def main():
 
     handshake_data = sys.stdin.read()
     if not handshake_data:
-        six.print_('No input data', file=sys.stderr)
+        print('No input data', file=sys.stderr)
         sys.exit(2)
 
     handshake_class = handshake_to_capabilities_classes[arguments.protocol]
@@ -244,7 +244,7 @@ def main():
         handshake_to_capabilities_object = parser_func(handshake_data)
         client_capabilities = handshake_to_capabilities_object.to_capabilities()
     except (TypeError, ValueError) as e:
-        six.print_(e.args[0], file=sys.stderr)
+        print(e.args[0], file=sys.stderr)
         sys.exit(2)
 
     print(json.dumps(client_capabilities))
