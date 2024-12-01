@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import attr
-import six
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
 

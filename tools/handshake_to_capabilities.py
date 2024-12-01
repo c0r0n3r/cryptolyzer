@@ -6,7 +6,6 @@ import collections
 import json
 import sys
 
-import six
 
 import attr
 

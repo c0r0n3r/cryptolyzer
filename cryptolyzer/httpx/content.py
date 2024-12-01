@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import six
 
 import attr
 import bs4

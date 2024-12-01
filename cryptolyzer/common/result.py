@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import ipaddress
-import six
 import attr
 
 from cryptoparser.common.base import Serializable

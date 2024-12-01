@@ -2,7 +2,6 @@
 
 import unittest
 
-import six
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 

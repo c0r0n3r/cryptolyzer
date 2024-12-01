@@ -12,7 +12,6 @@ try:
 except ImportError:  # pragma: no cover
     import pathlib2 as pathlib  # pragma: no cover
 
-import six
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsAlertDescription

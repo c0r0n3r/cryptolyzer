@@ -7,7 +7,6 @@ except ImportError:
 
 import socket
 
-import six
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion

@@ -12,7 +12,6 @@ import socket
 
 import attr
 
-import six
 
 from cryptodatahub.common.algorithm import Authentication, BlockCipher, BlockCipherMode, KeyExchange, NamedGroupType
 from cryptodatahub.common.exception import InvalidValue

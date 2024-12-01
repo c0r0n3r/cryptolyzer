@@ -16,7 +16,6 @@ import test.ssh.test_vulnerabilities
 
 import urllib3
 
-import six
 
 from cryptolyzer.common.transfer import L4TransferSocketParams
 

@@ -2,7 +2,6 @@
 
 import attr
 
-import six
 
 import asn1crypto.ocsp
 

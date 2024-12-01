@@ -4,7 +4,6 @@ import io
 
 import ipaddress
 
-import six
 import attr
 
 from cryptodatahub.dnsrec.algorithm import DnsRrType

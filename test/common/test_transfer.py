@@ -12,7 +12,6 @@ from test.common.classes import (
 
 import urllib3
 
-import six
 
 try:
     from unittest import mock

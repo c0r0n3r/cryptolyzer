@@ -11,7 +11,6 @@ except ImportError:
 from test.common.classes import TestThreadedServer, TestLoggerBase
 
 import attr
-import six
 
 from cryptoparser.common.exception import NotEnoughData
 

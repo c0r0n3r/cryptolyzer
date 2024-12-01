@@ -14,7 +14,6 @@ from test.common.classes import TestLoggerBase
 
 import urllib3
 
-import six
 
 from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptodatahub.common.exception import InvalidValue

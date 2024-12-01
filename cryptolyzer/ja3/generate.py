@@ -2,7 +2,6 @@
 
 import hashlib
 
-import six
 import attr
 
 from cryptoparser.common.utils import get_leaf_classes

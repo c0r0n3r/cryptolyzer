@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
-import six
 import attr
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat

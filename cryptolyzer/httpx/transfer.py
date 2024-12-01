@@ -2,7 +2,6 @@
 
 import attr
 import requests
-import six
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4TransferSocketParams

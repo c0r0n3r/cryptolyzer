@@ -5,7 +5,6 @@ import abc
 import attr
 import urllib3
 
-import six
 
 from cryptodatahub.common.types import convert_url
 from cryptodatahub.dnsrec.algorithm import DnsRrType

@@ -3,7 +3,6 @@
 import abc
 import attr
 
-import six
 
 from cryptodatahub.common.algorithm import BlockCipher
 from cryptodatahub.common.exception import InvalidValue

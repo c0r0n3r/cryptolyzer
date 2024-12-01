@@ -4,7 +4,6 @@ import collections
 
 import attr
 
-import six
 
 from cryptodatahub.common.algorithm import KeyExchange, NamedGroupType
 from cryptodatahub.common.entity import ClientType

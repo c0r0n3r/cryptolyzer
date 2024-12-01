@@ -2,7 +2,6 @@
 
 import copy
 import time
-import six
 
 import attr
 

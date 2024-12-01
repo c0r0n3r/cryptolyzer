@@ -28,7 +28,6 @@ import test.tls.test_vulnerabilities
 import test.tls.test_all
 
 import colorama
-import six
 import urllib3
 
 from cryptoparser.common.base import Serializable, SerializableTextEncoder

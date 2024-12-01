@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import attr
-import six
 
 from cryptodatahub.common.algorithm import Authentication, KeyExchange, NamedGroup
 

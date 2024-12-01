@@ -11,7 +11,6 @@ try:
 except ImportError:
     import mock
 
-import six
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite

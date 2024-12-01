@@ -3,7 +3,6 @@
 import codecs
 
 import attr
-import six
 
 from cryptodatahub.common.algorithm import KeyExchange
 from cryptodatahub.common.key import PublicKeySize

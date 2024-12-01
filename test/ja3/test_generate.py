@@ -4,7 +4,6 @@ import time
 
 from test.common.classes import TestThreadedServer, TestLoggerBase
 
-import six
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat
 from cryptoparser.tls.ciphersuite import TlsCipherSuite

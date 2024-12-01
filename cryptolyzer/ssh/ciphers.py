@@ -2,7 +2,6 @@
 
 import attr
 
-import six
 
 from cryptodatahub.ssh.algorithm import (
     SshCompressionAlgorithm,

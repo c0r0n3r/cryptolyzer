@@ -33,7 +33,6 @@ import attr
 import urllib3
 
 import pyfakefs.fake_filesystem_unittest
-import six
 
 from cryptodatahub.common.grade import Grade, GradeableComplex, GradeableSimple, GradeableVulnerabilities
 

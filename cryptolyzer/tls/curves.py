@@ -2,7 +2,6 @@
 
 from collections import OrderedDict
 
-import six
 
 import attr
 

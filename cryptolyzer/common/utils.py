@@ -7,7 +7,6 @@ import socket
 import string
 import sys
 
-import six
 
 import colorama
 import attr

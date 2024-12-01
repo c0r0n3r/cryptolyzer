@@ -5,7 +5,6 @@ import urllib3
 
 import attr
 
-import six
 
 from cryptodatahub.common.types import convert_url
 

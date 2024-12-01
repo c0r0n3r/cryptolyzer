@@ -4,7 +4,6 @@
 from collections import OrderedDict
 
 import attr
-import six
 
 from cryptodatahub.common.algorithm import Authentication
 

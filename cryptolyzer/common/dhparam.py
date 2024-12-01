@@ -4,7 +4,6 @@ import math
 
 import codecs
 import collections
-import six
 import attr
 
 from cryptodatahub.common.exception import InvalidValue

@@ -6,7 +6,6 @@ import socket
 
 import ipaddress
 import attr
-import six
 import urllib3
 
 from cryptoparser.common.exception import NotEnoughData
