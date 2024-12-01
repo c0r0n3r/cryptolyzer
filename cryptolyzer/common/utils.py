@@ -29,8 +29,7 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-@six.add_metaclass(Singleton)
-class LogSingleton(logging.Logger):
+class LogSingleton(logging.Logger, metaclass=Singleton):
     def __init__(self):
         super(LogSingleton, self).__init__(__setup__.__name__)
 

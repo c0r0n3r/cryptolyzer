@@ -557,8 +557,7 @@ class TlsHandshakeClientHelloKeyExchangeAnonymousDH(  # pylint: disable=too-many
 
 
 @attr.s
-@six.add_metaclass(abc.ABCMeta)
-class L7ClientTlsBase(L7TransferBase):
+class L7ClientTlsBase(L7TransferBase, metaclass=abc.ABCMeta):
     l4_transfer = attr.ib(init=False, default=None)
 
     @classmethod

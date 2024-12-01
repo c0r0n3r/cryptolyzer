@@ -27,8 +27,7 @@ from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.tls.client import L7ClientTlsBase
 
 
-@six.add_metaclass(abc.ABCMeta)
-class ProtocolHandlerBase():
+class ProtocolHandlerBase(metaclass=abc.ABCMeta):
     @classmethod
     def import_plugins(cls):
         plugin_root_dir_parts = pathlib.PurePath(*pathlib.PurePath(__file__).parts[:-2])  # remove common/analyzer.py
