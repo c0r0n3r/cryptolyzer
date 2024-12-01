@@ -549,14 +549,6 @@ RDP_NEGOTIATION_RESPONSE_LENGTH = 19
 
 
 class TestClientRDP(TestL7ClientBase):
-    @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
-    @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
-    def test_error_send_socket_timeout(self, _):
-        with self.assertRaises(NetworkError) as context_manager:
-            self.get_result('rdp', 'badssl.com', 443)
-        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
-
-    @unittest.skipIf(six.PY2, 'TimeoutError is raised instead of socket.error in Python >= 3.0')
     def test_error_send_timeout_error(self):
         with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
                 self.assertRaises(NetworkError) as context_manager:
@@ -587,14 +579,6 @@ class TestClientRDP(TestL7ClientBase):
 
 
 class TestClientLDAP(TestL7ClientBase):
-    @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
-    @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
-    def test_error_send_socket_timeout(self, _):
-        with self.assertRaises(NetworkError) as context_manager:
-            self.get_result('ldap', 'ldap.uchicago.edu', None)
-        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
-
-    @unittest.skipIf(six.PY2, 'There is no TimeoutError in Python < 3.0')
     def test_error_send_timeout_error(self):
         with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
                 self.assertRaises(NetworkError) as context_manager:
@@ -776,14 +760,6 @@ class TestClientPostgreSQL(TestL7ClientBase):
 
 
 class TestClientSieve(TestL7ClientBase):
-    @unittest.skipIf(six.PY3, 'There is no TimeoutError in Python < 3.0')
-    @mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=socket.timeout)
-    def test_error_send_socket_timeout(self, _):
-        with self.assertRaises(NetworkError) as context_manager:
-            self.get_result('sieve', 'mail.aa.net.uk', None)
-        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
-
-    @unittest.skipIf(six.PY2, 'There is no TimeoutError in Python < 3.0')
     def test_error_send_timeout_error(self):
         with mock.patch.object(L7ClientTlsBase, '_init_connection', side_effect=TimeoutError), \
                 self.assertRaises(NetworkError) as context_manager:

@@ -277,10 +277,7 @@ class TestThreadedServerHttps(TestThreadedServerHttpBase):
     def init_connection(self):
         self.server = socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler, False)
 
-        python_version_lt_3_6 = six.PY2 or (six.PY3 and sys.version_info.minor < 6)
-        prootocol = ssl.PROTOCOL_SSLv23 if python_version_lt_3_6 else ssl.PROTOCOL_TLS_SERVER
-
-        self.ssl_context = ssl.SSLContext(prootocol)
+        self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         self.ssl_context.load_cert_chain(certfile=str(self.CERT_FILE_PATH), keyfile=str(self.KEY_FILE_PATH))
         self.ssl_context.set_ciphers('ALL')
 
@@ -312,10 +309,7 @@ class TestThreadedServer(threading.Thread):
             except AttributeError:
                 pass
         else:
-            if six.PY3:
-                raise TimeoutError()
-
-            raise socket.timeout()
+            raise TimeoutError()
 
 
 class TestLoggerBase(unittest.TestCase):

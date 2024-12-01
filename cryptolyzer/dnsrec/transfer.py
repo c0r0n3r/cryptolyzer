@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import io
-import sys
 
 import ipaddress
 
@@ -70,9 +69,7 @@ class DnsHandshakeBase():
 
     @classmethod
     def _resolve(cls, dns_resolver, **kwargs):
-        python_version_lt_3_6 = six.PY2 or (six.PY3 and sys.version_info.minor < 6)
-        resolve_func = dns_resolver.query if python_version_lt_3_6 else dns_resolver.resolve
-        return resolve_func(**kwargs)
+        return dns_resolver.resolve(**kwargs)
 
     def _get_records_from_servers(self, domain, rr_type, nameservers, domain_prefix=None):
         if domain_prefix is not None:

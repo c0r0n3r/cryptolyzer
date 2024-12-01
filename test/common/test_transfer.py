@@ -59,21 +59,12 @@ class TestL4ClientTCP(unittest.TestCase):
             self.assertEqual(context_manager.exception.args, ('not a timeout error', ))
         sock.close()
 
-    @unittest.skipIf(six.PY2, 'There is no ConnectionRefusedError in Python < 3.0')
     def test_error_connection_refused(self):
         with mock.patch.object(socket, 'create_connection', side_effect=ConnectionRefusedError), \
                 self.assertRaises(NetworkError) as context_manager:
             l4_client = L4ClientTCP('badssl.com', 443)
             l4_client.init_connection()
         l4_client.close()
-        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
-
-    @unittest.skipIf(six.PY3, 'ConnectionRefusedError is raised instead of socket.error in Python >= 3.0')
-    def test_error_connection_refused_socket_error(self):
-        with mock.patch.object(socket, 'create_connection', side_effect=socket.error), \
-                self.assertRaises(NetworkError) as context_manager:
-            l4_client, _ = self._create_client_and_receive_text('badssl.com', 443, 1)
-            l4_client.close()
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     def test_error_unhandled_exception_rethrown(self):
