@@ -4,13 +4,9 @@
 
 import datetime
 import os
+import pathlib
 import sys
 import urllib
-
-try:
-    import pathlib
-except ImportError:  # pragma: no cover
-    import pathlib2 as pathlib  # pragma: no cover
 
 sys.path.insert(0, os.path.abspath('..'))
 from cryptolyzer.__setup__ import (  # noqa: E402, pylint: disable=wrong-import-position

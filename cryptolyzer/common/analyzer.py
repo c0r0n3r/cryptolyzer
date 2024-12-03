@@ -4,14 +4,9 @@ import abc
 import glob
 import importlib
 import ipaddress
+import pathlib
 import pkgutil
 import urllib
-
-try:
-    import pathlib
-except ImportError:  # pragma: no cover
-    import pathlib2 as pathlib  # pragma: no cover
-
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsAlertDescription

@@ -1,26 +1,20 @@
 # -*- coding: utf-8 -*-
 
 import abc
-import os
-
-import unittest
-from unittest.mock import patch
-
-try:
-    import pathlib
-except ImportError:  # pragma: no cover
-    import pathlib2 as pathlib  # pragma: no cover
-
 import codecs
 import http.server
 import io
 import logging
+import os
+import pathlib
 import socket
 import socketserver
 import ssl
 import sys
 import threading
 import time
+import unittest
+from unittest.mock import patch
 
 import attr
 import urllib3
