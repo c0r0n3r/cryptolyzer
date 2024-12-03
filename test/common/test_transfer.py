@@ -2,6 +2,7 @@
 
 import socket
 import unittest
+from unittest import mock
 
 from test.common.classes import (
     TestThreadedServer,
@@ -11,12 +12,6 @@ from test.common.classes import (
 )
 
 import urllib3
-
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
 
 from cryptoparser.common.exception import NotEnoughData
 

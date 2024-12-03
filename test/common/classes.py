@@ -3,15 +3,8 @@
 import abc
 import os
 
-try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
+from unittest.mock import patch
 
 try:
     import pathlib

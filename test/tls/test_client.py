@@ -5,10 +5,7 @@ import ftplib
 import imaplib
 import socket
 import unittest
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 from test.common.classes import TestLoggerBase
 

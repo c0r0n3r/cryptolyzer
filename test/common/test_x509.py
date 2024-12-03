@@ -3,11 +3,7 @@
 import datetime
 
 from collections import OrderedDict
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 from test.common.classes import TestKeyBase, TestLoggerBase
 
