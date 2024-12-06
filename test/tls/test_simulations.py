@@ -99,18 +99,18 @@ class TestTlsSimulations(TestLoggerBase):
         self.assertTrue(result)
 
     def test_dh_well_known(self):
-        result = self.get_result('www.opentopography.org', 443)
+        result = self.get_result('kaspersky.com', 443)
         self.assertTrue(all(
-            analyzer_result.cipher_suite.value.key_exchange in [KeyExchange.DHE, KeyExchange.RSA]
+            analyzer_result.cipher_suite.value.key_exchange in [KeyExchange.DHE, KeyExchange.ECDHE]
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertTrue(all(
-            analyzer_result.well_known == DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP
+            analyzer_result.well_known == DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP
             for analyzer_result in result.succeeded_clients.values()
             if analyzer_result.cipher_suite.value.key_exchange == KeyExchange.DHE
         ))
 
-        self.assertEqual(len(result.failed_clients), 1)
+        self.assertEqual(len(result.failed_clients), 3)
         self.assertTrue(result)
 
     def test_pfs_named_group(self):

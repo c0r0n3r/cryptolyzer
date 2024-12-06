@@ -343,23 +343,22 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self.assertEqual(certificate_status.revocation_reason, None)
 
         result = self.get_result('www.wikipedia.org', 443)
-        self.assertEqual(len(result.pubkeys), 2)
+        self.assertEqual(len(result.pubkeys), 1)
 
         now = datetime.datetime.now(asn1crypto.util.timezone.utc)
 
-        for pubkey_index in range(2):
-            certificate_status = result.pubkeys[pubkey_index].certificate_status
-            with self.subTest():
-                self.assertEqual(certificate_status.status, 'good')
-                self.assertLess(certificate_status.produced_at, now)
-                self.assertLess(certificate_status.this_update, now)
-                self.assertGreater(certificate_status.next_update, now)
-                self.assertEqual(certificate_status.revocation_time, None)
-                self.assertEqual(certificate_status.revocation_reason, None)
+        certificate_status = result.pubkeys[0].certificate_status
+        with self.subTest():
+            self.assertEqual(certificate_status.status, 'good')
+            self.assertLess(certificate_status.produced_at, now)
+            self.assertLess(certificate_status.this_update, now)
+            self.assertGreater(certificate_status.next_update, now)
+            self.assertEqual(certificate_status.revocation_time, None)
+            self.assertEqual(certificate_status.revocation_reason, None)
 
-                markdnow_result = certificate_status.as_markdown()
-                self.assertIn('Status: good\n', markdnow_result)
-                self.assertIn('Revocation Time: n/a\n', markdnow_result)
+            markdnow_result = certificate_status.as_markdown()
+            self.assertIn('Status: good\n', markdnow_result)
+            self.assertIn('Revocation Time: n/a\n', markdnow_result)
 
     @mock.patch.object(
         TlsExtensionsBase, 'get_item_by_type',

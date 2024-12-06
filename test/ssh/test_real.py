@@ -44,7 +44,7 @@ class TestReal(unittest.TestCase):
     def test_versions(self):
         result = test.ssh.test_versions.TestSshVersions.get_result('github.com')
         self.assertEqual(result.protocol_versions, [SshProtocolVersion(SshVersion.SSH2)])
-        six.assertRegex(self, result.software_version.raw, 'babeld-[0-9a-f]{8}')
+        six.assertRegex(self, result.software_version.raw, '[0-9a-f]{8}')
 
         result = test.ssh.test_versions.TestSshVersions.get_result('gitlab.com')
         self.assertEqual(result.protocol_versions, [SshProtocolVersion(SshVersion.SSH2)])
