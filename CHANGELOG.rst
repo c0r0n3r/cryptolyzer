@@ -3,6 +3,39 @@ Changelog
 =========
 
 -------------------
+0.12.6 - 2024-12-08
+-------------------
+
+Features
+========
+
+-  Generic
+
+   -  add HTTP proxy support (#152)
+
+Improvements
+============
+
+-  TLS (``tls``)
+
+   -  support "to" field during XMPP server analysis (#150)
+   -  support capability generation for most modern TLS clients (#147)
+
+Notable fixes
+=============
+
+-  TLS (``tls``)
+
+   -  handle XMPP servers do not require STARTTLS (#149)
+
+Refactor
+========
+
+-  TLS (``tls``)
+
+   -  Move elliptic-curve parameters to CryptoDataHub (#144)
+
+-------------------
 0.12.5 - 2024-05-25
 -------------------
 
