@@ -174,6 +174,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 if sni_sent:
                     six.raise_from(StopIteration, e)
             elif e.description not in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                    TlsAlertDescription.PROTOCOL_VERSION,
                     TlsAlertDescription.INTERNAL_ERROR,
                     TlsAlertDescription.DECODE_ERROR,
             ]:
