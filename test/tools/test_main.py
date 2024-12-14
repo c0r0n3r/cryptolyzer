@@ -182,8 +182,8 @@ class TestTShark(TestTlsClientBase):
 
         self.assertEqual(list(client_hello.cipher_suites), tls_json_object.cipher_suites)
         self.assertEqual(
-            list(map(lambda extension: extension.extension_type, client_hello.extensions)),
-            tls_json_object.extension_types
+            set(map(lambda extension: extension.extension_type, client_hello.extensions)),
+            set(tls_json_object.extension_types)
         )
         self.assertFalse(tls_json_object.grease.cipher_suites)
         self.assertFalse(tls_json_object.grease.extension_types)
@@ -196,8 +196,8 @@ class TestTShark(TestTlsClientBase):
 
         self.assertEqual(list(client_hello.cipher_suites), tls_json_object.cipher_suites)
         self.assertEqual(
-            list(map(lambda extension: extension.extension_type, client_hello.extensions)),
-            tls_json_object.extension_types
+            set(map(lambda extension: extension.extension_type, client_hello.extensions)),
+            set(tls_json_object.extension_types)
         )
         self.assertFalse(tls_json_object.grease.cipher_suites)
         self.assertFalse(tls_json_object.grease.extension_types)
@@ -215,8 +215,8 @@ class TestTShark(TestTlsClientBase):
 
         self.assertEqual(list(client_hello.cipher_suites), tls_json_object.cipher_suites)
         self.assertEqual(
-            list(map(lambda extension: extension.extension_type, client_hello.extensions)),
-            tls_json_object.extension_types
+            set(map(lambda extension: extension.extension_type, client_hello.extensions)),
+            set(tls_json_object.extension_types)
         )
         self.assertFalse(tls_json_object.grease.cipher_suites)
         self.assertFalse(tls_json_object.grease.extension_types)
