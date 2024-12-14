@@ -16,6 +16,7 @@ from cryptodatahub.tls.client import ClientVersionedParamsBase, TlsClient
 from cryptoparser.tls.ciphersuite import SslCipherKind, TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsExtensionCertificateStatusRequestClient,
+    TlsExtensionEncryptedClientHelloInner,
     TlsExtensionKeyShareClient,
     TlsExtensionKeyShareReservedClient,
     TlsExtensionKeyShareServer,
@@ -160,9 +161,24 @@ class AnalyzerSimulations(AnalyzerTlsBase):
         return 'Check which parameters are negotiated using different clients with the server(s)'
 
     @staticmethod
+    def _get_key_share_extension(extension_class, extension_params):
+        key_share_entries = []
+
+        for tls_named_curve in extension_params:
+            try:
+                key_share_entries.append(key_share_entry_from_named_curve(tls_named_curve))
+            except NotImplementedError:
+                pass
+
+        return extension_class(key_share_entries)
+
+    @staticmethod
     def _get_extension(server_name, extension_type, extension_params, grease):
         extension_types_with_no_attrs = [
-            TlsExtensionRenegotiationInfo, TlsExtensionSessionTicket, TlsExtensionCertificateStatusRequestClient
+            TlsExtensionCertificateStatusRequestClient,
+            TlsExtensionEncryptedClientHelloInner,
+            TlsExtensionRenegotiationInfo,
+            TlsExtensionSessionTicket,
         ]
 
         extension_classes = TlsExtensionVariantClient.get_parsed_extensions()
@@ -174,11 +190,7 @@ class AnalyzerSimulations(AnalyzerTlsBase):
         elif extension_class is TlsExtensionServerNameClient:
             extension = extension_class(server_name)
         elif extension_class in [TlsExtensionKeyShareClient, TlsExtensionKeyShareReservedClient]:
-            key_share_entries = [
-                key_share_entry_from_named_curve(tls_named_curve)
-                for tls_named_curve in extension_params
-            ]
-            extension = extension_class(key_share_entries)
+            extension = AnalyzerSimulations._get_key_share_extension(extension_class, extension_params)
         elif extension_class is TlsExtensionPadding:
             extension = extension_class(1)
         elif extension_class is TlsExtensionSupportedVersionsClient:

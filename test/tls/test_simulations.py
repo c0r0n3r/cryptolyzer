@@ -141,7 +141,7 @@ class TestTlsSimulations(TestLoggerBase):
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertTrue(all(
-            analyzer_result.key_size == PublicKeySize(KeyExchange.ECDHE, 256)
+            analyzer_result.key_size in [PublicKeySize(KeyExchange.ECDHE, 256), PublicKeySize(KeyExchange.ECDHE, 1120)]
             for analyzer_result in result.succeeded_clients.values()
         ))
         self.assertEqual(len(result.failed_clients), 1)

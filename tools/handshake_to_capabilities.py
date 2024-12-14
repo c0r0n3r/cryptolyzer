@@ -172,6 +172,7 @@ class HandshakeToCapabilitiesTls(HandshakeToCapabilitiesBase):
         extension_types, has_grease = self._get_non_grease_vaules(list(map(
             lambda extension: extension.extension_type, self.client_hello.extensions
         )))
+        extension_types = list(sorted(extension_types, key=lambda extension_type: extension_type.name))
         self.grease.update(collections.OrderedDict([('extension_types', has_grease)]))
 
         self._update_extensions_iterable(TlsExtensionType.APPLICATION_LAYER_PROTOCOL_NEGOTIATION, "protocol_names")
