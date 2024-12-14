@@ -183,6 +183,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
             TlsNamedCurve.SECP521R1,
             TlsNamedCurve.X25519,
             TlsNamedCurve.X25519_KYBER_768_R3,
+            TlsNamedCurve.X25519_ML_KEM_768,
         ]))
 
         result = self.get_result('pq.cloudflareresearch.com', 443)
