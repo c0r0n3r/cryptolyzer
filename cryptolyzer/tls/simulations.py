@@ -16,6 +16,7 @@ from cryptodatahub.tls.client import ClientVersionedParamsBase, TlsClient
 from cryptoparser.tls.ciphersuite import SslCipherKind, TlsCipherSuite
 from cryptoparser.tls.extension import (
     TlsExtensionCertificateStatusRequestClient,
+    TlsExtensionEncryptedClientHelloInner,
     TlsExtensionKeyShareClient,
     TlsExtensionKeyShareReservedClient,
     TlsExtensionKeyShareServer,
@@ -162,7 +163,10 @@ class AnalyzerSimulations(AnalyzerTlsBase):
     @staticmethod
     def _get_extension(server_name, extension_type, extension_params, grease):
         extension_types_with_no_attrs = [
-            TlsExtensionRenegotiationInfo, TlsExtensionSessionTicket, TlsExtensionCertificateStatusRequestClient
+            TlsExtensionCertificateStatusRequestClient,
+            TlsExtensionEncryptedClientHelloInner,
+            TlsExtensionRenegotiationInfo,
+            TlsExtensionSessionTicket,
         ]
 
         extension_classes = TlsExtensionVariantClient.get_parsed_extensions()
