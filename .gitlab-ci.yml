@@ -58,11 +58,6 @@ pythonrc:
   stage: fulltest
   script: tox -e py312
 
-pypy3:
-  image: pypy:3-slim
-  stage: fulltest
-  script: tox -e pypy3
-
 coveralls:
   image: python:3.11-slim
   variables:

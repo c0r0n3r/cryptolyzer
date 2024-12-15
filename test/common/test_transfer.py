@@ -189,6 +189,7 @@ class TestL4ClientTCP(unittest.TestCase):
         self.assertEqual(l4_client.buffer.strip(), b'HTTP/1.0 200 OK')
 
         l4_client.close()
+
         test_http_proxy_server.kill()
         test_http_server.kill()
 
