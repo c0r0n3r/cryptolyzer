@@ -1,3 +1,13 @@
+.. image:: https://gitlab.com/coroner/cryptolyzer/badges/master/pipeline.svg
+    :alt:  Pipeline
+    :target: https://gitlab.com/coroner/cryptolyzer/-/pipelines/master/latest
+.. image:: https://coveralls.io/repos/gitlab/coroner/cryptolyzer/badge.svg?branch=master
+    :alt:  Test Coverage
+    :target: https://coveralls.io/gitlab/coroner/cryptolyzer/
+.. image:: https://readthedocs.org/projects/cryptolyzer/badge/?version=latest
+    :alt:  Documentation
+    :target: https://cryptolyzer.readthedocs.io
+
 **CryptoLyzer** is a fast, flexible, and comprehensive server cryptographic protocol
 (`TLS <https://en.wikipedia.org/wiki/Transport_Layer_Security>`__,
 `SSL <https://en.wikipedia.org/wiki/Transport_Layer_Security#SSL_1.0,_2.0,_and_3.0>`__,
