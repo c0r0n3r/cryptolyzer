@@ -6,8 +6,9 @@ from cryptolyzer.__main__ import main
 
 
 class TestMain(TestMainBase):
-    def setUp(self):
-        self.main_func = main
+    @classmethod
+    def _get_main_func(cls):
+        return main
 
     def test_header(self):
         test_http_server = TestThreadedServerHttp('127.0.0.1', 0)

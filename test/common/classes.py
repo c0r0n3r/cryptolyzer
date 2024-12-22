@@ -138,7 +138,7 @@ class TestMainBase(unittest.TestCase):
                 patch('sys.stderr', new_callable=six.StringIO) as stderr, \
                 patch.object(sys, 'stdin', io.TextIOWrapper(io.BytesIO(stdin))), \
                 patch.object(sys, 'argv', command_line_arguments):
-            self.main_func()
+            self._get_main_func()()
             return stdout.getvalue(), stderr.getvalue()
 
     def _get_test_analyzer_result(
@@ -172,7 +172,7 @@ class TestMainBase(unittest.TestCase):
                 patch.object(sys, 'argv', argv), patch.object(sys, 'stdin', io.TextIOWrapper(io.BytesIO(stdin))):
 
             with self.assertRaises(SystemExit) as context_manager:
-                self.main_func()
+                self._get_main_func()()
             self.assertEqual(context_manager.exception.args[0], 2)
             six.assertRegex(self, stderr.getvalue(), stderr_regexp)
 
@@ -180,7 +180,7 @@ class TestMainBase(unittest.TestCase):
         devnull = six.StringIO()
         with patch.object(sys, 'stdout', devnull), patch.object(sys, 'argv', [str(command), '-h']):
             with self.assertRaises(SystemExit) as context_manager:
-                self.main_func()
+                self._get_main_func()()
             self.assertEqual(context_manager.exception.args[0], 0)
 
 

@@ -41,8 +41,11 @@ from tools.handshake_to_capabilities import main, HandshakeToCapabilitiesTls
 
 
 class TestTlsClientBase(TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     def setUp(self):
-        self.main_func = main
         self.script_path = pathlib.Path() / 'tools' / 'handshake_to_capabilities.py'
 
 

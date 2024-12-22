@@ -32,6 +32,10 @@ from .classes import L7ServerSshTest
 
 
 class TestMain(TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     def setUp(self):
         self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=2)))
         self.threaded_server.start()
@@ -39,8 +43,6 @@ class TestMain(TestMainBase):
         self.host = 'localhost'
         self.port = self.threaded_server.l7_server.l4_transfer.bind_port
         self.address = '{}:{}'.format(self.host, self.port)
-
-        self.main_func = main
 
     def test_ciphers(self):
         self.assertEqual(

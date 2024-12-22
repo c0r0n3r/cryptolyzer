@@ -50,8 +50,9 @@ from cryptolyzer.tls.versions import AnalyzerVersions
 
 
 class TestMain(TestMainBase):
-    def setUp(self):
-        self.main_func = main
+    @classmethod
+    def _get_main_func(cls):
+        return main
 
     def _test_runtime_error(self, argv, error_msg):
         with patch.object(sys, 'stdout', new_callable=six.StringIO) as stdout, \
