@@ -743,7 +743,7 @@ class L7ServerStartTlsOpenVpnBase(L7ServerStartTlsBase, L7OpenVpnBase):
     _buffer = attr.ib(init=False)
 
     def __attrs_post_init__(self):
-        super(L7ServerStartTlsOpenVpnBase, self).__attrs_post_init__()
+        super().__attrs_post_init__()
 
         self._buffer = bytearray()
 

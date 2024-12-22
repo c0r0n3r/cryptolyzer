@@ -90,6 +90,10 @@ class TestGradeableComplex(GradeableComplex):
 
 
 class TestMainBase(unittest.TestCase):
+    @classmethod
+    def _get_main_func(cls):
+        raise NotImplementedError()
+
     @staticmethod
     def _get_arguments(
             protocol_version, analyzer, hostname, port, timeout=None, scheme=None, proxy=None
@@ -212,7 +216,7 @@ class TestHTTPProxyRequestHandler(TestHTTPRequestHandlerBase):
 
 class TestThreadedServerHttpBase(threading.Thread):
     def __init__(self, address, port):
-        super(TestThreadedServerHttpBase, self).__init__()
+        super().__init__()
 
         self.address = address
         self.port = port
@@ -256,7 +260,7 @@ class TestThreadedServerHttps(TestThreadedServerHttpBase):
     CA_CERT_FILE_PATH = pathlib.Path(__file__).parent / 'certs' / 'snakeoil_ca_cert.pem'
 
     def __init__(self, address, port):
-        super(TestThreadedServerHttps, self).__init__(address, port)
+        super().__init__(address, port)
 
         self.ssl_context = None
 
@@ -274,7 +278,7 @@ class TestThreadedServerHttps(TestThreadedServerHttpBase):
 
 class TestThreadedServer(threading.Thread):
     def __init__(self, server):
-        super(TestThreadedServer, self).__init__()
+        super().__init__()
 
         self._server = server
         self._server.init_connection()

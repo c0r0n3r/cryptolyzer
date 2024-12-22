@@ -30,7 +30,7 @@ class Singleton(type):
 
 class LogSingleton(logging.Logger, metaclass=Singleton):
     def __init__(self):
-        super(LogSingleton, self).__init__(__setup__.__name__)
+        super().__init__(__setup__.__name__)
 
         formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%Y-%m-%dT%H:%M:%S%z')
 

@@ -503,7 +503,7 @@ class TestL7ServerStartTls(TestL7ServerBase):
 
 class TestL7ServerTlsFTP(TestL7ServerBase):
     def setUp(self):
-        super(TestL7ServerTlsFTP, self).setUp()
+        super().setUp()
 
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsFTP)
 
@@ -545,7 +545,7 @@ class TestL7ServerTlsFTP(TestL7ServerBase):
 
 class TestL7ServerTlsPOP3(TestL7ServerBase):
     def setUp(self):
-        super(TestL7ServerTlsPOP3, self).setUp()
+        super().setUp()
 
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsPOP3)
 
@@ -628,7 +628,7 @@ class TestL7ServerTlsSMTP(TestL7ServerBase):
 
 class TestL7ServerTlsNNTP(TestL7ServerBase):
     def setUp(self):
-        super(TestL7ServerTlsNNTP, self).setUp()
+        super().setUp()
 
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsNNTP)
 

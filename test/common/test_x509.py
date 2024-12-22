@@ -247,7 +247,7 @@ class TestPublicKeyX509(TestLoggerBase):
 
 class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instance-attributes
     def setUp(self):
-        super(TestX509CertificateChain, self).setUp()
+        super().setUp()
 
         self.trusted_root_ca = self._get_public_key_x509('rsa8192.badssl.com_root_ca.crt')
         self.trusted_intermediate_ca = self._get_public_key_x509('rsa8192.badssl.com_intermediate_ca.crt')

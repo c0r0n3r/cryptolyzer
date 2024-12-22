@@ -214,7 +214,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
         else:
             protocol_version = protocol_version_min
 
-        super(TlsHandshakeClientHelloSpecalization, self).__init__(
+        super().__init__(
             cipher_suites=cipher_suites,
             protocol_version=protocol_version,
             extensions=TlsExtensionsClient(extensions)
@@ -225,7 +225,7 @@ class TlsHandshakeClientHelloAnyAlgorithm(  # pylint: disable=too-many-ancestors
             TlsHandshakeClientHelloSpecalization
         ):
     def __init__(self, protocol_versions, hostname):
-        super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=protocol_versions,
             cipher_suites=list(TlsCipherSuite),
@@ -254,7 +254,7 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2)
         ]
 
-        super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
@@ -267,7 +267,7 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
 class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
-        super(TlsHandshakeClientHelloAuthenticationRSA, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_version=protocol_version,
             authentications=[Authentication.RSA, ],
@@ -279,7 +279,7 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthentica
 class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
-        super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(
+        super().__init__(
             protocol_version=protocol_version,
             hostname=hostname,
             authentications=[Authentication.DSS, ],
@@ -291,7 +291,7 @@ class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthentica
 class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
-        super(TlsHandshakeClientHelloAuthenticationECDSA, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_version=protocol_version,
             authentications=[Authentication.ECDSA, ],
@@ -303,7 +303,7 @@ class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenti
 class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
-        super(TlsHandshakeClientHelloAuthenticationGOST, self).__init__(
+        super().__init__(
             protocol_version=protocol_version,
             hostname=hostname,
             authentications=[
@@ -333,7 +333,7 @@ class TlsHandshakeClientHelloAuthenticationDeprecated(  # pylint: disable=too-ma
                 ])
         ]
 
-        super(TlsHandshakeClientHelloAuthenticationDeprecated, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
@@ -369,7 +369,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
         if named_curves is None:
             named_curves = self.NAMED_CURVES
 
-        super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -405,7 +405,7 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
         if named_curves is None:
             named_curves = self.NAMED_CURVES
 
-        super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -432,7 +432,7 @@ class TlsHandshakeClientHelloBlockCipherModeCBC(  # pylint: disable=too-many-anc
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloBlockCipherModeCBC, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -464,7 +464,7 @@ class TlsHandshakeClientHelloStreamCipherRC4(  # pylint: disable=too-many-ancest
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloStreamCipherRC4, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -491,7 +491,7 @@ class TlsHandshakeClientHelloBulkCipherBlockSize64(  # pylint: disable=too-many-
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloBulkCipherBlockSize64, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -518,7 +518,7 @@ class TlsHandshakeClientHelloBulkCipherNull(  # pylint: disable=too-many-ancesto
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloBulkCipherNull, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -545,7 +545,7 @@ class TlsHandshakeClientHelloKeyExchangeAnonymousDH(  # pylint: disable=too-many
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloKeyExchangeAnonymousDH, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -808,7 +808,7 @@ class L7ClientStartTlsMailBase(L7ClientStartTlsTextBase):
         is_last_line = line[3] == ' '
         line = line[4:]
 
-        super(L7ClientStartTlsMailBase, self)._update_capabilities(line, capabilities)
+        super()._update_capabilities(line, capabilities)
 
         if is_last_line:
             raise StopIteration()
@@ -1022,7 +1022,7 @@ class L7ClientIMAPS(L7ClientTlsBase):
 class IMAP4(imaplib.IMAP4):
     def __init__(self, host, port, l4_socket_params):
         self.l4_socket_params = l4_socket_params
-        super(IMAP4, self).__init__(host, port)
+        super().__init__(host, port)
 
     def open(self, *args, **kwargs):  # pylint: disable=arguments-differ,signature-differs,unused-argument
         self.host = args[0]
@@ -1513,7 +1513,7 @@ class SslError(ValueError):
 
 class SslHandshakeClientHelloAnyAlgorithm(SslHandshakeClientHello):
     def __init__(self):
-        super(SslHandshakeClientHelloAnyAlgorithm, self).__init__(
+        super().__init__(
             cipher_kinds=list(SslCipherKind)
         )
 
@@ -1580,7 +1580,7 @@ class ClientOpenVpnBase(L7ClientTlsBase, L7OpenVpnBase):
     _buffer = attr.ib(init=False)
 
     def __attrs_post_init__(self):
-        super(ClientOpenVpnBase, self).__attrs_post_init__()
+        super().__attrs_post_init__()
 
         self._buffer = bytearray()
 

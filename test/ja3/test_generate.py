@@ -27,7 +27,7 @@ from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 class AnalyzerThread(TestThreadedServer):
     def __init__(self, configuration=None):
         self.l7_server = L7ServerTls('localhost', 0, configuration=configuration)
-        super(AnalyzerThread, self).__init__(self.l7_server)
+        super().__init__(self.l7_server)
 
         self.analyzer = AnalyzerGenerate()
         self.result = None

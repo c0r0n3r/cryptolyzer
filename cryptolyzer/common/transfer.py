@@ -258,7 +258,7 @@ class L4ServerBase(L4TransferBase):
         raise NotImplementedError()
 
     def __del__(self):
-        super(L4ServerBase, self).__del__()
+        super().__del__()
 
         if self._socket is not None:
             self._close_socket(self._socket)
@@ -357,7 +357,7 @@ class L4ServerUDP(L4ServerBase):
         return msg_bytes
 
     def close(self):
-        super(L4ServerUDP, self).close()
+        super().close()
 
         self._client_address = None
 

@@ -181,7 +181,7 @@ class TestL4ClientTCP(unittest.TestCase):
 
 class L4ServerEcho(TestThreadedServer):
     def __init__(self, l4_server):
-        super(L4ServerEcho, self).__init__(l4_server)
+        super().__init__(l4_server)
 
         self.killed = False
 

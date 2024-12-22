@@ -23,7 +23,7 @@ from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
 class AnalyzerThread(TestThreadedServer):
     def __init__(self, configuration=None):
         self.l7_server = L7ServerSsh('localhost', 0, configuration=configuration)
-        super(AnalyzerThread, self).__init__(self.l7_server)
+        super().__init__(self.l7_server)
 
         self.analyzer = AnalyzerGenerate()
         self.result = None

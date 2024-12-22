@@ -82,7 +82,7 @@ class TestTlsCases:
 class L7ServerTlsTest(TestThreadedServer):
     def __init__(self, l7_server):
         self.l7_server = l7_server
-        super(L7ServerTlsTest, self).__init__(self.l7_server)
+        super().__init__(self.l7_server)
 
     def run(self):
         self.l7_server.do_handshake()
@@ -183,7 +183,7 @@ class TlsServerLongCipherSuiteListIntolerance(TlsServerHandshake):
             self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
             raise StopIteration()
 
-        super(TlsServerLongCipherSuiteListIntolerance, self)._process_handshake_message(
+        super()._process_handshake_message(
             message, last_handshake_message_type
         )
 

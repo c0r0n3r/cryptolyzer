@@ -20,7 +20,7 @@ class TestSshCases:
 class L7ServerSshTest(TestThreadedServer):
     def __init__(self, l7_server):
         self.l7_server = l7_server
-        super(L7ServerSshTest, self).__init__(self.l7_server)
+        super().__init__(self.l7_server)
 
     def run(self):
         self._server.do_ssh_handshake()
