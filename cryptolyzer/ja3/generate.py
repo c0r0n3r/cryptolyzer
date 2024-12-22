@@ -50,7 +50,7 @@ class AnalyzerGenerate(AnalyzerBase):
             raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
         tag = client_messages[0][TlsHandshakeType.CLIENT_HELLO].ja3()
-        LogSingleton().log(level=60, msg='Client offers TLS client hello which JA3 tag is "%s"' % (tag, ))
+        LogSingleton().log(level=60, msg=f'Client offers TLS client hello which JA3 tag is "{tag}"')
 
         return AnalyzerResultGenerate(
             tag

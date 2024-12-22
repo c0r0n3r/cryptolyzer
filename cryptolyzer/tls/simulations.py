@@ -396,13 +396,13 @@ class AnalyzerSimulations(AnalyzerTlsBase):
                 failed_clients.append((tls_client.value.meta, e.error.value))
                 LogSingleton().log(
                     level=60,
-                    msg='Connection to server has been failed with the client %s' % (tls_client.value.meta, )
+                    msg=f'Connection to server has been failed with the client {tls_client.value.meta}'
                 )
             else:
                 succeeded_clients.append((tls_client.value.meta, simulation_result))
                 LogSingleton().log(
                     level=60,
-                    msg='Connection to server has been succeeded with the client %s' % (tls_client.value.meta, )
+                    msg=f'Connection to server has been succeeded with the client {tls_client.value.meta}'
                 )
 
         return succeeded_clients, failed_clients

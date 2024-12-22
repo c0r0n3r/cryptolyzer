@@ -57,23 +57,23 @@ class TestHttpHeaders(TestLoggerBase):
         test_http_server.init_connection()
         test_http_server.start()
 
-        analyzer_result = self.get_result('http://127.0.0.1:{}'.format(test_http_server.bind_port))
+        analyzer_result = self.get_result(f'http://127.0.0.1:{test_http_server.bind_port}')
         self.assertIn(HttpHeaderFieldServer('TestHTTPRequestHandler'), analyzer_result.headers)
 
         test_https_server = TestThreadedServerHttps('127.0.0.1', 0)
         test_https_server.init_connection()
         test_https_server.start()
 
-        analyzer_result = self.get_result('https://127.0.0.1:{}'.format(test_https_server.bind_port))
+        analyzer_result = self.get_result(f'https://127.0.0.1:{test_https_server.bind_port}')
         self.assertIn(HttpHeaderFieldServer('TestHTTPRequestHandler'), analyzer_result.headers)
 
         test_http_proxy_server = TestThreadedServerHttpProxy('127.0.0.2', 0)
         test_http_proxy_server.init_connection()
         test_http_proxy_server.start()
 
-        http_proxy_url = urllib3.util.parse_url('http://127.0.0.2:{}'.format(test_http_proxy_server.bind_port))
+        http_proxy_url = urllib3.util.parse_url(f'http://127.0.0.2:{test_http_proxy_server.bind_port}')
         analyzer_result = self.get_result(
-            'http://127.0.0.1:{}'.format(test_http_server.bind_port),
+            f'http://127.0.0.1:{test_http_server.bind_port}',
             l4_socket_params=L4TransferSocketParams(http_proxy=http_proxy_url)
         )
         self.assertIn(HttpHeaderFieldServer('TestHTTPRequestHandler'), analyzer_result.headers)

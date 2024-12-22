@@ -48,7 +48,7 @@ if 'READTHEDOCS' in os.environ:
     ]
     for lang in ('en',):
         for tag in ('latest', 'stable'):
-            _robots_txt_lines.append('Sitemap: {}{}/{}/sitemap.xml'.format(_baseurl, lang, tag))
+            _robots_txt_lines.append(f'Sitemap: {_baseurl}{lang}/{tag}/sitemap.xml')
 
     _html_extra_dir_name = 'readthedocs'
     _html_extra_path = pathlib.Path(_html_extra_dir_name)

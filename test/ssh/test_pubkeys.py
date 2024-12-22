@@ -79,10 +79,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
         ]))
         log_lines = self.get_log_lines()
         for idx, public_key in enumerate(result.public_keys):
-            self.assertIn(
-                'Server offers {} host key'.format(public_key.host_key_algorithm.value.code),
-                log_lines[idx]
-            )
+            self.assertIn(f'Server offers {public_key.host_key_algorithm.value.code} host key', log_lines[idx])
 
     def test_host_cert(self):
         result = self.get_result('git.centos.org', 22)

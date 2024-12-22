@@ -74,7 +74,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
             except SecurityError:
                 break
             else:
-                LogSingleton().log(level=60, msg='Server offers signature algorithm %s' % (algorithm.name, ))
+                LogSingleton().log(level=60, msg=f'Server offers signature algorithm {algorithm.name}')
                 supported_algorithms.append(algorithm)
 
         return supported_algorithms

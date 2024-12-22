@@ -197,7 +197,7 @@ class L4ClientTCP(L4ClientBase):
 
     def _init_connection(self):
         if self.socket_params.http_proxy:
-            host = '{}:{}'.format(self.ip, self.port)
+            host = f'{self.ip}:{self.port}'
             conn = HTTPConnectionRaw(
                 self.socket_params.http_proxy.host,
                 self.socket_params.http_proxy.port,

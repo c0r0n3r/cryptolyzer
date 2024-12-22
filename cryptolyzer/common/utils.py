@@ -65,9 +65,9 @@ class SerializableTextEncoderHighlighted():
         if vulnerability.attack_type is None:
             attack_name = ''
         else:
-            attack_name = ', due to {}'.format(vulnerability.attack_type.value.name)
+            attack_name = f', due to {vulnerability.attack_type.value.name}'
             if vulnerability.named is not None:
-                attack_name += ', called {}'.format(vulnerability.named.value.name)
+                attack_name += f', called {vulnerability.named.value.name}'
 
         return attack_name
 
@@ -83,7 +83,7 @@ class SerializableTextEncoderHighlighted():
         if gradeable_simple.grade in (Grade.SECURE, Grade.INSECURE):
             return ''
 
-        return ' ({})'.format(gradeable_simple.grade.value.name)
+        return f' ({gradeable_simple.grade.value.name})'
 
     def _get_gradeable_vulnerabilities_result(self, gradeable_vulnerabilities, level):
         if not gradeable_vulnerabilities.vulnerabilities:
@@ -92,7 +92,7 @@ class SerializableTextEncoderHighlighted():
         indent = level * '    '
 
         if hasattr(gradeable_vulnerabilities, 'long_name') and gradeable_vulnerabilities.long_name is not None:
-            name = '{} ({})'.format(gradeable_vulnerabilities.long_name, gradeable_vulnerabilities.name)
+            name = f'{gradeable_vulnerabilities.long_name} ({gradeable_vulnerabilities.name})'
         elif hasattr(gradeable_vulnerabilities, 'name'):
             name = gradeable_vulnerabilities.name
         else:
@@ -102,7 +102,7 @@ class SerializableTextEncoderHighlighted():
             name = ' ' + self._get_highlighted_text(name)
 
         result = os.linesep
-        result += '{}* {}{} is'.format(indent, gradeable_vulnerabilities.get_gradeable_name(), name)
+        result += f'{indent}* {gradeable_vulnerabilities.get_gradeable_name()}{name} is'
 
         if len(gradeable_vulnerabilities.vulnerabilities) > 1:
             indent += '    '
@@ -111,11 +111,9 @@ class SerializableTextEncoderHighlighted():
             indent = ' '
 
         result += os.linesep.join([
-            '{}{}{}'.format(
-                indent,
-                self._get_colorized_text(vulnerability.grade, vulnerability.grade.value.name),
-                self._get_attack_result_string(vulnerability),
-            )
+            f'{indent}'
+            f'{self._get_colorized_text(vulnerability.grade, vulnerability.grade.value.name)}'
+            f'{self._get_attack_result_string(vulnerability)}'
             for vulnerability in sorted(gradeable_vulnerabilities.vulnerabilities, key=self._key_vulneravility)
         ])
 

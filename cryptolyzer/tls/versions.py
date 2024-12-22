@@ -105,7 +105,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
             if server_messages[SslMessageType.SERVER_HELLO].cipher_kinds:
                 LogSingleton().log(
                     level=60,
-                    msg='Server offers protocol version %s' % (TlsProtocolVersion(TlsVersion.SSL2), )
+                    msg=f'Server offers protocol version {TlsProtocolVersion(TlsVersion.SSL2)}'
                 )
                 return True
 
@@ -159,9 +159,9 @@ class AnalyzerVersions(AnalyzerTlsBase):
                     break
                 else:
                     if protocol_version == server_hello.protocol_version:
-                        LogSingleton().log(level=60, msg='Server offers protocol version %s' % (
-                            server_hello.protocol_version,
-                        ))
+                        LogSingleton().log(
+                            level=60, msg=f'Server offers protocol version {server_hello.protocol_version}'
+                        )
                         supported_protocols.append(server_hello.protocol_version)
 
                     break
@@ -178,7 +178,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
             TlsExtensionType.SUPPORTED_VERSIONS
         ).selected_version
         supported_protocols.append(selected_version)
-        LogSingleton().log(level=60, msg='Server offers protocol version %s' % (selected_version, ))
+        LogSingleton().log(level=60, msg=f'Server offers protocol version {selected_version}')
         while checkable_protocols and checkable_protocols[0] >= selected_version:
             del checkable_protocols[0]
 

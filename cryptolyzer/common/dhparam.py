@@ -41,11 +41,11 @@ class TlsDHParamVector(Vector):  # pylint: disable=too-many-ancestors
 
 
 def bytes_to_int(bytes_value):
-    return int(''.join(map('{:02x}'.format, bytes_value)), 16)
+    return int.from_bytes(bytes_value, byteorder='big')
 
 
 def int_to_bytes(int_value, size):
-    hex_value = '%x' % int_value
+    hex_value = f'{int_value:x}'
     str_value = ('0' * ((size * 2) - len(hex_value))) + hex_value
 
     return bytearray(codecs.decode(str_value, 'hex'))

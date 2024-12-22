@@ -40,7 +40,7 @@ def get_protocol_handler_analyzer_and_uris(parser, arguments):
         if analyzable_uri.scheme not in supported_schemes
     ]
     if unsupported_schemes:
-        parser.error('unsupported protocol: {}'.format(', '.join(unsupported_schemes)))
+        parser.error(f'unsupported protocol: {", ".join(unsupported_schemes)}')
 
     return protocol_handler, analyzer, targets
 
@@ -49,7 +49,7 @@ def parse_arg_socket_timeout(value):
     value = float(value)
 
     if value <= 0:
-        raise argparse.ArgumentTypeError('%s socket timeout must be a positive integer value' % value)
+        raise argparse.ArgumentTypeError(f'{value} socket timeout must be a positive integer value')
 
     return value
 
@@ -109,9 +109,9 @@ def get_argument_parser():
         for analyzer_class in analyzers:
             parser_plugin = parsers_plugin.add_parser(analyzer_class.get_name(), help=analyzer_class.get_help())
             schemes = [client.get_scheme() for client in analyzer_class.get_clients()]
+            scheme_list = ','.join(schemes)
             parser_plugin.add_argument(
-                'targets', metavar='URI', nargs='+',
-                help='[{{{}}}://]f.q.d.n[:port][#ip]'.format(','.join(schemes))
+                'targets', metavar='URI', nargs='+', help=f'[{{{scheme_list}}}://]f.q.d.n[:port][#ip]'
             )
 
     return parser

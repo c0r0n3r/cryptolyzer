@@ -108,7 +108,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
 
     def _check_log(self, result):
         for version in result.versions:
-            self.assertIn('Server offers protocol version {}'.format(str(version)), self.log_stream.getvalue())
+            self.assertIn(f'Server offers protocol version {str(version)}', self.log_stream.getvalue())
 
     def test_missing_fallback_scsv_support(self):
         threaded_server = self.create_server(TlsServerConfiguration(

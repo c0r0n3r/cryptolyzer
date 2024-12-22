@@ -76,7 +76,7 @@ class SshProtocolMessageDefault(SshProtocolMessage):
     def __init__(self):
         super().__init__(
             protocol_version=SshProtocolVersion(SshVersion.SSH2, 0),
-            software_version=SshSoftwareVersionUnparsed('{}_{}'.format(__setup__.__title__, __setup__.__version__)),
+            software_version=SshSoftwareVersionUnparsed(f'{__setup__.__title__}_{__setup__.__version__}'),
             comment=__setup__.__url__
         )
 

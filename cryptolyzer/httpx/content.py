@@ -209,7 +209,7 @@ class AnalyzerConetnt(AnalyzerHttpBase):
             if content_type is not None and content_type.charset is not None
             else 'utf-8'
         )
-        LogSingleton().log(level=60, msg='Server offers content with type %s' % (str(content_type.mime_type)))
+        LogSingleton().log(level=60, msg=f'Server offers content with type {str(content_type.mime_type)}')
 
         tags_with_integrity = None
         tags_with_unencrypted_source = None

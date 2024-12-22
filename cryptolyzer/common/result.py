@@ -124,7 +124,8 @@ class AnalyzerResultAllBase(AnalyzerResultBase):
         dict_value = self._asdict()
         name_dict = self._markdown_human_readable_names(self, dict_value)
         for attr_name, value in dict_value.items():
-            result += '{} {}\n\n'.format((level + 1) * '#', name_dict[attr_name])
+            header_signs = (level + 1) * '#'
+            result += f'{header_signs} {name_dict[attr_name]}\n\n'
             if (value is None or isinstance(value, (AnalyzerResultBase, AnalyzerTarget))):
                 result += self._as_markdown_without_target(value, level)
             else:
@@ -132,7 +133,8 @@ class AnalyzerResultAllBase(AnalyzerResultBase):
                     if index:
                         result += '\n'
 
-                    result += '{} {}\n\n'.format((level + 2) * '#', cipher_result.target.proto_version)
+                    header_signs = (level + 2) * '#'
+                    result += f'{header_signs} {cipher_result.target.proto_version}\n\n'
                     result += self._as_markdown_without_target(cipher_result, level)
             result += '\n'
 

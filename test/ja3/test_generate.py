@@ -73,7 +73,7 @@ class TestJA3Generate(TestLoggerBase):
         self.assertEqual(result.target, '771,3,,,')
         self.assertEqual(
             self.log_stream.getvalue(),
-            'Client offers TLS client hello which JA3 tag is "{}"\n'.format(result.target)
+            f'Client offers TLS client hello which JA3 tag is "{result.target}"\n'
         )
 
     def test_tag_one_element_lists(self):
@@ -93,7 +93,7 @@ class TestJA3Generate(TestLoggerBase):
         self.assertEqual(result.target, '771,3,11-10,1,0')
         self.assertEqual(
             self.log_stream.getvalue(),
-            'Client offers TLS client hello which JA3 tag is "{}"\n'.format(result.target)
+            f'Client offers TLS client hello which JA3 tag is "{result.target}"\n'
         )
 
     def test_tag_two_element_lists(self):
@@ -118,5 +118,5 @@ class TestJA3Generate(TestLoggerBase):
         self.assertEqual(result.target, '771,13-12,11-10,3-2,1-0')
         self.assertEqual(
             self.log_stream.getvalue(),
-            'Client offers TLS client hello which JA3 tag is "{}"\n'.format(result.target)
+            f'Client offers TLS client hello which JA3 tag is "{result.target}"\n'
         )

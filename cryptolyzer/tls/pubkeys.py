@@ -146,10 +146,14 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                     subject_matches=subject_matches,
                     certificate_chain=certificate_chain,
                 )
-                LogSingleton().log(level=60, msg='Server offers %s X.509 public key (with%s SNI)' % (
-                    tls_public_key.certificate_chain.items[-1].key_type.name,
-                    '' if tls_public_key.sni_sent else 'out',
-                ))
+                sni_with = 'with' if tls_public_key.sni_sent else 'without'
+                LogSingleton().log(
+                    level=60,
+                    msg=(
+                        f'Server offers {tls_public_key.certificate_chain.items[-1].key_type.name} X.509 public key '
+                        f'({sni_with} SNI)'
+                    )
+                )
                 results.append(tls_public_key)
 
             tls_public_key.certificate_status = certificate_status

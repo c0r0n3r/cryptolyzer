@@ -60,7 +60,7 @@ class AnalyzerResultKeyExchange(Serializable):
 
     def _as_markdown(self, level):
         return self._markdown_result([
-            '{} ({})'.format(kex_algorithm.value.code, kex_algorithm.value.key_size)
+            f'{kex_algorithm.value.code} ({kex_algorithm.value.key_size})'
             for kex_algorithm in self.kex_algorithms
         ], level)
 
@@ -132,8 +132,11 @@ class AnalyzerDHParams(AnalyzerSshBase):
 
             if dh_public_key.key_size not in gex_key_sizes:
                 gex_key_sizes.add(dh_public_key.key_size)
-                LogSingleton().log(level=60, msg='Server offers custom DH public parameter with size %d-bit (%s)' % (
-                        dh_public_key.key_size, SshProtocolVersion(SshVersion.SSH2),
+                LogSingleton().log(
+                    level=60,
+                    msg=(
+                        'Server offers custom DH public parameter with size '
+                        f'{dh_public_key.key_size}-bit ({SshProtocolVersion(SshVersion.SSH2)})'
                     )
                 )
 
@@ -166,10 +169,11 @@ class AnalyzerDHParams(AnalyzerSshBase):
                 kex_algorithms.append(kex_algorithm)
 
         for algorithm in kex_algorithms:
-            LogSingleton().log(level=60, msg='Server offers well-known DH public parameter with size %s-bit (%s)' % (
-                    'unknown' if isinstance(algorithm, str) else str(algorithm.value.key_size),
-                    algorithm if isinstance(algorithm, str) else algorithm.value.code,
-                )
+            key_size = 'unknown' if isinstance(algorithm, str) else str(algorithm.value.key_size)
+            algorithm_name = algorithm if isinstance(algorithm, str) else algorithm.value.code
+            LogSingleton().log(
+                level=60,
+                msg=f'Server offers well-known DH public parameter with size {key_size}-bit ({algorithm_name})'
             )
 
         return AnalyzerResultDHParams(

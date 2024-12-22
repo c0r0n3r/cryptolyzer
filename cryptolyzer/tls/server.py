@@ -503,7 +503,7 @@ class L7ServerStartTlsTextBase(L7ServerStartTlsBase):
 
     @classmethod
     def _get_software_name(cls):
-        return '{} {}'.format(__title__, __version__).encode('ascii')
+        return f'{__title__} {__version__}'.encode('ascii')
 
     def _init_l7(self):
         greeting = self._get_greeting()

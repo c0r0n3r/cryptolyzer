@@ -108,14 +108,11 @@ class AnalyzerCiphers(AnalyzerSshBase):
         if algorithm_name is None:
             algorithm_name = message_attr_name.replace('_', ' ')
 
-        LogSingleton().log(level=60, msg='Server offers %s %s (%s)' % (
-            algorithm_name,
-            ', '.join(list(map(
-                lambda algorithm: algorithm if isinstance(algorithm, str) else algorithm.value.code,
-                getattr(key_exchange_init_message, message_attr_name)
-            ))),
-            protocol_version,
-        ))
+        algorithm_name_list = ', '.join(list(map(
+            lambda algorithm: algorithm if isinstance(algorithm, str) else algorithm.value.code,
+            getattr(key_exchange_init_message, message_attr_name)
+        )))
+        LogSingleton().log(level=60, msg=f'Server offers {algorithm_name} {algorithm_name_list} ({protocol_version})')
 
     def analyze(self, analyzable):
         server_messages = analyzable.do_handshake(last_message_type=SshMessageCode.KEXINIT)

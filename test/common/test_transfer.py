@@ -76,7 +76,7 @@ class TestL4ClientTCP(unittest.TestCase):
         test_http_proxy_server.init_connection()
         test_http_proxy_server.start()
 
-        http_proxy_url = urllib3.util.parse_url('http://127.0.0.2:{}'.format(test_http_proxy_server.bind_port))
+        http_proxy_url = urllib3.util.parse_url(f'http://127.0.0.2:{test_http_proxy_server.bind_port}')
         l4_client = L4ClientTCP(
             '127.0.0.1', test_http_server.bind_port,
             socket_params=L4TransferSocketParams(http_proxy=http_proxy_url)
@@ -153,7 +153,7 @@ class TestL4ClientTCP(unittest.TestCase):
         test_http_proxy_server.init_connection()
         test_http_proxy_server.start()
 
-        http_proxy_url = urllib3.util.parse_url('http://127.0.0.2:{}'.format(test_http_proxy_server.bind_port))
+        http_proxy_url = urllib3.util.parse_url(f'http://127.0.0.2:{test_http_proxy_server.bind_port}')
 
         l4_client = L4ClientTCP(
             '127.0.0.1', test_http_server.bind_port,

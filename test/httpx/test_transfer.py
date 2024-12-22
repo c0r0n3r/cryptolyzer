@@ -21,9 +21,9 @@ class TestHttpHandshakeBase(unittest.TestCase):
         test_http_proxy_server.start()
 
         analyzer_result = L7ClientHttp(
-                urllib3.util.parse_url('http://127.0.0.1:{}'.format(test_http_server.bind_port)),
+                urllib3.util.parse_url(f'http://127.0.0.1:{test_http_server.bind_port}'),
                 L4TransferSocketParams(
-                    http_proxy=urllib3.util.parse_url('http://127.0.0.2:{}'.format(test_http_proxy_server.bind_port))
+                    http_proxy=urllib3.util.parse_url(f'http://127.0.0.2:{test_http_proxy_server.bind_port}')
                 )
         ).do_handshake()
         self.assertIn(b'Server: TestHTTPProxyRequestHandler\r\n', analyzer_result)
@@ -40,9 +40,9 @@ class TestHttpHandshakeBase(unittest.TestCase):
         test_http_proxy_server.start()
 
         analyzer_result = L7ClientHttps(
-                urllib3.util.parse_url('http://127.0.0.1:{}'.format(test_http_server.bind_port)),
+                urllib3.util.parse_url(f'http://127.0.0.1:{test_http_server.bind_port}'),
                 L4TransferSocketParams(
-                    http_proxy=urllib3.util.parse_url('http://127.0.0.2:{}'.format(test_http_proxy_server.bind_port))
+                    http_proxy=urllib3.util.parse_url(f'http://127.0.0.2:{test_http_proxy_server.bind_port}')
                 )
         ).do_handshake()
         self.assertIn(b'Server: TestHTTPProxyRequestHandler\r\n', analyzer_result)

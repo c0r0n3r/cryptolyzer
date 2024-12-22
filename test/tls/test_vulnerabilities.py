@@ -23,12 +23,14 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
 
     def _check_cipher_suite_logs(self, cipher_suites, log_stream):
         for cipher_suite in cipher_suites:
-            self.assertIn('Server offers cipher suite {}'.format(cipher_suite.name), log_stream)
+            self.assertIn(f'Server offers cipher suite {cipher_suite.name}', log_stream)
 
     def _check_ffdhe_params(self, ffdhe_params, log_stream):
         for ffdhe_param in ffdhe_params:
-            self.assertIn('Server offers FFDHE public parameter with size {}-bit'.format(
-                ffdhe_param.value.named_group.value.size), log_stream)
+            self.assertIn(
+                f'Server offers FFDHE public parameter with size {ffdhe_param.value.named_group.value.size}-bit',
+                log_stream
+            )
 
     def test_real_versions(self):
         result = self.get_result('novell.com', 443)

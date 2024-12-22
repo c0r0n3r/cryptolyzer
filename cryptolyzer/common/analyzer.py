@@ -101,9 +101,10 @@ class ProtocolHandlerBase(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     def analyze(self, analyzer, uri, socket_params=L4TransferSocketParams()):
-        LogSingleton().log(level=60, msg='Analysis started; protocol="%s", analyzer="%s"' % (
-            self.get_protocol(), analyzer.get_name(),
-        ))
+        LogSingleton().log(
+            level=60,
+            msg=f'Analysis started; protocol="{self.get_protocol()}", analyzer="{analyzer.get_name()}"'
+        )
 
         l7_client = self._l7_client_from_params(uri, socket_params)
         args, kwargs = self._get_analyzer_args()

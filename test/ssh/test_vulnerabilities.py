@@ -30,13 +30,15 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
 
     def _check_kex_params(self, algorithms, log_stream):
         for algorithm in algorithms:
-            self.assertIn('Server offers well-known DH public parameter with size {}-bit ({})'.format(
-                algorithm.value.key_size, algorithm.value.code
-            ), log_stream)
+            self.assertIn(
+                'Server offers well-known DH public parameter with size '
+                f'{algorithm.value.key_size}-bit ({algorithm.value.code})',
+                log_stream
+            )
 
     def _check_gex_params(self, key_sizes, log_stream):
         for key_size in key_sizes:
-            self.assertIn('Server offers custom DH public parameter with size {}-bit'.format(key_size), log_stream)
+            self.assertIn(f'Server offers custom DH public parameter with size {key_size}-bit', log_stream)
 
     def test_algorithms(self):
         # Vulnerable algorithms are aprotected by strict KEX

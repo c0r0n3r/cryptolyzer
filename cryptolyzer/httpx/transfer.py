@@ -22,7 +22,7 @@ class HttpHandshakeBase():
     @property
     def raw_headers(self):
         raw_headers = '\r\n'.join([
-            '{}: {}'.format(name, value)
+            f'{name}: {value}'
             for name, value in self.response.headers.items()
         ]) + '\r\n'
 

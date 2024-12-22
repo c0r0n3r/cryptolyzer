@@ -87,9 +87,8 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         protocol_names = list(extension.protocol_names)
         if protocol_names:
-            LogSingleton().log(level=60, msg='Server offers next protocol(s) %s' % (
-                ', '.join(['"{}"'.format(protocol_name.value.code) for protocol_name in protocol_names]),
-            ))
+            protocol_codes = ', '.join([f'"{protocol_name.value.code}"' for protocol_name in protocol_names])
+            LogSingleton().log(level=60, msg=f'Server offers next protocol(s) {protocol_codes}')
 
         return protocol_names
 
@@ -123,9 +122,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             if already_known_protocol_names:
                 break
 
-            LogSingleton().log(level=60, msg='Server offers application layer protocol "%s"' % (
-                protocol_name.value.code,
-            ))
+            LogSingleton().log(level=60, msg=f'Server offers application layer protocol "{protocol_name.value.code}"')
 
             remaining_protocol_names.remove(protocol_name)
 
@@ -203,12 +200,11 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             supported_compression_methods.add(supported_compression_method)
 
         if supported_compression_methods:
-            LogSingleton().log(level=60, msg='Server offers compression method(s) %s' % (
-                ', '.join([
-                    '"{}"'.format(compression_method.name)
-                    for compression_method in supported_compression_methods
-                ]),
-            ))
+            compression_method_names = ', '.join([
+                f'"{compression_method.name}"'
+                for compression_method in supported_compression_methods
+            ])
+            LogSingleton().log(level=60, msg=f'Server offers compression method(s) {compression_method_names}')
 
         return supported_compression_methods
 
@@ -323,9 +319,8 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         except KeyError:
             point_formats = [TlsECPointFormat.UNCOMPRESSED, ]
 
-        LogSingleton().log(level=60, msg='Server offers point format(s) %s' % (
-            ', '.join(['"{}"'.format(point_format.name) for point_format in point_formats]),
-        ))
+        point_format_names = ', '.join([f'"{point_format.name}"' for point_format in point_formats])
+        LogSingleton().log(level=60, msg=f'Server offers point format(s) {point_format_names}')
 
         return point_formats
 
@@ -361,7 +356,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             LogSingleton().log(level=60, msg='Server does not require record size limit')
             return True, None
 
-        LogSingleton().log(level=60, msg='Server requires record size limit %d' % (extension.record_size_limit))
+        LogSingleton().log(level=60, msg=f'Server requires record size limit {extension.record_size_limit}')
 
         return True, extension.record_size_limit
 

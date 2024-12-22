@@ -126,9 +126,9 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
             else:
                 host_public_key = dh_key_exchange_reply_message.host_public_key
                 host_public_keys.append(host_public_key)
-                LogSingleton().log(level=60, msg='Server offers %s host key' % (
-                    host_public_key.host_key_algorithm.value.code
-                ))
+                LogSingleton().log(
+                    level=60, msg=f'Server offers {host_public_key.host_key_algorithm.value.code} host key'
+                )
 
         return AnalyzerResultPublicKeys(
             AnalyzerTargetSsh.from_l7_client(analyzable),

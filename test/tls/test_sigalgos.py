@@ -65,10 +65,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         ])
         log_lines = self.get_log_lines()
         for idx, signature_algorithm in enumerate(result.sig_algos):
-            self.assertEqual(
-                'Server offers signature algorithm {}'.format(signature_algorithm.name),
-                log_lines[idx]
-            )
+            self.assertEqual(f'Server offers signature algorithm {signature_algorithm.name}', log_lines[idx])
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(

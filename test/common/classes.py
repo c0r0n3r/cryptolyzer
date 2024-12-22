@@ -110,15 +110,11 @@ class TestMainBase(unittest.TestCase):
         if scheme is not None:
             func_arguments['scheme'] = scheme
 
+        scheme = '' if scheme is None else scheme + '://'
         cli_arguments = {
             'protocol': protocol_version if isinstance(protocol_version, str) else protocol_version.identifier,
             'analyzer': analyzer,
-            'address': '{scheme}{hostname}:{port}#{ip_address}'.format(
-                scheme='' if scheme is None else scheme + '://',
-                hostname=hostname,
-                port=port,
-                ip_address=ip_address
-            ),
+            'address': f'{scheme}{hostname}:{port}#{ip_address}',
             'timeout': timeout,
             'proxy': proxy,
         }

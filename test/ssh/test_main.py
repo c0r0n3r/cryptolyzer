@@ -41,7 +41,7 @@ class TestMain(TestMainBase):
 
         self.host = 'localhost'
         self.port = self.threaded_server.l7_server.l4_transfer.bind_port
-        self.address = '{}:{}'.format(self.host, self.port)
+        self.address = f'{self.host}:{self.port}'
 
     def test_ciphers(self):
         self.assertEqual(
