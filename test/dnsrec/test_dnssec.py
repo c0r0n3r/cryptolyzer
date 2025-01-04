@@ -25,23 +25,20 @@ class TestDnsRecordDnsSec(TestLoggerBase):
         self.assertEqual(analyzer_result.delegation_signer, [])
         self.assertEqual(analyzer_result.resource_record_signatures, [])
 
-        analyzer_result = self.get_result('dns://cloudflare.com#1.1.1.1')
+        analyzer_result = self.get_result('dns://openssl.org#1.1.1.1')
         self.assertEqual(
             list(map(lambda dns_key: dns_key.algorithm, analyzer_result.dns_keys)),
-            [DnsSecAlgorithm.ECDSAP256SHA256, DnsSecAlgorithm.ECDSAP256SHA256]
+            [DnsSecAlgorithm.RSASHA256, DnsSecAlgorithm.RSASHA256]
         )
         self.assertEqual(
             list(map(lambda digital_signature: digital_signature.algorithm, analyzer_result.delegation_signer)),
-            [DnsSecAlgorithm.ECDSAP256SHA256]
+            [DnsSecAlgorithm.RSASHA256, DnsSecAlgorithm.RSASHA256]
         )
         self.assertEqual(
             list(map(lambda digital_signature: digital_signature.digest_type, analyzer_result.delegation_signer)),
-            [DnsSecDigestType.SHA_256]
+            [DnsSecDigestType.SHA_256, DnsSecDigestType.SHA_256]
         )
-        dns_key_tags = set(map(lambda dns_key: dns_key.key_tag, analyzer_result.dns_keys))
-        digital_signature_key_tags = set(map(
-            lambda digital_signature: digital_signature.key_tag,
-            analyzer_result.delegation_signer
-        ))
-        self.assertTrue(digital_signature_key_tags.issubset(dns_key_tags))
-        self.assertEqual(analyzer_result.resource_record_signatures, [])
+        self.assertEqual(
+            list(map(lambda rr_signature: rr_signature.algorithm, analyzer_result.resource_record_signatures)),
+            10 * [DnsSecAlgorithm.RSASHA256]
+        )
