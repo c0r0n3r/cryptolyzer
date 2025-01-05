@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'CryptoLyzer'
-version = '0.12.6'
+version = '1.0.0'
 description = 'A comprehensive cryptographic settings analyzer'
 authors = [
     {name = 'Szilárd Pfeiffer', email = 'coroner@pfeifferszilard.hu'}
@@ -13,7 +13,7 @@ maintainers = [
     {name = 'Szilárd Pfeiffer', email = 'coroner@pfeifferszilard.hu'}
 ]
 classifiers=[
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'Environment :: Console',
     'Framework :: tox',
     'Intended Audience :: Developers',
@@ -72,7 +72,7 @@ dependencies = [
     'bs4',
     'certvalidator',
     'colorama',
-    'cryptoparser==0.12.6',
+    'cryptoparser==1.0.0',
     'pyfakefs',
     'python-dateutil',
     'requests',

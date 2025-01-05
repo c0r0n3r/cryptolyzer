@@ -3,6 +3,18 @@ Changelog
 =========
 
 -------------------
+1.0.0 - 2025-01-05
+-------------------
+
+Refactor
+========
+
+-  Generic
+
+   -  Support only Python version greater or euqal than 3.9
+   -  Use pyproject.toml instead of setup.py
+
+-------------------
 0.12.6 - 2024-12-08
 -------------------
 
