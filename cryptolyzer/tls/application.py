@@ -2,7 +2,6 @@
 
 import abc
 
-import six
 
 import attr
 
@@ -23,20 +22,20 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType, Securit
 
 
 @attr.s(init=False)
-class L7OpenVpnBase(object):
+class L7OpenVpnBase():
     _FRAGMENT_LENGHT = 100
 
     session_id = attr.ib(
         init=False, default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+        validator=attr.validators.optional(attr.validators.instance_of(int))
     )
     client_packet_id = attr.ib(
         init=False, default=0x00000000,
-        validator=attr.validators.instance_of(six.integer_types)
+        validator=attr.validators.instance_of(int)
     )
     remote_session_id = attr.ib(
         init=False, default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+        validator=attr.validators.optional(attr.validators.instance_of(int))
     )
     _buffer = attr.ib(init=False)
 
@@ -92,9 +91,9 @@ class L7OpenVpnBase(object):
                 l4_transfer.receive(receivable_byte_num)
             except NotEnoughData as e:
                 if l4_transfer.buffer:
-                    six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                    raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
-                six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
         return packets
 
@@ -120,7 +119,7 @@ class L7OpenVpnBase(object):
         try:
             packets = self._receive_packets(l4_transfer)
         except (InvalidType, InvalidValue, NotEnoughData) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
         received_bytes = bytearray()
         for packet in packets:

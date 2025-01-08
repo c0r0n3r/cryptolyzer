@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import attr
-import six
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
 
@@ -63,7 +62,7 @@ class AnalyzerResultExtensions(AnalyzerResultTls):  # pylint: disable=too-many-i
     )
     record_size_limit_handled = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)))
     record_size_limit_server = attr.ib(
-        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+        validator=attr.validators.optional(attr.validators.instance_of(int))
     )
 
 
@@ -88,9 +87,8 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         protocol_names = list(extension.protocol_names)
         if protocol_names:
-            LogSingleton().log(level=60, msg=six.u('Server offers next protocol(s) %s') % (
-                ', '.join(['"{}"'.format(protocol_name.value.code) for protocol_name in protocol_names]),
-            ))
+            protocol_codes = ', '.join([f'"{protocol_name.value.code}"' for protocol_name in protocol_names])
+            LogSingleton().log(level=60, msg=f'Server offers next protocol(s) {protocol_codes}')
 
         return protocol_names
 
@@ -124,9 +122,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             if already_known_protocol_names:
                 break
 
-            LogSingleton().log(level=60, msg=six.u('Server offers application layer protocol "%s"') % (
-                protocol_name.value.code,
-            ))
+            LogSingleton().log(level=60, msg=f'Server offers application layer protocol "{protocol_name.value.code}"')
 
             remaining_protocol_names.remove(protocol_name)
 
@@ -148,7 +144,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
                 client_hello, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
             )
         except (TlsAlert, NetworkError) as e:
-            six.raise_from(KeyError, e)
+            raise KeyError from e
 
         return server_messages
 
@@ -177,9 +173,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             analyzable, client_hello, TlsExtensionType.EXTENDED_MASTER_SECRET,
         )
         if extended_master_secret_supported:
-            LogSingleton().log(level=60, msg=six.u('Server offers extended master secret'))
+            LogSingleton().log(level=60, msg='Server offers extended master secret')
         else:
-            LogSingleton().log(level=60, msg=six.u('Server does not offer extended master secret'))
+            LogSingleton().log(level=60, msg='Server does not offer extended master secret')
         return extended_master_secret_supported
 
     @classmethod
@@ -204,12 +200,11 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             supported_compression_methods.add(supported_compression_method)
 
         if supported_compression_methods:
-            LogSingleton().log(level=60, msg=six.u('Server offers compression method(s) %s') % (
-                ', '.join([
-                    '"{}"'.format(compression_method.name)
-                    for compression_method in supported_compression_methods
-                ]),
-            ))
+            compression_method_names = ', '.join([
+                f'"{compression_method.name}"'
+                for compression_method in supported_compression_methods
+            ])
+            LogSingleton().log(level=60, msg=f'Server offers compression method(s) {compression_method_names}')
 
         return supported_compression_methods
 
@@ -228,9 +223,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         clock_is_accurate = -15 < clock_skew < 15
 
         if clock_is_accurate:
-            LogSingleton().log(level=60, msg=six.u('Server offers accurate clock'))
+            LogSingleton().log(level=60, msg='Server offers accurate clock')
         else:
-            LogSingleton().log(level=60, msg=six.u('Server does not offer accurate clock'))
+            LogSingleton().log(level=60, msg='Server does not offer accurate clock')
 
         return clock_is_accurate
 
@@ -250,9 +245,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             )
 
         if renegotiation_supported:
-            LogSingleton().log(level=60, msg=six.u('Server offers renegotiation'))
+            LogSingleton().log(level=60, msg='Server offers renegotiation')
         else:
-            LogSingleton().log(level=60, msg=six.u('Server does not offer renegotiation'))
+            LogSingleton().log(level=60, msg='Server does not offer renegotiation')
 
         return renegotiation_supported
 
@@ -271,9 +266,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             session_cache_supported = session_id != TlsSessionIdVector([])
 
         if session_cache_supported:
-            LogSingleton().log(level=60, msg=six.u('Server offers session cache'))
+            LogSingleton().log(level=60, msg='Server offers session cache')
         else:
-            LogSingleton().log(level=60, msg=six.u('Server does not offer session cache'))
+            LogSingleton().log(level=60, msg='Server does not offer session cache')
 
         return session_cache_supported
 
@@ -285,9 +280,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         )
 
         if session_ticket_supported:
-            LogSingleton().log(level=60, msg=six.u('Server offers session ticket'))
+            LogSingleton().log(level=60, msg='Server offers session ticket')
         else:
-            LogSingleton().log(level=60, msg=six.u('Server does not offer session ticket'))
+            LogSingleton().log(level=60, msg='Server does not offer session ticket')
 
         return session_ticket_supported
 
@@ -307,10 +302,10 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             extensions = server_messages[TlsHandshakeType.SERVER_HELLO].extensions
             extensions.get_item_by_type(TlsExtensionType.ENCRYPT_THEN_MAC)
         except KeyError:
-            LogSingleton().log(level=60, msg=six.u('Server does not offer encrypt then MAC'))
+            LogSingleton().log(level=60, msg='Server does not offer encrypt then MAC')
             return False
 
-        LogSingleton().log(level=60, msg=six.u('Server offers encrypt then MAC'))
+        LogSingleton().log(level=60, msg='Server offers encrypt then MAC')
         return True
 
     @classmethod
@@ -324,9 +319,8 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         except KeyError:
             point_formats = [TlsECPointFormat.UNCOMPRESSED, ]
 
-        LogSingleton().log(level=60, msg=six.u('Server offers point format(s) %s') % (
-            ', '.join(['"{}"'.format(point_format.name) for point_format in point_formats]),
-        ))
+        point_format_names = ', '.join([f'"{point_format.name}"' for point_format in point_formats])
+        LogSingleton().log(level=60, msg=f'Server offers point format(s) {point_format_names}')
 
         return point_formats
 
@@ -344,10 +338,10 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             pass
 
         if not handled:
-            LogSingleton().log(level=60, msg=six.u('Server does not handle record size limit'))
+            LogSingleton().log(level=60, msg='Server does not handle record size limit')
             return False, None
 
-        LogSingleton().log(level=60, msg=six.u('Server handles record size limit'))
+        LogSingleton().log(level=60, msg='Server handles record size limit')
 
         client_hello = cls._get_client_hello(analyzable, protocol_version)
         try:
@@ -359,10 +353,10 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             extensions = server_messages[TlsHandshakeType.SERVER_HELLO].extensions
             extension = extensions.get_item_by_type(TlsExtensionType.RECORD_SIZE_LIMIT)
         except KeyError:
-            LogSingleton().log(level=60, msg=six.u('Server does not require record size limit'))
+            LogSingleton().log(level=60, msg='Server does not require record size limit')
             return True, None
 
-        LogSingleton().log(level=60, msg=six.u('Server requires record size limit %d' % (extension.record_size_limit)))
+        LogSingleton().log(level=60, msg=f'Server requires record size limit {extension.record_size_limit}')
 
         return True, extension.record_size_limit
 

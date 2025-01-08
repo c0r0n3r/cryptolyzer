@@ -1,37 +1,25 @@
 # -*- coding: utf-8 -*-
 
 import abc
-import os
-
-try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
-try:
-    import pathlib
-except ImportError:  # pragma: no cover
-    import pathlib2 as pathlib  # pragma: no cover
-
 import codecs
+import http.server
 import io
 import logging
+import os
+import pathlib
 import socket
+import socketserver
 import ssl
 import sys
 import threading
 import time
+import unittest
+from unittest.mock import patch
 
 import attr
 import urllib3
 
 import pyfakefs.fake_filesystem_unittest
-import six
 
 from cryptodatahub.common.grade import Grade, GradeableComplex, GradeableSimple, GradeableVulnerabilities
 
@@ -102,6 +90,10 @@ class TestGradeableComplex(GradeableComplex):
 
 
 class TestMainBase(unittest.TestCase):
+    @classmethod
+    def _get_main_func(cls):
+        raise NotImplementedError()
+
     @staticmethod
     def _get_arguments(
             protocol_version, analyzer, hostname, port, timeout=None, scheme=None, proxy=None
@@ -118,15 +110,11 @@ class TestMainBase(unittest.TestCase):
         if scheme is not None:
             func_arguments['scheme'] = scheme
 
+        scheme = '' if scheme is None else scheme + '://'
         cli_arguments = {
             'protocol': protocol_version if isinstance(protocol_version, str) else protocol_version.identifier,
             'analyzer': analyzer,
-            'address': '{scheme}{hostname}:{port}#{ip_address}'.format(
-                scheme='' if scheme is None else scheme + '://',
-                hostname=hostname,
-                port=port,
-                ip_address=ip_address
-            ),
+            'address': f'{scheme}{hostname}:{port}#{ip_address}',
             'timeout': timeout,
             'proxy': proxy,
         }
@@ -134,8 +122,8 @@ class TestMainBase(unittest.TestCase):
         return func_arguments, cli_arguments
 
     def _get_command_result(self, command_line_arguments, stdin=b''):
-        with patch('sys.stdout', new_callable=six.StringIO) as stdout, \
-                patch('sys.stderr', new_callable=six.StringIO) as stderr, \
+        with patch('sys.stdout', new_callable=io.StringIO) as stdout, \
+                patch('sys.stderr', new_callable=io.StringIO) as stderr, \
                 patch.object(sys, 'stdin', io.TextIOWrapper(io.BytesIO(stdin))), \
                 patch.object(sys, 'argv', command_line_arguments):
             self._get_main_func()()
@@ -168,24 +156,24 @@ class TestMainBase(unittest.TestCase):
         return self._get_test_analyzer_result('highlighted', protocol, analyzer, address, timeout, proxy)[0]
 
     def _test_argument_error(self, argv, stderr_regexp, stdin=b''):
-        with patch.object(sys, 'stderr', new_callable=six.StringIO) as stderr, \
+        with patch.object(sys, 'stderr', new_callable=io.StringIO) as stderr, \
                 patch.object(sys, 'argv', argv), patch.object(sys, 'stdin', io.TextIOWrapper(io.BytesIO(stdin))):
 
             with self.assertRaises(SystemExit) as context_manager:
                 self._get_main_func()()
             self.assertEqual(context_manager.exception.args[0], 2)
-            six.assertRegex(self, stderr.getvalue(), stderr_regexp)
+            self.assertRegex(stderr.getvalue(), stderr_regexp)
 
     def _test_argument_help(self, command):
-        devnull = six.StringIO()
+        devnull = io.StringIO()
         with patch.object(sys, 'stdout', devnull), patch.object(sys, 'argv', [str(command), '-h']):
             with self.assertRaises(SystemExit) as context_manager:
                 self._get_main_func()()
             self.assertEqual(context_manager.exception.args[0], 0)
 
 
-class TestHTTPRequestHandlerBase(six.moves.SimpleHTTPServer.SimpleHTTPRequestHandler):
-    def log_message(self, fmt, *args, **kwarg):
+class TestHTTPRequestHandlerBase(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):  # pylint: disable=redefined-builtin
         pass
 
     def version_string(self):
@@ -224,7 +212,7 @@ class TestHTTPProxyRequestHandler(TestHTTPRequestHandlerBase):
 
 class TestThreadedServerHttpBase(threading.Thread):
     def __init__(self, address, port):
-        super(TestThreadedServerHttpBase, self).__init__()
+        super().__init__()
 
         self.address = address
         self.port = port
@@ -252,13 +240,13 @@ class TestHTTPRequestHandler(TestHTTPRequestHandlerBase):
 
 class TestThreadedServerHttpProxy(TestThreadedServerHttpBase):
     def init_connection(self):
-        self.server = six.moves.socketserver.TCPServer((self.address, self.port), TestHTTPProxyRequestHandler)
+        self.server = socketserver.TCPServer((self.address, self.port), TestHTTPProxyRequestHandler)
         self.server.timeout = 5
 
 
 class TestThreadedServerHttp(TestThreadedServerHttpBase):
     def init_connection(self):
-        self.server = six.moves.socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler)
+        self.server = socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler)
         self.server.timeout = 5
 
 
@@ -268,17 +256,14 @@ class TestThreadedServerHttps(TestThreadedServerHttpBase):
     CA_CERT_FILE_PATH = pathlib.Path(__file__).parent / 'certs' / 'snakeoil_ca_cert.pem'
 
     def __init__(self, address, port):
-        super(TestThreadedServerHttps, self).__init__(address, port)
+        super().__init__(address, port)
 
         self.ssl_context = None
 
     def init_connection(self):
-        self.server = six.moves.socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler, False)
+        self.server = socketserver.TCPServer((self.address, self.port), TestHTTPRequestHandler, False)
 
-        python_version_lt_3_6 = six.PY2 or (six.PY3 and sys.version_info.minor < 6)
-        prootocol = ssl.PROTOCOL_SSLv23 if python_version_lt_3_6 else ssl.PROTOCOL_TLS_SERVER
-
-        self.ssl_context = ssl.SSLContext(prootocol)
+        self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         self.ssl_context.load_cert_chain(certfile=str(self.CERT_FILE_PATH), keyfile=str(self.KEY_FILE_PATH))
         self.ssl_context.set_ciphers('ALL')
 
@@ -289,7 +274,7 @@ class TestThreadedServerHttps(TestThreadedServerHttpBase):
 
 class TestThreadedServer(threading.Thread):
     def __init__(self, server):
-        super(TestThreadedServer, self).__init__()
+        super().__init__()
 
         self._server = server
         self._server.init_connection()
@@ -310,10 +295,7 @@ class TestThreadedServer(threading.Thread):
             except AttributeError:
                 pass
         else:
-            if six.PY3:
-                raise TimeoutError()
-
-            raise socket.timeout()
+            raise TimeoutError()
 
 
 class TestLoggerBase(unittest.TestCase):

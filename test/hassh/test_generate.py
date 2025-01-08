@@ -4,7 +4,6 @@ import time
 
 from test.common.classes import TestThreadedServer, TestLoggerBase
 
-import six
 
 from cryptodatahub.ssh.algorithm import (
     SshCompressionAlgorithm,
@@ -24,7 +23,7 @@ from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
 class AnalyzerThread(TestThreadedServer):
     def __init__(self, configuration=None):
         self.l7_server = L7ServerSsh('localhost', 0, configuration=configuration)
-        super(AnalyzerThread, self).__init__(self.l7_server)
+        super().__init__(self.l7_server)
 
         self.analyzer = AnalyzerGenerate()
         self.result = None
@@ -50,7 +49,7 @@ class TestHASSHGenerate(TestLoggerBase):
         return analyzer_thread.result
 
     def test_error_no_connection(self):
-        with six.assertRaisesRegex(self, NetworkError, 'connection to target cannot be established'):
+        with self.assertRaisesRegex(NetworkError, 'connection to target cannot be established'):
             configuration = SshServerConfiguration()
             l7_server = L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.1), configuration=configuration)
             l7_server.init_connection()
@@ -77,5 +76,5 @@ class TestHASSHGenerate(TestLoggerBase):
         self.assertEqual(result.target, '934970575776d2fc88153d4cd99b094d')
         self.assertEqual(
             self.log_stream.getvalue(),
-            'Client offers SSH key exchange init which HASSH fingerprint is "{}"\n'.format(result.target)
+            f'Client offers SSH key exchange init which HASSH fingerprint is "{result.target}"\n'
         )

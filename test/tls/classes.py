@@ -3,15 +3,11 @@
 import datetime
 
 import abc
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 from test.common.classes import TestThreadedServer, TestLoggerBase
 
 import attr
-import six
 
 from cryptoparser.common.exception import NotEnoughData
 
@@ -86,7 +82,7 @@ class TestTlsCases:
 class L7ServerTlsTest(TestThreadedServer):
     def __init__(self, l7_server):
         self.l7_server = l7_server
-        super(L7ServerTlsTest, self).__init__(self.l7_server)
+        super().__init__(self.l7_server)
 
     def run(self):
         self.l7_server.do_handshake()
@@ -159,7 +155,7 @@ class TlsServerOneMessageInMultipleRecords(TlsServerHandshake):
 
     def _process_handshake_message(self, message, last_handshake_message_type):
         for hello_message_byte in self.SERVER_HELLO_MESSAGE.compose():
-            self.l7_transfer.send(TlsRecord(fragment=six.int2byte(hello_message_byte)).compose())
+            self.l7_transfer.send(TlsRecord(fragment=bytes((hello_message_byte,))).compose())
 
 
 class L7ServerTlsOneMessageInMultipleRecords(L7ServerTls):
@@ -187,7 +183,7 @@ class TlsServerLongCipherSuiteListIntolerance(TlsServerHandshake):
             self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
             raise StopIteration()
 
-        super(TlsServerLongCipherSuiteListIntolerance, self)._process_handshake_message(
+        super()._process_handshake_message(
             message, last_handshake_message_type
         )
 

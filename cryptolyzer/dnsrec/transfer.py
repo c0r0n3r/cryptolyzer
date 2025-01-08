@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import sys
+import io
 
 import ipaddress
 
-import six
 import attr
 
 from cryptodatahub.dnsrec.algorithm import DnsRrType
@@ -16,7 +15,7 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 
 
 @attr.s
-class DnsHandshakeBase(object):
+class DnsHandshakeBase():
     l4_socket_params = attr.ib(
         default=L4TransferSocketParams(),
         validator=attr.validators.instance_of(L4TransferSocketParams),
@@ -43,7 +42,7 @@ class DnsHandshakeBase(object):
                 continue
 
             for record in list(rrset.items):
-                out = six.BytesIO()
+                out = io.BytesIO()
                 record.to_wire(out)
                 records.append(out.getvalue())
 
@@ -69,9 +68,7 @@ class DnsHandshakeBase(object):
 
     @classmethod
     def _resolve(cls, dns_resolver, **kwargs):
-        python_version_lt_3_6 = six.PY2 or (six.PY3 and sys.version_info.minor < 6)
-        resolve_func = dns_resolver.query if python_version_lt_3_6 else dns_resolver.resolve
-        return resolve_func(**kwargs)
+        return dns_resolver.resolve(**kwargs)
 
     def _get_records_from_servers(self, domain, rr_type, nameservers, domain_prefix=None):
         if domain_prefix is not None:
@@ -83,9 +80,9 @@ class DnsHandshakeBase(object):
         try:
             records = self._resolve(dns_resolver, qname=domain, rdtype=rr_type.value.name, raise_on_no_answer=False)
         except dns.resolver.NXDOMAIN as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
+            raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
         except dns.resolver.Timeout as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
         except (dns.resolver.NoNameservers, dns.resolver.NoAnswer):
             pass
 

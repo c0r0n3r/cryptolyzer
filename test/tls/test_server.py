@@ -6,12 +6,7 @@ import smtplib
 import ssl
 import sys
 import unittest
-try:
-    from unittest import mock
-except ImportError:
-    import mock
-
-import six
+from unittest import mock
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -508,7 +503,7 @@ class TestL7ServerStartTls(TestL7ServerBase):
 
 class TestL7ServerTlsFTP(TestL7ServerBase):
     def setUp(self):
-        super(TestL7ServerTlsFTP, self).setUp()
+        super().setUp()
 
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsFTP)
 
@@ -550,7 +545,7 @@ class TestL7ServerTlsFTP(TestL7ServerBase):
 
 class TestL7ServerTlsPOP3(TestL7ServerBase):
     def setUp(self):
-        super(TestL7ServerTlsPOP3, self).setUp()
+        super().setUp()
 
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsPOP3)
 
@@ -566,7 +561,6 @@ class TestL7ServerTlsPOP3(TestL7ServerBase):
     def test_tls_handshake(self):
         self._test_tls_handshake(l7_client_class=ClientPOP3)
 
-    @unittest.skipIf(six.PY2, 'There is no poplib.POP3.stls in Python < 3.0')
     def test_real_with_capabilities_stls(self):
         client = poplib.POP3(
             host=str(self.threaded_server.l7_server.address),
@@ -576,20 +570,6 @@ class TestL7ServerTlsPOP3(TestL7ServerBase):
             client.stls()
 
         self.assertEqual(context_manager.exception.reason, self.ssl_exception_reason)
-
-    @unittest.skipIf(six.PY3, 'There is no poplib.POP3.stls in Python < 3.0')
-    def test_real_with_capabilities_cmd(self):
-        client = poplib.POP3(
-            host=str(self.threaded_server.l7_server.address),
-            port=self.threaded_server.l7_server.l4_transfer.bind_port
-        )
-
-        response, capabilities, _ = client._longcmd('CAPABILITIES')  # pylint: disable=protected-access
-        self.assertEqual(response, '+OK')
-        self.assertEqual(capabilities, ['CAPA', 'STLS'])
-
-        response = client._shortcmd('STLS')  # pylint: disable=protected-access
-        self.assertEqual(response, '+OK Begin TLS negotiation now.')
 
 
 class TestL7ServerTlsLMTP(TestL7ServerBase):
@@ -648,7 +628,7 @@ class TestL7ServerTlsSMTP(TestL7ServerBase):
 
 class TestL7ServerTlsNNTP(TestL7ServerBase):
     def setUp(self):
-        super(TestL7ServerTlsNNTP, self).setUp()
+        super().setUp()
 
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsNNTP)
 

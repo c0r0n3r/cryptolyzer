@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
-import six
 import attr
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat
@@ -23,8 +22,8 @@ from cryptolyzer.common.result import AnalyzerResultBase
 
 
 @attr.s
-class JA3ClientTag(object):
-    tag = attr.ib(validator=attr.validators.instance_of(six.string_types))
+class JA3ClientTag():
+    tag = attr.ib(validator=attr.validators.instance_of(str))
 
     @classmethod
     def get_supported_schemes(cls):

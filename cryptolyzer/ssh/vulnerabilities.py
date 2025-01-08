@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import six
 
 import attr
 
@@ -179,7 +178,7 @@ class AnalyzerVulnerabilities(AnalyzerSshBase):
 
     @classmethod
     def _get_known_algorithms(cls, algorithms):
-        return filter(lambda algorithm: not isinstance(algorithm, six.string_types), algorithms)
+        return filter(lambda algorithm: not isinstance(algorithm, str), algorithms)
 
     def analyze(self, analyzable):
         LogSingleton().disabled = True

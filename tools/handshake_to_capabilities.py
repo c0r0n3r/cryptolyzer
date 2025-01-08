@@ -6,7 +6,6 @@ import collections
 import json
 import sys
 
-import six
 
 import attr
 
@@ -23,7 +22,7 @@ from cryptoparser.tls.record import TlsRecord
 
 
 @attr.s
-class HandshakeToCapabilitiesBase(object):
+class HandshakeToCapabilitiesBase():
     handshake_data = attr.ib(validator=attr.validators.instance_of((bytes, bytearray)))
 
     @abc.abstractmethod
@@ -44,7 +43,7 @@ class HandshakeToCapabilitiesBase(object):
         try:
             parsable = parsable_class.parse_exact_size(handshake_data)
         except (InvalidType, InvalidValue, NotEnoughData, TooMuchData) as e:
-            six.raise_from(ValueError('Invalid handshake bytes in TShark JSON data'), e)
+            raise ValueError('Invalid handshake bytes in TShark JSON data') from e
 
         return parsable
 
@@ -57,7 +56,7 @@ class HandshakeToCapabilitiesBase(object):
         try:
             tshark_json = json.loads(handshake_data)
         except ValueError as e:  # json.decoder.JSONDecodeError is derived from ValueError
-            six.raise_from(ValueError('Invalid JSON data'), e)
+            raise ValueError('Invalid JSON data') from e
 
         if not tshark_json:
             raise ValueError('Empty JSON data')
@@ -66,7 +65,7 @@ class HandshakeToCapabilitiesBase(object):
             try:
                 layers = packet['_source']['layers']
             except (KeyError, TypeError) as e:
-                six.raise_from(ValueError('Not a TShark JSON structure'), e)
+                raise ValueError('Not a TShark JSON structure') from e
 
             try:
                 if 'tcp.segments' in layers:
@@ -76,14 +75,14 @@ class HandshakeToCapabilitiesBase(object):
                 else:
                     raise KeyError()
             except (KeyError, TypeError) as e:
-                six.raise_from(ValueError('Missing TCP payload in TShark JSON data'), e)
+                raise ValueError('Missing TCP payload in TShark JSON data') from e
 
-            if not isinstance(payload, six.string_types):
+            if not isinstance(payload, str):
                 raise ValueError('Invalid TCP payload in TShark JSON data')
             try:
                 payload_bytes = bytes_from_hex_string(payload, separator=':')
             except ValueError as e:
-                six.raise_from(ValueError('Invalid TCP payload in TShark JSON data'), e)
+                raise ValueError('Invalid TCP payload in TShark JSON data') from e
 
             return cls(payload_bytes)
 
@@ -234,7 +233,7 @@ def main():
 
     handshake_data = sys.stdin.read()
     if not handshake_data:
-        six.print_('No input data', file=sys.stderr)
+        print('No input data', file=sys.stderr)
         sys.exit(2)
 
     handshake_class = handshake_to_capabilities_classes[arguments.protocol]
@@ -244,7 +243,7 @@ def main():
         handshake_to_capabilities_object = parser_func(handshake_data)
         client_capabilities = handshake_to_capabilities_object.to_capabilities()
     except (TypeError, ValueError) as e:
-        six.print_(e.args[0], file=sys.stderr)
+        print(e.args[0], file=sys.stderr)
         sys.exit(2)
 
     print(json.dumps(client_capabilities))

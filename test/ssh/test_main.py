@@ -16,7 +16,6 @@ import test.ssh.test_vulnerabilities
 
 import urllib3
 
-import six
 
 from cryptolyzer.common.transfer import L4TransferSocketParams
 
@@ -42,12 +41,12 @@ class TestMain(TestMainBase):
 
         self.host = 'localhost'
         self.port = self.threaded_server.l7_server.l4_transfer.bind_port
-        self.address = '{}:{}'.format(self.host, self.port)
+        self.address = f'{self.host}:{self.port}'
 
     def test_ciphers(self):
         self.assertEqual(
             self._get_test_analyzer_result_json('ssh2', 'ciphers', self.address),
-            test.ssh.test_ciphers.TestSshCiphers.get_result(six.u(self.host), self.port).as_json() + '\n'
+            test.ssh.test_ciphers.TestSshCiphers.get_result(self.host, self.port).as_json() + '\n'
         )
 
     def test_dhparams(self):
@@ -64,7 +63,7 @@ class TestMain(TestMainBase):
     def test_versions(self):
         self.assertEqual(
             self._get_test_analyzer_result_json('ssh', 'versions', self.address),
-            test.ssh.test_versions.TestSshVersions.get_result(six.u(self.host), self.port).as_json() + '\n',
+            test.ssh.test_versions.TestSshVersions.get_result(self.host, self.port).as_json() + '\n',
         )
 
     def test_vulns(self):

@@ -7,7 +7,6 @@ import socket
 import string
 import sys
 
-import six
 
 import colorama
 import attr
@@ -29,10 +28,9 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-@six.add_metaclass(Singleton)
-class LogSingleton(logging.Logger):
+class LogSingleton(logging.Logger, metaclass=Singleton):
     def __init__(self):
-        super(LogSingleton, self).__init__(__setup__.__name__)
+        super().__init__(__setup__.__name__)
 
         formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%Y-%m-%dT%H:%M:%S%z')
 
@@ -44,7 +42,7 @@ class LogSingleton(logging.Logger):
 
 
 @attr.s
-class SerializableTextEncoderHighlighted(object):
+class SerializableTextEncoderHighlighted():
     _COLOR_SCHEMES = {
         None: colorama.Style.RESET_ALL,
         Grade.INSECURE: colorama.Fore.RED,
@@ -67,9 +65,9 @@ class SerializableTextEncoderHighlighted(object):
         if vulnerability.attack_type is None:
             attack_name = ''
         else:
-            attack_name = ', due to {}'.format(vulnerability.attack_type.value.name)
+            attack_name = f', due to {vulnerability.attack_type.value.name}'
             if vulnerability.named is not None:
-                attack_name += ', called {}'.format(vulnerability.named.value.name)
+                attack_name += f', called {vulnerability.named.value.name}'
 
         return attack_name
 
@@ -85,7 +83,7 @@ class SerializableTextEncoderHighlighted(object):
         if gradeable_simple.grade in (Grade.SECURE, Grade.INSECURE):
             return ''
 
-        return ' ({})'.format(gradeable_simple.grade.value.name)
+        return f' ({gradeable_simple.grade.value.name})'
 
     def _get_gradeable_vulnerabilities_result(self, gradeable_vulnerabilities, level):
         if not gradeable_vulnerabilities.vulnerabilities:
@@ -94,7 +92,7 @@ class SerializableTextEncoderHighlighted(object):
         indent = level * '    '
 
         if hasattr(gradeable_vulnerabilities, 'long_name') and gradeable_vulnerabilities.long_name is not None:
-            name = '{} ({})'.format(gradeable_vulnerabilities.long_name, gradeable_vulnerabilities.name)
+            name = f'{gradeable_vulnerabilities.long_name} ({gradeable_vulnerabilities.name})'
         elif hasattr(gradeable_vulnerabilities, 'name'):
             name = gradeable_vulnerabilities.name
         else:
@@ -104,7 +102,7 @@ class SerializableTextEncoderHighlighted(object):
             name = ' ' + self._get_highlighted_text(name)
 
         result = os.linesep
-        result += '{}* {}{} is'.format(indent, gradeable_vulnerabilities.get_gradeable_name(), name)
+        result += f'{indent}* {gradeable_vulnerabilities.get_gradeable_name()}{name} is'
 
         if len(gradeable_vulnerabilities.vulnerabilities) > 1:
             indent += '    '
@@ -113,11 +111,9 @@ class SerializableTextEncoderHighlighted(object):
             indent = ' '
 
         result += os.linesep.join([
-            '{}{}{}'.format(
-                indent,
-                self._get_colorized_text(vulnerability.grade, vulnerability.grade.value.name),
-                self._get_attack_result_string(vulnerability),
-            )
+            f'{indent}'
+            f'{self._get_colorized_text(vulnerability.grade, vulnerability.grade.value.name)}'
+            f'{self._get_attack_result_string(vulnerability)}'
             for vulnerability in sorted(gradeable_vulnerabilities.vulnerabilities, key=self._key_vulneravility)
         ])
 
@@ -171,7 +167,7 @@ def resolve_address(address, port, ip=None):
             for addrinfo in socket.getaddrinfo(address, port, 0, socket.SOCK_STREAM)
         ]
     except socket.gaierror as e:
-        six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
+        raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
     if not addresses:
         raise NetworkError(NetworkErrorType.NO_ADDRESS)
 
@@ -180,9 +176,9 @@ def resolve_address(address, port, ip=None):
         ip = addresses[0][1]
     else:
         try:
-            family = socket.AF_INET if ipaddress.ip_address(six.text_type(ip)).version == 4 else socket.AF_INET6
+            family = socket.AF_INET if ipaddress.ip_address(str(ip)).version == 4 else socket.AF_INET6
         except ValueError as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
+            raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
 
     return family, ip  # pylint: disable=possibly-used-before-assignment
 

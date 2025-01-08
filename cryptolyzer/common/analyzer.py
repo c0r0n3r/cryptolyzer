@@ -4,15 +4,9 @@ import abc
 import glob
 import importlib
 import ipaddress
+import pathlib
 import pkgutil
 import urllib
-
-try:
-    import pathlib
-except ImportError:  # pragma: no cover
-    import pathlib2 as pathlib  # pragma: no cover
-
-import six
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsAlertDescription
@@ -27,8 +21,7 @@ from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.tls.client import L7ClientTlsBase
 
 
-@six.add_metaclass(abc.ABCMeta)
-class ProtocolHandlerBase(object):
+class ProtocolHandlerBase(metaclass=abc.ABCMeta):
     @classmethod
     def import_plugins(cls):
         plugin_root_dir_parts = pathlib.PurePath(*pathlib.PurePath(__file__).parts[:-2])  # remove common/analyzer.py
@@ -108,9 +101,10 @@ class ProtocolHandlerBase(object):
         raise NotImplementedError()
 
     def analyze(self, analyzer, uri, socket_params=L4TransferSocketParams()):
-        LogSingleton().log(level=60, msg=six.u('Analysis started; protocol="%s", analyzer="%s"') % (
-            self.get_protocol(), analyzer.get_name(),
-        ))
+        LogSingleton().log(
+            level=60,
+            msg=f'Analysis started; protocol="{self.get_protocol()}", analyzer="{analyzer.get_name()}"'
+        )
 
         l7_client = self._l7_client_from_params(uri, socket_params)
         args, kwargs = self._get_analyzer_args()
@@ -130,7 +124,7 @@ class ProtocolHandlerBase(object):
         return analyzer_list[0]()
 
 
-class AnalyzerBase(object):
+class AnalyzerBase():
     @classmethod
     @abc.abstractmethod
     def get_name(cls):
@@ -145,7 +139,7 @@ class AnalyzerResultBase(Serializable):
     pass
 
 
-class AnalyzerTlsBase(object):
+class AnalyzerTlsBase():
     _ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS = [
         TlsAlertDescription.HANDSHAKE_FAILURE,  # no matching algorithms
         TlsAlertDescription.CLOSE_NOTIFY,  # no matching algorithms
@@ -210,7 +204,7 @@ class ProtocolHandlerSshExactVersion(ProtocolHandlerSshBase):
         raise NotImplementedError()
 
 
-class AnalyzerSshBase(object):
+class AnalyzerSshBase():
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientSsh))
@@ -224,7 +218,7 @@ class AnalyzerSshBase(object):
         raise NotImplementedError()
 
 
-class AnalyzerHttpBase(object):
+class AnalyzerHttpBase():
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientHttpBase))
@@ -238,7 +232,7 @@ class AnalyzerHttpBase(object):
         raise NotImplementedError()
 
 
-class AnalyzerDnsRecordBase(object):
+class AnalyzerDnsRecordBase():
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientDnsBase))

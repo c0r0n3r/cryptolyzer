@@ -99,7 +99,7 @@ class CertificateStatus(Serializable):
 
 
 @attr.s
-class CertificateChainX509(object):
+class CertificateChainX509():
     items = attr.ib(
         init=False,
         default=[],
@@ -131,7 +131,7 @@ class CertificateChainX509(object):
 
 
 @attr.s
-class CertificateChainX509Validator(object):  # pylint: disable=too-few-public-methods
+class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
     _validated = attr.ib(
         init=False,
         default=None,

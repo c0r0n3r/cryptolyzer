@@ -6,7 +6,6 @@ import socket
 
 import ipaddress
 import attr
-import six
 import urllib3
 
 from cryptoparser.common.exception import NotEnoughData
@@ -17,7 +16,7 @@ from cryptolyzer.common.utils import buffer_flush, buffer_is_plain_text, resolve
 
 
 @attr.s
-class L4TransferSocketParams(object):
+class L4TransferSocketParams():
     timeout = attr.ib(
         default=None,
         converter=attr.converters.optional(float),
@@ -30,15 +29,15 @@ class L4TransferSocketParams(object):
 
 
 @attr.s
-class L4TransferBase(object):
-    address = attr.ib(validator=attr.validators.instance_of(six.string_types))
+class L4TransferBase():
+    address = attr.ib(validator=attr.validators.instance_of(str))
     port = attr.ib(validator=attr.validators.instance_of(int))
     socket_params = attr.ib(
         default=L4TransferSocketParams(),
         validator=attr.validators.instance_of(L4TransferSocketParams),
     )
     ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((
-        six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
+        str, ipaddress.IPv4Address, ipaddress.IPv6Address
     ))))
     _family = attr.ib(init=False)
     _buffer = attr.ib(init=False)
@@ -192,13 +191,13 @@ class L4ClientTCP(L4ClientBase):
             return func(*args, **kwargs)
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, (socket.error, socket.timeout)):
-                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
             raise e
 
     def _init_connection(self):
         if self.socket_params.http_proxy:
-            host = '{}:{}'.format(self.ip, self.port)
+            host = f'{self.ip}:{self.port}'
             conn = HTTPConnectionRaw(
                 self.socket_params.http_proxy.host,
                 self.socket_params.http_proxy.port,
@@ -259,7 +258,7 @@ class L4ServerBase(L4TransferBase):
         raise NotImplementedError()
 
     def __del__(self):
-        super(L4ServerBase, self).__del__()
+        super().__del__()
 
         if self._socket is not None:
             self._close_socket(self._socket)
@@ -277,11 +276,11 @@ class L4ServerBase(L4TransferBase):
             if socket_type == socket.SOCK_STREAM:
                 self._socket.listen(self.backlog)
         except KeyboardInterrupt as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
         except OverflowError as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_ADDRESS), e)
+            raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
         except (OSError, socket.error) as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+            raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
     @property
     def bind_address(self):
@@ -310,7 +309,7 @@ class L4ServerTCP(L4ServerBase):
         try:
             self._client_socket, _ = self._socket.accept()
         except BaseException as e:  # pylint: disable=broad-except
-            six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+            raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
         self._client_socket.settimeout(self.get_default_timeout())
         self.flush_buffer()
@@ -358,7 +357,7 @@ class L4ServerUDP(L4ServerBase):
         return msg_bytes
 
     def close(self):
-        super(L4ServerUDP, self).close()
+        super().close()
 
         self._client_address = None
 
@@ -367,15 +366,15 @@ class L4ServerUDP(L4ServerBase):
 
 
 @attr.s
-class L7TransferBase(object):
-    address = attr.ib(validator=attr.validators.instance_of(six.string_types))
+class L7TransferBase():
+    address = attr.ib(validator=attr.validators.instance_of(str))
     port = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
     l4_socket_params = attr.ib(
         default=L4TransferSocketParams(),
         validator=attr.validators.instance_of(L4TransferSocketParams),
     )
     ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((
-        six.string_types, ipaddress.IPv4Address, ipaddress.IPv6Address
+        str, ipaddress.IPv4Address, ipaddress.IPv6Address
     ))))
     _family = attr.ib(init=False)
     l4_transfer = attr.ib(

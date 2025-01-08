@@ -3,7 +3,6 @@
 import abc
 import attr
 
-import six
 
 from cryptodatahub.common.algorithm import BlockCipher
 from cryptodatahub.common.exception import InvalidValue
@@ -107,7 +106,7 @@ class L7ServerTlsBase(L7ServerBase):
             try:
                 self.receive(TlsRecord.HEADER_SIZE)
             except NotEnoughData as e:
-                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
             try:
                 TlsRecord.parse_header(self.buffer)
@@ -504,7 +503,7 @@ class L7ServerStartTlsTextBase(L7ServerStartTlsBase):
 
     @classmethod
     def _get_software_name(cls):
-        return '{} {}'.format(__title__, __version__).encode('ascii')
+        return f'{__title__} {__version__}'.encode('ascii')
 
     def _init_l7(self):
         greeting = self._get_greeting()
@@ -731,20 +730,20 @@ class L7ServerTlsNNTP(L7ServerStartTlsTextBase):
 class L7ServerStartTlsOpenVpnBase(L7ServerStartTlsBase, L7OpenVpnBase):
     session_id = attr.ib(
         init=False, default=0xff58585858585858,
-        validator=attr.validators.instance_of(six.integer_types)
+        validator=attr.validators.instance_of(int)
     )
     client_packet_id = attr.ib(
         init=False, default=0x00000000,
-        validator=attr.validators.instance_of(six.integer_types)
+        validator=attr.validators.instance_of(int)
     )
     remote_session_id = attr.ib(
         init=False, default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(six.integer_types))
+        validator=attr.validators.optional(attr.validators.instance_of(int))
     )
     _buffer = attr.ib(init=False)
 
     def __attrs_post_init__(self):
-        super(L7ServerStartTlsOpenVpnBase, self).__attrs_post_init__()
+        super().__attrs_post_init__()
 
         self._buffer = bytearray()
 
@@ -780,7 +779,7 @@ class L7ServerStartTlsOpenVpnBase(L7ServerStartTlsBase, L7OpenVpnBase):
         try:
             self._reset_session()
         except (InvalidValue, InvalidType, NotEnoughData) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def send(self, sendable_bytes):
         return self._send_bytes(self.l4_transfer, sendable_bytes)

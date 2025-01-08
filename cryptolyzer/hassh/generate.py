@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import six
 
 import attr
 
@@ -46,7 +45,7 @@ class AnalyzerGenerate(AnalyzerBase):
 
         fingerprint = client_messages[0][SshMessageCode.KEXINIT].hassh
         LogSingleton().log(
-            level=60, msg=six.u('Client offers SSH key exchange init which HASSH fingerprint is "%s"') % (fingerprint, )
+            level=60, msg=f'Client offers SSH key exchange init which HASSH fingerprint is "{fingerprint}"'
         )
         return AnalyzerResultGenerate(
             fingerprint

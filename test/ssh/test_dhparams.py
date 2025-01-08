@@ -37,7 +37,7 @@ class TestSshDHParams(TestSshCases.TestSshClientBase):
         log_lines = self.pop_log_lines()
         for idx, key_size in enumerate(result.group_exchange.key_sizes):
             self.assertEqual(
-                'Server offers custom DH public parameter with size {}-bit (SSH 2.0)'.format(key_size),
+                f'Server offers custom DH public parameter with size {key_size}-bit (SSH 2.0)',
                 log_lines[idx + 1]
             )
 
@@ -52,9 +52,7 @@ class TestSshDHParams(TestSshCases.TestSshClientBase):
         log_lines = self.pop_log_lines()
         for idx, key_size in enumerate(result.group_exchange.key_sizes):
             self.assertIn(
-                'Server offers custom DH public parameter with size {}-bit (SSH 2.0)'.format(
-                    key_size,
-                ),
+                f'Server offers custom DH public parameter with size {key_size}-bit (SSH 2.0)',
                 log_lines[idx]
             )
 

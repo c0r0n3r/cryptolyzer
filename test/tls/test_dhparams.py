@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 from cryptoparser.tls.extension import TlsExtensionsBase, TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion

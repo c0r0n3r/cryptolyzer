@@ -2,14 +2,13 @@
 
 import attr
 import requests
-import six
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4TransferSocketParams
 
 
 @attr.s
-class HttpHandshakeBase(object):
+class HttpHandshakeBase():
     l4_socket_params = attr.ib(
         default=L4TransferSocketParams(),
         validator=attr.validators.instance_of(L4TransferSocketParams),
@@ -23,7 +22,7 @@ class HttpHandshakeBase(object):
     @property
     def raw_headers(self):
         raw_headers = '\r\n'.join([
-            '{}: {}'.format(name, value)
+            f'{name}: {value}'
             for name, value in self.response.headers.items()
         ]) + '\r\n'
 
@@ -45,9 +44,9 @@ class HttpHandshakeBase(object):
         try:
             self.response = requests.head(transfer.uri, **requests_kwargs)
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+            raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
         except requests.exceptions.HTTPError as e:
             # HTTP request returned an unsuccessful status code
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
         except requests.exceptions.TooManyRedirects as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e

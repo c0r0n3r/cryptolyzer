@@ -4,7 +4,6 @@ import math
 
 import codecs
 import collections
-import six
 import attr
 
 from cryptodatahub.common.exception import InvalidValue
@@ -21,18 +20,18 @@ from .prime import is_prime, prime_precheck
 
 
 @attr.s
-class DHPublicNumbers(object):
+class DHPublicNumbers():
     y = attr.ib(  # pylint: disable=invalid-name
-        validator=attr.validators.instance_of(six.integer_types),
+        validator=attr.validators.instance_of(int),
         metadata={'human_readable_name': 'y'},
     )
     parameter_numbers = attr.ib(validator=attr.validators.instance_of(DHParameterNumbers))
 
 
 @attr.s
-class DHPublicKey(object):
+class DHPublicKey():
     public_numbers = attr.ib(validator=attr.validators.instance_of(DHPublicNumbers))
-    key_size = attr.ib(validator=attr.validators.instance_of(six.integer_types))
+    key_size = attr.ib(validator=attr.validators.instance_of(int))
 
 
 class TlsDHParamVector(Vector):  # pylint: disable=too-many-ancestors
@@ -42,11 +41,11 @@ class TlsDHParamVector(Vector):  # pylint: disable=too-many-ancestors
 
 
 def bytes_to_int(bytes_value):
-    return int(''.join(map('{:02x}'.format, bytes_value)), 16)
+    return int.from_bytes(bytes_value, byteorder='big')
 
 
 def int_to_bytes(int_value, size):
-    hex_value = '%x' % int_value
+    hex_value = f'{int_value:x}'
     str_value = ('0' * ((size * 2) - len(hex_value))) + hex_value
 
     return bytearray(codecs.decode(str_value, 'hex'))
@@ -72,7 +71,7 @@ def get_ecdh_ephemeral_key_forged(named_group):
         try:
             well_know_ec_param = ECParamWellKnown.from_named_group(named_group)
         except InvalidValue as e:
-            six.raise_from(NotImplementedError(named_group), e)
+            raise NotImplementedError(named_group) from e
 
         ephemeral_public_key_bytes = bytearray().join([
             b'\x04',  # uncompressed point format

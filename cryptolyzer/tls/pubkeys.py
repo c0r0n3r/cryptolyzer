@@ -2,7 +2,6 @@
 
 import attr
 
-import six
 
 import asn1crypto.ocsp
 
@@ -135,7 +134,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         )
 
         leaf_certificate = certificate_chain.items[0]
-        subject_matches = leaf_certificate.is_subject_matches(six.ensure_str(analyzable.address))
+        subject_matches = leaf_certificate.is_subject_matches(analyzable.address)
         if sni_sent or subject_matches:
             for result in results:
                 if certificate_chain == result.certificate_chain:
@@ -147,10 +146,14 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                     subject_matches=subject_matches,
                     certificate_chain=certificate_chain,
                 )
-                LogSingleton().log(level=60, msg=six.u('Server offers %s X.509 public key (with%s SNI)') % (
-                    tls_public_key.certificate_chain.items[-1].key_type.name,
-                    '' if tls_public_key.sni_sent else 'out',
-                ))
+                sni_with = 'with' if tls_public_key.sni_sent else 'without'
+                LogSingleton().log(
+                    level=60,
+                    msg=(
+                        f'Server offers {tls_public_key.certificate_chain.items[-1].key_type.name} X.509 public key '
+                        f'({sni_with} SNI)'
+                    )
+                )
                 results.append(tls_public_key)
 
             tls_public_key.certificate_status = certificate_status
@@ -172,7 +175,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         except TlsAlert as e:
             if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
                 if sni_sent:
-                    six.raise_from(StopIteration, e)
+                    raise StopIteration from e
             elif e.description not in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
                     TlsAlertDescription.PROTOCOL_VERSION,
                     TlsAlertDescription.INTERNAL_ERROR,
@@ -184,7 +187,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 raise e
         except SecurityError as e:
             if e.error != SecurityErrorType.UNPARSABLE_MESSAGE and client_hello == client_hello_messages[0]:
-                six.raise_from(StopIteration, e)
+                raise StopIteration from e
 
         return server_messages
 

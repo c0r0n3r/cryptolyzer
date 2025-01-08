@@ -91,8 +91,8 @@ Support
 Python implementation
 =====================
 
--  CPython (2.7, 3.3+)
--  PyPy (2.7, 3.5+)
+-  CPython (3.9+)
+-  PyPy (3.9+)
 
 Operating systems
 =================

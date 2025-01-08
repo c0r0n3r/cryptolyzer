@@ -2,6 +2,7 @@
 
 import socket
 import unittest
+from unittest import mock
 
 from test.common.classes import (
     TestThreadedServer,
@@ -11,13 +12,6 @@ from test.common.classes import (
 )
 
 import urllib3
-
-import six
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
 
 from cryptoparser.common.exception import NotEnoughData
 
@@ -59,21 +53,12 @@ class TestL4ClientTCP(unittest.TestCase):
             self.assertEqual(context_manager.exception.args, ('not a timeout error', ))
         sock.close()
 
-    @unittest.skipIf(six.PY2, 'There is no ConnectionRefusedError in Python < 3.0')
     def test_error_connection_refused(self):
         with mock.patch.object(socket, 'create_connection', side_effect=ConnectionRefusedError), \
                 self.assertRaises(NetworkError) as context_manager:
             l4_client = L4ClientTCP('badssl.com', 443)
             l4_client.init_connection()
         l4_client.close()
-        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
-
-    @unittest.skipIf(six.PY3, 'ConnectionRefusedError is raised instead of socket.error in Python >= 3.0')
-    def test_error_connection_refused_socket_error(self):
-        with mock.patch.object(socket, 'create_connection', side_effect=socket.error), \
-                self.assertRaises(NetworkError) as context_manager:
-            l4_client, _ = self._create_client_and_receive_text('badssl.com', 443, 1)
-            l4_client.close()
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     def test_error_unhandled_exception_rethrown(self):
@@ -91,7 +76,7 @@ class TestL4ClientTCP(unittest.TestCase):
         test_http_proxy_server.init_connection()
         test_http_proxy_server.start()
 
-        http_proxy_url = urllib3.util.parse_url('http://127.0.0.2:{}'.format(test_http_proxy_server.bind_port))
+        http_proxy_url = urllib3.util.parse_url(f'http://127.0.0.2:{test_http_proxy_server.bind_port}')
         l4_client = L4ClientTCP(
             '127.0.0.1', test_http_server.bind_port,
             socket_params=L4TransferSocketParams(http_proxy=http_proxy_url)
@@ -168,7 +153,7 @@ class TestL4ClientTCP(unittest.TestCase):
         test_http_proxy_server.init_connection()
         test_http_proxy_server.start()
 
-        http_proxy_url = urllib3.util.parse_url('http://127.0.0.2:{}'.format(test_http_proxy_server.bind_port))
+        http_proxy_url = urllib3.util.parse_url(f'http://127.0.0.2:{test_http_proxy_server.bind_port}')
 
         l4_client = L4ClientTCP(
             '127.0.0.1', test_http_server.bind_port,
@@ -196,7 +181,7 @@ class TestL4ClientTCP(unittest.TestCase):
 
 class L4ServerEcho(TestThreadedServer):
     def __init__(self, l4_server):
-        super(L4ServerEcho, self).__init__(l4_server)
+        super().__init__(l4_server)
 
         self.killed = False
 

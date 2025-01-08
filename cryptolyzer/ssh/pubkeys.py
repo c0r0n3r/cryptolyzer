@@ -4,7 +4,6 @@
 from collections import OrderedDict
 
 import attr
-import six
 
 from cryptodatahub.common.algorithm import Authentication
 
@@ -82,7 +81,7 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
 
     @classmethod
     def _get_dh_key_exchange_reply_message_class(cls, server_messages):
-        return six.next(iter(filter(
+        return next(iter(filter(
             lambda server_message: issubclass(server_message, SshDHKeyExchangeReplyBase),
             server_messages
         )))
@@ -97,7 +96,7 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
                 host_key_algorithm.value.signature.value.key_type
             ),
             filter(
-                lambda host_key_algorithm: not isinstance(host_key_algorithm, six.string_types),
+                lambda host_key_algorithm: not isinstance(host_key_algorithm, str),
                 analyzer_result.host_key_algorithms
             )
         ))
@@ -127,9 +126,9 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
             else:
                 host_public_key = dh_key_exchange_reply_message.host_public_key
                 host_public_keys.append(host_public_key)
-                LogSingleton().log(level=60, msg=six.u('Server offers %s host key') % (
-                    host_public_key.host_key_algorithm.value.code
-                ))
+                LogSingleton().log(
+                    level=60, msg=f'Server offers {host_public_key.host_key_algorithm.value.code} host key'
+                )
 
         return AnalyzerResultPublicKeys(
             AnalyzerTargetSsh.from_l7_client(analyzable),

@@ -4,7 +4,6 @@ import time
 
 from test.common.classes import TestThreadedServer, TestLoggerBase
 
-import six
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -28,7 +27,7 @@ from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 class AnalyzerThread(TestThreadedServer):
     def __init__(self, configuration=None):
         self.l7_server = L7ServerTls('localhost', 0, configuration=configuration)
-        super(AnalyzerThread, self).__init__(self.l7_server)
+        super().__init__(self.l7_server)
 
         self.analyzer = AnalyzerGenerate()
         self.result = None
@@ -52,7 +51,7 @@ class TestJA3Generate(TestLoggerBase):
             l7_client.do_tls_handshake(hello_message=hello_message)
         except TlsAlert as e:
             if e.description != TlsAlertDescription.PROTOCOL_VERSION:
-                six.raise_from(ValueError, e)
+                raise ValueError from e
         else:
             raise ValueError
 
@@ -60,7 +59,7 @@ class TestJA3Generate(TestLoggerBase):
         return analyzer_thread.result
 
     def test_error_no_connection(self):
-        with six.assertRaisesRegex(self, NetworkError, 'connection to target cannot be established'):
+        with self.assertRaisesRegex(NetworkError, 'connection to target cannot be established'):
             configuration = TlsServerConfiguration(protocol_versions=[])
             l7_server = L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.1), configuration=configuration)
             l7_server.init_connection()
@@ -74,7 +73,7 @@ class TestJA3Generate(TestLoggerBase):
         self.assertEqual(result.target, '771,3,,,')
         self.assertEqual(
             self.log_stream.getvalue(),
-            'Client offers TLS client hello which JA3 tag is "{}"\n'.format(result.target)
+            f'Client offers TLS client hello which JA3 tag is "{result.target}"\n'
         )
 
     def test_tag_one_element_lists(self):
@@ -94,7 +93,7 @@ class TestJA3Generate(TestLoggerBase):
         self.assertEqual(result.target, '771,3,11-10,1,0')
         self.assertEqual(
             self.log_stream.getvalue(),
-            'Client offers TLS client hello which JA3 tag is "{}"\n'.format(result.target)
+            f'Client offers TLS client hello which JA3 tag is "{result.target}"\n'
         )
 
     def test_tag_two_element_lists(self):
@@ -119,5 +118,5 @@ class TestJA3Generate(TestLoggerBase):
         self.assertEqual(result.target, '771,13-12,11-10,3-2,1-0')
         self.assertEqual(
             self.log_stream.getvalue(),
-            'Client offers TLS client hello which JA3 tag is "{}"\n'.format(result.target)
+            f'Client offers TLS client hello which JA3 tag is "{result.target}"\n'
         )

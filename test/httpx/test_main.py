@@ -15,7 +15,7 @@ class TestMain(TestMainBase):
         test_http_server.init_connection()
         test_http_server.start()
 
-        uri = 'http://127.0.0.1:{}'.format(test_http_server.bind_port)
+        uri = f'http://127.0.0.1:{test_http_server.bind_port}'
 
         result = self._get_test_analyzer_result_markdown('http', 'headers', uri)
         self.assertIn('Name: Server', result)
@@ -36,7 +36,7 @@ class TestMain(TestMainBase):
         test_http_server.init_connection()
         test_http_server.start()
 
-        uri = 'http://127.0.0.1:{}'.format(test_http_server.bind_port)
+        uri = f'http://127.0.0.1:{test_http_server.bind_port}'
 
         result = self._get_test_analyzer_result_markdown('http', 'content', uri + '/test/common/data/integrity.html')
         self.assertIn(

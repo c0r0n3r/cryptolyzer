@@ -5,7 +5,6 @@ import abc
 import attr
 import urllib3
 
-import six
 
 from cryptodatahub.common.types import convert_url
 from cryptodatahub.dnsrec.algorithm import DnsRrType
@@ -33,7 +32,7 @@ from cryptolyzer.dnsrec.transfer import DnsHandshakeBase
 
 
 @attr.s
-class L7ClientDnsBase(object):
+class L7ClientDnsBase():
     domain = attr.ib(
         converter=convert_url(),
         validator=attr.validators.instance_of(urllib3.util.url.Url)
@@ -61,7 +60,7 @@ class L7ClientDnsBase(object):
                 get_leaf_classes(cls)
             )))(uri)
         except StopIteration as e:
-            six.raise_from(ValueError(uri.scheme), e)
+            raise ValueError(uri.scheme) from e
 
         return transfer
 
@@ -86,10 +85,8 @@ class L7ClientDnsBase(object):
         if not record_values:
             return
 
-        LogSingleton().log(
-            level=60,
-            msg=six.u('Server responded (%s) record(s) %s') % (record_name, ', '.join(record_values))
-        )
+        record_value_list = ', '.join(record_values)
+        LogSingleton().log(level=60, msg=f'Server responded ({record_name}) record(s) {record_value_list}')
 
     def _get_record_list(self, record_type, record_class, domain_prefix=None):
         dns_client = self.get_client_handshake_class()(self.l4_socket_params)
@@ -103,7 +100,7 @@ class L7ClientDnsBase(object):
         self._log_records(
             'MX',
             map(
-                lambda mx_record: '{} ({})'.format(str(mx_record.exchange), mx_record.priority),
+                lambda mx_record: f'{str(mx_record.exchange)} ({mx_record.priority})',
                 mx_records
             )
         )
@@ -116,7 +113,7 @@ class L7ClientDnsBase(object):
         except NetworkError:
             return None
 
-        self._log_records(record_name, map(lambda record: '{}'.format(record.value), txt_records))
+        self._log_records(record_name, map(lambda record: f'{record.value}', txt_records))
 
         record_values = []
         for txt_record in txt_records:
@@ -148,10 +145,7 @@ class L7ClientDnsBase(object):
         dnskey_records = self._get_record_list(DnsRrType.DNSKEY, DnsRecordDnskey, domain_prefix)
         self._log_records(
             'DNSKEY',
-            map(
-                lambda dnskey_record: '{} ({})'.format(dnskey_record.algorithm.value.name, dnskey_record.key_tag),
-                dnskey_records
-            )
+            map(lambda dnskey_record: f'{dnskey_record.algorithm.value.name} ({dnskey_record.key_tag})', dnskey_records)
         )
 
         return dnskey_records
@@ -160,28 +154,21 @@ class L7ClientDnsBase(object):
         ds_records = self._get_record_list(DnsRrType.DS, DnsRecordDs, domain_prefix)
         self._log_records(
             'DS',
-            map(
-                lambda ds_record: '{} ({})'.format(ds_record.algorithm.value.name, ds_record.key_tag),
-                ds_records
-            )
+            map(lambda ds_record: f'{ds_record.algorithm.value.name} ({ds_record.key_tag})', ds_records)
         )
 
         return ds_records
 
+    @staticmethod
+    def _get_rrsig_record_log_value(rrsig_record):
+        type_covered = rrsig_record.type_covered
+        rrsig_record_value = type_covered.value.name if isinstance(rrsig_record, DnsRrType) else type_covered.value
+
+        return f'{rrsig_record_value} ({rrsig_record.key_tag})'
+
     def get_rrsig_records(self, domain_prefix=None):
         rrsig_records = self._get_record_list(DnsRrType.RRSIG, DnsRecordRrsig, domain_prefix)
-        self._log_records(
-            'RRSIG',
-            map(
-                lambda rrsig_record: '{} ({})'.format(
-                    rrsig_record.type_covered.value.name
-                    if isinstance(rrsig_record, DnsRrType)
-                    else rrsig_record.type_covered.value,
-                    rrsig_record.key_tag
-                ),
-                rrsig_records
-            )
-        )
+        self._log_records('RRSIG', map(self._get_rrsig_record_log_value, rrsig_records))
 
         return rrsig_records
 

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import six
 
 import attr
 import bs4
@@ -22,7 +21,7 @@ from cryptolyzer.common.utils import LogSingleton
 
 @attr.s(frozen=True)
 class HttpTagSourceDataType(Serializable, GradeableSimple):
-    value = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    value = attr.ib(validator=attr.validators.instance_of(str))
 
     def __str__(self):
         return self.value
@@ -37,7 +36,7 @@ class HttpTagSourceDataType(Serializable, GradeableSimple):
 
 
 @attr.s(frozen=True)
-class HttpTagSourced(object):
+class HttpTagSourced():
     data_type = attr.ib(
         converter=convert_value_to_object(HttpTagSourceDataType),
         validator=attr.validators.instance_of(HttpTagSourceDataType)
@@ -50,7 +49,7 @@ class HttpTagSourced(object):
 
 
 @attr.s(frozen=True)
-class HttpTagScriptBase(object):
+class HttpTagScriptBase():
     source_url = attr.ib(
         validator=attr.validators.instance_of(urllib3.util.url.Url),
         metadata={'human_readable_name': 'Source URL'}
@@ -59,12 +58,12 @@ class HttpTagScriptBase(object):
 
 @attr.s(frozen=True)
 class HttpTagScriptIntegrityUnparsed(HttpTagScriptBase):
-    integrity = attr.ib(validator=attr.validators.instance_of(six.string_types))
+    integrity = attr.ib(validator=attr.validators.instance_of(str))
 
 
 @attr.s(frozen=True)
 class HttpTagScriptIntegrity(HttpTagScriptBase):
-    hash_algorithm = attr.ib(validator=attr.validators.instance_of((Hash, six.string_types)))
+    hash_algorithm = attr.ib(validator=attr.validators.instance_of((Hash, str)))
     hash_value = attr.ib(converter=convert_base64_data(), validator=attr.validators.instance_of(Base64Data))
     is_hash_correct = attr.ib(validator=attr.validators.instance_of(bool))
 
@@ -101,7 +100,7 @@ class AnalyzerResultConetnt(AnalyzerResultHttp):  # pylint: disable=too-few-publ
     )
 
 
-class HttpTagGetterBase(object):
+class HttpTagGetterBase():
     _SOURCE_ATTR_NAME_BY_TAG_NAME = {
         'img': 'src',
         'audio': 'src',
@@ -210,7 +209,7 @@ class AnalyzerConetnt(AnalyzerHttpBase):
             if content_type is not None and content_type.charset is not None
             else 'utf-8'
         )
-        LogSingleton().log(level=60, msg=six.u('Server offers content with type %s') % (str(content_type.mime_type)))
+        LogSingleton().log(level=60, msg=f'Server offers content with type {str(content_type.mime_type)}')
 
         tags_with_integrity = None
         tags_with_unencrypted_source = None

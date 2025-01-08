@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+import unittest
+from unittest import mock
 
 import base64
 
@@ -95,13 +88,13 @@ class TestHttpTagIntegrityGetter(unittest.TestCase):
                 '<!DOCTYPE html>',
                 '<html>',
                 '  <head>',
-                '    <script integrity="sha256-%s" src="/head.1.js"></script>' % (sha2_256_hash_base64_content),
-                '    <script integrity="sha384-%s" src="/head.2.js"></script>' % (sha2_384_hash_base64_content),
+                f'    <script integrity="sha256-{sha2_256_hash_base64_content}" src="/head.1.js"></script>',
+                f'    <script integrity="sha384-{sha2_384_hash_base64_content}" src="/head.2.js"></script>',
                 '  </head>',
                 '  <body>',
-                '    <script integrity="sha512-%s" src="/body.root.js"></script>' % (sha2_512_hash_base64_content),
+                f'    <script integrity="sha512-{sha2_512_hash_base64_content}" src="/body.root.js"></script>',
                 '    <div>',
-                '      <script integrity="sha512-%s" src="/body.inner.js"></script>' % (script_data_base64),
+                f'      <script integrity="sha512-{script_data_base64}" src="/body.inner.js"></script>',
                 '    </div>',
                 '  </body>',
                 '</html>',

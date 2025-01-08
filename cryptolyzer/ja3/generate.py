@@ -2,7 +2,6 @@
 
 import hashlib
 
-import six
 import attr
 
 from cryptoparser.common.utils import get_leaf_classes
@@ -18,7 +17,7 @@ from cryptolyzer.tls.server import L7ServerTlsBase
 
 @attr.s
 class AnalyzerResultGenerate(AnalyzerResultBase):
-    target_hash = attr.ib(init=False, validator=attr.validators.instance_of(six.string_types))
+    target_hash = attr.ib(init=False, validator=attr.validators.instance_of(str))
 
     def __attrs_post_init__(self):
         tag_hash = hashlib.md5()
@@ -51,7 +50,7 @@ class AnalyzerGenerate(AnalyzerBase):
             raise NetworkError(NetworkErrorType.NO_CONNECTION)
 
         tag = client_messages[0][TlsHandshakeType.CLIENT_HELLO].ja3()
-        LogSingleton().log(level=60, msg=six.u('Client offers TLS client hello which JA3 tag is "%s"') % (tag, ))
+        LogSingleton().log(level=60, msg=f'Client offers TLS client hello which JA3 tag is "{tag}"')
 
         return AnalyzerResultGenerate(
             tag

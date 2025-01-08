@@ -6,6 +6,7 @@ except ImportError:
     from mock import patch
 
 import argparse
+import io
 import sys
 import os
 
@@ -27,7 +28,6 @@ import test.tls.test_vulnerabilities
 import test.tls.test_all
 
 import colorama
-import six
 import urllib3
 
 from cryptoparser.common.base import Serializable, SerializableTextEncoder
@@ -55,7 +55,7 @@ class TestMain(TestMainBase):
         return main
 
     def _test_runtime_error(self, argv, error_msg):
-        with patch.object(sys, 'stdout', new_callable=six.StringIO) as stdout, \
+        with patch.object(sys, 'stdout', new_callable=io.StringIO) as stdout, \
                 patch.object(sys, 'argv', argv):
 
             main()

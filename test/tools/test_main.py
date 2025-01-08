@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
-
-try:
-    import pathlib
-except ImportError:  # pragma: no cover
-    import pathlib2 as pathlib  # pragma: no cover
+import pathlib
 
 from test.common.classes import TestMainBase
 

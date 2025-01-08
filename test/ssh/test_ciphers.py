@@ -56,42 +56,25 @@ class TestSshCiphers(TestSshCases.TestSshClientBase):
         self.assertEqual(result.compression_algorithms_client_to_server, list(SshCompressionAlgorithm))
         self.assertEqual(result.compression_algorithms_server_to_client, list(SshCompressionAlgorithm))
         log_lines = self.get_log_lines()
+        kex_algorithms = ', '.join(map(lambda kex_algorithm: kex_algorithm.value.code, SshKexAlgorithm))
+        self.assertIn(f'Server offers KEX algorithms {kex_algorithms} (SSH 2.0)', log_lines[0])
+        host_key_algorithms = ', '.join(map(lambda kex_algorithm: kex_algorithm.value.code, SshHostKeyAlgorithm))
+        self.assertIn(f'Server offers host key algorithms {host_key_algorithms} (SSH 2.0)', log_lines[1])
+        encryption_algorithms = ', '.join(map(
+            lambda encryption_algorithm: encryption_algorithm.value.code,
+            SshEncryptionAlgorithm
+        ))
         self.assertIn(
-            'Server offers KEX algorithms {} (SSH 2.0)'.format(
-                ', '.join(map(lambda kex_algorithm: kex_algorithm.value.code, SshKexAlgorithm))
-            ),
-            log_lines[0]
-        )
-        self.assertIn(
-            'Server offers host key algorithms {} (SSH 2.0)'.format(
-                ', '.join(map(lambda kex_algorithm: kex_algorithm.value.code, SshHostKeyAlgorithm))
-            ),
-            log_lines[1]
-        )
-        self.assertIn(
-            'Server offers encryption algorithms client to server {} (SSH 2.0)'.format(
-                ', '.join(map(lambda encryption_algorithm: encryption_algorithm.value.code, SshEncryptionAlgorithm))
-            ),
+            f'Server offers encryption algorithms client to server {encryption_algorithms} (SSH 2.0)',
             log_lines[2]
         )
         self.assertIn(
-            'Server offers encryption algorithms server to client {} (SSH 2.0)'.format(
-                ', '.join(map(lambda encryption_algorithm: encryption_algorithm.value.code, SshEncryptionAlgorithm))
-            ),
+            f'Server offers encryption algorithms server to client {encryption_algorithms} (SSH 2.0)',
             log_lines[3]
         )
-        self.assertIn(
-            'Server offers MAC algorithms client to server {} (SSH 2.0)'.format(
-                ', '.join(map(lambda mac_algorithm: mac_algorithm.value.code, SshMacAlgorithm))
-            ),
-            log_lines[4]
-        )
-        self.assertIn(
-            'Server offers MAC algorithms server to client {} (SSH 2.0)'.format(
-                ', '.join(map(lambda mac_algorithm: mac_algorithm.value.code, SshMacAlgorithm))
-            ),
-            log_lines[5]
-        )
+        mac_algorithms = ', '.join(map(lambda mac_algorithm: mac_algorithm.value.code, SshMacAlgorithm))
+        self.assertIn(f'Server offers MAC algorithms client to server {mac_algorithms} (SSH 2.0)', log_lines[4])
+        self.assertIn(f'Server offers MAC algorithms server to client {mac_algorithms} (SSH 2.0)', log_lines[5])
 
     def test_real(self):
         self.get_result('github.com')

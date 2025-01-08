@@ -12,7 +12,6 @@ import socket
 
 import attr
 
-import six
 
 from cryptodatahub.common.algorithm import Authentication, BlockCipher, BlockCipherMode, KeyExchange, NamedGroupType
 from cryptodatahub.common.exception import InvalidValue
@@ -215,7 +214,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
         else:
             protocol_version = protocol_version_min
 
-        super(TlsHandshakeClientHelloSpecalization, self).__init__(
+        super().__init__(
             cipher_suites=cipher_suites,
             protocol_version=protocol_version,
             extensions=TlsExtensionsClient(extensions)
@@ -226,7 +225,7 @@ class TlsHandshakeClientHelloAnyAlgorithm(  # pylint: disable=too-many-ancestors
             TlsHandshakeClientHelloSpecalization
         ):
     def __init__(self, protocol_versions, hostname):
-        super(TlsHandshakeClientHelloAnyAlgorithm, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=protocol_versions,
             cipher_suites=list(TlsCipherSuite),
@@ -255,7 +254,7 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2)
         ]
 
-        super(TlsHandshakeClientHelloAuthenticationBase, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
@@ -268,7 +267,7 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
 class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
-        super(TlsHandshakeClientHelloAuthenticationRSA, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_version=protocol_version,
             authentications=[Authentication.RSA, ],
@@ -280,7 +279,7 @@ class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthentica
 class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
-        super(TlsHandshakeClientHelloAuthenticationDSS, self).__init__(
+        super().__init__(
             protocol_version=protocol_version,
             hostname=hostname,
             authentications=[Authentication.DSS, ],
@@ -292,7 +291,7 @@ class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthentica
 class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
-        super(TlsHandshakeClientHelloAuthenticationECDSA, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_version=protocol_version,
             authentications=[Authentication.ECDSA, ],
@@ -304,7 +303,7 @@ class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenti
 class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
     def __init__(self, protocol_version, hostname):
-        super(TlsHandshakeClientHelloAuthenticationGOST, self).__init__(
+        super().__init__(
             protocol_version=protocol_version,
             hostname=hostname,
             authentications=[
@@ -334,7 +333,7 @@ class TlsHandshakeClientHelloAuthenticationDeprecated(  # pylint: disable=too-ma
                 ])
         ]
 
-        super(TlsHandshakeClientHelloAuthenticationDeprecated, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
@@ -370,7 +369,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
         if named_curves is None:
             named_curves = self.NAMED_CURVES
 
-        super(TlsHandshakeClientHelloKeyExchangeDHE, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -406,7 +405,7 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
         if named_curves is None:
             named_curves = self.NAMED_CURVES
 
-        super(TlsHandshakeClientHelloKeyExchangeECDHx, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -433,7 +432,7 @@ class TlsHandshakeClientHelloBlockCipherModeCBC(  # pylint: disable=too-many-anc
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloBlockCipherModeCBC, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -465,7 +464,7 @@ class TlsHandshakeClientHelloStreamCipherRC4(  # pylint: disable=too-many-ancest
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloStreamCipherRC4, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -492,7 +491,7 @@ class TlsHandshakeClientHelloBulkCipherBlockSize64(  # pylint: disable=too-many-
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloBulkCipherBlockSize64, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -519,7 +518,7 @@ class TlsHandshakeClientHelloBulkCipherNull(  # pylint: disable=too-many-ancesto
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloBulkCipherNull, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -546,7 +545,7 @@ class TlsHandshakeClientHelloKeyExchangeAnonymousDH(  # pylint: disable=too-many
             signature_algorithms=None,
     ):
 
-        super(TlsHandshakeClientHelloKeyExchangeAnonymousDH, self).__init__(
+        super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=self.CIPHER_SUITES,
@@ -557,8 +556,7 @@ class TlsHandshakeClientHelloKeyExchangeAnonymousDH(  # pylint: disable=too-many
 
 
 @attr.s
-@six.add_metaclass(abc.ABCMeta)
-class L7ClientTlsBase(L7TransferBase):
+class L7ClientTlsBase(L7TransferBase, metaclass=abc.ABCMeta):
     l4_transfer = attr.ib(init=False, default=None)
 
     @classmethod
@@ -642,10 +640,10 @@ class L7ClientStartTlsBase(L7ClientTlsBase):
         try:
             self._init_l7()
         except NotEnoughData as e:
-            six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'TimeoutError' or isinstance(e, socket.timeout):
-                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
             raise e
 
@@ -772,9 +770,9 @@ class L7ClientStartTlsTextBase(L7ClientStartTlsBase):
             else:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except UnicodeDecodeError as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
         except NotEnoughData as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         pass
@@ -810,7 +808,7 @@ class L7ClientStartTlsMailBase(L7ClientStartTlsTextBase):
         is_last_line = line[3] == ' '
         line = line[4:]
 
-        super(L7ClientStartTlsMailBase, self)._update_capabilities(line, capabilities)
+        super()._update_capabilities(line, capabilities)
 
         if is_last_line:
             raise StopIteration()
@@ -885,7 +883,7 @@ class ClientMySQL(L7ClientStartTlsBase):
             self.l4_transfer.flush_buffer(parsed_length)
             initial_handshake, _ = MySQLHandshakeV10.parse_immutable(record.packet_bytes)
         except (InvalidValue, InvalidType, NotEnoughData) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
         capabilities = set()
         if MySQLCapability.CLIENT_SSL in initial_handshake.capabilities:
@@ -937,7 +935,7 @@ class ClientPostgreSQL(L7ClientStartTlsBase):
             Sync.parse_exact_size(self.l4_transfer.buffer)
             self.l4_transfer.flush_buffer(Sync.MESSAGE_SIZE)
         except (InvalidValue, InvalidType) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         pass
@@ -1021,10 +1019,10 @@ class L7ClientIMAPS(L7ClientTlsBase):
         return 993
 
 
-class IMAP4(imaplib.IMAP4, object):
+class IMAP4(imaplib.IMAP4):
     def __init__(self, host, port, l4_socket_params):
         self.l4_socket_params = l4_socket_params
-        super(IMAP4, self).__init__(host, port)
+        super().__init__(host, port)
 
     def open(self, *args, **kwargs):  # pylint: disable=arguments-differ,signature-differs,unused-argument
         self.host = args[0]
@@ -1057,7 +1055,7 @@ class ClientIMAP(L7ClientStartTlsBase):
             if response != 'OK':
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except imaplib.IMAP4.error as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         try:
@@ -1097,7 +1095,7 @@ class ClientFTP(L7ClientStartTlsBase):
             if not response.startswith('234'):
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except ftplib.all_errors as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         try:
@@ -1136,7 +1134,7 @@ class ClientRDP(L7ClientStartTlsBase):
             neg_rsp = RDPNegotiationResponse.parse_exact_size(cotp.user_data)
             self.l4_transfer.flush_buffer(len(request_bytes))
         except (InvalidValue, InvalidType) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
         if not set(self._SUPPORTED_MODES) & set(neg_rsp.protocol):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
@@ -1161,7 +1159,7 @@ class ClientXMPPBase(L7ClientStartTlsBase):
 
     stream_to = attr.ib(
         default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(six.string_types))
+        validator=attr.validators.optional(attr.validators.instance_of(str))
     )
 
     @classmethod
@@ -1222,7 +1220,7 @@ class ClientXMPPBase(L7ClientStartTlsBase):
         try:
             self._init_xmpp(self.l4_transfer, self.address)
         except NotEnoughData as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         pass
@@ -1286,7 +1284,7 @@ class ClientLDAP(L7ClientStartTlsBase):
             ext_response, parsed_length = LDAPExtendedResponseStartTLS.parse_immutable(self.l4_transfer.buffer)
             self.l4_transfer.flush_buffer(parsed_length)
         except (InvalidValue, InvalidType) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
         if ext_response.result_code != LDAPResultCode.SUCCESS:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
@@ -1375,15 +1373,15 @@ class ClientSieve(L7ClientStartTlsBase):
             else:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
         except UnicodeDecodeError as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
         except NotEnoughData as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
         pass
 
 
-class TlsClient(object):
+class TlsClient():
     _last_processed_message_type = attr.ib(init=False, default=None)
     server_messages = attr.ib(init=False, default={})
 
@@ -1449,7 +1447,7 @@ class TlsClientHandshake(TlsClient):
             transfer.send(tls_record_bytes)
         except BaseException as e:  # pylint: disable=broad-except
             if e.__class__.__name__ == 'TimeoutError' or isinstance(e, socket.timeout):
-                six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
             raise e
 
@@ -1503,9 +1501,9 @@ class TlsClientHandshake(TlsClient):
                 transfer.receive(receivable_byte_num)
             except NotEnoughData as e:
                 if transfer.buffer:
-                    six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                    raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
-                six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
 
 @attr.s
@@ -1515,7 +1513,7 @@ class SslError(ValueError):
 
 class SslHandshakeClientHelloAnyAlgorithm(SslHandshakeClientHello):
     def __init__(self):
-        super(SslHandshakeClientHelloAnyAlgorithm, self).__init__(
+        super().__init__(
             cipher_kinds=list(SslCipherKind)
         )
 
@@ -1568,11 +1566,11 @@ class SslClientHandshake(TlsClient):
                                         TlsAlertDescription.CLOSE_NOTIFY,
                                         TlsAlertDescription.INTERNAL_ERROR,
                                     ]:
-                                six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                                raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
-                        six.raise_from(NetworkError(NetworkErrorType.NO_CONNECTION), e)
+                        raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
                 else:
-                    six.raise_from(NetworkError(NetworkErrorType.NO_RESPONSE), e)
+                    raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
 
 @attr.s
@@ -1582,7 +1580,7 @@ class ClientOpenVpnBase(L7ClientTlsBase, L7OpenVpnBase):
     _buffer = attr.ib(init=False)
 
     def __attrs_post_init__(self):
-        super(ClientOpenVpnBase, self).__attrs_post_init__()
+        super().__attrs_post_init__()
 
         self._buffer = bytearray()
 
@@ -1659,7 +1657,7 @@ class ClientOpenVpnBase(L7ClientTlsBase, L7OpenVpnBase):
         try:
             self._reset_session()
         except (InvalidValue, InvalidType, NotEnoughData) as e:
-            six.raise_from(SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY), e)
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def send(self, sendable_bytes):
         return self._send_bytes(self.l4_transfer, sendable_bytes)
@@ -1670,7 +1668,7 @@ class ClientOpenVpnBase(L7ClientTlsBase, L7OpenVpnBase):
             try:
                 actual_received_bytes = self._receive_packet_bytes(self.l4_transfer, receivable_byte_num)
             except NotEnoughData as e:
-                six.raise_from(NotEnoughData(receivable_byte_num - total_received_byte_num), e)
+                raise NotEnoughData(receivable_byte_num - total_received_byte_num) from e
             self._buffer += actual_received_bytes
             total_received_byte_num += len(actual_received_bytes)
 

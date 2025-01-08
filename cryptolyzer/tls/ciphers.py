@@ -2,7 +2,6 @@
 
 import copy
 import time
-import six
 
 import attr
 
@@ -113,9 +112,9 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 cls._next_accepted_cipher_suites(
                     l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites
                 )
-                LogSingleton().log(level=60, msg=six.u('Server offers cipher suite %s (%s)') % (
-                    accepted_cipher_suites[-1].name, protocol_version,
-                ))
+                LogSingleton().log(
+                    level=60, msg=f'Server offers cipher suite {accepted_cipher_suites[-1].name} ({protocol_version})'
+                )
             except StopIteration:
                 break
             except TlsAlert as e:

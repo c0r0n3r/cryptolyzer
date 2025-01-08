@@ -2,15 +2,14 @@
 
 import enum
 
-import six
 
 import attr
 
 
 @attr.s
-class ErrorParams(object):
-    short_description = attr.ib(validator=attr.validators.instance_of(six.string_types))
-    long_description = attr.ib(validator=attr.validators.instance_of(six.string_types))
+class ErrorParams():
+    short_description = attr.ib(validator=attr.validators.instance_of(str))
+    long_description = attr.ib(validator=attr.validators.instance_of(str))
 
 
 class NetworkErrorType(enum.Enum):

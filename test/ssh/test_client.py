@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 from cryptodatahub.common.algorithm import NamedGroup
 

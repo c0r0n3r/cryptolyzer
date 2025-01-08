@@ -9,7 +9,7 @@ from cryptoparser.ssh.record import SshRecordInit
 from cryptoparser.ssh.subprotocol import SshProtocolMessage
 
 
-class SshHandshakeBase(object):
+class SshHandshakeBase():
     _last_processed_message_type = attr.ib(init=False, default=None)
     server_messages = attr.ib(init=False, default={})
 

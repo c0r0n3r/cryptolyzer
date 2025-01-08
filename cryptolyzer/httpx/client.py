@@ -5,7 +5,6 @@ import urllib3
 
 import attr
 
-import six
 
 from cryptodatahub.common.types import convert_url
 
@@ -16,7 +15,7 @@ from cryptolyzer.httpx.transfer import HttpHandshakeBase
 
 
 @attr.s
-class L7ClientHttpBase(object):
+class L7ClientHttpBase():
     uri = attr.ib(
         converter=convert_url(),
         validator=attr.validators.instance_of(urllib3.util.url.Url)
@@ -44,7 +43,7 @@ class L7ClientHttpBase(object):
                 get_leaf_classes(cls)
             )))(uri)
         except StopIteration as e:
-            six.raise_from(ValueError(uri.scheme), e)
+            raise ValueError(uri.scheme) from e
 
         return transfer
 

@@ -4,13 +4,9 @@
 
 import datetime
 import os
+import pathlib
 import sys
 import urllib
-
-try:
-    import pathlib
-except ImportError:  # pragma: no cover
-    import pathlib2 as pathlib  # pragma: no cover
 
 sys.path.insert(0, os.path.abspath('..'))
 from cryptolyzer.__setup__ import (  # noqa: E402, pylint: disable=wrong-import-position
@@ -52,7 +48,7 @@ if 'READTHEDOCS' in os.environ:
     ]
     for lang in ('en',):
         for tag in ('latest', 'stable'):
-            _robots_txt_lines.append('Sitemap: {}{}/{}/sitemap.xml'.format(_baseurl, lang, tag))
+            _robots_txt_lines.append(f'Sitemap: {_baseurl}{lang}/{tag}/sitemap.xml')
 
     _html_extra_dir_name = 'readthedocs'
     _html_extra_path = pathlib.Path(_html_extra_dir_name)

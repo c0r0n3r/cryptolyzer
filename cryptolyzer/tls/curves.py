@@ -2,7 +2,6 @@
 
 from collections import OrderedDict
 
-import six
 
 import attr
 
@@ -96,17 +95,17 @@ class AnalyzerCurves(AnalyzerTlsBase):
                 ]
                 if e.description in acceptable_alerts:
                     extension_supported = None
-                    six.raise_from(StopIteration(extension_supported), e)
+                    raise StopIteration(extension_supported) from e
 
             if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
-                six.raise_from(StopIteration(extension_supported), e)
+                raise StopIteration(extension_supported) from e
 
             raise e
         except SecurityError as e:
             if checkable_curves is None:
                 extension_supported = None
 
-            six.raise_from(StopIteration(extension_supported), e)
+            raise StopIteration(extension_supported) from e
         finally:
             del client_hello.extensions[-1]
 
@@ -148,9 +147,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
                 extension_supported = False
                 break
 
-            LogSingleton().log(level=60, msg=six.u('Server offers elliptic-curve %s') % (
-                supported_curve.value.named_group.name,
-            ))
+            LogSingleton().log(level=60, msg=f'Server offers elliptic-curve {supported_curve.value.named_group.name}')
             supported_curves.update([(supported_curve.name, supported_curve), ])
 
         return AnalyzerResultCurves(

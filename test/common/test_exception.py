@@ -2,15 +2,14 @@
 
 import unittest
 
-import six
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 
 
 class TestException(unittest.TestCase):
     def test_str(self):
-        with six.assertRaisesRegex(self, NetworkError, 'address of the target cannot be resolved'):
+        with self.assertRaisesRegex(NetworkError, 'address of the target cannot be resolved'):
             raise NetworkError(NetworkErrorType.NO_ADDRESS)
 
-        with six.assertRaisesRegex(self, SecurityError, 'target does not support secure communication'):
+        with self.assertRaisesRegex(SecurityError, 'target does not support secure communication'):
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)

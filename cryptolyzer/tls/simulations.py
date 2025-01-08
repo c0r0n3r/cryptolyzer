@@ -4,7 +4,6 @@ import collections
 
 import attr
 
-import six
 
 from cryptodatahub.common.algorithm import KeyExchange, NamedGroupType
 from cryptodatahub.common.entity import ClientType
@@ -60,7 +59,7 @@ from cryptolyzer.tls.curves import AnalyzerCurves
 
 
 @attr.s
-class AnalyzerResultSimulationsSsl(object):
+class AnalyzerResultSimulationsSsl():
     """
     :class: Analyzer result relates to the parameters of the SSL connection initiated between the server and the
         simulated client application.
@@ -72,7 +71,7 @@ class AnalyzerResultSimulationsSsl(object):
 
 
 @attr.s
-class AnalyzerResultSimulationsTlsBase(object):
+class AnalyzerResultSimulationsTlsBase():
     """
     :class: Analyzer result relates to the parameters of the TLS connection initiated between the server and the
         simulated client application.
@@ -357,22 +356,22 @@ class AnalyzerSimulations(AnalyzerTlsBase):
             server_messages = analyzable.do_tls_handshake(hello_message=client_hello, last_handshake_message_type=None)
         except TlsAlert as e:
             if e.description == TlsAlertDescription.PROTOCOL_VERSION:
-                six.raise_from(SecurityError(SecurityErrorType.NO_SHARED_VERSION), e)
-            elif e.description == TlsAlertDescription.HANDSHAKE_FAILURE:
-                six.raise_from(SecurityError(SecurityErrorType.NO_SHARED_CIPHER), e)
-            else:
-                six.raise_from(SecurityError(SecurityErrorType.UNKNOWN_ERROR), e)
+                raise SecurityError(SecurityErrorType.NO_SHARED_VERSION) from e
+            if e.description == TlsAlertDescription.HANDSHAKE_FAILURE:
+                raise SecurityError(SecurityErrorType.NO_SHARED_CIPHER) from e
+
+            raise SecurityError(SecurityErrorType.UNKNOWN_ERROR) from e
+
+        server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
+        protocol_versions = list(map(TlsProtocolVersion, tls_client.capabilities.tls_versions))
+        try:
+            extension = server_hello.extensions.get_item_by_type(TlsExtensionType.SUPPORTED_VERSIONS)
+        except KeyError:
+            protocol_version = server_hello.protocol_version
         else:
-            server_hello = server_messages[TlsHandshakeType.SERVER_HELLO]
-            protocol_versions = list(map(TlsProtocolVersion, tls_client.capabilities.tls_versions))
-            try:
-                extension = server_hello.extensions.get_item_by_type(TlsExtensionType.SUPPORTED_VERSIONS)
-            except KeyError:
-                protocol_version = server_hello.protocol_version
-            else:
-                protocol_version = extension.selected_version
-            if protocol_version not in protocol_versions:
-                raise SecurityError(SecurityErrorType.NO_SHARED_VERSION)
+            protocol_version = extension.selected_version
+        if protocol_version not in protocol_versions:
+            raise SecurityError(SecurityErrorType.NO_SHARED_VERSION)
 
         return self._get_simulation_result(server_messages)
 
@@ -397,13 +396,13 @@ class AnalyzerSimulations(AnalyzerTlsBase):
                 failed_clients.append((tls_client.value.meta, e.error.value))
                 LogSingleton().log(
                     level=60,
-                    msg=six.u('Connection to server has been failed with the client %s') % (tls_client.value.meta, )
+                    msg=f'Connection to server has been failed with the client {tls_client.value.meta}'
                 )
             else:
                 succeeded_clients.append((tls_client.value.meta, simulation_result))
                 LogSingleton().log(
                     level=60,
-                    msg=six.u('Connection to server has been succeeded with the client %s') % (tls_client.value.meta, )
+                    msg=f'Connection to server has been succeeded with the client {tls_client.value.meta}'
                 )
 
         return succeeded_clients, failed_clients
