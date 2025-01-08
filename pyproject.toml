@@ -1,0 +1,129 @@
+[build-system]
+requires = ['setuptools', 'setuptools-scm']
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'CryptoLyzer'
+version = '0.12.6'
+description = 'A comprehensive cryptographic settings analyzer'
+authors = [
+    {name = 'Szilárd Pfeiffer', email = 'coroner@pfeifferszilard.hu'}
+]
+maintainers = [
+    {name = 'Szilárd Pfeiffer', email = 'coroner@pfeifferszilard.hu'}
+]
+classifiers=[
+    'Development Status :: 4 - Beta',
+    'Environment :: Console',
+    'Framework :: tox',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Information Technology',
+    'Intended Audience :: Science/Research',
+    'Intended Audience :: System Administrators',
+    'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
+    'Natural Language :: English',
+    'Operating System :: MacOS',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: POSIX',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: Implementation :: CPython',
+    'Programming Language :: Python :: Implementation :: PyPy',
+    'Programming Language :: Python',
+    'Topic :: Internet',
+    'Topic :: Internet :: File Transfer Protocol (FTP)',
+    'Topic :: Internet :: XMPP',
+    'Topic :: Security',
+    'Topic :: Security :: Cryptography',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Software Development :: Testing :: Traffic Generation',
+    'Topic :: Software Development :: Testing',
+]
+
+keywords = [
+    'ssl',
+    'tls',
+    'gost',
+    'ja3',
+    'hassh',
+    'https',
+    'pop3',
+    'smtp',
+    'imap',
+    'ftp',
+    'rdp',
+    'xmpp',
+    'jabber',
+    'ldap',
+    'sieve',
+    'ssh',
+    'hsts',
+    'dnssec',
+]
+readme = {file = 'README.rst', content-type = 'text/x-rst'}
+license = {text = 'MPL-2.0'}
+
+dependencies = [
+    'oscrypto @ git+https://github.com/wbond/oscrypto.git@d5f3437',
+    'attrs',
+    'bs4',
+    'certvalidator',
+    'colorama',
+    'cryptoparser==0.12.6',
+    'pyfakefs',
+    'python-dateutil',
+    'requests',
+    'dnspython',
+    'urllib3',
+]
+
+[project.scripts]
+cryptolyze = 'cryptolyzer.__main__:main'
+
+[project.urls]
+Homepage = 'https://gitlab.com/coroner/cryptolyzer'
+Changelog = 'https://cryptolyzer.readthedocs.io/en/latest/changelog'
+Documentation = 'https://cryptolyzer.readthedocs.io/en/latest/'
+Issues = 'https://gitlab.com/coroner/cryptolyzer/-/issues'
+Source = 'https://gitlab.com/coroner/cryptolyzer'
+
+[tool.variables]
+technical_name = 'cryptolyzer'
+
+[tool.setuptools]
+license-files = ['LICENSE.txt']
+
+[tool.setuptools.packages.find]
+exclude = ['submodules']
+
+[tool.tox]
+envlist = [
+    'pep8',
+    'pylint',
+    'pypy3',
+    'py39',
+    'py310',
+    'py311',
+    'py312',
+    'py313',
+    'pythonrc',
+]
+
+[tool.tox.env_run_base]
+deps = ['coverage', '.[tests]']
+commands = [
+    ['coverage', 'erase'],
+    ['coverage', 'run', '-m', 'unittest', 'discover', '-v'],
+    ['coverage', 'report']
+]
+
+[tool.tox.env.pep8]
+deps = ['flake8']
+commands = [['flake8', 'cryptolyzer', 'docs', 'test']]
+
+[tool.tox.env.pylint]
+deps = ['pylint', '.[tests]']
+commands = [['pylint', '--rcfile', '.pylintrc', 'cryptolyzer', 'docs', 'test']]

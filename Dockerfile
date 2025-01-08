@@ -8,7 +8,8 @@ ADD . /usr/src/cryptolyzer
 
 RUN apt-get update && apt-get install --no-install-recommends -y git-core \
  && pip3 install --no-cache-dir /usr/src/cryptolyzer \
- && pip3 install --no-cache-dir --force-reinstall /usr/src/cryptolyzer/submodules/cryptoparser
+ && pip3 install --no-cache-dir --force-reinstall /usr/src/cryptolyzer/submodules/cryptoparser \
+ && pip3 install --no-cache-dir --force-reinstall /usr/src/cryptolyzer/submodules/cryptoparser/submodules/cryptodatahub
 
 USER nobody
 
