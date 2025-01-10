@@ -96,7 +96,7 @@ class TestTlsSimulations(TestLoggerBase):
         self.assertTrue(result)
 
     def test_dh_well_known(self):
-        result = self.get_result('kaspersky.com', 443)
+        result = self.get_result('kaspersky.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(all(
             analyzer_result.cipher_suite.value.key_exchange in [KeyExchange.DHE, KeyExchange.ECDHE]
             for analyzer_result in result.succeeded_clients.values()
