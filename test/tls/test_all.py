@@ -161,7 +161,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         ])
         self.assertNotEqual(result.dhparams.dhparam, None)
 
-        result = self.get_result('comodo.com', 443)
+        result = self.get_result('xenproject.org', 443)
         self.assertTrue(all(map(
             lambda version: version > TlsProtocolVersion(TlsVersion.TLS1_2), result.versions.versions
         )))
@@ -170,8 +170,21 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
             TlsCipherSuite.TLS_AES_256_GCM_SHA384,
             TlsCipherSuite.TLS_CHACHA20_POLY1305_SHA256,
         ]))
-        self.assertEqual(result.dhparams, None)
-        self.assertEqual(set(result.curves.curves), set([TlsNamedCurve.SECP256R1, TlsNamedCurve.X25519]))
+        self.assertEqual(result.dhparams.dhparam, None)
+        self.assertEqual(result.dhparams.groups, [
+            TlsNamedCurve.FFDHE2048,
+            TlsNamedCurve.FFDHE3072,
+            TlsNamedCurve.FFDHE4096,
+            TlsNamedCurve.FFDHE6144,
+            TlsNamedCurve.FFDHE8192
+        ])
+        self.assertEqual(set(result.curves.curves), set([
+            TlsNamedCurve.X25519,
+            TlsNamedCurve.SECP256R1,
+            TlsNamedCurve.X448,
+            TlsNamedCurve.SECP521R1,
+            TlsNamedCurve.SECP384R1,
+        ]))
 
         result = self.get_result('pq.cloudflareresearch.com', 443)
         self.assertTrue(all(map(
