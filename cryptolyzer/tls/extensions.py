@@ -217,8 +217,8 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             return None
 
         clock_skew = (
-            int(client_hello.random.time.strftime('%s')) -
-            int(server_messages[TlsHandshakeType.SERVER_HELLO].random.time.strftime('%s'))
+            client_hello.random.time.timestamp() -
+            server_messages[TlsHandshakeType.SERVER_HELLO].random.time.timestamp()
         )
         clock_is_accurate = -15 < clock_skew < 15
 
