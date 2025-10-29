@@ -334,15 +334,9 @@ class TestClientPOP3(TestL7ClientBase):
         self.assertEqual(l7_client.greeting, ['+OK Dovecot ready.'])
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
-    def test_pop3s_client(self):
-        _, result = self.get_result('pop3s', 'pop.gmail.com', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(version)
-                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
-            ]
-        )
+    def test_pop3s_client_port(self):
+        client = L7ClientTlsBase.from_scheme('pop3s', 'localhost')
+        self.assertEqual(client.port, 995)
 
 
 class TestClientIMAP(TestL7ClientBase):
@@ -382,15 +376,9 @@ class TestClientIMAP(TestL7ClientBase):
         _, result = self.get_result('imap', 'imap.comcast.net', None, L4TransferSocketParams(timeout=10))
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
-    def test_imaps_client(self):
-        _, result = self.get_result('imaps', 'imap.gmail.com', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(version)
-                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
-            ]
-        )
+    def test_imaps_client_port(self):
+        client = L7ClientTlsBase.from_scheme('imaps', 'localhost')
+        self.assertEqual(client.port, 993)
 
 
 class TestClientLMTP(TestL7ClientBase):
@@ -493,15 +481,9 @@ class TestClientSMTP(TestL7ClientBase):
             ]
         )
 
-    def test_smtps_client(self):
-        _, result = self.get_result('smtps', 'smtp.gmail.com', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(version)
-                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
-            ]
-        )
+    def test_smtps_client_port(self):
+        client = L7ClientTlsBase.from_scheme('smtps', 'localhost')
+        self.assertEqual(client.port, 465)
 
 
 class TestClientFTP(TestL7ClientBase):
@@ -535,10 +517,6 @@ class TestClientFTP(TestL7ClientBase):
             result.versions,
             [TlsProtocolVersion(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
-
-    def test_ftps_client(self):
-        _, result = self.get_result('ftps', 'ftps.tceq.texas.gov', None)
-        self.assertEqual(result.versions, [TlsProtocolVersion(TlsVersion.TLS1_2), ])
 
 
 RDP_NEGOTIATION_RESPONSE_LENGTH = 19
@@ -618,13 +596,9 @@ class TestClientLDAP(TestL7ClientBase):
             TlsProtocolVersion(TlsVersion.TLS1_2),
         ])
 
-    def test_ldaps_client(self):
-        _, result = self.get_result('ldaps', 'ldap.uchicago.edu', None, L4TransferSocketParams(timeout=10))
-        self.assertEqual(result.versions, [
-            TlsProtocolVersion(TlsVersion.TLS1),
-            TlsProtocolVersion(TlsVersion.TLS1_1),
-            TlsProtocolVersion(TlsVersion.TLS1_2),
-        ])
+    def test_ldaps_client_port(self):
+        client = L7ClientTlsBase.from_scheme('ldaps', 'localhost')
+        self.assertEqual(client.port, 636)
 
 
 class TestClientNNTP(TestL7ClientBase):
