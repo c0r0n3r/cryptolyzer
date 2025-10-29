@@ -148,7 +148,8 @@ class TestMain(TestMainBase):
                                                             scheme='https')
         self._check_higlighted_output(func, func_arguments, cli_arguments)
 
-        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'novell.com', 443, scheme='https')
+        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'novell.com', 443, timeout=10,
+                                                            scheme='https')
         self._check_higlighted_output(func, func_arguments, cli_arguments)
 
         with patch.object(AnalyzerVersions, '_analyze_inappropriate_version_fallback', return_value=True):
