@@ -108,7 +108,7 @@ class TestPublicKeyX509(TestLoggerBase):
 
         result = self._get_result('letsencrypt.org', 443)
         self.assertEqual(
-            result.pubkeys[0].certificate_chain.items[0].crl_distribution_points,
+            result.pubkeys[0].certificate_chain.items[-1].crl_distribution_points,
             []
         )
 

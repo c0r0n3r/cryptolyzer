@@ -167,15 +167,13 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         self._check_log(result)
 
     def test_tls_1_3(self):
-        result = self.get_result('www.facebook.com', 443)
+        result = self.get_result('www.busanbank.co.kr', 443)
         self.assertEqual(
             result.versions,
             [
-                TlsProtocolVersion(TlsVersion.TLS1),
-                TlsProtocolVersion(TlsVersion.TLS1_1),
                 TlsProtocolVersion(TlsVersion.TLS1_2),
-                TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_23),
                 TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_26),
+                TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_27),
                 TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_28),
                 TlsProtocolVersion(TlsVersion.TLS1_3),
             ]

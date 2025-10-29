@@ -219,8 +219,11 @@ class TestHttpContent(TestLoggerBase):
 
         analyzer_result = self.get_result('https://letsencrypt.org')
         self.assertEqual(analyzer_result.mime_type, mime_type_html)
-        self.assertEqual(len(analyzer_result.script_integrity), 1)
-        self.assertTrue(analyzer_result.script_integrity[0].is_hash_correct)
+        self.assertEqual(len(analyzer_result.script_integrity), 4)
+        self.assertTrue(all(map(
+            lambda script_integrity: script_integrity.is_hash_correct,
+            analyzer_result.script_integrity
+        )))
         self.assertEqual(len(analyzer_result.unencrypted_sources), 0)
 
         analyzer_result = self.get_result('https://mixed-script.badssl.com')

@@ -256,7 +256,7 @@ class TestTlsExtensions(TestLoggerBase):
             self.assertEqual(limit_server, 1024)
 
     def test_renegotiation_info(self):
-        result = self.get_result('www.deloton.com', 443)
+        result = self.get_result('www.userfriendly.org', 443)
         self.assertFalse(result.renegotiation_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server does not offer renegotiation', log_lines)

@@ -33,19 +33,19 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
             )
 
     def test_real_versions(self):
-        result = self.get_result('novell.com', 443)
+        result = self.get_result('baidu.com', 443)
         self.assertTrue(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
         self.assertFalse(result.ciphers.anonymous_dh.value)
         self.assertFalse(result.ciphers.null_encryption.value)
-        self.assertFalse(result.ciphers.rc4.value)
+        self.assertTrue(result.ciphers.rc4.value)
         self.assertTrue(result.ciphers.non_forward_secret.value)
         self.assertFalse(result.ciphers.export_grade.value)
 
         self.assertFalse(result.versions.drown.value)
         self.assertTrue(result.versions.early_tls_version.value)
-        self.assertFalse(result.versions.ssl_version.value)
+        self.assertTrue(result.versions.ssl_version.value)
 
         self.assertFalse(result.dhparams.weak_dh.value)
         self.assertFalse(result.dhparams.dheat.value)
@@ -101,14 +101,14 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         self.assertIn('Server offers 1024-bit NGINX 0.7.2 builtin DH parameter', log_stream)
 
     def test_real_dhparams(self):
-        result = self.get_result('fedoraproject.org', 443)
+        result = self.get_result('archive.org', 443)
         self.assertTrue(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
         self.assertFalse(result.ciphers.anonymous_dh.value)
         self.assertFalse(result.ciphers.null_encryption.value)
         self.assertFalse(result.ciphers.rc4.value)
-        self.assertFalse(result.ciphers.non_forward_secret.value)
+        self.assertTrue(result.ciphers.non_forward_secret.value)
         self.assertFalse(result.ciphers.export_grade.value)
 
         self.assertFalse(result.versions.drown.value)

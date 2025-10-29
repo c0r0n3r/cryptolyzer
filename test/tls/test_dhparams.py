@@ -44,7 +44,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         AnalyzerDHParams, '_get_public_key', side_effect=StopIteration
     )
     def test_error_key_reuse_undeterminable(self, _):
-        result = self.get_result('princeton.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result('lamar.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
         self.assertIsNone(result.dhparam)
         self.assertEqual(result.key_reuse, None)
@@ -64,7 +64,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError
     )
     def test_last_key_share_extension(self, _):
-        result = self.get_result('princeton.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result('lamar.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertIsNotNone(result.dhparam, None)
 
@@ -105,7 +105,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertFalse(result.key_reuse)
 
     def test_well_known_prime(self):
-        result = self.get_result('ubuntuforums.org', 443)
+        result = self.get_result('launchpad.net', 443)
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, True)
@@ -137,7 +137,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertFalse(result.key_reuse)
 
     def test_tls_1_2_rfc_7919_support(self):
-        result = self.get_result('princeton.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result('lamar.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
         self.assertEqual(result.dhparam, None)
         self.assertEqual(
@@ -158,7 +158,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         )
     )
     def test_tls_1_2_no_rfc_7919_support(self, _):
-        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result('office.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertEqual(
             result.dhparam.parameter_numbers,
@@ -179,7 +179,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
 
-        result = self.get_result('fedoraproject.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        result = self.get_result('archive.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [
             TlsNamedCurve.FFDHE2048,
             TlsNamedCurve.FFDHE3072,

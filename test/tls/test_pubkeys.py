@@ -339,7 +339,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
         self.assertEqual(certificate_status.update_interval, datetime.timedelta(days=4))
         self.assertEqual(certificate_status.revocation_reason, None)
 
-        result = self.get_result('www.wikipedia.org', 443)
+        result = self.get_result('www.linkedin.com', 443)
         self.assertEqual(len(result.pubkeys), 1)
 
         now = datetime.datetime.now(asn1crypto.util.timezone.utc)

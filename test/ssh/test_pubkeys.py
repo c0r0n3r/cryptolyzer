@@ -82,19 +82,19 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
             self.assertIn(f'Server offers {public_key.host_key_algorithm.value.code} host key', log_lines[idx])
 
     def test_host_cert(self):
-        result = self.get_result('git.centos.org', 22)
+        result = self.get_result('syslog.ips.nl', 22)
         self.assertEqual(
             list(map(lambda ssh_key: ssh_key.public_key.key_type, result.public_keys)),
-            [Authentication.ECDSA, Authentication.EDDSA, Authentication.RSA, Authentication.EDDSA],
+            [Authentication.ECDSA, Authentication.EDDSA, Authentication.RSA, Authentication.RSA],
         )
         self.assertEqual(
             list(map(lambda ssh_key: ssh_key.host_key_algorithm.value.code, result.public_keys)),
-            ['ecdsa-sha2-nistp256', 'ssh-ed25519', 'ssh-rsa', 'ssh-ed25519-cert-v01@openssh.com'],
+            ['ecdsa-sha2-nistp256', 'ssh-ed25519', 'ssh-rsa', 'ssh-rsa-cert-v01@openssh.com'],
             [
                 SshHostKeyAlgorithm.ECDSA_SHA2_NISTP256,
                 SshHostKeyAlgorithm.SSH_ED25519,
                 SshHostKeyAlgorithm.SSH_RSA,
-                SshHostKeyAlgorithm.SSH_ED25519_CERT_V01_OPENSSH_COM
+                SshHostKeyAlgorithm.SSH_RSA_CERT_V01_OPENSSH_COM,
             ]
         )
-        self.assertEqual(result.public_keys[3].key_id, 'pagure1.centos.org')
+        self.assertEqual(result.public_keys[3].key_id, 'avy.fabriquehq.nl')
