@@ -114,6 +114,7 @@ envlist = [
 
 [tool.tox.env_run_base]
 deps = ['coverage', '.[tests]']
+allowlist_externals = ['coverage']
 commands = [
     ['coverage', 'erase'],
     ['coverage', 'run', '-m', 'unittest', 'discover', '-v'],
