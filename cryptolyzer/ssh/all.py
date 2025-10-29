@@ -61,7 +61,10 @@ class AnalyzerAll(AnalyzerSshBase):
 
     @staticmethod
     def _is_key_exchange_supported(ciphers_result, key_exchange):
-        if any(map(lambda kex_algorithm: kex_algorithm.value.kex == key_exchange, ciphers_result.kex_algorithms)):
+        if any(map(
+            lambda kex_algorithm: not isinstance(kex_algorithm, str) and kex_algorithm.value.kex == key_exchange,
+            ciphers_result.kex_algorithms
+        )):
             return SshProtocolVersion(SshVersion.SSH2)
 
         return None
