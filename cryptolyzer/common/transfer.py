@@ -382,7 +382,9 @@ class L4ServerUDP(L4ServerBase):
         self._client_address = None
 
     def close_client(self):
-        pass
+        self._client_address = None
+        self._client_port = None
+        self.flush_buffer()
 
 
 @attr.s

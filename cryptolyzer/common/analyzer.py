@@ -17,6 +17,7 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.dnsrec.client import L7ClientDnsBase
 from cryptolyzer.httpx.client import L7ClientHttpBase
+from cryptolyzer.ike.client import L7ClientIPsecBase
 from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.tls.client import L7ClientTlsBase
 
@@ -204,6 +205,21 @@ class ProtocolHandlerSshExactVersion(ProtocolHandlerSshBase):
         raise NotImplementedError()
 
 
+class ProtocolHandlerIKEBase(ProtocolHandlerBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_protocol_version(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def get_protocol(cls):
+        return cls.get_protocol_version().identifier  # pragma: no cover
+
+    @classmethod
+    def _get_analyzer_args(cls):
+        return ([], {'protocol_version': cls.get_protocol_version()})
+
+
 class AnalyzerSshBase():
     @classmethod
     def get_clients(cls):
@@ -243,4 +259,20 @@ class AnalyzerDnsRecordBase():
 
     @abc.abstractmethod
     def analyze(self, analyzable):
+        raise NotImplementedError()
+
+
+class AnalyzerIKEBase():
+    @classmethod
+    def get_clients(cls):
+        return [
+            L7ClientIPsecBase
+        ]
+
+    @classmethod
+    def get_default_scheme(cls):
+        return 'ipsec'
+
+    @abc.abstractmethod
+    def analyze(self, analyzable, protocol_version):
         raise NotImplementedError()

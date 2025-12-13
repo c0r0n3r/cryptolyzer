@@ -7,6 +7,7 @@ import attr
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.httpx.version import HttpVersion
+from cryptoparser.ike.version import IsakmpProtocolVersion
 from cryptoparser.ssh.version import SshProtocolVersion
 from cryptoparser.tls.version import TlsProtocolVersion
 
@@ -170,3 +171,8 @@ class AnalyzerResultHttp(AnalyzerResultBase):
 @attr.s
 class AnalyzerResultDnsRecord(AnalyzerResultBase):
     pass
+
+
+@attr.s
+class AnalyzerResultIKE(AnalyzerResultBase):
+    """Base class for IKE analyzer results."""
