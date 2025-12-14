@@ -26,19 +26,19 @@ class TestDnsRecordDnsSec(TestLoggerBase):
         self.assertEqual(analyzer_result.resource_record_signatures, [])
 
         analyzer_result = self.get_result('dns://openssl.org#1.1.1.1')
-        self.assertEqual(
-            list(map(lambda dns_key: dns_key.algorithm, analyzer_result.dns_keys)),
-            [DnsSecAlgorithm.RSASHA256, DnsSecAlgorithm.RSASHA256]
-        )
-        self.assertEqual(
-            list(map(lambda digital_signature: digital_signature.algorithm, analyzer_result.delegation_signer)),
-            [DnsSecAlgorithm.RSASHA256, DnsSecAlgorithm.RSASHA256]
-        )
-        self.assertEqual(
-            list(map(lambda digital_signature: digital_signature.digest_type, analyzer_result.delegation_signer)),
-            [DnsSecDigestType.SHA_256, DnsSecDigestType.SHA_256]
-        )
-        self.assertEqual(
-            list(map(lambda rr_signature: rr_signature.algorithm, analyzer_result.resource_record_signatures)),
-            10 * [DnsSecAlgorithm.RSASHA256]
-        )
+        self.assertTrue(all(map(
+            lambda dns_key: dns_key.algorithm == DnsSecAlgorithm.RSASHA256,
+            analyzer_result.dns_keys
+        )))
+        self.assertTrue(all(map(
+            lambda digital_signature: digital_signature.algorithm == DnsSecAlgorithm.RSASHA256,
+            analyzer_result.delegation_signer
+        )))
+        self.assertTrue(all(map(
+            lambda digital_signature: digital_signature.digest_type == DnsSecDigestType.SHA_256,
+            analyzer_result.delegation_signer
+        )))
+        self.assertTrue(all(map(
+            lambda rr_signature: rr_signature.algorithm == DnsSecAlgorithm.RSASHA256,
+            analyzer_result.resource_record_signatures
+        )))

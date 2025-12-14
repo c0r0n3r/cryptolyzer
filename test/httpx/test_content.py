@@ -186,28 +186,28 @@ class TestHttpContent(TestLoggerBase):
         ])
 
         with mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=relative_links)):
-            analyzer_result = self.get_result('https://example.com')
+            analyzer_result = self.get_result('https://example.org')
             self.assertEqual(analyzer_result.unencrypted_sources, [])
         with mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=relative_links)):
-            analyzer_result = self.get_result('http://example.com')
+            analyzer_result = self.get_result('http://example.org')
             self.assertEqual(len(analyzer_result.unencrypted_sources), 7)
 
         absolute_links = b''.join([
             b'<!DOCTYPE html>',
             b'<html>',
             b'  <body>',
-            b'    <img src="http://example.com/img"/>',
-            b'    <audio src="http://example.com/audio"/>',
-            b'    <iframe src="http://example.com/iframe"/>',
-            b'    <link href="http://example.com/link" rel="stylesheet"/>',
-            b'    <object data="http://example.com/object"/>',
-            b'    <script src="http://example.com/script"/>',
-            b'    <video src="http://example.com/video"/>',
+            b'    <img src="http://example.org/img"/>',
+            b'    <audio src="http://example.org/audio"/>',
+            b'    <iframe src="http://example.org/iframe"/>',
+            b'    <link href="http://example.org/link" rel="stylesheet"/>',
+            b'    <object data="http://example.org/object"/>',
+            b'    <script src="http://example.org/script"/>',
+            b'    <video src="http://example.org/video"/>',
             b'  </body>',
             b'</html>',
         ])
         with mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=absolute_links)):
-            analyzer_result = self.get_result('http://example.com')
+            analyzer_result = self.get_result('http://example.org')
             self.assertEqual(len(analyzer_result.unencrypted_sources), 7)
 
     def test_real(self):
