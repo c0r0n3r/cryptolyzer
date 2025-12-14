@@ -103,11 +103,14 @@ dockerhub:
       - $CI_COMMIT_REF_NAME == "master"
 
 obs:
-  image: coroner/python_obs
+  image:
+    name: coroner/python_obs:1.0.0
+    pull_policy: always
   stage: deploy
   variables:
     GIT_SUBMODULE_DEPTH: 1
     GIT_SUBMODULE_STRATEGY: recursive
+  before_script: []
   script:
     - obs.sh
   only:
