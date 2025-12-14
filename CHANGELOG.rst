@@ -2,9 +2,9 @@
 Changelog
 =========
 
------
-1.0.1
------
+------------------
+1.0.1 - 2025-12-07
+------------------
 
 Notable fixes
 =============
@@ -14,6 +14,10 @@ Notable fixes
    -  Generic
 
       -  IMAP checks work well with Python 3.14 (#158)
+
+   -  Extensions (``extensions``)
+
+      -  clock skew check works weel on Windows (#157)
 
 -------------------
 1.0.0 - 2025-01-05
