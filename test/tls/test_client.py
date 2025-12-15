@@ -518,6 +518,10 @@ class TestClientFTP(TestL7ClientBase):
             [TlsProtocolVersion(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
         )
 
+    def test_ftps_client_port(self):
+        client = L7ClientTlsBase.from_scheme('ftps', 'localhost')
+        self.assertEqual(client.port, 990)
+
 
 RDP_NEGOTIATION_RESPONSE_LENGTH = 19
 
