@@ -148,7 +148,7 @@ class L7ServerTlsCloseDuringHandshake(L7ServerTls):
 class TlsServerOneMessageInMultipleRecords(TlsServerHandshake):
     SERVER_HELLO_MESSAGE = TlsHandshakeServerHello(
         protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
-        random=TlsHandshakeHelloRandom(datetime.datetime.fromtimestamp(0)),
+        random=TlsHandshakeHelloRandom(datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)),
         cipher_suite=TlsCipherSuite.TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
         extensions=TlsExtensionsClient([]),
     )
