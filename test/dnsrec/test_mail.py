@@ -28,6 +28,11 @@ class TestDnsRecordMail(TestLoggerBase):
             client.l4_socket_params = l4_socket_params.timeout
         return analyzer.analyze(client)
 
+    def test_missing(self):
+        analyzer_result = self.get_result('dns://openssl.org')
+        self.assertIsNone(analyzer_result.mta_sts.value)
+        self.assertIsNone(analyzer_result.tls_rpt.value)
+
     def test_real(self):
         analyzer_result = self.get_result('dns://example.com')
         self.assertEqual(analyzer_result.mx, [DnsRecordMx(0, '')])
