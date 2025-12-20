@@ -9,6 +9,7 @@ import imaplib
 import collections
 import re
 import socket
+import sys
 
 import attr
 
@@ -1028,7 +1029,8 @@ class IMAP4(imaplib.IMAP4):
         self.host = args[0]
         self.port = args[1]
         self.sock = socket.create_connection((self.host, self.port), self.l4_socket_params.timeout)
-        self.file = self.sock.makefile('rb')
+        file = self.sock.makefile('rb')
+        setattr(self, '_file' if sys.version_info.major > 3 or sys.version_info.minor >= 14 else 'file', file)
 
 
 class ClientIMAP(L7ClientStartTlsBase):

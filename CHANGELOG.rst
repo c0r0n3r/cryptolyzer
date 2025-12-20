@@ -2,6 +2,19 @@
 Changelog
 =========
 
+-----
+1.0.1
+-----
+
+Notable fixes
+=============
+
+-  TLS (``tls``)
+
+   -  Generic
+
+      -  IMAP checks work well with Python 3.14 (#158)
+
 -------------------
 1.0.0 - 2025-01-05
 -------------------
