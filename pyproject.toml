@@ -30,6 +30,7 @@ classifiers=[
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
     'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
     'Programming Language :: Python :: Implementation :: CPython',
     'Programming Language :: Python :: Implementation :: PyPy',
     'Programming Language :: Python',
@@ -109,6 +110,7 @@ envlist = [
     'py311',
     'py312',
     'py313',
+    'py314',
     'pythonrc',
 ]
 

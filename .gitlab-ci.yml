@@ -15,19 +15,19 @@ variables:
   PYTHONPATH: "submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub"
 
 pylint:
-  image: python:3.12-slim
+  image: python:3.14-slim
   stage: earlytest
   script: tox -e pylint
 
 pep8:
-  image: python:3.12-slim
+  image: python:3.14-slim
   stage: earlytest
   script: tox -e pep8
 
-python3:
-  image: python:3.12-slim
+python314:
+  image: python:3.14-slim
   stage: earlytest
-  script: tox -e py312
+  script: tox -e py314
 
 python39:
   image: python:3.9-slim
@@ -44,15 +44,20 @@ python311:
   stage: fulltest
   script: tox -e py311
 
+python312:
+  image: python:3.12-slim
+  stage: fulltest
+  script: tox -e py312
+
 python313:
   image: python:3.13-slim
   stage: fulltest
   script: tox -e py313
 
 pythonrc:
-  image: python:3.14-rc-slim
+  image: python:3.15-rc-slim
   stage: fulltest
-  script: tox -e py314
+  script: tox -e py315
 
 coveralls:
   image: python:3.12-slim
