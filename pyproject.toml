@@ -20,7 +20,6 @@ classifiers=[
     'Intended Audience :: Information Technology',
     'Intended Audience :: Science/Research',
     'Intended Audience :: System Administrators',
-    'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
     'Natural Language :: English',
     'Operating System :: MacOS',
     'Operating System :: Microsoft :: Windows',
@@ -99,9 +98,6 @@ Source = 'https://gitlab.com/coroner/cryptolyzer'
 
 [tool.variables]
 technical_name = 'cryptolyzer'
-
-[tool.setuptools]
-license-files = ['LICENSE.txt']
 
 [tool.setuptools.packages.find]
 exclude = ['submodules']
