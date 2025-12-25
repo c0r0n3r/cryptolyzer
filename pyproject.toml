@@ -81,6 +81,12 @@ dependencies = [
     'urllib3',
 ]
 
+[project.optional-dependencies]
+docs = [
+    'sphinx>=8.0',
+    'sphinx-sitemap',
+]
+
 [project.scripts]
 cryptolyze = 'cryptolyzer.__main__:main'
 
