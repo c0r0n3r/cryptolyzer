@@ -3,6 +3,17 @@ Changelog
 =========
 
 ------------------
+1.0.2 - 2025-12-30
+------------------
+
+Dependencies
+============
+
+-  Generic
+
+   -  Purge submodules directory from distribution (#159)
+
+------------------
 1.0.1 - 2025-12-07
 ------------------
 
