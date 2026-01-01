@@ -118,6 +118,7 @@ envlist = [
 
 [tool.tox.env_run_base]
 deps = ['coverage', '.[tests]']
+setenv = {PYTHONPATH = 'submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub'}
 commands = [
     ['coverage', 'erase'],
     ['coverage', 'run', '-m', 'unittest', 'discover', '-v'],
@@ -126,8 +127,10 @@ commands = [
 
 [tool.tox.env.pep8]
 deps = ['flake8']
+setenv = {PYTHONPATH = 'submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub'}
 commands = [['flake8', 'cryptolyzer', 'docs', 'test']]
 
 [tool.tox.env.pylint]
 deps = ['pylint', '.[tests]']
+setenv = {PYTHONPATH = 'submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub'}
 commands = [['pylint', '--rcfile', '.pylintrc', 'cryptolyzer', 'docs', 'test']]
