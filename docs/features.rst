@@ -289,6 +289,17 @@ Versions
 -  `IKEv1 <https://tools.ietf.org/html/rfc2409>`__
 -  `IKEv2 <https://tools.ietf.org/html/rfc7296>`__
 
+Analyzers
+"""""""""
+
+Supported analyzers by cryptographic protocol versions
+
++-------------------------------------------+-------+-------+
+| Analyzers                                 | IKEv1 | IKEv2 |
++===========================================+=======+=======+
+| Diffie-Hellman parameters (``dhparams``)  |   ✓   |   ✓   |
++-------------------------------------------+-------+-------+
+
 DNS
 ^^^
 

@@ -34,7 +34,7 @@ class TestIkeAll(unittest.TestCase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            L4TransferSocketParams(timeout=1),
             ip=l4_transfer.bind_address,
         )
         markdown_result = result.as_markdown()

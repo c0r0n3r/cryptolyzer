@@ -18,8 +18,8 @@ from cryptoparser.common.utils import get_leaf_classes
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.dnsrec.client import L7ClientDnsBase
-from cryptolyzer.httpx.client import L7ClientHttpBase
 from cryptolyzer.ike.client import L7ClientIPsecBase
+from cryptolyzer.httpx.client import L7ClientHttpBase
 from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.tls.client import L7ClientTlsBase
 
@@ -222,6 +222,13 @@ class ProtocolHandlerIKEBase(ProtocolHandlerBase):
         return ([], {'protocol_version': cls.get_protocol_version()})
 
 
+class ProtocolHandlerIKEExactVersion(ProtocolHandlerIKEBase):
+    """Base class for IKE protocol handlers with exact version."""
+    @classmethod
+    def get_protocol_version(cls):
+        raise NotImplementedError()
+
+
 class AnalyzerSshBase():
     _KEXINIT_CIPHER_ATTRIBUTES = (
         'kex_algorithms',
@@ -308,6 +315,8 @@ class AnalyzerDnsRecordBase():
 
 
 class AnalyzerIKEBase():
+    _MAX_PROPOSALS_PER_INIT_MESSAGE = 128
+
     @classmethod
     def get_clients(cls):
         return [

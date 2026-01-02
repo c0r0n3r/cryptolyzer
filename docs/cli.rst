@@ -154,6 +154,7 @@ cryptographic protocol parts to create uniformity.
    
    cryptolyze tls1_2 dhparams example.com
    cryptolyze ssh2 dhparams example.com
+   cryptolyze ikev2 dhparams example.com
    
    cryptolyze tls1_2 pubkeys example.com
    cryptolyze ssh2 pubkeys example.com

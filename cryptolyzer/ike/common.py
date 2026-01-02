@@ -71,14 +71,15 @@ class Ikev2CipherSuite:
     block_cipher_mode: typing.Optional[BlockCipherMode] = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(BlockCipherMode))
     )
-    integrity_algorithm: MAC = attr.ib(
-        validator=attr.validators.instance_of(MAC)
-    )
     pseudorandom_function: MAC = attr.ib(
         validator=attr.validators.instance_of(MAC)
     )
     diffie_hellman_group: typing.Union[NamedGroup, DHParamWellKnown] = attr.ib(
         validator=attr.validators.instance_of((NamedGroup, DHParamWellKnown))
+    )
+    integrity_algorithm: typing.Optional[MAC] = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(MAC))
     )
 
     @classmethod
@@ -99,10 +100,11 @@ class Ikev2CipherSuite:
                 f'encryption algorithm {encryption_transform_id}'
             )
 
+        integrity_algorithm = None if integrity_transform_id.value.hmac is None else integrity_transform_id.value.hmac
         return cls(
             encryption_algorithm=encryption_algorithm,
             block_cipher_mode=encryption_transform_id.value.block_cipher_mode,
-            integrity_algorithm=integrity_transform_id.value.hmac,
             pseudorandom_function=pseudorandom_transform_id.value.mac,
             diffie_hellman_group=diffie_hellman_transform_id.value.key_parameter,
+            integrity_algorithm=integrity_algorithm,
         )
