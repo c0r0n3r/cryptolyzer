@@ -7,8 +7,14 @@ import test.ike.test_versions  # noqa: F401  pylint: disable=unused-import
 
 import urllib3
 
+from cryptodatahub.ike.version import IkeVersion
+
 from cryptolyzer.common.transfer import L4TransferSocketParams
-from cryptolyzer.ike.analyzer import ProtocolHandlerIKEVersionIndependent
+from cryptolyzer.ike.analyzer import (
+    ProtocolHandlerIKEv1,
+    ProtocolHandlerIKEv2,
+    ProtocolHandlerIKEVersionIndependent,
+)
 from cryptolyzer.ike.server import L7ServerIke
 from cryptolyzer.ike.versions import AnalyzerVersions
 
@@ -50,3 +56,15 @@ class TestMain(TestMainBase):
             self._get_test_analyzer_result_json('ike', 'versions', self.address),
             expected,
         )
+
+
+class TestProtocolHandlerVersion(TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return None
+
+    def test_ikev1_protocol_version(self):
+        self.assertEqual(ProtocolHandlerIKEv1.get_protocol_version(), IkeVersion.V1)
+
+    def test_ikev2_protocol_version(self):
+        self.assertEqual(ProtocolHandlerIKEv2.get_protocol_version(), IkeVersion.V2)

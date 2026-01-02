@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+import unittest.mock
 
 from cryptodatahub.ike.algorithm import (
     Ikev1AuthenticationMethod,
@@ -11,11 +12,14 @@ from cryptodatahub.ike.algorithm import (
     Ikev2DiffieHellmanGroup,
     Ikev2EncryptionAlgorithm,
     Ikev2IntegrityAlgorithm,
+    Ikev2NotifyType,
     Ikev2PseudorandomFunction,
 )
 
 from cryptolyzer.ike.client import Ikev1SecurityAssociationProposalAlgorithms
 from cryptolyzer.ike.common import Ikev1CipherSuite, Ikev2CipherSuite
+from cryptolyzer.ike.dhparams import AnalyzerDHParams
+from cryptolyzer.ike.exception import IsakmpNotify
 
 
 class TestIkev1CipherSuite(unittest.TestCase):
@@ -82,3 +86,14 @@ class TestIkev2CipherSuite(unittest.TestCase):
                 diffie_hellman_transform_id=Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT,
                 key_length=9999,
             )
+
+
+class TestSendIkev2InitMessageNoProposalChosen(unittest.TestCase):
+    def test_returns_none_on_no_proposal_chosen(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        l7_client.do_ikev2_handshake.side_effect = IsakmpNotify(Ikev2NotifyType.NO_PROPOSAL_CHOSEN)
+        # pylint: disable=protected-access
+        result = analyzer._send_ikev2_init_message(l7_client, unittest.mock.MagicMock())
+        self.assertIsNone(result)

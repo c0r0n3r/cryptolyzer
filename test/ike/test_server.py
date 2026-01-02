@@ -659,3 +659,18 @@ class TestL7ServerIke(unittest.TestCase):
 
     def test_default_port(self):
         self.assertEqual(L7ServerIke.get_default_port(), 45000)
+
+
+class TestIkev2GenerateKeNoncePayloadsEcdh(unittest.TestCase):
+    def test_ecdh_group_forges_ecdh_key(self):
+        sa = _Ikev2ProposalFactory.make_sa(
+            Ikev2EncryptionAlgorithm.ENCR_AES_CBC, 128,
+            Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
+            Ikev2PseudorandomFunction.PRF_HMAC_SHA1,
+            Ikev2DiffieHellmanGroup.ECP_GROUP_256_BIT,
+        )
+        # pylint: disable=protected-access
+        payloads = Ikev2ServerHandshake._generate_ke_nonce_payloads(sa)
+        ke_payload = next(p for p in payloads if isinstance(p, Ikev2PayloadKeyExchange))
+        self.assertEqual(ke_payload.dh_group, Ikev2DiffieHellmanGroup.ECP_GROUP_256_BIT)
+        self.assertGreater(len(ke_payload.key_exchange_data), 0)

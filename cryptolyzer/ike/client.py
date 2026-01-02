@@ -70,6 +70,7 @@ from cryptoparser.ike.ikev2 import (
     Transform,
 )
 
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.common.exception import (
     SecurityError,
     SecurityErrorType,
@@ -265,6 +266,7 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         else:
             dh_group = diffie_hellman_groups[0]
 
+        payload_key_exchange = None
         if isinstance(dh_group.value.key_parameter, NamedGroup):
             payload_key_exchange = Ikev2PayloadKeyExchange(
                 flags=set(),
@@ -273,7 +275,6 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
                     dh_group.value.key_parameter, add_point_format_octet=False
                 ),
             )
-            payloads.append(payload_key_exchange)
         elif isinstance(dh_group.value.key_parameter, DHParamWellKnown):
             payload_key_exchange = Ikev2PayloadKeyExchange(
                 flags=set(),
@@ -282,6 +283,11 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
                     get_dh_ephemeral_key_forged(dh_group.value.key_parameter.value.parameter_numbers.p),
                     dh_group.value.key_parameter.value.key_size // 8
                 )
+            )
+        if payload_key_exchange is not None:
+            LogSingleton().log(
+                level=40,
+                msg=f'Sending KE payload; length={len(payload_key_exchange.key_exchange_data) * 8}'
             )
             payloads.append(payload_key_exchange)
 
@@ -825,6 +831,12 @@ class IKEv1ClientHandshake(IKEClient):
                     key_exchange_payloads = Ikev1SecurityAssociationBase.get_key_exchange_payloads(
                         payload_security_association.proposals
                     )
+                    if key_exchange_payloads:
+                        ke_data = key_exchange_payloads[0].key_exchange_data
+                        LogSingleton().log(
+                            level=40,
+                            msg=f'Sending KE payload; length={len(ke_data) * 8}'
+                        )
                     key_exchange_message = IsakmpMessage(
                         version=init_message.version,
                         initiator_spi=init_message.initiator_spi,
@@ -879,6 +891,9 @@ class L7ClientIPsecBase(L7TransferBase, metaclass=abc.ABCMeta):
 
         try:
             l7_client.do_handshake(self, init_message, last_exchange_type)
+        except IsakmpNotify as e:
+            e.server_messages = l7_client.server_messages
+            raise
         finally:
             self._close_connection()
 
