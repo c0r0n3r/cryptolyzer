@@ -8,10 +8,15 @@
 
 *.egg-info
 
+*.pcap
+
 /.coverage
 
 /.eggs
 /.tox
+
+/.vscode
+
 /Pipfile
 /Pipfile.lock
 /build
