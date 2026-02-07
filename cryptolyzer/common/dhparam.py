@@ -110,11 +110,11 @@ def parse_ecdh_params(param_bytes):
 
 @attr.s
 class DHParameter(Serializable):
-    parameter_numbers = attr.ib(
+    parameter_numbers: DHParameterNumbers = attr.ib(
         validator=attr.validators.instance_of(DHParameterNumbers),
         metadata={'human_friendly': False},
     )
-    key_size = attr.ib(
+    key_size: PublicKeySize = attr.ib(
         converter=convert_public_key_size(KeyExchange.DHE),
         validator=attr.validators.instance_of(PublicKeySize)
     )

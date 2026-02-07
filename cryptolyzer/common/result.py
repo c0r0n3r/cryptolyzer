@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import ipaddress
+import typing
+
 import attr
 
 from cryptoparser.common.base import Serializable
@@ -25,7 +27,7 @@ class AnalyzerTargetBase(Serializable):
 
 @attr.s
 class AnalyzerTarget(AnalyzerTargetBase):
-    ip = attr.ib(
+    ip: typing.Union[str, ipaddress.IPv4Address, ipaddress.IPv6Address] = attr.ib(
         validator=attr.validators.instance_of((
             str, ipaddress.IPv4Address, ipaddress.IPv6Address
         )),
@@ -62,6 +64,15 @@ class AnalyzerTargetHttp(AnalyzerTarget):
             port = int(l7_client.uri.port)
 
         return cls(l7_client.get_scheme(), l7_client.uri.host, '', port, path=l7_client.uri.path)
+
+
+@attr.s
+class AnalyzerTargetIke(AnalyzerTarget):
+    proto_version: IsakmpProtocolVersion = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(IsakmpProtocolVersion)),
+        metadata={'human_readable_name': 'Protocol Version'}
+    )
 
 
 @attr.s

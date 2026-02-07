@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import abc
+import typing
 
 import attr
 
@@ -18,11 +19,14 @@ class L7ServerConfigurationBase():
 
 @attr.s
 class L7ServerBase(L7TransferBase):
-    configuration = attr.ib(
+    configuration: typing.Optional[L7ServerConfigurationBase] = attr.ib(
         default=None,
         validator=attr.validators.optional(attr.validators.instance_of(L7ServerConfigurationBase))
     )
-    max_handshake_count = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
+    max_handshake_count: typing.Optional[int] = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(int))
+    )
 
     @classmethod
     @abc.abstractmethod
@@ -77,10 +81,10 @@ class L7ServerBase(L7TransferBase):
 
 @attr.s
 class L7ServerHandshakeBase():
-    l7_transfer = attr.ib(validator=attr.validators.instance_of(L7TransferBase))
-    configuration = attr.ib(validator=attr.validators.instance_of(L7ServerConfigurationBase))
-    _last_processed_message_type = attr.ib(init=False, default=None)
-    client_messages = attr.ib(init=False, default={})
+    l7_transfer: L7TransferBase = attr.ib(validator=attr.validators.instance_of(L7TransferBase))
+    configuration: L7ServerConfigurationBase = attr.ib(validator=attr.validators.instance_of(L7ServerConfigurationBase))
+    _last_processed_message_type: typing.Optional[typing.Any] = attr.ib(init=False, default=None)
+    client_messages: typing.Dict[typing.Any, typing.Any] = attr.ib(init=False, default={})
 
     def _init_connection(self, last_handshake_message_type):
         pass
