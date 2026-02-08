@@ -60,6 +60,10 @@ class SecurityErrorType(enum.Enum):
         short_description='no shared version',
         long_description='target does not support version shared with the client',
     )
+    CERTIFICATE_VERIFY_FAILED = ErrorParams(
+        short_description='certificate verify failed',
+        long_description='target does not provide a certificate that can be verified',
+    )
 
 
 @attr.s

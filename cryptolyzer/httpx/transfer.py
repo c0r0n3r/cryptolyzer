@@ -3,7 +3,7 @@
 import attr
 import requests
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.transfer import L4TransferSocketParams
 
 
@@ -43,6 +43,11 @@ class HttpHandshakeBase():
 
         try:
             self.response = requests.head(transfer.uri, **requests_kwargs)
+        except (requests.exceptions.SSLError) as e:
+            if "CERTIFICATE_VERIFY_FAILED" in str(e):
+                raise SecurityError(SecurityErrorType.CERTIFICATE_VERIFY_FAILED) from e
+
+            raise SecurityError(SecurityErrorType.UNKNOWN_ERROR) from e
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
             raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
         except requests.exceptions.HTTPError as e:
