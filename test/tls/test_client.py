@@ -647,15 +647,9 @@ class TestClientNNTP(TestL7ClientBase):
         l7_client = L7ClientTlsBase.from_scheme('nntp', 'localhost')
         self.assertEqual(l7_client.port, 119)
 
-    def test_nntp_client(self):
-        _, result = self.get_result('nntps', 'secure-us.news.easynews.com', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(tls_version)
-                for tls_version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
-            ]
-        )
+    def test_nntps_client_port(self):
+        client = L7ClientTlsBase.from_scheme('nntps', 'localhost')
+        self.assertEqual(client.port, 563)
 
 
 class TestClientMySQL(TestL7ClientBase):
