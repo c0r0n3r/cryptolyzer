@@ -213,7 +213,7 @@ class TestHttpContent(TestLoggerBase):
     def test_real(self):
         mime_type_html = FieldValueMimeType('html', MimeTypeRegistry.TEXT)
 
-        analyzer_result = self.get_result('https://www.cloudflare.com')
+        analyzer_result = self.get_result('https://google.com')
         self.assertEqual(analyzer_result.mime_type, mime_type_html)
         self.assertEqual(len(analyzer_result.script_integrity), 0)
 

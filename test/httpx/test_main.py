@@ -60,6 +60,6 @@ class TestMain(TestMainBase):
         test_http_server.kill()
 
     def test_default_scheme(self):
-        uri = 'example.org'
+        uri = 'cloudflare.com'
         result = self._get_test_analyzer_result_markdown('http', 'headers', uri, timeout=90)
-        self.assertIn('Name: CF-RAY', result)
+        self.assertIn('Scheme: https', result)
