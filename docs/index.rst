@@ -25,7 +25,7 @@ Summary
 Details
 =======
 
-The main purpose of creating this application is the fact, that cryptography protocol analysis differs in many aspect
+The main purpose of creating this application is the fact, that cryptography protocol analysis differs in many aspects
 from establishing a connection using a cryptographic protocol. Analysis is mostly testing where we trigger special and
 corner cases of the protocol and we also trying to establish connection with hardly supported, experimental, obsoleted
 or even deprecated mechanisms or algorithms which are may or may not supported by the latest or any version of an

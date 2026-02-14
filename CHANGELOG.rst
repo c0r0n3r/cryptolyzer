@@ -28,7 +28,7 @@ Notable fixes
 
    -  Extensions (``extensions``)
 
-      -  clock skew check works weel on Windows (#157)
+      -  clock skew check works well on Windows (#157)
 
 -------------------
 1.0.0 - 2025-01-05
@@ -39,7 +39,7 @@ Refactor
 
 -  Generic
 
-   -  Support only Python version greater or euqal than 3.9
+   -  Support only Python version greater than or equal to 3.9
    -  Use pyproject.toml instead of setup.py
 
 -------------------

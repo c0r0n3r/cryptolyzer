@@ -2,8 +2,8 @@
 Application Programming Interface
 ---------------------------------
 
-CryptoLyzer is not only a command-line tool but also provides a Python API, making it possible to customize the analysis 
-post-process its result or generate customized output by using a high-level, popular programming language. The main
+CryptoLyzer is not only a command-line tool but also provides a Python API, making it possible to customize the analysis,
+post-process its result, or generate customized output by using a high-level, popular programming language. The main
 concept of the analysis requires two objects, namely an analyzer and an analyzable. A special kind of client represents
 the analyzable and implements the strictly necessary part of a certain protocol used by the analyzer to get the
 relevant in terms of a certain analysis. Different types of protocol -- including opportunistic TLS protocols -- are

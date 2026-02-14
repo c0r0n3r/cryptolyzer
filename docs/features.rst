@@ -62,7 +62,7 @@ Differentiators
    cipher suites
 -  checks `post-quantum <https://en.wikipedia.org/wiki/Post-quantum_cryptography>`__ elliptic curves
    (`Kyber <https://en.wikipedia.org/wiki/Kyber>`__)
--  checks TLS 1.3 draft versions, not just finnal version
+-  checks TLS 1.3 draft versions, not just final version
 -  checks whether Diffie-Hellman
 
    -  public parameter is a `safe prime <https://en.wikipedia.org/wiki/Safe_and_Sophie_Germain_primes>`__
@@ -100,7 +100,7 @@ Supported analyzers by cryptographic protocol versions
 +-------------------------------------------+-----+-----+-----+-----+-----+-----+
 
 `Opportunistic TLS <https://en.wikipedia.org/wiki/Opportunistic_TLS>`__ or STARTTLS) which is an extension of an application
-layer protocol -- offering a way to upgrade a plain text connection to an encrypted ione without using a separate port - is
+layer protocol -- offering a way to upgrade a plain text connection to an encrypted one without using a separate port - is
 supported in the case of the following application layer protocols.
 
    -  `FTP <https://en.wikipedia.org/wiki/File_Transfer_Protocol>`__
@@ -157,7 +157,7 @@ Extensions
 -  `next protocols negotiation <https://tools.ietf.org/id/draft-agl-tls-nextprotoneg-03.html>`__
 -  `renegotiation indication <https://www.rfc-editor.org/rfc/rfc5746.html>`__
 -  `session ticket <https://www.rfc-editor.org/rfc/rfc5077.html>`__
--  `inetrnal clock accuracy <https://www.rfc-editor.org/rfc/rfc5246#section-7.4.1.2>`__
+-  `internal clock accuracy <https://www.rfc-editor.org/rfc/rfc5246#section-7.4.1.2>`__
 
 Public Keys
 """""""""""
@@ -197,7 +197,7 @@ Vulnerabilities
 -  `anonymous Diffie-Hellman ciphers <https://en.wikipedia.org/wiki/Key-agreement_protocol#Exponential_key_exchange>`__
 -  `inappropriate version fallback <https://www.rfc-editor.org/rfc/rfc7507.html>`__
 -  `early TLS versions <https://www.rfc-editor.org/rfc/rfc8996>`__
--  `insecure SSL versions <ihttps://www.rfc-editor.org/rfc/rfc7507.html>`__
+-  `insecure SSL versions <https://www.rfc-editor.org/rfc/rfc7507.html>`__
 -  `export grade ciphers <https://en.wikipedia.org/wiki/Export_of_cryptography_from_the_United_States>`__
 -  `non-forward-secret ciphers <https://en.wikipedia.org/wiki/Forward_secrecy>`__
 -  `null encryption ciphers <https://en.wikipedia.org/wiki/Null_encryption>`__
