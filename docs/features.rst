@@ -277,6 +277,15 @@ Headers
    -  `subresource integrity <https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity>`__
    -  `mixed content <https://developer.mozilla.org/en-US/docs/Web/Security/Mixed_content>`__
 
+Internet Key Exchange (IKE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Versions
+""""""""
+
+-  `IKEv1 <https://tools.ietf.org/html/rfc2409>`__
+-  `IKEv2 <https://tools.ietf.org/html/rfc7296>`__
+
 DNS
 ^^^
 

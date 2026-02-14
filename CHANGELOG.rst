@@ -3,6 +3,22 @@ Changelog
 =========
 
 ------------------
+1.1.0 - 2026-02-13
+------------------
+
+Features
+========
+
+-  IKE (``ike``)
+
+   -  add checker for IKE version support (#160)
+   -  add IKE server for handshake simulation and testing (#160)
+
+-  HTTP (``httpx``)
+
+   -  add specific error when certificate verification fails
+
+------------------
 1.0.2 - 2025-12-30
 ------------------
 
