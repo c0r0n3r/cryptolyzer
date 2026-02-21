@@ -707,13 +707,22 @@ class TestClientMySQL(TestL7ClientBase):
         _, result = self._get_mock_server_response('mysql')
         self.assertEqual(result.versions, [])
 
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(MySQLRecord(0, MySQLHandshakeV10(
+        protocol_version=MySQLVersion.MYSQL_9,
+        server_version='version',
+        connection_id=1,
+        auth_plugin_data=b'\x00\x00\x00\x00\x00\x00\x00\x00',
+        capabilities=set([MySQLCapability.CLIENT_SSL, MySQLCapability.CLIENT_PROTOCOL_41]),
+        character_set=MySQLCharacterSet.UTF8,
+        states=set(),
+    ).compose()).compose(),))
+    def test_client_protocol_41(self, _):
+        _, result = self._get_mock_server_response('mysql')
+        self.assertEqual(result.versions, [])
+
     def test_default_port(self):
         l7_client = L7ClientTlsBase.from_scheme('mysql', 'localhost')
         self.assertEqual(l7_client.port, 3306)
-
-    def test_mysql_client(self):
-        _, result = self.get_result('mysql', 'db4free.net', None, L4TransferSocketParams(timeout=10))
-        self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
 
 class TestClientPostgreSQL(TestL7ClientBase):
