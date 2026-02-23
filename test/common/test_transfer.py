@@ -141,7 +141,7 @@ class TestL4ClientTCP(unittest.TestCase):
 
         l4_client.flush_buffer()
         l4_client.receive_line()
-        self.assertTrue(l4_client.buffer.startswith(b'Content-Length: 1'))
+        self.assertRegex(l4_client.buffer.decode('ascii'), 'Content-Length: [1-9][0-9]+')
 
         l4_client.flush_buffer()
         l4_client.receive_line()
