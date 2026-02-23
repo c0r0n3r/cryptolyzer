@@ -128,23 +128,46 @@ def get_ffdh_single_server_configuration():
 
 
 def get_ecdh_only_server_configuration():
-    """Server config that only accepts ECDH groups. Rejects FFDH proposals with NO_PROPOSAL_CHOSEN."""
-    ikev1_cipher_suite = Ikev1CipherSuite(
-        encryption_algorithm=BlockCipher.AES_128,
-        block_cipher_mode=BlockCipherMode.CBC,
-        diffie_hellman_group=Ikev1DiffieHellmanGroup.ECP_256_BIT.value.key_parameter,
-        hash_algorithm=Hash.SHA1,
-    )
-    ikev2_cipher_suite = Ikev2CipherSuite.from_transform_ids(
-        encryption_transform_id=Ikev2EncryptionAlgorithm.ENCR_AES_CBC,
-        integrity_transform_id=Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
-        pseudorandom_transform_id=Ikev2PseudorandomFunction.PRF_HMAC_SHA1,
-        diffie_hellman_transform_id=Ikev2DiffieHellmanGroup.ECP_GROUP_256_BIT,
-        key_length=128,
-    )
+    """Server config with exactly 2 ECDH groups to shorten test run time."""
+    ikev1_suites = [
+        Ikev1CipherSuite.from_ikev1_security_association_proposal_algorithms(
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.ECP_256_BIT,
+                hash_algorithm=Ikev1HashAlgorithm.SHA,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=128,
+            )
+        ),
+        Ikev1CipherSuite.from_ikev1_security_association_proposal_algorithms(
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.ECP_384_BIT,
+                hash_algorithm=Ikev1HashAlgorithm.SHA,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=128,
+            )
+        ),
+    ]
+    ikev2_suites = [
+        Ikev2CipherSuite.from_transform_ids(
+            encryption_transform_id=Ikev2EncryptionAlgorithm.ENCR_AES_CBC,
+            integrity_transform_id=Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
+            pseudorandom_transform_id=Ikev2PseudorandomFunction.PRF_HMAC_SHA1,
+            diffie_hellman_transform_id=Ikev2DiffieHellmanGroup.ECP_GROUP_256_BIT,
+            key_length=128,
+        ),
+        Ikev2CipherSuite.from_transform_ids(
+            encryption_transform_id=Ikev2EncryptionAlgorithm.ENCR_AES_CBC,
+            integrity_transform_id=Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
+            pseudorandom_transform_id=Ikev2PseudorandomFunction.PRF_HMAC_SHA1,
+            diffie_hellman_transform_id=Ikev2DiffieHellmanGroup.ECP_GROUP_384_BIT,
+            key_length=128,
+        ),
+    ]
     return IkeServerConfiguration(
-        ikev1_cipher_suites=[ikev1_cipher_suite],
-        ikev2_cipher_suites=[ikev2_cipher_suite],
+        ikev1_cipher_suites=ikev1_suites,
+        ikev2_cipher_suites=ikev2_suites,
     )
 
 

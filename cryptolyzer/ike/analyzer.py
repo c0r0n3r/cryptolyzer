@@ -6,6 +6,7 @@ from cryptoparser.ike.version import IsakmpVersion
 from cryptolyzer.common.analyzer import ProtocolHandlerIKEBase, ProtocolHandlerIKEExactVersion
 
 from cryptolyzer.ike.dhparams import AnalyzerDHParams
+from cryptolyzer.ike.curves import AnalyzerCurves
 from cryptolyzer.ike.versions import AnalyzerVersions
 
 
@@ -14,6 +15,7 @@ class ProtocolHandlerIKEv1(ProtocolHandlerIKEExactVersion):
     def get_analyzers(cls):
         return (
             AnalyzerDHParams,
+            AnalyzerCurves,
         )
 
     @classmethod

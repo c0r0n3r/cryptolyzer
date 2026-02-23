@@ -14,6 +14,10 @@ Features
    -  Diffie-Hellman (``dhparams``)
 
       -  add checker for IKEv1/IKEv2 support (#161)
+
+   -  Elliptic Curves (``curves``)
+
+      -  add checker for IKEv1/IKEv2 support (#162)
  
 ------------------
 1.1.1 - 2026-05-03
