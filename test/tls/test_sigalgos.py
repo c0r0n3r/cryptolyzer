@@ -31,7 +31,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
     )
     def test_error_tls_alert_protocol_version(self, _):
-        result = self.get_result('ecc256.badssl.com', 443)
+        result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.sig_algos, [])
 
     @mock.patch.object(
@@ -49,13 +49,13 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         ]
     )
     def test_error_response_error_no_response(self, _):
-        result = self.get_result('ecc256.badssl.com', 443)
+        result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.sig_algos, [
             TlsSignatureAndHashAlgorithm.RSA_NONE,
         ])
 
     def test_sigalgos(self):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.sig_algos, [
             TlsSignatureAndHashAlgorithm.RSA_SHA1,
             TlsSignatureAndHashAlgorithm.RSA_SHA224,
@@ -79,5 +79,5 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
         )
 
     def test_json(self):
-        result = self.get_result('ecc256.badssl.com', 443)
+        result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result)

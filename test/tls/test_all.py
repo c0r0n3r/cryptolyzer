@@ -122,7 +122,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         ])), TlsProtocolVersion(TlsVersion.TLS1_1))
 
     def test_real(self):
-        result = self.get_result('dh1024.badssl.com', 443)
+        result = self.get_result('dh1024.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.dhparams.groups, [])
         self.assertNotEqual(result.dhparams.dhparam, None)
         self.assertFalse(result.vulns.ciphers.null_encryption.value)
@@ -130,7 +130,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         self.assertTrue(result.vulns.dhparams.weak_dh.value)
         self.assertTrue(result.vulns.versions.early_tls_version.value)
 
-        result = self.get_result('rc4-md5.badssl.com', 443)
+        result = self.get_result('rc4-md5.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result.vulns.ciphers.rc4.value)
         self.assertFalse(result.vulns.ciphers.null_encryption.value)
         self.assertFalse(result.vulns.ciphers.sweet32.value)
@@ -189,7 +189,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 
     def test_markdown(self):
-        result = self.get_result('rc4-md5.badssl.com', 443)
+        result = self.get_result('rc4-md5.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         markdown_result = result.as_markdown()
 
         target_index = markdown_result.find('Target')
@@ -200,7 +200,9 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
     def test_missing_parts(self):
 
         with mock.patch.object(AnalyzerAll, 'is_public_key_supported', return_value=None):
-            result = self.get_result('static-rsa.badssl.com', 443)
+            result = self.get_result(
+                'static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10)
+            )
 
         self.assertEqual(result.curves, None)
         self.assertEqual(result.dhparams, None)
@@ -209,7 +211,9 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         self.assertNotEqual(result.pubkeyreq, None)
         self.assertNotEqual(result.versions, None)
 
-        result = self.get_result('tls-v1-0.badssl.com', 1010)
+        result = self.get_result(
+            'tls-v1-0.badssl.com', 1010, l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(result.sigalgos, None)
         self.assertNotEqual(result.ciphers, None)
         self.assertNotEqual(result.dhparams, None)

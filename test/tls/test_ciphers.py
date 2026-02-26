@@ -142,7 +142,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         return_value=[]
     )
     def test_error_protocol_version(self, mocked_next_accepted_cipher_suites, _):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 1)
 
@@ -155,7 +155,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         return_value=[]
     )
     def test_error_decode_error(self, mocked_next_accepted_cipher_suites, _):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 1)
 
@@ -164,7 +164,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         side_effect=TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
     )
     def test_error_internal_error(self, mocked_next_accepted_cipher_suites):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 5)
 
@@ -173,7 +173,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         side_effect=TlsAlert(TlsAlertDescription.INSUFFICIENT_SECURITY)
     )
     def test_error_insufficient_security(self, mocked_next_accepted_cipher_suites):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 5)
 
@@ -182,7 +182,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         side_effect=TlsAlert(TlsAlertDescription.ILLEGAL_PARAMETER)
     )
     def test_error_illegal_parameter(self, mocked_next_accepted_cipher_suites):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 5)
 
@@ -192,7 +192,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
     )
     @mock.patch('time.sleep', return_value=None)
     def test_error_internal_error_once(self, _, __):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.cipher_suites, [
             TlsCipherSuite.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
             TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA,
@@ -204,7 +204,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
     )
     @mock.patch('time.sleep', return_value=None)
     def test_error_internal_error_multiple(self, _, __):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.cipher_suites, [])
 
     @mock.patch.object(
@@ -212,7 +212,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         wraps=_wrapped_next_accepted_cipher_suites_response_error
     )
     def test_error_response_error_no_response_last_time(self, _):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 1)
 
     def test_long_cipher_suite_list_intolerance(self):
@@ -227,7 +227,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         self.assertTrue(result.long_cipher_suite_list_intolerance)
 
     def test_cbc(self):
-        result = self.get_result('cbc.badssl.com', 443)
+        result = self.get_result('cbc.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         self.assertEqual(result.cipher_suite_preference, True)
         self.assertEqual(
@@ -253,7 +253,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         )
 
     def test_rc4(self):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         rc4_block_ciphers = [
             BlockCipher.RC4_40,
@@ -266,13 +266,13 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         ))
 
     def test_rc4_md5(self):
-        result = self.get_result('rc4-md5.badssl.com', 443)
+        result = self.get_result('rc4-md5.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         self.assertEqual(result.cipher_suite_preference, None)
         self.assertEqual(result.cipher_suites, [TlsCipherSuite.TLS_RSA_WITH_RC4_128_MD5, ])
 
     def test_triple_des(self):
-        result = self.get_result('3des.badssl.com', 443)
+        result = self.get_result('3des.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         triple_des_block_ciphers = [
             BlockCipher.TRIPLE_DES,
@@ -285,7 +285,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         ))
 
     def test_anon(self):
-        result = self.get_result('null.badssl.com', 443)
+        result = self.get_result('null.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         self.assertTrue(all(
             'NULL' in cipher_suite.name or 'anon' in cipher_suite.name
@@ -293,7 +293,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         ))
 
     def test_rsa(self):
-        result = self.get_result('static-rsa.badssl.com', 443)
+        result = self.get_result('static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         self.assertTrue(all(
             cipher_suite.value.authentication == Authentication.RSA
@@ -320,5 +320,5 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
         )
 
     def test_json(self):
-        result = self.get_result('mozill.old.badssl.com', 443)
+        result = self.get_result('mozill.old.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result)

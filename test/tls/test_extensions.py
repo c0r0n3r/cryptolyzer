@@ -43,7 +43,7 @@ class TestTlsExtensions(TestLoggerBase):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(result.next_protocols, [])
 
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(set(result.next_protocols), set([TlsNextProtocolName.HTTP_1_1, ]))
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers application layer protocol "http/1.1"', log_lines)
@@ -69,10 +69,12 @@ class TestTlsExtensions(TestLoggerBase):
         )
 
     def test_application_layer_protocols(self):
-        result = self.get_result('tls-v1-0.badssl.com', 1010)
+        result = self.get_result(
+            'tls-v1-0.badssl.com', 1010, l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(result.application_layer_protocols, [])
 
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(set(result.application_layer_protocols), set([TlsProtocolName.HTTP_1_1]))
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers application layer protocol "http/1.1"', log_lines)
@@ -136,7 +138,9 @@ class TestTlsExtensions(TestLoggerBase):
         self.assertIn('Server offers compression method(s) "NULL"', log_lines)
 
     def test_ec_point_formats(self):
-        result = self.get_result('ecc256.badssl.com', 433)
+        result = self.get_result(
+            'ecc256.badssl.com', 433, l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(
             result.ec_point_formats,
             [TlsECPointFormat.UNCOMPRESSED, ]
@@ -153,7 +157,10 @@ class TestTlsExtensions(TestLoggerBase):
         self.assertIn('Server offers point format(s) "UNCOMPRESSED"', log_lines)
 
     def test_encrypt_then_mac(self):
-        result = self.get_result('tls-v1-0.badssl.com', 1010, TlsProtocolVersion(TlsVersion.TLS1))
+        result = self.get_result(
+            'tls-v1-0.badssl.com', 1010, TlsProtocolVersion(TlsVersion.TLS1),
+            l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertFalse(result.encrypt_then_mac_supported)
         log_lines = self.pop_log_lines()
         self.assertNotIn('Server does not offer encrypt then MAC', log_lines)
@@ -176,7 +183,9 @@ class TestTlsExtensions(TestLoggerBase):
         self.assertNotIn('Server offers encrypt then MAC', log_lines)
 
     def test_extended_master_secret(self):
-        result = self.get_result('tls-v1-2.badssl.com', 1012)
+        result = self.get_result(
+            'tls-v1-2.badssl.com', 1012, l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertFalse(result.extended_master_secret_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server does not offer extended master secret', log_lines)

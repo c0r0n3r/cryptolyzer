@@ -38,7 +38,10 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         side_effect=len(TlsNamedCurve) * [NetworkError(NetworkErrorType.NO_RESPONSE)]
     )
     def test_error_response_error_no_response(self, _):
-        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result(
+            'ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2),
+            l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(len(result.curves), 0)
 
     @mock.patch(
@@ -46,7 +49,10 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         side_effect=NotImplementedError(TlsNamedCurve.X25519)
     )
     def test_error_not_implemented_named_curve(self, _):
-        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result(
+            'ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2),
+            l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(result.curves, [TlsNamedCurve.X25519])
 
     @mock.patch(
@@ -55,14 +61,20 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
     )
     def test_error_not_implemented_other(self, _):
         with self.assertRaisesRegex(NotImplementedError, 'cryptolyzer.tls.curves.parse_ecdh_params'):
-            self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+            self.get_result(
+                'ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2),
+                l4_socket_params=L4TransferSocketParams(timeout=10)
+            )
 
     @mock.patch.object(
         AnalyzerCurves, '_get_response_message',
         side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
     )
     def test_error_tls_alert_for_first_time(self, _):
-        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result(
+            'ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2),
+            l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(result.curves, [])
 
     @mock.patch.object(
@@ -81,7 +93,10 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
 
     def test_curves(self):
-        result = self.get_result('ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result(
+            'ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2),
+            l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(result.curves, [TlsNamedCurve.SECP256R1, ])
         self.assertTrue(result.extension_supported)
         self.assertEqual(
@@ -105,7 +120,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
         self.assertIn('Server offers elliptic-curve PRIME256V1', curve_log_lines)
 
     def test_no_ec_support(self):
-        result = self.get_result('static-rsa.badssl.com', 443)
+        result = self.get_result('static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.curves), 0)
         self.assertFalse(self.log_stream.getvalue(), '')
 
@@ -139,7 +154,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
     @mock.patch.object(L4ClientTCP, 'send', side_effect=socket.timeout)
     def test_error_connection_closed_during_the_handshake(self, _):
         with self.assertRaises(NetworkError) as context_manager:
-            self.get_result('badssl.com', 443)
+            self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     def test_json(self):

@@ -73,7 +73,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparam, None)
 
     def test_size(self):
-        result = self.get_result('dh480.badssl.com', 443)
+        result = self.get_result('dh480.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam.key_size.value, 480)
         self.assertEqual(result.dhparam.prime, True)
@@ -87,7 +87,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         )
 
     def test_prime(self):
-        result = self.get_result('dh-composite.badssl.com', 443)
+        result = self.get_result('dh-composite.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, False)
@@ -96,7 +96,10 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertFalse(result.key_reuse)
 
     def test_safe_prime(self):
-        result = self.get_result('dh-small-subgroup.badssl.com', 443)
+        result = self.get_result(
+            'dh-small-subgroup.badssl.com', 443,
+            l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, True)
@@ -124,14 +127,17 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertEqual(result.dhparam, None)
 
     def test_no_dhe_support(self):
-        result = self.get_result('static-rsa.badssl.com', 443)
+        result = self.get_result('static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
         self.assertEqual(result.key_reuse, None)
         self.assertFalse(self.log_stream.getvalue(), '')
 
     def test_tls_early_version(self):
-        result = self.get_result('dh480.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1))
+        result = self.get_result(
+            'dh480.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1),
+            l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(result.groups, [])
         self.assertNotEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
@@ -199,7 +205,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         )
 
     def test_json(self):
-        result = self.get_result('dh480.badssl.com', 443)
+        result = self.get_result('dh480.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result)
         result = self.get_result('www.owasp.org', 443)
         self.assertTrue(result)

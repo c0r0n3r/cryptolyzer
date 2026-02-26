@@ -38,7 +38,7 @@ class TestTlsSimulations(TestLoggerBase):
         side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
     )
     def test_error_tls_alert_protocol_version(self, _):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.succeeded_clients), 0)
         self.assertEqual(len(result.failed_clients), len(set(tls_client.value.meta.client for tls_client in TlsClient)))
 
@@ -47,7 +47,7 @@ class TestTlsSimulations(TestLoggerBase):
         side_effect=TlsAlert(TlsAlertDescription.HANDSHAKE_FAILURE)
     )
     def test_error_tls_alert_handshake_failure(self, _):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.succeeded_clients), 0)
         self.assertEqual(len(result.failed_clients), len(set(tls_client.value.meta.client for tls_client in TlsClient)))
 
@@ -56,18 +56,18 @@ class TestTlsSimulations(TestLoggerBase):
         side_effect=TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
     )
     def test_error_tls_alert_unknown_error(self, _):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.succeeded_clients), 0)
         self.assertEqual(len(result.failed_clients), len(set(tls_client.value.meta.client for tls_client in TlsClient)))
 
     def test_failed_clients(self):
-        result = self.get_result('rc4.badssl.com', 443)
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.succeeded_clients), 3)
         self.assertEqual(len(result.failed_clients), 4)
         self.assertTrue(result)
 
     def test_non_pfs(self):
-        result = self.get_result('static-rsa.badssl.com', 443)
+        result = self.get_result('static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(all(
             type(analyzer_result) is AnalyzerResultSimulationsTlsBase  # pylint: disable=unidiomatic-typecheck
             for analyzer_result in result.succeeded_clients.values()
@@ -79,7 +79,7 @@ class TestTlsSimulations(TestLoggerBase):
         self.assertTrue(result)
 
     def test_pfs_dh_custom(self):
-        result = self.get_result('dh2048.badssl.com', 443)
+        result = self.get_result('dh2048.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(all(
             type(analyzer_result) is AnalyzerResultSimulationsTlsPfs  # pylint: disable=unidiomatic-typecheck
             for analyzer_result in result.succeeded_clients.values()
@@ -111,7 +111,7 @@ class TestTlsSimulations(TestLoggerBase):
         self.assertTrue(result)
 
     def test_pfs_named_group(self):
-        result = self.get_result('ecc256.badssl.com', 443)
+        result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(all(
             type(analyzer_result) is AnalyzerResultSimulationsTlsPfsNamedGroup  # pylint: disable=unidiomatic-typecheck
             for analyzer_result in result.succeeded_clients.values()

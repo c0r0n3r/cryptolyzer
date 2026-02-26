@@ -206,7 +206,7 @@ class TestL7ClientTlsBase(TestL7ClientBase):
     @mock.patch.object(L4ClientTCP, '_send', return_value=0)
     def test_error_send(self, _):
         with self.assertRaises(NetworkError) as context_manager:
-            self.get_result('tls', 'badssl.com', 443)
+            self.get_result('tls', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     def test_error_unsupported_scheme(self):
@@ -242,7 +242,7 @@ class TestL7ClientTlsBase(TestL7ClientBase):
 
     def test_error_connection_timeout_on_close(self):
         analyzer = AnalyzerVersions()
-        l7_client = L7ClientTlsMock('badssl.com', 443)
+        l7_client = L7ClientTlsMock('badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(
             analyzer.analyze(l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)).versions,
             [
@@ -253,7 +253,7 @@ class TestL7ClientTlsBase(TestL7ClientBase):
         )
 
     def test_tls_client(self):
-        _, result = self.get_result('tls', 'badssl.com', 443)
+        _, result = self.get_result('tls', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(
             result.versions,
             [
@@ -264,7 +264,7 @@ class TestL7ClientTlsBase(TestL7ClientBase):
         )
 
     def test_https_client(self):
-        _, result = self.get_result('https', 'badssl.com', None)
+        _, result = self.get_result('https', 'badssl.com', None, L4TransferSocketParams(timeout=10))
         self.assertEqual(
             result.versions,
             [
@@ -535,12 +535,12 @@ class TestClientRDP(TestL7ClientBase):
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidType)
     def test_error_parse_invalid_type(self, _):
-        _, result = self.get_result('rdp', 'badssl.com', 443)
+        _, result = self.get_result('rdp', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(ParsableBase, 'parse_exact_size', side_effect=InvalidValue('x', int))
     def test_error_parse_invalid_value(self, _):
-        _, result = self.get_result('rdp', 'badssl.com', 443)
+        _, result = self.get_result('rdp', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(
@@ -552,7 +552,7 @@ class TestClientRDP(TestL7ClientBase):
         ).compose()
     )
     def test_error_no_ssl_support(self, _):
-        _, result = self.get_result('rdp', 'badssl.com', 443)
+        _, result = self.get_result('rdp', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.versions, [])
 
 
@@ -1069,7 +1069,7 @@ class TestClientOpenVpn(TestL7ClientBase):
     @mock.patch.object(L7TransferBase, 'receive', side_effect=NotEnoughData)
     @mock.patch.object(L4TransferBase, 'buffer', mock.PropertyMock(return_value=b'\x00'))
     def test_error_no_response(self, _):
-        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443)
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         l7_client.session_id = 0xfffffffffffffffe
         with self.assertRaises(NetworkError) as context_manager:
             l7_client.init_connection()
@@ -1083,7 +1083,7 @@ class TestClientOpenVpn(TestL7ClientBase):
         L4ClientTCP, 'send', return_value=None
     )
     def test_error_not_enough_packet_byte_udp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443)
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(NotEnoughData) as context_manager:
@@ -1101,7 +1101,7 @@ class TestClientOpenVpn(TestL7ClientBase):
         L4ClientTCP, 'send', return_value=None
     )
     def test_error_not_enough_packet_byte_tcp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443)
+        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(NotEnoughData) as context_manager:
@@ -1115,7 +1115,7 @@ class TestClientOpenVpn(TestL7ClientBase):
         return_value=[OpenVpnPacketHardResetClientV2(0xffffffffffffffff, 1), ]
     )
     def test_error_invalid_op_code_udp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443)
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(InvalidType):
@@ -1128,7 +1128,7 @@ class TestClientOpenVpn(TestL7ClientBase):
         return_value=[OpenVpnPacketHardResetClientV2(0xffffffffffffffff, 1), ]
     )
     def test_error_invalid_op_code_tcp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443)
+        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(InvalidType):
@@ -1145,7 +1145,7 @@ class TestClientOpenVpn(TestL7ClientBase):
         L4ClientTCP, 'send', return_value=None
     )
     def test_error_receive_unexpected_server_reset_tcp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443)
+        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443, L4TransferSocketParams(timeout=10))
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(NotEnoughData) as context_manager:
@@ -1171,7 +1171,7 @@ class TestClientOpenVpn(TestL7ClientBase):
         L4ClientUDP, 'send', return_value=None
     )
     def test_error_receive_unexpected_server_reset_udp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 1194)
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 1194, L4TransferSocketParams(timeout=10))
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(NotEnoughData) as context_manager:
@@ -1279,7 +1279,8 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_ssl_error_replied(self, _):
         with self.assertRaises(SslError) as context_manager:
-            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(list(SslCipherKind)))
+            L7ClientTls('badssl.com', 443, L4TransferSocketParams(timeout=10)).do_ssl_handshake(
+                SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CIPHER_ERROR)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
@@ -1295,7 +1296,8 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_unparsable_response(self, _):
         with self.assertRaises(SecurityError) as context_manager:
-            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(list(SslCipherKind)))
+            L7ClientTls('badssl.com', 443, L4TransferSocketParams(timeout=10)).do_ssl_handshake(
+                SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
@@ -1318,7 +1320,8 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_multiple_record_resonse(self, _):
         with self.assertRaises(SecurityError) as context_manager:
-            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(list(SslCipherKind)))
+            L7ClientTls('badssl.com', 443, L4TransferSocketParams(timeout=10)).do_ssl_handshake(
+                SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, SecurityErrorType.PLAIN_TEXT_MESSAGE)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
@@ -1335,7 +1338,8 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_error_unacceptable_tls_error_replied(self, _):
         with self.assertRaises(NetworkError) as context_manager:
-            L7ClientTls('badssl.com', 443).do_ssl_handshake(SslHandshakeClientHello(list(SslCipherKind)))
+            L7ClientTls('badssl.com', 443, L4TransferSocketParams(timeout=10)).do_ssl_handshake(
+                SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
     @mock.patch.object(L4ClientTCP, 'receive', return_value=b'')
@@ -1347,7 +1351,7 @@ class TestSslClientHandshake(unittest.TestCase):
     )
     def test_multiple_messages(self, _, __):
         with self.assertRaises(SslError) as context_manager:
-            L7ClientTls('badssl.com', 443).do_ssl_handshake(
+            L7ClientTls('badssl.com', 443, L4TransferSocketParams(timeout=10)).do_ssl_handshake(
                 SslHandshakeClientHello(list(SslCipherKind)),
                 SslMessageType.ERROR
             )

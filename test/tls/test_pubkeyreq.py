@@ -23,7 +23,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
         side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME),
     )
     def test_error_tls_alert_unrecognized_name(self, _):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
@@ -34,7 +34,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
         side_effect=TlsAlert(TlsAlertDescription.HANDSHAKE_FAILURE)
     )
     def test_error_tls_alert_handshake_failure(self, _):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
@@ -45,7 +45,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
         side_effect=ValueError
     )
     def test_error_distinguished_name_cannot_be_loaded(self, _):
-        result = self.get_result('client.badssl.com', 443)
+        result = self.get_result('client.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.distinguished_names, [])
 
     @staticmethod
@@ -54,18 +54,18 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
             l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerPublicKeyRequest()
-        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port)
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
         analyzer_result = analyzer.analyze(l7_client, protocol_version)
 
         return analyzer_result
 
     def test_real_server(self):
-        result = self.get_result('badssl.com', 443)
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
-        result = self.get_result('client.badssl.com', 443)
+        result = self.get_result('client.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(
             result.distinguished_names,
             [
