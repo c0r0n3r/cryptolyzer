@@ -122,7 +122,7 @@ class TestMain(TestMainBase):
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_json('tls', 'versions', 'dns.google#8.8.8.8'))
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_markdown('tls', 'versions', 'dns.google#8.8.8.8'))
 
-    def _check_higlighted_output(self, func, func_arguments, cli_arguments):
+    def _check_highlighted_output(self, func, func_arguments, cli_arguments):
         result = func(**func_arguments)
 
         colorama.init()
@@ -138,25 +138,25 @@ class TestMain(TestMainBase):
         func = test.tls.test_vulnerabilities.TestTlsVulnerabilities.get_result
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'dh1024.badssl.com', 443, timeout=10,
                                                             scheme='https')
-        self._check_higlighted_output(func, func_arguments, cli_arguments)
+        self._check_highlighted_output(func, func_arguments, cli_arguments)
 
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'null.badssl.com', 443, timeout=10,
                                                             scheme='https')
-        self._check_higlighted_output(func, func_arguments, cli_arguments)
+        self._check_highlighted_output(func, func_arguments, cli_arguments)
 
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'rc4.badssl.com', 443, timeout=10,
                                                             scheme='https')
-        self._check_higlighted_output(func, func_arguments, cli_arguments)
+        self._check_highlighted_output(func, func_arguments, cli_arguments)
 
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'novell.com', 443, timeout=10,
                                                             scheme='https')
-        self._check_higlighted_output(func, func_arguments, cli_arguments)
+        self._check_highlighted_output(func, func_arguments, cli_arguments)
 
         with patch.object(AnalyzerVersions, '_analyze_inappropriate_version_fallback', return_value=True):
             func = test.tls.test_versions.TestTlsVersions.get_result
             func_arguments, cli_arguments = self._get_arguments('tls', 'versions', 'badssl.com', 443, timeout=10,
                                                                 scheme='https')
-            self._check_higlighted_output(func, func_arguments, cli_arguments)
+            self._check_highlighted_output(func, func_arguments, cli_arguments)
 
     def test_analyzer_output_tls_ciphers(self):
         func_arguments, cli_arguments = self._get_arguments(
