@@ -8,8 +8,8 @@ import attr
 
 @attr.s
 class ErrorParams():
-    short_description = attr.ib(validator=attr.validators.instance_of(str))
-    long_description = attr.ib(validator=attr.validators.instance_of(str))
+    short_description: str = attr.ib(validator=attr.validators.instance_of(str))
+    long_description: str = attr.ib(validator=attr.validators.instance_of(str))
 
 
 class NetworkErrorType(enum.Enum):
@@ -29,7 +29,7 @@ class NetworkErrorType(enum.Enum):
 
 @attr.s(frozen=True)
 class NetworkError(IOError):
-    error = attr.ib(validator=attr.validators.in_(NetworkErrorType))
+    error: NetworkErrorType = attr.ib(validator=attr.validators.in_(NetworkErrorType))
 
     def __str__(self):
         return self.error.value.long_description
@@ -68,7 +68,7 @@ class SecurityErrorType(enum.Enum):
 
 @attr.s
 class SecurityError(ValueError):
-    error = attr.ib(validator=attr.validators.in_(SecurityErrorType))
+    error: SecurityErrorType = attr.ib(validator=attr.validators.in_(SecurityErrorType))
 
     def __str__(self):
         return self.error.value.long_description

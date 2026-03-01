@@ -3,6 +3,7 @@
 import abc
 import http.client
 import socket
+import typing
 
 import ipaddress
 import attr
@@ -17,12 +18,12 @@ from cryptolyzer.common.utils import buffer_flush, buffer_is_plain_text, resolve
 
 @attr.s
 class L4TransferSocketParams():
-    timeout = attr.ib(
+    timeout: typing.Optional[float] = attr.ib(
         default=None,
         converter=attr.converters.optional(float),
         validator=attr.validators.optional(attr.validators.instance_of((int, float)))
     )
-    http_proxy = attr.ib(
+    http_proxy: typing.Optional[urllib3.util.url.Url] = attr.ib(
         default=None,
         validator=attr.validators.optional(attr.validators.instance_of(urllib3.util.url.Url))
     )
@@ -30,18 +31,21 @@ class L4TransferSocketParams():
 
 @attr.s
 class L4TransferBase():
-    address = attr.ib(validator=attr.validators.instance_of(str))
-    port = attr.ib(validator=attr.validators.instance_of(int))
-    socket_params = attr.ib(
+    address: str = attr.ib(validator=attr.validators.instance_of(str))
+    port: int = attr.ib(validator=attr.validators.instance_of(int))
+    socket_params: L4TransferSocketParams = attr.ib(
         default=L4TransferSocketParams(),
         validator=attr.validators.instance_of(L4TransferSocketParams),
     )
-    ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((
-        str, ipaddress.IPv4Address, ipaddress.IPv6Address
-    ))))
-    _family = attr.ib(init=False)
-    _buffer = attr.ib(init=False)
-    _socket = attr.ib(
+    ip: typing.Optional[typing.Union[str, ipaddress.IPv4Address, ipaddress.IPv6Address]] = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of((
+            str, ipaddress.IPv4Address, ipaddress.IPv6Address
+        )))
+    )
+    _family: socket.AddressFamily = attr.ib(init=False)  # pylint: disable=no-member
+    _buffer: bytearray = attr.ib(init=False)
+    _socket: typing.Optional[socket.socket] = attr.ib(
         init=False, default=None,
         validator=attr.validators.optional(attr.validators.instance_of(socket.socket))
     )
@@ -176,6 +180,8 @@ class L4ClientBase(L4TransferBase):
         raise NotImplementedError()
 
     def _send(self, sendable_bytes):
+        assert self._socket is not None
+
         return self._socket.send(sendable_bytes)
 
 
@@ -231,6 +237,8 @@ class L4ClientUDP(L4ClientBase):
         self._socket.connect((str(self.ip), self.port))
 
     def _receive_bytes(self, receivable_byte_num, flags):
+        assert self._socket is not None
+
         msg_bytes = bytearray(1)
         msg_byte_num = self._socket.recv_into(msg_bytes, 1, flags=socket.MSG_PEEK | socket.MSG_TRUNC)
 
@@ -246,7 +254,7 @@ class L4ClientUDP(L4ClientBase):
 
 @attr.s
 class L4ServerBase(L4TransferBase):
-    backlog = attr.ib(default=1, validator=attr.validators.instance_of(int))
+    backlog: int = attr.ib(default=1, validator=attr.validators.instance_of(int))
 
     @classmethod
     @abc.abstractmethod
@@ -284,10 +292,14 @@ class L4ServerBase(L4TransferBase):
 
     @property
     def bind_address(self):
+        assert self._socket is not None
+
         return self._socket.getsockname()[0]
 
     @property
     def bind_port(self):
+        assert self._socket is not None
+
         return self._socket.getsockname()[1]
 
     @classmethod
@@ -306,6 +318,8 @@ class L4ServerTCP(L4ServerBase):
         return socket.SOCK_STREAM
 
     def accept(self):
+        assert self._socket is not None
+
         try:
             self._client_socket, _ = self._socket.accept()
         except BaseException as e:  # pylint: disable=broad-except
@@ -318,6 +332,8 @@ class L4ServerTCP(L4ServerBase):
         return self._receive_bytes_from_tcp_socket(self._client_socket, receivable_byte_num, flags)
 
     def _send(self, sendable_bytes):
+        assert self._client_socket is not None
+
         return self._client_socket.send(sendable_bytes)
 
     def close_client(self):
@@ -341,9 +357,13 @@ class L4ServerUDP(L4ServerBase):
         pass
 
     def _send(self, sendable_bytes):
+        assert self._socket is not None
+
         return self._socket.sendto(sendable_bytes, (self._client_address, self._client_port))
 
     def _receive_bytes(self, receivable_byte_num, flags):
+        assert self._socket is not None
+
         msg_bytes = bytearray(1)
         msg_byte_num = self._socket.recv_into(msg_bytes, 1, flags=socket.MSG_PEEK | socket.MSG_TRUNC)
 
@@ -362,22 +382,30 @@ class L4ServerUDP(L4ServerBase):
         self._client_address = None
 
     def close_client(self):
-        pass
+        self._client_address = None
+        self._client_port = None
+        self.flush_buffer()
 
 
 @attr.s
 class L7TransferBase():
-    address = attr.ib(validator=attr.validators.instance_of(str))
-    port = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(int)))
-    l4_socket_params = attr.ib(
+    address: str = attr.ib(validator=attr.validators.instance_of(str))
+    port: typing.Optional[int] = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(int))
+    )
+    l4_socket_params: L4TransferSocketParams = attr.ib(
         default=L4TransferSocketParams(),
         validator=attr.validators.instance_of(L4TransferSocketParams),
     )
-    ip = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of((
-        str, ipaddress.IPv4Address, ipaddress.IPv6Address
-    ))))
+    ip: typing.Optional[typing.Union[str, ipaddress.IPv4Address, ipaddress.IPv6Address]] = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of((
+            str, ipaddress.IPv4Address, ipaddress.IPv6Address
+        )))
+    )
     _family = attr.ib(init=False)
-    l4_transfer = attr.ib(
+    l4_transfer: typing.Optional[L4TransferBase] = attr.ib(
         init=False, default=None, validator=attr.validators.optional(attr.validators.instance_of(L4TransferBase))
     )
 
@@ -393,23 +421,35 @@ class L7TransferBase():
         self.l4_transfer = None
 
     def send(self, sendable_bytes):
+        assert self.l4_transfer is not None
+
         return self.l4_transfer.send(sendable_bytes)
 
     def receive(self, receivable_byte_num):
+        assert self.l4_transfer is not None
+
         return self.l4_transfer.receive(receivable_byte_num)
 
     def receive_line(self, max_line_length=None):
+        assert self.l4_transfer is not None
+
         return self.l4_transfer.receive_line(max_line_length)
 
     def flush_buffer(self, byte_num=None):
+        assert self.l4_transfer is not None
+
         self.l4_transfer.flush_buffer(byte_num)
 
     @property
     def buffer(self):
+        assert self.l4_transfer is not None
+
         return self.l4_transfer.buffer
 
     @property
     def buffer_is_plain_text(self):
+        assert self.l4_transfer is not None
+
         return self.l4_transfer.buffer_is_plain_text
 
     @classmethod

@@ -41,7 +41,7 @@ class LogSingleton(logging.Logger, metaclass=Singleton):
         self.addHandler(handler)
 
 
-@attr.s
+@attr.s()
 class SerializableTextEncoderHighlighted():
     _COLOR_SCHEMES = {
         None: colorama.Style.RESET_ALL,
@@ -51,7 +51,7 @@ class SerializableTextEncoderHighlighted():
         Grade.SECURE: colorama.Fore.GREEN,
     }
 
-    old_serializable_text_encoder = attr.ib(init=False, validator=attr.validators.instance_of(callable))
+    old_serializable_text_encoder = attr.ib(init=False)
 
     def __attrs_post_init__(self):
         self.old_serializable_text_encoder = Serializable.post_text_encoder

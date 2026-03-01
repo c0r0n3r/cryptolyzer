@@ -62,6 +62,7 @@ keywords = [
     'ssh',
     'hsts',
     'dnssec',
+    'ipsec',
 ]
 readme = {file = 'README.rst', content-type = 'text/x-rst'}
 license = {text = 'MPL-2.0'}
