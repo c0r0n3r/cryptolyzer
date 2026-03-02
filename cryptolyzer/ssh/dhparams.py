@@ -153,6 +153,7 @@ class AnalyzerDHParams(AnalyzerSshBase):
         )
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         LogSingleton().disabled = True
         analyzer_result = AnalyzerCiphers().analyze(analyzable)
         LogSingleton().disabled = False

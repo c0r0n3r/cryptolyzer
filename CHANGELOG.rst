@@ -11,6 +11,10 @@ Features
 
 -  IKE (``ike``)
 
+   -  Generic
+
+      -  Add throttle-delay for spacing connection attempts (#163)
+
    -  Diffie-Hellman (``dhparams``)
 
       -  add checker for IKEv1/IKEv2 support (#161)

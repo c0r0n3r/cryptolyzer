@@ -233,6 +233,7 @@ class AnalyzerAll(AnalyzerTlsBase):
         return AnalyzerAll._get_result(AnalyzerExtensions, analyzable, protocol_version)
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         results = {
             'target': AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
         }

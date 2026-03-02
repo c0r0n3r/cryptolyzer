@@ -49,6 +49,7 @@ class AnalyzerHeaders(AnalyzerHttpBase):
         return header_fields
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         headers = self._analyze_headers(analyzable, protocol_version)
 
         return AnalyzerResultHeaders(

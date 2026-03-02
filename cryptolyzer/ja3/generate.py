@@ -18,6 +18,7 @@ from cryptolyzer.tls.server import L7ServerTlsBase
 
 @attr.s
 class AnalyzerResultGenerate(AnalyzerResultBase):
+    target: str = attr.ib(validator=attr.validators.instance_of(str))
     target_hash = attr.ib(init=False, validator=attr.validators.instance_of(str))
 
     def __attrs_post_init__(self):
@@ -44,6 +45,7 @@ class AnalyzerGenerate(AnalyzerBase):
         return 'tls'
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         analyzable.max_handshake_count = 1
         analyzable.init_connection()
         client_messages = analyzable.do_handshake()

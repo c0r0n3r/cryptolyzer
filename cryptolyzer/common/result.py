@@ -140,6 +140,9 @@ class AnalyzerResultBase(Serializable):
 
 @attr.s
 class AnalyzerResultError(AnalyzerResultBase):
+    target: typing.Union[AnalyzerTargetBase, L7TransferBase, str] = attr.ib(
+        validator=attr.validators.instance_of((AnalyzerTargetBase, L7TransferBase, str))
+    )
     error = attr.ib(validator=attr.validators.instance_of(str))
 
 

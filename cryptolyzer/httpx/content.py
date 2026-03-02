@@ -231,6 +231,7 @@ class AnalyzerConetnt(AnalyzerHttpBase):
         return content_type.mime_type, tags_with_integrity, tags_with_unencrypted_source
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         mime_type, tags_with_integrity, tags_with_unencrypted_source = self._analyze_content(
             analyzable, protocol_version
         )

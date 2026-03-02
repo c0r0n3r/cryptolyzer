@@ -80,6 +80,7 @@ class AnalyzerAll(AnalyzerSshBase):
         return AnalyzerAll._get_result(AnalyzerDHParams, analyzable, protocol_version)
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         results = {
             'target': AnalyzerTargetSsh.from_l7_client(analyzable),
         }

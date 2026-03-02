@@ -60,6 +60,7 @@ class AnalyzerDnsSec(AnalyzerDnsRecordBase):
         return dnskey_records, ds_records, rrsig_records
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         dnskey_records, ds_records, rrsig_records = self._analyze_records(analyzable)
 
         return AnalyzerResultDnsSec(

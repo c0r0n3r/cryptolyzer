@@ -304,6 +304,7 @@ class AnalyzerVulnerabilities(AnalyzerTlsBase):
         return 'Check which vulnerabilities affect the server(s)'
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         LogSingleton().disabled = True
         analyzer_result_versions = AnalyzerVersions().analyze(analyzable, None)
         analyzer_results_ciphers = [

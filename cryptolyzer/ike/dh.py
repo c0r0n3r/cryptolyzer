@@ -48,10 +48,6 @@ class AnalyzerDHBase(AnalyzerIKEBase):
     def get_help(cls):
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def analyze(self, analyzable, protocol_version: IsakmpVersion):
-        raise NotImplementedError()
-
     @classmethod
     @abc.abstractmethod
     def _get_dh_groups(cls, dh_group_type):
@@ -62,11 +58,11 @@ class AnalyzerDHBase(AnalyzerIKEBase):
     def _get_dh_group_name(cls):
         raise NotImplementedError()
 
-    @classmethod
-    def _check_ikev1_key_reuse(cls, l7_client, init_message):
+    def _check_ikev1_key_reuse(self, l7_client, init_message):
         try_count = 3
         key_exchange_data = []
         for _ in range(try_count):
+            self._before_probe(l7_client)
             init_message.initiator_spi = init_message.initiator_spi + 1
             server_messages = l7_client.do_ikev1_handshake(
                 init_message=init_message,
@@ -79,6 +75,7 @@ class AnalyzerDHBase(AnalyzerIKEBase):
         return len(set(key_exchange_data)) < try_count
 
     def _send_ikev1_init_message(self, l7_client, dh_group, init_message, check_key_reuse):
+        self._before_probe(l7_client)
         try:
             l7_client.do_ikev1_handshake(
                 init_message=init_message,
@@ -166,11 +163,11 @@ class AnalyzerDHBase(AnalyzerIKEBase):
 
         return accepted_dh_groups, key_reused
 
-    @classmethod
-    def _check_ikev2_key_reuse(cls, l7_client, init_message):
+    def _check_ikev2_key_reuse(self, l7_client, init_message):
         try_count = 3
         key_exchange_data = []
         for _ in range(try_count):
+            self._before_probe(l7_client)
             init_message.initiator_spi = init_message.initiator_spi + 1
             server_messages = l7_client.do_ikev2_handshake(
                 init_message=init_message,
@@ -187,6 +184,8 @@ class AnalyzerDHBase(AnalyzerIKEBase):
         accepted_dh_groups = []
         checkable_dh_groups = self._get_dh_groups(Ikev2DiffieHellmanGroup)
         while checkable_dh_groups:
+            self._before_probe(l7_client)
+
             init_message = Ikev2SecurityAssociationSpecialization(
                 diffie_hellman_groups=checkable_dh_groups,
                 encryption_algorithms=list(Ikev2EncryptionAlgorithm),
@@ -250,7 +249,6 @@ class AnalyzerDHBase(AnalyzerIKEBase):
         :type analyzable: AnalyzerTargetIKE
         :type protocol_version: IsakmpVersion
         """
-
         if protocol_version == IsakmpVersion.V2:
             return self._analyze_ikev2(analyzable)
 

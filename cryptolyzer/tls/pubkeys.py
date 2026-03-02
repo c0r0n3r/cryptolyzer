@@ -193,6 +193,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         return server_messages
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         results = []
 
         for hostname in [None, analyzable.address]:

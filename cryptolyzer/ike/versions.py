@@ -23,31 +23,6 @@ from cryptolyzer.ike.client import Ikev2SecurityAssociationAnyAlgorithm, Ikev1Se
 from cryptolyzer.ike.exception import IsakmpNotify
 
 
-def _probe_version(
-    analyzable,
-    handshake_callable,
-    acceptable_notify_types: typing.Container,
-) -> bool:
-    """
-    Run handshake; on NO_RESPONSE log and return False; on NO_CONNECTION or other re-raise.
-    Return True if version is supported.
-    """
-    try:
-        handshake_callable()
-    except IsakmpNotify as e:
-        if e.notify not in acceptable_notify_types:
-            raise
-        LogSingleton().log(level=60, msg=f'Notify response from server; notify={e.notify}')
-        return True
-    except NetworkError as e:
-        if e.error == NetworkErrorType.NO_RESPONSE:
-            addr = f'{analyzable.address}:{analyzable.port}'
-            LogSingleton().log(level=60, msg=f'No response from server; address={addr}')
-            return False
-        raise
-    return True
-
-
 @attr.s
 class AnalyzerResultVersions(AnalyzerResultIKE):  # pylint: disable=too-few-public-methods
     """
@@ -78,16 +53,43 @@ class AnalyzerVersions(AnalyzerIKEBase):
     def get_help(cls):
         return 'Check which protocol versions supported by the server(s)'
 
+    def _probe_version(
+        self,
+        analyzable,
+        handshake_callable,
+        acceptable_notify_types: typing.Container,
+    ) -> bool:
+        """
+        Run handshake; on NO_RESPONSE log and return False; on NO_CONNECTION or other re-raise.
+        Return True if version is supported.
+        """
+        self._before_probe(analyzable)
+        try:
+            handshake_callable()
+        except IsakmpNotify as e:
+            if e.notify not in acceptable_notify_types:
+                raise
+            LogSingleton().log(level=60, msg=f'Notify response from server; notify={e.notify}')
+            return True
+        except NetworkError as e:
+            if e.error == NetworkErrorType.NO_RESPONSE:
+                addr = f'{analyzable.address}:{analyzable.port}'
+                LogSingleton().log(level=60, msg=f'No response from server; address={addr}')
+                return False
+            raise
+        return True
+
     def analyze(self, analyzable, protocol_version):
         """
         :type analyzable: AnalyzerTargetIKE
         :type protocol_version: IsakmpProtocolVersion
         :rtype: AnalyzerResultVersions
         """
+        super().analyze(analyzable, protocol_version)
         supported_versions = []
         alerts_unsupported_version = None
 
-        if _probe_version(
+        if self._probe_version(
             analyzable,
             lambda: analyzable.do_ikev2_handshake(
                 init_message=Ikev2SecurityAssociationAnyAlgorithm(),
@@ -97,7 +99,7 @@ class AnalyzerVersions(AnalyzerIKEBase):
         ):
             supported_versions.append(IsakmpProtocolVersion(IsakmpVersion.V2, 0))
 
-        if _probe_version(
+        if self._probe_version(
             analyzable,
             lambda: analyzable.do_ikev1_handshake(
                 init_message=Ikev1SecurityAssociationMandatoryMostPopular(Ikev1ExchangeType.IDENTITY_PROTECTION),

@@ -28,6 +28,11 @@ class L4TransferSocketParams():
         default=None,
         validator=attr.validators.optional(attr.validators.instance_of(urllib3.util.url.Url))
     )
+    throttle_delay: float = attr.ib(
+        default=0.0,
+        converter=float,
+        validator=attr.validators.instance_of((int, float)),
+    )
 
 
 @attr.s

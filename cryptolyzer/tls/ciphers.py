@@ -194,6 +194,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         return checkable_cipher_suites
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         checkable_cipher_suites = self._get_checkable_cipher_suites(protocol_version)
         long_cipher_suite_list_intolerance = False
         accepted_cipher_suites, remaining_cipher_suites = self._get_accepted_cipher_suites_all(

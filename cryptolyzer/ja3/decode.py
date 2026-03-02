@@ -43,6 +43,7 @@ class JA3ClientTag():
 
 @attr.s
 class AnalyzerResultDecode(AnalyzerResultBase):
+    target: str = attr.ib(validator=attr.validators.instance_of(str))
     tls_protocol_version = attr.ib(
         validator=attr.validators.instance_of(TlsProtocolVersion),
     )
@@ -90,6 +91,7 @@ class AnalyzerDecode(AnalyzerBase):
         return composer.composed_bytes
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         tls_protocol_version, cipher_suites, extension_types, named_curves, ec_point_formats = analyzable.tag.split(',')
 
         tls_protocol_version = TlsProtocolVersion.parse_exact_size(
