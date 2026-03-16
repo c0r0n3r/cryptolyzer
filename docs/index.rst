@@ -21,6 +21,10 @@ Summary
 
 .. include:: ../README.rst
 
+.. raw:: html
+
+   <script async id="asciicast-618789" src="https://asciinema.org/a/618789.js"></script>
+
 =======
 Details
 =======

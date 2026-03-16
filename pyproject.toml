@@ -5,7 +5,7 @@ build-backend = 'setuptools.build_meta'
 [project]
 name = 'CryptoLyzer'
 version = '1.1.0'
-description = 'A comprehensive cryptographic settings analyzer'
+description = 'Multi-protocol cryptographic configuration analyzer for TLS, SSH, DNS, and HTTP — alternative to testssl.sh and sslyze with Python API, 400+ cipher suites, vulnerability detection (FREAK, Logjam, ROBOT), and JA3/HASSH fingerprinting'
 authors = [
     {name = 'Szilárd Pfeiffer', email = 'coroner@pfeifferszilard.hu'}
 ]
@@ -63,8 +63,22 @@ keywords = [
     'hsts',
     'dnssec',
     'ipsec',
+    'tls audit',
+    'ssl audit',
+    'cipher suite',
+    'security audit',
+    'penetration testing',
+    'cryptographic misconfiguration',
+    'vulnerability detection',
+    'freak',
+    'logjam',
+    'robot',
+    'sweet32',
+    'fingerprinting',
+    'certificate analysis',
+    'http security headers',
 ]
-readme = {file = 'README.rst', content-type = 'text/x-rst'}
+readme = {file = 'README.md', content-type = 'text/markdown'}
 license = {text = 'MPL-2.0'}
 
 dependencies = [
