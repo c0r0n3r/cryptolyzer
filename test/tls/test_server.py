@@ -39,6 +39,7 @@ from cryptoparser.tls.subprotocol import (
 from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP, L4TransferSocketParams
 from cryptolyzer.tls.client import (
     ClientFTP,
+    ClientIMAP,
     ClientLDAP,
     ClientLMTP,
     ClientMySQL,
@@ -59,6 +60,7 @@ from cryptolyzer.tls.client import (
 from cryptolyzer.tls.server import (
     L7ServerTls,
     L7ServerTlsFTP,
+    L7ServerTlsIMAP,
     L7ServerTlsLDAP,
     L7ServerTlsLMTP,
     L7ServerTlsMySQL,
@@ -771,3 +773,37 @@ class TestL7ServerTlsOpenVpnTcp(TestL7ServerBase):
 
         l7_client.l4_transfer.close()
         self.threaded_server.join()
+
+
+class TestL7ServerTlsIMAP(TestL7ServerBase):
+    def setUp(self):
+        super().setUp()
+
+        self.threaded_server = self.create_server(l7_server_class=L7ServerTlsIMAP)
+
+    def test_default_port(self):
+        self.assertEqual(ClientIMAP.get_default_port(), L7ServerTlsIMAP.get_default_port())
+
+    def test_scheme(self):
+        self.assertEqual(ClientIMAP.get_scheme(), L7ServerTlsIMAP.get_scheme())
+
+    def test_error_no_capability_command(self):
+        l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        l4_client.init_connection()
+        l4_client.receive_until(b'\n')  # read greeting
+        l4_client.flush_buffer()
+        l4_client.send(b'A001 LOGIN user pass\r\n')
+        self._assert_on_more_data(l4_client)
+        l4_client.close()
+
+    def test_error_no_starttls_command(self):
+        l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        l4_client.init_connection()
+        l4_client.receive_until(b'\n')  # read greeting
+        l4_client.flush_buffer()
+        l4_client.send(b'A001 CAPABILITY\r\n')
+        l4_client.receive_until(b'completed\r\n')  # read capability response
+        l4_client.flush_buffer()
+        l4_client.send(b'A002 LOGIN user pass\r\n')
+        self._assert_on_more_data(l4_client)
+        l4_client.close()

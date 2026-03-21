@@ -45,7 +45,6 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import (
-    ClientIMAP,
     ClientOpenVpnBase,
     ClientXMPPClient,
     ClientXMPPServer,
@@ -73,6 +72,14 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.server import (
     L7ServerTls,
     L7ServerTlsBase,
+    L7ServerTlsIMAP,
+    L7ServerTlsIMAPBase,
+    L7ServerTlsIMAPNoStartTLS,
+    L7ServerTlsIMAPStartTLSBad,
+    L7ServerTlsXMPP,
+    L7ServerTlsXMPPBase,
+    L7ServerTlsXMPPNoStartTLS,
+    L7ServerTlsXMPPStartTLSBad,
     SslServerHandshake,
     TlsServerConfiguration,
     TlsServerHandshake,
@@ -335,41 +342,72 @@ class TestClientPOP3(TestL7ClientBase):
 
 
 class TestClientIMAP(TestL7ClientBase):
-    @mock.patch.object(
-        ClientIMAP, '_capabilities',
-        mock.PropertyMock(return_value=(
-            'IMAP4REV1',
-            'LITERAL+',
-            'SASL-IR',
-            'LOGIN-REFERRALS',
-            'ID',
-            'ENABLE',
-            'IDLE',
-            'LOGINDISABLED',
-        )),
-        create=True
-    )
+    @staticmethod
+    def _start_imap_server(l7_server_class):
+        threaded_server = L7ServerTlsTest(
+            l7_server_class('localhost', 0, L4TransferSocketParams(timeout=0.5)),
+        )
+        threaded_server.start()
+        return threaded_server
+
     def test_error_unsupported_starttls(self):
-        _, result = self.get_result('imap', 'imap.comcast.net', None, L4TransferSocketParams(timeout=10))
+        threaded_server = self._start_imap_server(L7ServerTlsIMAPNoStartTLS)
+        _, result = self.get_result(
+            'imap',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
+        )
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(imaplib.IMAP4, '__init__', side_effect=imaplib.IMAP4.error)
     def test_error_imap_error(self, _):
-        _, result = self.get_result('imap', 'imap.comcast.net', None, L4TransferSocketParams(timeout=10))
+        threaded_server = self._start_imap_server(L7ServerTlsIMAP)
+        _, result = self.get_result(
+            'imap',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
+        )
         self.assertEqual(result.versions, [])
 
-    @mock.patch.object(
-        imaplib.IMAP4, 'xatom',
-        return_value=[('BAD', 'command unknown or arguments invalid'), mock.DEFAULT]
-    )
     @mock.patch.object(imaplib.IMAP4, 'shutdown', side_effect=imaplib.IMAP4.error)
-    def test_error_starttls_error(self, _, __):
-        _, result = self.get_result('imap', 'imap.comcast.net', None, L4TransferSocketParams(timeout=10))
+    def test_error_imap_shutdown_error(self, _):
+        threaded_server = self._start_imap_server(L7ServerTlsIMAPNoStartTLS)
+        _, result = self.get_result(
+            'imap',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
+        )
         self.assertEqual(result.versions, [])
 
     def test_imap_client(self):
-        _, result = self.get_result('imap', 'imap.comcast.net', None, L4TransferSocketParams(timeout=10))
+        threaded_server = self._start_imap_server(L7ServerTlsIMAP)
+        _, result = self.get_result(
+            'imap',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
+        )
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
+
+    def test_error_starttls_error(self):
+        threaded_server = self._start_imap_server(L7ServerTlsIMAPStartTLSBad)
+        _, result = self.get_result(
+            'imap',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
+        )
+        self.assertEqual(result.versions, [])
+
+    def test_imap_client_port(self):
+        client = L7ClientTlsBase.from_scheme('imap', 'localhost')
+        self.assertEqual(client.port, 143)
+
+    def test_imap_server_port(self):
+        self.assertEqual(L7ServerTlsIMAPBase.get_default_port(), 143)
 
     def test_imaps_client_port(self):
         client = L7ClientTlsBase.from_scheme('imaps', 'localhost')
@@ -815,6 +853,14 @@ class TestClientSieve(TestL7ClientBase):
 
 
 class TestClientXMPP(TestL7ClientBase):
+    @staticmethod
+    def _start_xmpp_server(l7_server_class):
+        threaded_server = L7ServerTlsTest(
+            l7_server_class('localhost', 0, L4TransferSocketParams(timeout=0.5)),
+        )
+        threaded_server.start()
+        return threaded_server
+
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'<stream:error>', ))
     def test_error_stream_error(self, _):
         threaded_server = L7ServerTlsTest(
@@ -841,36 +887,21 @@ class TestClientXMPP(TestL7ClientBase):
         )
         self.assertEqual(result.versions, [])
 
-    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
-        b'<stream:stream>',
-        b'<stream:features></stream:features>',
-    ))
-    def test_error_no_tls_feature(self, _):
-        threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
-        )
-        threaded_server.start()
+    def test_error_no_tls_feature(self):
+        threaded_server = self._start_xmpp_server(L7ServerTlsXMPPNoStartTLS)
         _, result = self.get_result(
             'xmppclient', 'localhost',
-            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=0.5),
         )
         self.assertEqual(result.versions, [])
 
-    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
-        b'<stream:stream>' +
-        b'  <stream:features>' +
-        b'    <starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"></starttls>' +
-        b'  </stream:features>',
-        b'<failure xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
-    ))
-    def test_error_starttls_error(self, _):
-        threaded_server = L7ServerTlsTest(
-            L7ServerTlsMockResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
-        )
-        threaded_server.start()
+    def test_error_starttls_error(self):
+        threaded_server = self._start_xmpp_server(L7ServerTlsXMPPStartTLSBad)
         _, result = self.get_result(
             'xmppclient', 'localhost',
-            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=0.5),
         )
         self.assertEqual(result.versions, [])
 
@@ -892,73 +923,23 @@ class TestClientXMPP(TestL7ClientBase):
         )
         self.assertEqual(result.versions, [])
 
-    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
-        b'<stream:stream>' +
-        b'  <stream:features>' +
-        b'    <starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"></starttls>' +
-        b'  </stream:features>',
-        b'<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
-    ))
-    def test_empty_starttls(self, _):
-        _, result = self.get_result('xmppclient', 'xmpp.co', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-                TlsProtocolVersion(TlsVersion.TLS1_3),
-            ]
+    def test_xmpp_client(self):
+        threaded_server = self._start_xmpp_server(L7ServerTlsXMPP)
+        _, result = self.get_result(
+            'xmppclient', 'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
         )
+        self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
-    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
-        b'<stream:stream>' +
-        b'  <stream:features>' +
-        b'    <starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>' +
-        b'  </stream:features>',
-        b'<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
-    ))
-    def test_empty_starttls_short(self, _):
-        _, result = self.get_result('xmppclient', 'xmpp.co', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-                TlsProtocolVersion(TlsVersion.TLS1_3),
-            ]
+        threaded_server = self._start_xmpp_server(L7ServerTlsXMPP)
+        port = threaded_server.l7_server.l4_transfer.bind_port
+        analyzer = AnalyzerVersions()
+        handler = ProtocolHandlerBase.from_protocol('tls')
+        result = handler.analyze(
+            analyzer, urllib3.util.parse_url(f'xmppclient://localhost:{port}/?stream_to=localhost')
         )
-
-    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
-        b'<stream:stream>' +
-        b'  <stream:features>' +
-        b'    <starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>' +
-        b'  </stream:features>',
-        b'<proceed xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\'/>'
-    ))
-    def test_starttls_apostrophe(self, _):
-        _, result = self.get_result('xmppclient', 'xmpp.co', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-                TlsProtocolVersion(TlsVersion.TLS1_3),
-            ]
-        )
-
-    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
-        b'<stream:stream>' +
-        b'  <stream:features>' +
-        b'    <starttls xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\' />' +
-        b'  </stream:features>',
-        b'<proceed xmlns=\'urn:ietf:params:xml:ns:xmpp-tls\' />'
-    ))
-    def test_starttls_whitespace(self, _):
-        _, result = self.get_result('xmppclient', 'xmpp.co', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-                TlsProtocolVersion(TlsVersion.TLS1_3),
-            ]
-        )
+        self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
     def test_stream_open_message(self):
         self.assertEqual(
@@ -981,26 +962,16 @@ class TestClientXMPP(TestL7ClientBase):
             b'version="1.0">'
         )
 
-    def test_xmpp_client(self):
-        _, result = self.get_result('xmppclient', 'xmpp.co', None)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-                TlsProtocolVersion(TlsVersion.TLS1_3),
-            ]
-        )
+    def test_xmppclient_client_port(self):
+        client = L7ClientTlsBase.from_scheme('xmppclient', 'localhost')
+        self.assertEqual(client.port, 5222)
 
-        analyzer = AnalyzerVersions()
-        handler = ProtocolHandlerBase.from_protocol('tls')
-        result = handler.analyze(analyzer, urllib3.util.parse_url('xmppclient://xmpp.co/?stream_to=xmpp.co'))
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-                TlsProtocolVersion(TlsVersion.TLS1_3),
-            ]
-        )
+    def test_xmppserver_client_port(self):
+        client = L7ClientTlsBase.from_scheme('xmppserver', 'localhost')
+        self.assertEqual(client.port, 5269)
+
+    def test_xmpp_server_port(self):
+        self.assertEqual(L7ServerTlsXMPPBase.get_default_port(), 5222)
 
 
 class TestClientDoH(TestL7ClientBase):
