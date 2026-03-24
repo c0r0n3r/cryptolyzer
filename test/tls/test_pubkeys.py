@@ -5,6 +5,9 @@ from unittest import mock
 from collections import OrderedDict
 
 import datetime
+
+from test.common.classes import TestMainBase
+
 import asn1crypto
 
 from cryptodatahub.common.algorithm import Authentication
@@ -19,6 +22,8 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys, CertificateStatus
+
+from cryptolyzer.__main__ import main
 
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
@@ -164,7 +169,11 @@ OCSP_RESPONSE_REVOKED = asn1crypto.ocsp.OCSPResponse.load(bytes(
 ))
 
 
-class TestTlsPubKeys(TestTlsCases.TestTlsBase):
+class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
@@ -451,3 +460,11 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase):
 
         result = self.get_result('revoked.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result.as_json())
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeys', 'www.cloudflare.com', 443, scheme='tls'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')

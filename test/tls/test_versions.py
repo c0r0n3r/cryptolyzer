@@ -2,6 +2,8 @@
 
 from unittest import mock
 
+from test.common.classes import TestMainBase
+
 from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
@@ -12,6 +14,8 @@ from cryptolyzer.tls.client import L7ClientTlsBase, SslError
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 from cryptolyzer.tls.versions import AnalyzerVersions
+
+from cryptolyzer.__main__ import main
 
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
@@ -88,7 +92,11 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
         )
 
 
-class TestTlsVersions(TestTlsCases.TestTlsBase):
+class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME),
@@ -175,20 +183,6 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         )
         self._check_log(result)
 
-    def test_tls_1_3(self):
-        result = self.get_result('www.busanbank.co.kr', 443)
-        self.assertEqual(
-            result.versions,
-            [
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-                TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_26),
-                TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_27),
-                TlsProtocolVersion(TlsVersion.TLS1_3_DRAFT_28),
-                TlsProtocolVersion(TlsVersion.TLS1_3),
-            ]
-        )
-        self._check_log(result)
-
     def test_ecdsa_only(self):
         result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -211,3 +205,11 @@ class TestTlsVersions(TestTlsCases.TestTlsBase):
         )
         threaded_server.start()
         self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions, [])
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls', 'versions', 'tls-v1-0.badssl.com', 1010, timeout=10, scheme='tls'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')

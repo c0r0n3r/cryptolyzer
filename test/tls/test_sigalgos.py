@@ -2,6 +2,8 @@
 
 from unittest import mock
 
+from test.common.classes import TestMainBase
+
 from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -12,10 +14,16 @@ from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.sigalgos import AnalyzerSigAlgos
 
+from cryptolyzer.__main__ import main
+
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
-class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
+class TestTlsSigAlgos(TestTlsCases.TestTlsBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
@@ -81,3 +89,11 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase):
     def test_json(self):
         result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result)
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'sigalgos', 'ecc256.badssl.com', 443, timeout=10, scheme='tls'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')

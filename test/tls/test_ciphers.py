@@ -3,6 +3,8 @@
 import unittest
 from unittest import mock
 
+from test.common.classes import TestMainBase
+
 from cryptodatahub.common.algorithm import Authentication, BlockCipher
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription
@@ -16,6 +18,8 @@ from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
+
+from cryptolyzer.__main__ import main
 
 from .classes import (
     L7ServerTlsLongCipherSuiteListIntolerance,
@@ -118,7 +122,11 @@ def _wrapped_next_accepted_cipher_suites_response_error(
     )
 
 
-class TestTlsCiphers(TestTlsCases.TestTlsBase):
+class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @staticmethod
     def get_result(
             host,
@@ -322,3 +330,11 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase):
     def test_json(self):
         result = self.get_result('mozill.old.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result)
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1), 'ciphers', 'rc4-md5.badssl.com', 443, timeout=10, scheme='tls'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')

@@ -4,6 +4,8 @@ from unittest import mock
 
 from collections import OrderedDict
 
+from test.common.classes import TestMainBase
+
 import asn1crypto.x509
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription
@@ -14,10 +16,16 @@ from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest
 
+from cryptolyzer.__main__ import main
+
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
-class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
+class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME),
@@ -93,3 +101,11 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase):
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeyreq', 'client.badssl.com', 443, timeout=10, scheme='tls'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')

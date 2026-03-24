@@ -4,6 +4,7 @@ from unittest import mock
 
 import socket
 
+from test.common.classes import TestMainBase
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -15,10 +16,16 @@ from cryptolyzer.tls.client import L7ClientTlsBase, TlsHandshakeClientHelloAnyAl
 from cryptolyzer.tls.curves import AnalyzerCurves
 from cryptolyzer.tls.exception import TlsAlert
 
+from cryptolyzer.__main__ import main
+
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse, L7ServerTlsAlert, TlsServerAlert
 
 
-class TestTlsCurves(TestTlsCases.TestTlsBase):
+class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @staticmethod
     def get_result(
             host,
@@ -160,3 +167,11 @@ class TestTlsCurves(TestTlsCases.TestTlsBase):
     def test_json(self):
         result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertTrue(result)
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'curves', 'ecc256.badssl.com', 443, timeout=10, scheme='tls'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')

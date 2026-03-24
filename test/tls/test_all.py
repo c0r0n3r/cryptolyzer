@@ -4,6 +4,10 @@ from unittest import mock
 
 from collections import OrderedDict
 
+from test.common.classes import TestMainBase
+
+import test.tls.test_ciphers
+
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -15,10 +19,16 @@ from cryptolyzer.tls.all import AnalyzerAll
 from cryptolyzer.tls.ciphers import AnalyzerResultCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
 
+from cryptolyzer.__main__ import main
+
 from .classes import TestTlsCases
 
 
-class TestTlsAll(TestTlsCases.TestTlsBase):
+class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @staticmethod
     def get_result(
             host,
@@ -220,3 +230,20 @@ class TestTlsAll(TestTlsCases.TestTlsBase):
         self.assertNotEqual(result.pubkeys, None)
         self.assertNotEqual(result.pubkeyreq, None)
         self.assertNotEqual(result.versions, None)
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls', 'all', 'rc4-md5.badssl.com', 443, timeout=10, scheme='https'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')
+
+        ciphers_func_arguments, _ = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1), 'ciphers', 'rc4-md5.badssl.com', 443, timeout=10, scheme='tls'
+        )
+        ciphers_result = test.tls.test_ciphers.TestTlsCiphers.get_result(**ciphers_func_arguments)
+        ciphers_markdown = ciphers_result._as_markdown_without_target(  # pylint: disable=protected-access
+            ciphers_result, 0
+        )
+        self.assertTrue(ciphers_markdown in result.as_markdown())

@@ -2,6 +2,8 @@
 
 from unittest import mock
 
+from test.common.classes import TestMainBase
+
 from cryptoparser.tls.extension import TlsExtensionsBase, TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
@@ -15,10 +17,16 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 
+from cryptolyzer.__main__ import main
+
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
-class TestTlsDHParams(TestTlsCases.TestTlsBase):
+class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
@@ -108,7 +116,10 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertFalse(result.key_reuse)
 
     def test_well_known_prime(self):
-        result = self.get_result('launchpad.net', 443)
+        result = self.get_result(
+            'launchpad.net', 443,
+            l4_socket_params=L4TransferSocketParams(timeout=10)
+        )
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, True)
@@ -209,3 +220,11 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase):
         self.assertTrue(result)
         result = self.get_result('www.owasp.org', 443)
         self.assertTrue(result)
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'dhparams', 'dh2048.badssl.com', 443, timeout=10, scheme='tls'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')

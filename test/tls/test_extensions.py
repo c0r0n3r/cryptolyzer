@@ -3,7 +3,7 @@
 
 from unittest import mock
 
-from test.common.classes import TestLoggerBase
+from test.common.classes import TestLoggerBase, TestMainBase
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -25,10 +25,16 @@ from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert, TlsAlertDescriptio
 from cryptolyzer.tls.extensions import AnalyzerExtensions
 from cryptolyzer.tls.server import L7ServerTls
 
+from cryptolyzer.__main__ import main
+
 from .classes import L7ServerTlsTest
 
 
-class TestTlsExtensions(TestLoggerBase):
+class TestTlsExtensions(TestLoggerBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
@@ -296,3 +302,11 @@ class TestTlsExtensions(TestLoggerBase):
         self.assertTrue(result.session_ticket_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers session ticket', log_lines)
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'extensions', 'dh2048.badssl.com', 443, timeout=10, scheme='tls'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')

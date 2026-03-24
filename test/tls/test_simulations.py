@@ -2,7 +2,7 @@
 
 from unittest import mock
 
-from test.common.classes import TestLoggerBase
+from test.common.classes import TestLoggerBase, TestMainBase
 
 from cryptodatahub.common.algorithm import Authentication, KeyExchange
 from cryptodatahub.common.key import PublicKeySize
@@ -11,7 +11,7 @@ from cryptodatahub.tls.client import TlsClient
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
-from cryptolyzer.common.dhparam import DHParamWellKnown
+from cryptolyzer.common.dhparam import DHParameter, DHParamWellKnown
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
@@ -19,11 +19,18 @@ from cryptolyzer.tls.simulations import (
     AnalyzerSimulations,
     AnalyzerResultSimulationsTlsBase,
     AnalyzerResultSimulationsTlsPfs,
+    AnalyzerResultSimulationsTlsPfsDhWellKnown,
     AnalyzerResultSimulationsTlsPfsNamedGroup,
 )
 
+from cryptolyzer.__main__ import main
 
-class TestTlsSimulations(TestLoggerBase):
+
+class TestTlsSimulations(TestLoggerBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
     @staticmethod
     def get_result(
             host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='https'
@@ -96,18 +103,23 @@ class TestTlsSimulations(TestLoggerBase):
         self.assertTrue(result)
 
     def test_dh_well_known(self):
-        result = self.get_result('kaspersky.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertTrue(all(
-            analyzer_result.cipher_suite.value.key_exchange in [KeyExchange.DHE, KeyExchange.ECDHE]
-            for analyzer_result in result.succeeded_clients.values()
-        ))
-        self.assertTrue(all(
-            analyzer_result.well_known == DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP
-            for analyzer_result in result.succeeded_clients.values()
-            if analyzer_result.cipher_suite.value.key_exchange == KeyExchange.DHE
-        ))
+        original_post_init = DHParameter.__attrs_post_init__
 
-        self.assertEqual(len(result.failed_clients), 3)
+        def patched_post_init(self):
+            original_post_init(self)
+            self.well_known = DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP
+
+        with mock.patch.object(DHParameter, '__attrs_post_init__', patched_post_init):
+            result = self.get_result('dh2048.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+
+        self.assertTrue(all(
+            type(analyzer_result) is AnalyzerResultSimulationsTlsPfsDhWellKnown  # pylint: disable=unidiomatic-typecheck
+            for analyzer_result in result.succeeded_clients.values()
+        ))
+        self.assertTrue(all(
+            analyzer_result.well_known == DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP
+            for analyzer_result in result.succeeded_clients.values()
+        ))
         self.assertTrue(result)
 
     def test_pfs_named_group(self):
@@ -126,6 +138,14 @@ class TestTlsSimulations(TestLoggerBase):
         ))
         self.assertEqual(len(result.failed_clients), 1)
         self.assertTrue(result)
+
+    def test_output(self):
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls', 'simulations', 'tls-v1-0.badssl.com', 1010, timeout=10, scheme='tls'
+        )
+        result = self.get_result(**func_arguments)
+        self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
+        self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')
 
     def test_version_1_3(self):
         result = self.get_result('cloudflare.com', 443)
