@@ -90,6 +90,9 @@ cryptolyze --output-format=json tls all example.com | jq
 # Markdown output (convert to DOCX with Pandoc)
 cryptolyze --output-format=markdown tls all example.com \
   | pandoc --from markdown --to docx --output report.docx
+
+# Parallel analysis for multiple targets
+cryptolyze --parallel 2 tls versions tls://dns.google tls://one.one.one.one
 ```
 
 ### Docker

@@ -31,6 +31,7 @@ from cryptolyzer.__main__ import (
     get_argument_parser,
     get_protocol_handler_analyzer_and_uris,
     main,
+    parse_arg_parallel,
     parse_arg_socket_timeout,
     parse_arg_http_proxy,
 )
@@ -96,7 +97,17 @@ class TestMain(TestMainBase):
         self.assertEqual(parse_arg_http_proxy('proxy'), urllib3.util.parse_url('http://proxy'))
         self.assertEqual(parse_arg_http_proxy('http://proxy'), urllib3.util.parse_url('http://proxy'))
 
+        self.assertEqual(parse_arg_parallel('1'), 1)
+
         self.assertEqual(parse_arg_socket_timeout(1), 1.0)
+
+    def test_argument_parsing_parallel_error(self):
+        with self.assertRaises(argparse.ArgumentTypeError) as context_manager:
+            parse_arg_parallel(0)
+        self.assertEqual(
+            context_manager.exception.args,
+            ('0 parallel must be a positive integer value',)
+        )
 
     def test_runtime_error(self):
         self._test_runtime_error(

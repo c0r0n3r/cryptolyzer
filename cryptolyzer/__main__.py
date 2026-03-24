@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import concurrent.futures
 import colorama
 import urllib3
 
@@ -45,6 +46,15 @@ def get_protocol_handler_analyzer_and_uris(parser, arguments):
     return protocol_handler, analyzer, targets
 
 
+def parse_arg_parallel(value):
+    value = int(value)
+
+    if value < 1:
+        raise argparse.ArgumentTypeError(f'{value} parallel must be a positive integer value')
+
+    return value
+
+
 def parse_arg_socket_timeout(value):
     value = float(value)
 
@@ -82,6 +92,13 @@ def get_argument_parser():
         help='format of the anlysis result (default: %(default)s)'
     )
     parser.add_argument(
+        '-j', '--parallel',
+        type=parse_arg_parallel,
+        default=1,
+        metavar='count',
+        help='Number of targets to analyze in parallel (default: %(default)s)'
+    )
+    parser.add_argument(
         '-t', '--socket-timeout',
         type=parse_arg_socket_timeout,
         default=5.0,
@@ -117,32 +134,47 @@ def get_argument_parser():
     return parser
 
 
+def _analyze_target(protocol_handler, analyzer, target, l4_socket_params):
+    try:
+        return protocol_handler.analyze(analyzer, target, l4_socket_params)
+    except (NetworkError, SecurityError, InvalidDataLength, InvalidType, InvalidValue) as e:
+        return AnalyzerResultError(str(target), str(e))
+
+
+def _print_result(analyzer_result, output_format):
+    if output_format == 'highlighted':
+        print(analyzer_result.as_markdown())
+    elif output_format == 'json':
+        print(analyzer_result.as_json())
+    elif output_format == 'markdown':
+        print(analyzer_result.as_markdown())
+    else:
+        raise NotImplementedError()
+
+
 def main():
     parser = get_argument_parser()
     arguments = parser.parse_args()
     protocol_handler, analyzer, targets = get_protocol_handler_analyzer_and_uris(parser, arguments)
+
+    if arguments.output_format == 'highlighted':
+        colorama.init(strip=False)
+        Serializable.post_text_encoder = SerializableTextEncoderHighlighted()
 
     l4_socket_params = L4TransferSocketParams(
         timeout=arguments.socket_timeout,
         http_proxy=arguments.http_proxy if arguments.http_proxy else None,
     )
 
-    for target in targets:
-        try:
-            analyzer_result = protocol_handler.analyze(analyzer, target, l4_socket_params)
-        except (NetworkError, SecurityError, InvalidDataLength, InvalidType, InvalidValue) as e:
-            analyzer_result = AnalyzerResultError(str(target), str(e))
-
-        if arguments.output_format == 'highlighted':
-            colorama.init(strip=False)
-            Serializable.post_text_encoder = SerializableTextEncoderHighlighted()
-            print(analyzer_result.as_markdown())
-        elif arguments.output_format == 'json':
-            print(analyzer_result.as_json())
-        elif arguments.output_format == 'markdown':
-            print(analyzer_result.as_markdown())
-        else:
-            raise NotImplementedError()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=arguments.parallel) as executor:
+        for analyzer_result in executor.map(
+            _analyze_target,
+            [protocol_handler] * len(targets),
+            [analyzer] * len(targets),
+            targets,
+            [l4_socket_params] * len(targets),
+        ):
+            _print_result(analyzer_result, arguments.output_format)
 
 
 if __name__ == '__main__':

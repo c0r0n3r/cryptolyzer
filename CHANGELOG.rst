@@ -3,6 +3,17 @@ Changelog
 =========
 
 ------------------
+1.1.1 - Unreleased
+------------------
+
+Features
+========
+
+-  Generic
+
+   -  add support for parallel target analysis (#164)
+
+------------------
 1.1.0 - 2026-02-13
 ------------------
 

@@ -116,11 +116,13 @@ the XMPP protocol, which can be given as follows.
 
     cryptolyze tls versions xmppclient://xmpp.igniterealtime.org/?stream_to=igniterealtime.org
 
-The command-line interface makes available to give multiple analyzable target as arguments, when the targets are analyzed one after another.
+The command-line interface makes it possible to pass multiple analyzable targets as arguments. By default, the targets are analyzed sequentially. For larger target lists, you can configure concurrent analysis by specifying the number of workers using the ``-j`` or ``--parallel`` option.
 
 .. code:: shell
 
    cryptolyze tls versions tls://dns.google tls://one.one.one.one ...
+   
+   cryptolyze --parallel 2 tls versions tls://dns.google tls://one.one.one.one ...
 
 Logging
 ```````
