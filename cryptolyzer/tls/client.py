@@ -1241,6 +1241,10 @@ class ClientXMPPServer(ClientXMPPBase):
     def _get_connection_type(cls):
         return 'server'
 
+    @classmethod
+    def get_default_port(cls):
+        return 5269
+
 
 class L7ClientLDAPS(L7ClientTlsBase):
     @classmethod

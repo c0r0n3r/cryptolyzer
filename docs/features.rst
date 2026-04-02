@@ -218,6 +218,7 @@ Fingerprinting
    connecting TLS client independently from its type (graphical/cli, browser/email client/...)
 
    -  `FTP <https://en.wikipedia.org/wiki/File_Transfer_Protocol>`__
+   -  `IMAP <https://en.wikipedia.org/wiki/Internet_Message_Access_Protocol>`__
    -  `LDAP <https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol>`__
    -  `LMTP <https://en.wikipedia.org/wiki/Local_Mail_Transfer_Protocol>`__
    -  `MySQL <https://en.wikipedia.org/wiki/MySQL>`__
@@ -228,6 +229,7 @@ Fingerprinting
    -  `RDP <https://en.wikipedia.org/wiki/Remote_Desktop_Protocol>`__
    -  `Sieve <https://en.wikipedia.org/wiki/Sieve_(mail_filtering_language)>`__
    -  `SMTP <https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol>`__
+   -  `XMPP (Jabber) <https://en.wikipedia.org/wiki/XMPP>`__
 
 2. decodes existing `JA3 tags <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__
    by showing human-readable format of the TLS parameters represented by the tag

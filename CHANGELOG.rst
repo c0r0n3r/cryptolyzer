@@ -18,6 +18,13 @@ Features
 
    -  add specific error when certificate verification fails
 
+-  JA3 (``ja3``)
+
+   -  Generate (``generate``)
+
+      -  support IMAP clients (#165)
+      -  support XMPP clients (#165)
+ 
 ------------------
 1.0.2 - 2025-12-30
 ------------------

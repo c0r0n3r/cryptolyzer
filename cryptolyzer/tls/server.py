@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 
 import abc
 import attr
@@ -622,6 +623,193 @@ class L7ServerTlsPOP3(L7ServerStartTlsTextBase):
     @classmethod
     def _get_starttls_response(cls):
         return b'+OK Begin TLS negotiation now.\r\n'
+
+
+class L7ServerTlsIMAPBase(L7ServerStartTlsBase):
+    """
+    Minimal IMAP STARTTLS test server.
+
+    It implements what `imaplib.IMAP4` needs for:
+    - initial untagged welcome message
+    - CAPABILITY exchange during connection setup
+    - tagged STARTTLS extension command (via `xatom('STARTTLS')`)
+
+    After STARTTLS negotiation response is sent, the base `L7ServerTlsBase`
+    continues with the normal TLS handshake parsing over the same socket.
+    """
+
+    @classmethod
+    def get_scheme(cls):
+        return 'imap'
+
+    @classmethod
+    def get_default_port(cls):
+        return 143
+
+    @classmethod
+    def _get_greeting(cls):
+        return b'* OK IMAP4rev1 Service Ready\r\n'
+
+    @classmethod
+    @abc.abstractmethod
+    def _is_capability_starttls(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def _is_starttls_ok(cls):
+        return True
+
+    @classmethod
+    def _get_capabilities(cls):
+        capabilities = [
+            b'IMAP4REV1',
+            b'LITERAL+',
+            b'SASL-IR',
+            b'LOGIN-REFERRALS',
+            b'ID',
+            b'ENABLE',
+            b'IDLE',
+            b'LOGINDISABLED',
+        ]
+        if cls._is_capability_starttls():
+            capabilities.append(b'STARTTLS')
+        return b' '.join(capabilities)
+
+    @classmethod
+    def _get_starttls_response_type(cls):
+        # imaplib returns {OK,NO,BAD} as the response "type". Returning `NO`
+        # makes the client take the error path.
+        return b'OK' if cls._is_starttls_ok() else b'NO'
+
+    @staticmethod
+    def _parse_imap_tag(line):
+        # Tag is the first whitespace-separated token, e.g. b'A0001'.
+        parts = line.split()
+        return parts[0] if parts else b''
+
+    def _init_l7(self):
+        self.send(self._get_greeting())
+
+        # imaplib initialization: CAPABILITY command
+        self.l4_transfer.receive_line()
+        capability_cmd = bytes(self.buffer).strip()
+        tag = self._parse_imap_tag(capability_cmd)
+        self.flush_buffer()
+
+        if b'CAPABILITY' not in capability_cmd.upper():
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+        self.send(b'* CAPABILITY ' + self._get_capabilities() + b'\r\n')
+        self.send(tag + b' OK CAPABILITY completed\r\n')
+
+        # ClientIMAP._init_l7: STARTTLS extension command (via xatom)
+        self.l4_transfer.receive_line()
+        starttls_cmd = bytes(self.buffer).strip()
+        starttls_tag = self._parse_imap_tag(starttls_cmd)
+        self.flush_buffer()
+
+        if b'STARTTLS' not in starttls_cmd.upper():
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
+
+        self.send(
+            starttls_tag
+            + b' '
+            + self._get_starttls_response_type()
+            + b' STARTTLS completed\r\n'
+        )
+
+
+class L7ServerTlsIMAP(L7ServerTlsIMAPBase):
+    @classmethod
+    def _is_capability_starttls(cls):
+        return True
+
+
+class L7ServerTlsIMAPNoStartTLS(L7ServerTlsIMAPBase):
+    @classmethod
+    def _is_capability_starttls(cls):
+        return False
+
+
+class L7ServerTlsIMAPStartTLSBad(L7ServerTlsIMAPBase):
+    @classmethod
+    def _is_capability_starttls(cls):
+        return True
+
+    @classmethod
+    def _is_starttls_ok(cls):
+        return False
+
+
+class L7ServerTlsXMPPBase(L7ServerStartTlsBase):
+    @classmethod
+    def get_scheme(cls):
+        return 'xmpp'
+
+    @classmethod
+    def get_default_port(cls):
+        return 5222
+
+    @classmethod
+    @abc.abstractmethod
+    def _is_starttls_feature(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def _is_starttls_ok(cls):
+        return True
+
+    @classmethod
+    def _get_features(cls):
+        if cls._is_starttls_feature():
+            return (
+                b'<stream:features>'
+                b'<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>'
+                b'</stream:features>'
+            )
+        return b'<stream:features></stream:features>'
+
+    def _init_l7(self):
+        self.l4_transfer.receive_until(b'>')
+        self.flush_buffer()
+
+        self.send(
+            b'<stream:stream xmlns:stream="http://etherx.jabber.org/streams">'
+            + self._get_features()
+        )
+
+        if not self._is_starttls_feature():
+            return
+
+        self.l4_transfer.receive_until(b'>')
+        self.flush_buffer()
+
+        if self._is_starttls_ok():
+            self.send(b'<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>')
+        else:
+            self.send(b'<failure xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>')
+
+
+class L7ServerTlsXMPP(L7ServerTlsXMPPBase):
+    @classmethod
+    def _is_starttls_feature(cls):
+        return True
+
+
+class L7ServerTlsXMPPNoStartTLS(L7ServerTlsXMPPBase):
+    @classmethod
+    def _is_starttls_feature(cls):
+        return False
+
+
+class L7ServerTlsXMPPStartTLSBad(L7ServerTlsXMPPBase):
+    @classmethod
+    def _is_starttls_feature(cls):
+        return True
+
+    @classmethod
+    def _is_starttls_ok(cls):
+        return False
 
 
 class L7ServerStartTlsMailBase(L7ServerStartTlsTextBase):
