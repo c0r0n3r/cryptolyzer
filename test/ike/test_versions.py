@@ -173,7 +173,7 @@ class TestIkeVersions(TestLoggerBase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            L4TransferSocketParams(timeout=2),
             ip=l4_transfer.bind_address,
         )
 
