@@ -174,8 +174,8 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
             4096
         )
     )
-    def test_tls_1_2_no_rfc_7919_support(self, _):
-        result = self.get_result('office.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+    def test_tls_1_x_key_reuse(self, _):
+        result = self.get_result('lamar.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertEqual(
             result.dhparam.parameter_numbers,
