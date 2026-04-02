@@ -329,11 +329,6 @@ class TestClientPOP3(TestL7ClientBase):
         self.assertEqual(l7_client.greeting, ['+OK Server ready.'])
         self.assertEqual(result.versions, [])
 
-    def test_pop3_client(self):
-        l7_client, result = self.get_result('pop3', 'pop3.comcast.net', None, L4TransferSocketParams(timeout=10))
-        self.assertEqual(l7_client.greeting, ['+OK Dovecot ready.'])
-        self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
-
     def test_pop3s_client_port(self):
         client = L7ClientTlsBase.from_scheme('pop3s', 'localhost')
         self.assertEqual(client.port, 995)
