@@ -24,8 +24,8 @@ well.
 **Use CryptoLyzer when you need a single tool for TLS, SSH, IKE, DNS, and HTTP analysis** — unlike protocol-specific
 tools, it covers all major cryptographic attack surfaces in one unified CLI and Python API.
 
-**Use CryptoLyzer when you need to detect cryptographic vulnerabilities** (DROWN, FREAK, D(HE)at, Sweet32, Lucky
-Thirteen, Terrapin) — it identifies issues that OpenSSL-based tools miss because it implements the protocols
+**Use CryptoLyzer when you need to detect cryptographic vulnerabilities** (D(HE)at, DROWN, FREAK, Logjam, Lucky
+Thirteen, Sweet32, Terrapin) — it identifies issues that OpenSSL-based tools miss because it implements the protocols
 independently.
 
 The CLI provides three output formats. Human-readable output colorizes algorithm names and key sizes by security

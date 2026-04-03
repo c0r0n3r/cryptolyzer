@@ -72,6 +72,12 @@ class VulnerabilityResultFreak(VulnerabilityResultAttackNamed):
         return AttackNamed.FREAK
 
 
+class VulnerabilityResultLogjam(VulnerabilityResultAttackNamed):
+    @classmethod
+    def get_attack_named(cls):
+        return AttackNamed.LOGJAM
+
+
 class VulnerabilityResultLuckyThirteen(VulnerabilityResultAttackNamed):
     @classmethod
     def get_attack_named(cls):
@@ -86,6 +92,7 @@ class AnalyzerResultVulnerabilityCiphers(AnalyzerResultVulnerabilityCiphersBase)
 
     :param lucky13: `Lucky Thirteen attack <https://en.wikipedia.org/wiki/Lucky_Thirteen_attack>`__.
     :param freak: `FREAK attack <https://en.wikipedia.org/wiki/FREAK>`__.
+    :param logjam: `Logjam attack <https://weakdh.org/>`__.
     :param export_grade: Cipher suite uses
         `export grade <https://en.wikipedia.org/wiki/Export_of_cryptography_from_the_United_States>`__ algorithms.
     """
@@ -102,6 +109,10 @@ class AnalyzerResultVulnerabilityCiphers(AnalyzerResultVulnerabilityCiphersBase)
         validator=attr.validators.instance_of(VulnerabilityResultFreak),
         metadata={'human_readable_name': VulnerabilityResultFreak.get_name()},
     )
+    logjam = attr.ib(
+        validator=attr.validators.instance_of(VulnerabilityResultLogjam),
+        metadata={'human_readable_name': VulnerabilityResultLogjam.get_name()},
+    )
     export_grade = attr.ib(
         validator=attr.validators.instance_of(VulnerabilityResultExportGrade),
         metadata={'human_readable_name': VulnerabilityResultExportGrade.get_name()},
@@ -114,6 +125,10 @@ class AnalyzerResultVulnerabilityCiphers(AnalyzerResultVulnerabilityCiphersBase)
 
         freak = VulnerabilityResultFreak(any(map(
             lambda cipher_suite: cipher_suite.value.freak, cipher_suites
+        )))
+
+        logjam = VulnerabilityResultLogjam(any(map(
+            lambda cipher_suite: cipher_suite.value.logjam, cipher_suites
         )))
 
         lucky13_cipher_suites = set(TlsHandshakeClientHelloBlockCipherModeCBC.CIPHER_SUITES)
@@ -141,6 +156,7 @@ class AnalyzerResultVulnerabilityCiphers(AnalyzerResultVulnerabilityCiphersBase)
 
             null_encryption=null_encryption,
             freak=freak,
+            logjam=logjam,
             lucky13=lucky13,
             export_grade=export_grade,
         )

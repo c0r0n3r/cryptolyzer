@@ -34,6 +34,27 @@ class TestTlsVulnerabilityCiphers(unittest.TestCase):
         self.assertFalse(result.freak.value)
         self.assertTrue(result.export_grade.value)
 
+    def test_logjam_dhe_export(self):
+        result = AnalyzerResultVulnerabilityCiphers.from_cipher_suites([
+            TlsCipherSuite.TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,
+        ])
+        self.assertTrue(result.logjam.value)
+        self.assertTrue(result.export_grade.value)
+
+    def test_no_logjam_dhe(self):
+        result = AnalyzerResultVulnerabilityCiphers.from_cipher_suites([
+            TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
+        ])
+        self.assertFalse(result.logjam.value)
+        self.assertFalse(result.export_grade.value)
+
+    def test_no_logjam_rsa_export(self):
+        result = AnalyzerResultVulnerabilityCiphers.from_cipher_suites([
+            TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5,
+        ])
+        self.assertFalse(result.logjam.value)
+        self.assertTrue(result.freak.value)
+
 
 class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
     @staticmethod
