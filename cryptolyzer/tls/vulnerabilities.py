@@ -27,7 +27,6 @@ from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloBlockCipherModeCBC,
     TlsHandshakeClientHelloBulkCipherNull,
-    TlsHandshakeClientHelloKeyExchangeAnonymousDH,
 )
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 from cryptolyzer.tls.versions import AnalyzerVersions, VulnerabilityResultInappropriateVersionFallback
@@ -113,8 +112,9 @@ class AnalyzerResultVulnerabilityCiphers(AnalyzerResultVulnerabilityCiphersBase)
         null_encryption_cipher_suites = set(TlsHandshakeClientHelloBulkCipherNull.CIPHER_SUITES)
         null_encryption = VulnerabilityResultNullEncryption(bool(null_encryption_cipher_suites & set(cipher_suites)))
 
-        export_rsa_cipher_suites = set(TlsHandshakeClientHelloKeyExchangeAnonymousDH.CIPHER_SUITES)
-        freak = VulnerabilityResultFreak(bool(export_rsa_cipher_suites & set(cipher_suites)))
+        freak = VulnerabilityResultFreak(any(map(
+            lambda cipher_suite: cipher_suite.value.freak, cipher_suites
+        )))
 
         lucky13_cipher_suites = set(TlsHandshakeClientHelloBlockCipherModeCBC.CIPHER_SUITES)
         lucky13 = VulnerabilityResultLuckyThirteen(bool(lucky13_cipher_suites & set(cipher_suites)))
