@@ -27,10 +27,12 @@ the output format and log level -- and the analyzable protocol itself. The analy
 versions or version-independent peculiarities, meaning that the command line interface should give a way to analyze
 which versions of a protocol are supported by a service and which are version-independent peculiarities. The most
 obvious example is the TLS protocol for demonstrating the command-line interface's structure. To analyze which versions
-of the TLS protocol are supported by a service run on the domain *example.com* you can use the following command:
+of the protocol are supported by a service run on the domain *example.com* you can use the following commands:
 
 .. code:: shell
 
+   cryptolyze ike versions example.com
+   cryptolyze ssh versions example.com
    cryptolyze tls versions example.com
 
 Another example of version-independent analyses is when we want to know which versions of the different client

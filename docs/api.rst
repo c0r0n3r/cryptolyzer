@@ -391,6 +391,28 @@ Result Classes
 .. automodule:: cryptolyzer.ssh.pubkeys
     :members:
 
+IKE
+===
+
+Versions
+--------
+
+The IKE protocol has two different versions, meaning that just like in the command-line interface it is the parameter
+of the analysis in the case of the Python API, so before running the analysis the protocol version must be determined.
+
+.. code:: python
+
+
+    >>> from cryptolyzer.ike.client import L7ClientIPsecBase
+    >>> from cryptolyzer.ike.versions import AnalyzerVersions
+    >>>
+    >>> analyzer = AnalyzerVersions()
+    >>> client = L7ClientIPsecBase('moon.strongswan.org', 500)
+    >>> result = analyzer.analyze(client, None)
+    >>>
+    >>> [str(version) for version in result.versions]
+    ['IKEv1 (0)', 'IKEv2 (0)']
+
 HTTP(S)
 =======
 
