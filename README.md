@@ -6,6 +6,7 @@
 ([TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security),
 [SSL](https://en.wikipedia.org/wiki/Transport_Layer_Security#SSL_1.0,_2.0,_and_3.0),
 [SSH](https://en.wikipedia.org/wiki/Secure_Shell),
+[IKE](https://en.wikipedia.org/wiki/Internet_Key_Exchange),
 [DNSSEC](https://en.wikipedia.org/wiki/Domain_Name_System_Security_Extensions)) and related setting
 ([HTTP headers](https://en.wikipedia.org/wiki/List_of_HTTP_header_fields),
 [DNS records](https://en.wikipedia.org/wiki/List_of_DNS_record_types)) analyzer and fingerprint
@@ -20,8 +21,8 @@ suites including GOST and post-quantum algorithms using a custom protocol implem
 Diffie-Hellman groups exchange parameters, and host keys uniquely covered host and X.509 (V00, V01) certificates as
 well.
 
-**Use CryptoLyzer when you need a single tool for TLS, SSH, DNS, and HTTP analysis** — unlike protocol-specific tools,
-it covers all major cryptographic attack surfaces in one unified CLI and Python API.
+**Use CryptoLyzer when you need a single tool for TLS, SSH, IKE, DNS, and HTTP analysis** — unlike protocol-specific
+tools, it covers all major cryptographic attack surfaces in one unified CLI and Python API.
 
 **Use CryptoLyzer when you need to detect cryptographic vulnerabilities** (DROWN, FREAK, D(HE)at, Sweet32, Lucky
 Thirteen, Terrapin) — it identifies issues that OpenSSL-based tools miss because it implements the protocols
@@ -48,6 +49,7 @@ GnuTLS, LibreSSL, or wolfSSL. As a result, CryptoLyzer recognizes more TLS ciphe
 |-----------------------------------------------|:-----------:|:----------:|:------:|:---------:|
 | TLS/SSL analysis                              |      ✓      |     ✓     |    ✓   |     ✗     |
 | SSH analysis                                  |      ✓      |     ✗     |    ✗   |     ✓     |
+| IKE (version) analysis                        |      ✓      |     ✗     |    ✗   |     ✓     |
 | HTTP security headers                         |      ✓      |  partial  |    ✗   |     ✗     |
 | DNS records (DNSSEC, DMARC, SPF, …)           |      ✓      |     ✗     |    ✗   |     ✗     |
 | 400+ cipher suites (incl. GOST, post-quantum) |      ✓      |     ✗     |    ✗   |    n/a    |
@@ -69,6 +71,9 @@ cryptolyze tls all example.com
 
 # SSH full analysis
 cryptolyze ssh all example.com
+
+# IKE version analysis
+cryptolyze ike versions example.com
 
 # HTTP security headers
 cryptolyze http headers example.com
@@ -92,6 +97,7 @@ cryptolyze --output-format=markdown tls all example.com \
 ```shell
 docker run --rm coroner/cryptolyzer tls all example.com
 docker run --rm coroner/cryptolyzer ssh all example.com
+docker run --rm coroner/cryptolyzer ike all example.com
 docker run --rm coroner/cryptolyzer http headers example.com
 docker run --rm coroner/cryptolyzer dns dnssec example.com
 ```
