@@ -56,6 +56,12 @@ if 'READTHEDOCS' in os.environ:
     with open(_html_extra_path / 'robots.txt', 'w+', encoding='ascii') as _robots_txt_file:
         _robots_txt_file.write(os.linesep.join(_robots_txt_lines))
 
+    _llms_txt_src = pathlib.Path(__file__).parent.parent / 'llms.txt'
+    with open(_llms_txt_src, encoding='utf-8') as _llms_txt_src_file:
+        _llms_txt_content = _llms_txt_src_file.read()
+    with open(_html_extra_path / 'llms.txt', 'w+', encoding='utf-8') as _llms_txt_file:
+        _llms_txt_file.write(_llms_txt_content)
+
     html_extra_path = [
         _html_extra_dir_name
     ]
