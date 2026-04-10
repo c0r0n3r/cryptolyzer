@@ -150,9 +150,16 @@ The [code](https://gitlab.com/coroner/cryptolyzer) is available under the terms 
 A non-comprehensive but straightforward description of MPL 2.0 can be found at the
 [Choose an open source license](https://choosealicense.com/licenses#mpl-2.0) website.
 
+## Funding
+
+This project is funded through [NGI Zero Core](https://nlnet.nl/core), a fund established by [NLnet](https://nlnet.nl)
+with financial support from the European Commission's [Next Generation Internet](https://ngi.eu) program. Learn more at
+the [NLnet project page](https://nlnet.nl/project/CryptoLyzer-IKE).
+
+[<img src="https://nlnet.nl/logo/banner.png" alt="NLnet foundation logo" width="20%" />](https://nlnet.nl)
+[<img src="https://nlnet.nl/image/logos/NGI0_tag.svg" alt="NGI Zero Logo" width="20%" />](https://nlnet.nl/core)
+
 ## Credits
 
-- [NLnet Foundation](https://nlnet.nl) and [NGI Assure](https://www.assure.ngi.eu) support the
-  project as part of the [Next Generation Internet](https://ngi.eu) initiative.
 - Icons made by [Freepik](https://www.flaticon.com/authors/freepik) from
   [Flaticon](https://www.flaticon.com/).
