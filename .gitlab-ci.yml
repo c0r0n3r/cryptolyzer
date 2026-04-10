@@ -89,6 +89,7 @@ dockerhub:
     DOCKER_NAME: coroner/${CI_PROJECT_NAME}
     GIT_SUBMODULE_STRATEGY: recursive
   before_script:
+    - apk add --no-cache python3
     - if ! [ -z ${CI_COMMIT_TAG} ] ; then DOCKER_NAME="${DOCKER_NAME}:${CI_COMMIT_TAG}" ; fi
     - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin
   script:
