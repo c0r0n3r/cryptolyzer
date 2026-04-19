@@ -1,13 +1,38 @@
 # -*- coding: utf-8 -*-
 
+import unittest
+
 from cryptodatahub.tls.algorithm import TlsNamedCurve
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
-from cryptolyzer.tls.vulnerabilities import AnalyzerVulnerabilities
+from cryptolyzer.tls.vulnerabilities import AnalyzerResultVulnerabilityCiphers, AnalyzerVulnerabilities
 
 from .classes import TestTlsCases
+
+
+class TestTlsVulnerabilityCiphers(unittest.TestCase):
+    def test_freak_rsa_export(self):
+        result = AnalyzerResultVulnerabilityCiphers.from_cipher_suites([
+            TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5,
+        ])
+        self.assertTrue(result.freak.value)
+        self.assertTrue(result.export_grade.value)
+
+    def test_no_freak_rsa(self):
+        result = AnalyzerResultVulnerabilityCiphers.from_cipher_suites([
+            TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
+        ])
+        self.assertFalse(result.freak.value)
+        self.assertFalse(result.export_grade.value)
+
+    def test_no_freak_dhe_export(self):
+        result = AnalyzerResultVulnerabilityCiphers.from_cipher_suites([
+            TlsCipherSuite.TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA,
+        ])
+        self.assertFalse(result.freak.value)
+        self.assertTrue(result.export_grade.value)
 
 
 class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
