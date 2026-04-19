@@ -96,15 +96,41 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
                 host_key_algorithm.value.signature.value.key_type
             ),
             filter(
-                lambda host_key_algorithm: not isinstance(host_key_algorithm, str),
-                analyzer_result.host_key_algorithms
-            )
+                lambda host_key_algorithm: (
+                    not isinstance(host_key_algorithm, str) and
+                    (
+                        host_key_algorithm.value.key_type,
+                        host_key_algorithm.value.signature.value.key_type,
+                    ) in self._KEY_EXCHANGE_INIT_MESSAGES_BY_TYPE
+                ),
+                analyzer_result.host_key_algorithms,
+            ),
+        ))
+
+        server_dhe_ecdhe_kex = list(filter(
+            lambda kex: not isinstance(kex, str),
+            analyzer_result.kex_algorithms
         ))
 
         host_public_keys = []
         for host_key_type, key_exchange_init_message in self._KEY_EXCHANGE_INIT_MESSAGES_BY_TYPE.items():
             if host_key_type not in host_key_types:
                 continue
+
+            kex_algorithms = [
+                kex_algorithm
+                for kex_algorithm in server_dhe_ecdhe_kex
+                if kex_algorithm in key_exchange_init_message.kex_algorithms
+            ]
+
+            key_exchange_init_message = self._build_limited_key_exchange_init_message(
+                key_exchange_init_message,
+                analyzer_result,
+                keep_from_template=('host_key_algorithms',),
+                server_overrides={
+                    'kex_algorithms': kex_algorithms,
+                },
+            )
 
             try:
                 server_messages = analyzable.do_handshake(
