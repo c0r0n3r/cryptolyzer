@@ -10,6 +10,7 @@ import urllib
 
 from cryptoparser.common.base import Serializable
 from cryptoparser.tls.subprotocol import TlsAlertDescription
+from cryptoparser.ssh.subprotocol import SshKeyExchangeInit
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 from cryptoparser.common.utils import get_leaf_classes
 
@@ -221,6 +222,17 @@ class ProtocolHandlerIKEBase(ProtocolHandlerBase):
 
 
 class AnalyzerSshBase():
+    _KEXINIT_CIPHER_ATTRIBUTES = (
+        'kex_algorithms',
+        'host_key_algorithms',
+        'encryption_algorithms_client_to_server',
+        'encryption_algorithms_server_to_client',
+        'mac_algorithms_client_to_server',
+        'mac_algorithms_server_to_client',
+        'compression_algorithms_client_to_server',
+        'compression_algorithms_server_to_client',
+    )
+
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientSsh))
@@ -228,6 +240,38 @@ class AnalyzerSshBase():
     @classmethod
     def get_default_scheme(cls):
         return 'ssh'
+
+    @staticmethod
+    def _get_known_algorithms(algorithms):
+        return filter(lambda algorithm: not isinstance(algorithm, str), algorithms)
+
+    @classmethod
+    def _build_limited_key_exchange_init_message(
+            cls,
+            key_exchange_init,
+            analyzer_result,
+            keep_from_template=(),
+            server_overrides=None,
+    ):
+        if isinstance(key_exchange_init, type):
+            key_exchange_init_message = key_exchange_init()
+        else:
+            key_exchange_init_message = key_exchange_init
+
+        keep_from_template = set(keep_from_template)
+        server_overrides = {} if server_overrides is None else dict(server_overrides)
+
+        init_kwargs = {}
+        for attribute_name in cls._KEXINIT_CIPHER_ATTRIBUTES:
+            if attribute_name in server_overrides:
+                init_kwargs[attribute_name] = server_overrides[attribute_name]
+            elif attribute_name in keep_from_template:
+                init_kwargs[attribute_name] = getattr(key_exchange_init_message, attribute_name)
+            else:
+                init_kwargs[attribute_name] = list(cls._get_known_algorithms(getattr(analyzer_result, attribute_name)))
+
+        SshKeyExchangeInit.__init__(key_exchange_init_message, **init_kwargs)
+        return key_exchange_init_message
 
     @abc.abstractmethod
     def analyze(self, analyzable):

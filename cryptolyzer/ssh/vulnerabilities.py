@@ -176,10 +176,6 @@ class AnalyzerVulnerabilities(AnalyzerSshBase):
     def get_help(cls):
         return 'Check which vulnerabilities affect the server(s)'
 
-    @classmethod
-    def _get_known_algorithms(cls, algorithms):
-        return filter(lambda algorithm: not isinstance(algorithm, str), algorithms)
-
     def analyze(self, analyzable):
         LogSingleton().disabled = True
         analyzer_result_versions = AnalyzerVersions().analyze(analyzable)

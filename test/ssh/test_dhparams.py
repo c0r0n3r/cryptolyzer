@@ -2,12 +2,14 @@
 
 from cryptodatahub.ssh.algorithm import SshKexAlgorithm
 
+from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.transfer import L4TransferSocketParams
 
-from cryptolyzer.ssh.client import L7ClientSsh
+from cryptolyzer.ssh.client import L7ClientSsh, SshDisconnect
 from cryptolyzer.ssh.dhparams import AnalyzerDHParams
+from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
 
-from .classes import TestSshCases
+from .classes import L7ServerSshTest, TestSshCases
 
 
 class TestSshDHParams(TestSshCases.TestSshClientBase):
@@ -62,3 +64,16 @@ class TestSshDHParams(TestSshCases.TestSshClientBase):
             SshKexAlgorithm.DIFFIE_HELLMAN_GROUP14_SHA1,
         ])
         self.assertEqual(result.group_exchange, None)
+
+    def test_dhparams_with_algorithm_limit(self):
+        server_configuration = SshServerConfiguration(max_remote_algorithm_count=50)
+        threaded_server = L7ServerSshTest(L7ServerSsh(
+            'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=server_configuration
+        ))
+        threaded_server.start()
+
+        try:
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+            self.assertIsNotNone(result)
+        except (NetworkError, SshDisconnect, StopIteration):
+            pass

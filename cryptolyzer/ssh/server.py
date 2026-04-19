@@ -69,6 +69,11 @@ class SshServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
         validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(LanguageTag)),
         default=()
     )
+    max_remote_algorithm_count = attr.ib(
+        validator=attr.validators.optional(attr.validators.instance_of(int)),
+        default=None,
+        metadata={'description': 'Maximum number of algorithms allowed per list from remote side (None = unlimited)'}
+    )
 
 
 @attr.s
@@ -138,6 +143,23 @@ class SshServerHandshake(L7ServerHandshakeBase, SshHandshakeBase):
     def _process_handshake_message(self, message, last_handshake_message_type):
         self._last_processed_message_type = message.get_message_code()
         self.client_messages[self._last_processed_message_type] = message
+
+        if self.configuration.max_remote_algorithm_count is not None:
+            if self._last_processed_message_type == SshMessageCode.KEXINIT:
+                for attribute in message._get_cipher_attributes():  # pylint: disable=protected-access
+                    if 'algorithms' not in attribute.name:
+                        continue
+
+                    algorithm_list = getattr(message, attribute.name)
+                    if len(algorithm_list) > self.configuration.max_remote_algorithm_count:
+                        self._send_disconnect(
+                            SshReasonCode.PROTOCOL_ERROR,
+                            (
+                                f'Too many {attribute.name} '
+                                f'({len(algorithm_list)} > {self.configuration.max_remote_algorithm_count})'
+                            )
+                        )
+                        raise StopIteration()
 
         if self._last_processed_message_type == last_handshake_message_type:
             self._send_disconnect(SshReasonCode.HOST_NOT_ALLOWED_TO_CONNECT, 'not allowed to connect')

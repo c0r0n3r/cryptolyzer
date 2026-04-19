@@ -24,8 +24,8 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
 from cryptolyzer.common.utils import LogSingleton
 
-from cryptolyzer.ssh.client import L7ServerSshGexParams, SshKeyExchangeInitAnyAlgorithm
 from cryptolyzer.ssh.ciphers import AnalyzerCiphers
+from cryptolyzer.ssh.client import L7ServerSshGexParams, SshKeyExchangeInitAnyAlgorithm
 
 
 @attr.s
@@ -92,14 +92,20 @@ class AnalyzerDHParams(AnalyzerSshBase):
         return 'Check DH parameters offered by the server(s)'
 
     @classmethod
-    def _get_negotiable_key_sizes(cls, analyzable, gex_algorithms):
+    def _get_negotiable_key_sizes(cls, analyzable, analyzer_result, gex_algorithms):
         gex_min_size = 1
         gex_max_size = 8192
         gex_tolerates_bounds = True
         gex_key_sizes = set()
         while True:
             try:
-                key_exchange_init_message = SshKeyExchangeInitAnyAlgorithm(kex_algorithms=[gex_algorithms[0], ])
+                key_exchange_init_message = cls._build_limited_key_exchange_init_message(
+                    SshKeyExchangeInitAnyAlgorithm,
+                    analyzer_result,
+                    server_overrides={
+                        'kex_algorithms': [gex_algorithms[0]],
+                    },
+                )
                 server_messages = analyzable.do_handshake(
                     key_exchange_init_message=key_exchange_init_message,
                     gex_params=L7ServerSshGexParams(
@@ -155,11 +161,8 @@ class AnalyzerDHParams(AnalyzerSshBase):
         kex_algorithms = []
 
         algorithms = filter(
-            lambda kex_algorithm: (
-                isinstance(kex_algorithm, SshKexAlgorithm) and
-                kex_algorithm.value.kex == KeyExchange.DHE
-                ),
-            analyzer_result.kex_algorithms
+            lambda kex_algorithm: kex_algorithm.value.kex == KeyExchange.DHE,
+            self._get_known_algorithms(analyzer_result.kex_algorithms)
         )
 
         for kex_algorithm in algorithms:
@@ -179,5 +182,5 @@ class AnalyzerDHParams(AnalyzerSshBase):
         return AnalyzerResultDHParams(
             AnalyzerTargetSsh.from_l7_client(analyzable),
             AnalyzerResultKeyExchange(kex_algorithms) if kex_algorithms else None,
-            self._get_negotiable_key_sizes(analyzable, gex_algorithms) if gex_algorithms else None
+            self._get_negotiable_key_sizes(analyzable, analyzer_result, gex_algorithms) if gex_algorithms else None
         )

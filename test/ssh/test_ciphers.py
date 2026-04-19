@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import types
+
 from cryptodatahub.ssh.algorithm import (
     SshCompressionAlgorithm,
     SshEncryptionAlgorithm,
@@ -7,15 +9,25 @@ from cryptodatahub.ssh.algorithm import (
     SshKexAlgorithm,
     SshMacAlgorithm,
 )
+from cryptoparser.ssh.subprotocol import SshMessageCode
 
+from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerTargetSsh
 from cryptolyzer.common.transfer import L4TransferSocketParams
 
-from cryptolyzer.ssh.client import L7ClientSsh
-from cryptolyzer.ssh.server import L7ServerSsh
+from cryptolyzer.ssh.client import L7ClientSsh, SshDisconnect
+from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration, SshServerHandshake
 from cryptolyzer.ssh.ciphers import AnalyzerCiphers, AnalyzerResultCiphers
 
 from .classes import TestSshCases, L7ServerSshTest
+
+
+class _TestSshServerHandshake(SshServerHandshake):
+    def _send_disconnect(self, *_args, **_kwargs):
+        return None
+
+    def process_handshake_message(self, message, last_handshake_message_type):
+        return self._process_handshake_message(message, last_handshake_message_type)
 
 
 class TestSshCiphers(TestSshCases.TestSshClientBase):
@@ -79,3 +91,33 @@ class TestSshCiphers(TestSshCases.TestSshClientBase):
     def test_real(self):
         self.get_result('github.com')
         self.get_result('gitlab.com')
+
+    def test_ciphers_with_algorithm_limit(self):
+        server_configuration = SshServerConfiguration(max_remote_algorithm_count=50)
+        threaded_server = L7ServerSshTest(L7ServerSsh(
+            'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=server_configuration
+        ))
+        threaded_server.start()
+
+        try:
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+            self.assertIsNotNone(result)
+        except (NetworkError, SshDisconnect, StopIteration):
+            pass
+
+    def test_ciphers_algorithm_limit_disconnect_raises_stop_iteration(self):
+        handshake = object.__new__(_TestSshServerHandshake)
+        handshake.configuration = SshServerConfiguration(max_remote_algorithm_count=1)
+        handshake.client_messages = {}
+
+        non_algorithm_attribute = types.SimpleNamespace(name='cookie')
+        cipher_attribute = types.SimpleNamespace(name='kex_algorithms')
+        message = types.SimpleNamespace(
+            get_message_code=lambda: SshMessageCode.KEXINIT,
+            _get_cipher_attributes=lambda: [non_algorithm_attribute, cipher_attribute],
+            cookie=b'\x00' * 16,
+            kex_algorithms=[1, 2],
+        )
+
+        with self.assertRaises(StopIteration):
+            handshake.process_handshake_message(message, SshMessageCode.KEXINIT)

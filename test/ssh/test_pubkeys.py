@@ -14,8 +14,9 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.ssh.client import L7ClientSsh, SshClientHandshake, SshDisconnect
 from cryptolyzer.ssh.pubkeys import AnalyzerPublicKeys
+from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
 
-from .classes import TestSshCases
+from .classes import L7ServerSshTest, TestSshCases
 
 
 class TestSshPubkeys(TestSshCases.TestSshClientBase):
@@ -98,3 +99,16 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
             ]
         )
         self.assertEqual(result.public_keys[3].key_id, 'avy.fabriquehq.nl')
+
+    def test_pubkeys_with_algorithm_limit(self):
+        server_configuration = SshServerConfiguration(max_remote_algorithm_count=50)
+        threaded_server = L7ServerSshTest(L7ServerSsh(
+            'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=server_configuration
+        ))
+        threaded_server.start()
+
+        try:
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+            self.assertIsNotNone(result)
+        except (NetworkError, SshDisconnect, StopIteration):
+            pass

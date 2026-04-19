@@ -13,6 +13,15 @@ Features
 
    -  add support for parallel target analysis (#164)
 
+Notable fixes
+=============
+
+-  SSH (``ssh``)
+
+   -  Generic
+
+      -  handle servers that enforce maximum SSH KEXINIT algorithm list lengths (#170)
+
 ------------------
 1.1.0 - 2026-02-13
 ------------------
