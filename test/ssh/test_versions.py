@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
 from cryptolyzer.common.transfer import L4TransferSocketParams

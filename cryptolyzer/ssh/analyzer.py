@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion

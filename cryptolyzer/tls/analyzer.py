@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
