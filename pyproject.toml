@@ -79,7 +79,8 @@ keywords = [
     'http security headers',
 ]
 readme = {file = 'README.md', content-type = 'text/markdown'}
-license = {text = 'MPL-2.0'}
+license = 'MPL-2.0'
+license-files = ['LICENSE.txt']
 
 dependencies = [
     'oscrypto @ git+https://github.com/wbond/oscrypto.git@d5f3437',
