@@ -274,7 +274,13 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertFalse(trusted_root_chain.contains_anchor)
         self.assertEqual(
             trusted_root_chain.trust_roots,
-            {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: True}
+            {
+                Entity.APPLE: True,
+                Entity.GOOGLE: True,
+                Entity.MICROSOFT: True,
+                Entity.MOZILLA: True,
+                Entity.ORACLE: True,
+            }
         )
         self.assertTrue(trusted_root_chain.ordered)
 
@@ -287,7 +293,13 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertTrue(self_signed_chain.ordered)
         self.assertEqual(
             self_signed_chain.trust_roots,
-            {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
+            {
+                Entity.APPLE: False,
+                Entity.GOOGLE: False,
+                Entity.MICROSOFT: False,
+                Entity.MOZILLA: False,
+                Entity.ORACLE: False,
+            }
         )
 
         result = self.get_result('untrusted-root.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
@@ -299,7 +311,13 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertTrue(untrusted_root_chain.ordered)
         self.assertEqual(
             untrusted_root_chain.trust_roots,
-            {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
+            {
+                Entity.APPLE: False,
+                Entity.GOOGLE: False,
+                Entity.MICROSOFT: False,
+                Entity.MOZILLA: False,
+                Entity.ORACLE: False,
+            }
         )
 
         self.assertNotEqual(self_signed_chain.items[0], untrusted_root_chain.items[1])
@@ -315,7 +333,13 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(incomplete_chain.ordered, None)
         self.assertEqual(
             incomplete_chain.trust_roots,
-            {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
+            {
+                Entity.APPLE: False,
+                Entity.GOOGLE: False,
+                Entity.MICROSOFT: False,
+                Entity.MOZILLA: False,
+                Entity.ORACLE: False,
+            }
         )
         self.assertEqual(result.pubkeys[0].certificate_status, None)
 
@@ -377,7 +401,13 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
             with self.subTest():
                 self.assertEqual(
                     pubkey.certificate_chain.trust_roots,
-                    {Entity.APPLE: False, Entity.GOOGLE: False, Entity.MICROSOFT: False, Entity.MOZILLA: False}
+                    {
+                        Entity.APPLE: False,
+                        Entity.GOOGLE: False,
+                        Entity.MICROSOFT: False,
+                        Entity.MOZILLA: False,
+                        Entity.ORACLE: False,
+                    }
                 )
 
     def test_real(self):
@@ -393,7 +423,13 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
             with self.subTest(pubkey=pubkey):
                 self.assertEqual(
                     pubkey.certificate_chain.trust_roots,
-                    {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: True}
+                    {
+                        Entity.APPLE: True,
+                        Entity.GOOGLE: True,
+                        Entity.MICROSOFT: True,
+                        Entity.MOZILLA: True,
+                        Entity.ORACLE: True,
+                    }
                 )
         self.assertTrue(all(pubkey.certificate_chain.contains_anchor for pubkey in result.pubkeys))
         self.assertEqual(
@@ -428,7 +464,13 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
             with self.subTest():
                 self.assertEqual(
                     pubkey.certificate_chain.trust_roots,
-                    {Entity.APPLE: True, Entity.GOOGLE: True, Entity.MICROSOFT: True, Entity.MOZILLA: True}
+                    {
+                        Entity.APPLE: True,
+                        Entity.GOOGLE: True,
+                        Entity.MICROSOFT: True,
+                        Entity.MOZILLA: True,
+                        Entity.ORACLE: True,
+                    }
                 )
 
     def test_json(self):
