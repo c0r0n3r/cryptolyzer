@@ -3,7 +3,7 @@ Changelog
 =========
 
 ------------------
-1.1.1 - Unreleased
+1.1.1 - 2026-05-03
 ------------------
 
 Features
@@ -12,6 +12,13 @@ Features
 -  Generic
 
    -  add support for parallel target analysis (#164)
+
+-  TLS (``tls``)
+
+   -  Vulnerabilities (``vulns``)
+
+      -  add checker for FREAK attack (#169)
+      -  add checker for Logjam attack (#167)
 
 Notable fixes
 =============
