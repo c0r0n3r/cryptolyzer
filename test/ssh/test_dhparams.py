@@ -26,7 +26,7 @@ class TestSshDHParams(TestSshCases.TestSshClientBase):
         self.assertEqual(result.group_exchange, None)
 
     def test_real_gex(self):
-        result = self.get_result('git.launchpad.net', 22)
+        result = self.get_result('git.launchpad.net', 22, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.key_exchange.kex_algorithms, [SshKexAlgorithm.DIFFIE_HELLMAN_GROUP14_SHA1, ])
         self.assertEqual(result.group_exchange.gex_algorithms, [
             SshKexAlgorithm.DIFFIE_HELLMAN_GROUP_EXCHANGE_SHA256,
