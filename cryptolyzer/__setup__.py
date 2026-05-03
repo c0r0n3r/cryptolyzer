@@ -13,4 +13,4 @@ __description__ = metadata['Summary']
 __author__ = email.utils.parseaddr(metadata['Author-email'])[0]
 __author_email__ = email.utils.parseaddr(metadata['Author-email'])[1]
 __url__ = 'https://gitlab.com/coroner/' + __technical_name__
-__license__ = metadata['License']
+__license__ = metadata['License-Expression']
