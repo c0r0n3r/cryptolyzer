@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'CryptoLyzer'
-version = '1.1.1'
+version = '1.2.0'
 description = 'Multi-protocol cryptographic configuration analyzer for TLS, SSH, DNS, and HTTP — alternative to testssl.sh and sslyze with Python API, 400+ cipher suites, vulnerability detection (FREAK, Logjam, ROBOT), and JA3/HASSH fingerprinting'
 authors = [
     {name = 'Szilárd Pfeiffer', email = 'coroner@pfeifferszilard.hu'}
@@ -88,7 +88,7 @@ dependencies = [
     'bs4',
     'certvalidator',
     'colorama',
-    'cryptoparser==1.1.1',
+    'cryptoparser==1.2.0',
     'pyfakefs',
     'python-dateutil',
     'requests',
