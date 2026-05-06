@@ -44,6 +44,17 @@ class TestAnalyzerDHParamsUnit(unittest.TestCase):
                 analyzer._analyze_ikev2(l7_client)  # pylint: disable=protected-access
         self.assertEqual(ctx.exception.notify, Ikev2NotifyType.INVALID_SYNTAX)
 
+    def test_ikev1_unexpected_notify_in_key_reuse_check(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        l7_client.do_ikev1_handshake.side_effect = IsakmpNotify(Ikev1NotifyType.PAYLOAD_MALFORMED)
+        with self.assertRaises(IsakmpNotify) as ctx:
+            analyzer._check_ikev1_key_reuse(  # pylint: disable=protected-access
+                l7_client, unittest.mock.MagicMock()
+            )
+        self.assertEqual(ctx.exception.notify, Ikev1NotifyType.PAYLOAD_MALFORMED)
+
 
 class TestAnalyzerDHParams(TestAnalyzerDHBase):
     @classmethod
