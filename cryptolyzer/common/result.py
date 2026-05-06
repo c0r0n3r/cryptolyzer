@@ -11,6 +11,9 @@ from cryptoparser.httpx.version import HttpVersion
 from cryptoparser.ike.version import IsakmpProtocolVersion
 from cryptoparser.ssh.version import SshProtocolVersion
 from cryptoparser.tls.version import TlsProtocolVersion
+from cryptoparser.ike.version import IsakmpVersion
+
+from cryptolyzer.common.transfer import L7TransferBase
 
 
 @attr.s
@@ -109,8 +112,19 @@ class AnalyzerTargetDnsRecord(AnalyzerTargetBase):
 
 
 @attr.s
+class AnalyzerTargetIKE(AnalyzerTarget):
+    proto_version = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(IsakmpVersion)),
+        metadata={'human_readable_name': 'Protocol Version'}
+    )
+
+
+@attr.s
 class AnalyzerResultBase(Serializable):
-    target = attr.ib()
+    target: typing.Union[AnalyzerTargetBase, L7TransferBase] = attr.ib(
+        validator=attr.validators.instance_of((AnalyzerTargetBase, L7TransferBase))
+    )
 
     def _as_markdown_without_target(self, value, level):
         multiline, attr_result = self._markdown_result(value, level)

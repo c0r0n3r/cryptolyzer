@@ -196,6 +196,26 @@ class TestIkev1SecurityAssociationAlgorithms(unittest.TestCase):
         self.assertIsNotNone(sa_payload)
         self.assertGreater(len(sa_payload.proposals), 0)
 
+    def test_aggressive_mode(self):
+        algorithms = [
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_2048_BIT,
+                hash_algorithm=Ikev1HashAlgorithm.SHA,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=128,
+            ),
+        ]
+        message = Ikev1SecurityAssociationAlgorithms(
+            exchange_type=Ikev1ExchangeType.AGGRESSIVE,
+            algorithms=algorithms,
+        )
+        key_exchange_payload = message.get_payload_by_type(Ikev1PayloadType.KEY_EXCHANGE)
+        self.assertIsNotNone(key_exchange_payload)
+        sa_payload = message.get_payload_by_type(Ikev1PayloadType.SECURITY_ASSOCIATION)
+        self.assertIsNotNone(sa_payload)
+        self.assertGreater(len(sa_payload.proposals), 0)
+
 
 class TestIkev1SecurityAssociationBaseDhGroups(unittest.TestCase):
     def test_ffdh_group_only(self):
@@ -546,7 +566,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
         # Cookie handling is a client-side behavior; test it without starting a real server.
         init_message = Ikev2SecurityAssociationSpecialization(
             encryption_algorithms=(tuple(Ikev2EncryptionAlgorithm)[0],),
-            diffie_hellman_groups=(),
+            diffie_hellman_groups=(tuple(Ikev2DiffieHellmanGroup)[0],),
             pseudorandom_functions=(tuple(Ikev2PseudorandomFunction)[0],),
             integrity_algorithms=(tuple(Ikev2IntegrityAlgorithm)[0],),
         )
@@ -693,7 +713,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
     def test_error_unparsable_message(self):
         init_message = Ikev2SecurityAssociationSpecialization(
             encryption_algorithms=(tuple(Ikev2EncryptionAlgorithm)[0],),
-            diffie_hellman_groups=(),
+            diffie_hellman_groups=(tuple(Ikev2DiffieHellmanGroup)[0],),
             pseudorandom_functions=(tuple(Ikev2PseudorandomFunction)[0],),
             integrity_algorithms=(tuple(Ikev2IntegrityAlgorithm)[0],),
         )

@@ -2,6 +2,19 @@
 Changelog
 =========
 
+-----
+1.2.0
+-----
+
+Features
+========
+
+-  IKE (``ike``)
+
+   -  Diffie-Hellman (``dhparams``)
+
+      -  add checker for IKEv1/IKEv2 support (#161)
+ 
 ------------------
 1.1.1 - 2026-05-03
 ------------------

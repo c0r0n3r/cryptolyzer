@@ -174,16 +174,19 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         )
         payloads.append(payload_security_association)
 
-        if ecdh_groups:
-            dh_group = ecdh_groups[0]
+        if list(diffie_hellman_groups) == list(Ikev2DiffieHellmanGroup):
+            dh_group = ecdh_groups[0] if ecdh_groups else ffdh_groups[0]
+        else:
+            dh_group = diffie_hellman_groups[0]
+
+        if isinstance(dh_group.value.key_parameter, NamedGroup):
             payload_key_exchange = Ikev2PayloadKeyExchange(
                 flags=set(),
                 dh_group=dh_group,
                 key_exchange_data=get_ecdh_ephemeral_key_forged(dh_group.value.key_parameter)[1:],
             )
             payloads.append(payload_key_exchange)
-        elif ffdh_groups:
-            dh_group = ffdh_groups[0]
+        elif isinstance(dh_group.value.key_parameter, DHParamWellKnown):
             payload_key_exchange = Ikev2PayloadKeyExchange(
                 flags=set(),
                 dh_group=dh_group,
@@ -354,30 +357,34 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
         return ffdh_group, ecdh_group
 
     @classmethod
+    def get_key_exchange_payloads(cls, proposals: typing.List[Ikev1PayloadProposal]):
+        payloads = []
+        ffdh_group, ecdh_group = cls._get_dh_groups(proposals)
+
+        if ecdh_group:
+            payloads.append(Ikev1PayloadKeyExchange(
+                key_exchange_data=get_ecdh_ephemeral_key_forged(ecdh_group.value.key_parameter)[1:],
+            ))
+        elif ffdh_group:
+            payloads.append(Ikev1PayloadKeyExchange(
+                key_exchange_data=int_to_bytes(
+                    get_dh_ephemeral_key_forged(ffdh_group.value.key_parameter.value.parameter_numbers.p),
+                    ffdh_group.value.key_parameter.value.key_size // 8
+                )
+            ))
+
+        payloads.append(Ikev1PayloadNonce(
+            nonce_data=random.randbytes(32)
+        ))
+
+        return payloads
+
+    @classmethod
     def _get_payloads(
         cls,
-        exchange_type: Ikev1ExchangeType,
         proposals: typing.List[Ikev1PayloadProposal],
     ):
         payloads = []
-        if exchange_type == Ikev1ExchangeType.AGGRESSIVE:
-            ffdh_group, ecdh_group = cls._get_dh_groups(proposals)
-
-            if ecdh_group:
-                payloads.append(Ikev1PayloadKeyExchange(
-                    key_exchange_data=get_ecdh_ephemeral_key_forged(ecdh_group.value.key_parameter)[1:],
-                ))
-            elif ffdh_group:
-                payloads.append(Ikev1PayloadKeyExchange(
-                    key_exchange_data=int_to_bytes(
-                        get_dh_ephemeral_key_forged(ffdh_group.value.key_parameter.value.parameter_numbers.p),
-                        ffdh_group.value.key_parameter.value.key_size // 8
-                    )
-                ))
-
-            payloads.append(Ikev1PayloadNonce(
-                nonce_data=random.randbytes(32)
-            ))
 
         payload_security_association = Ikev1PayloadSecurityAssociation(
             doi=Ikev1Doi.IPSEC,
@@ -407,10 +414,9 @@ class Ikev1SecurityAssociationSpecialization(Ikev1SecurityAssociationBase):
             key_length=key_length,
         ))
 
-        payloads = self._get_payloads(
-            exchange_type=exchange_type,
-            proposals=proposals
-        )
+        payloads = self._get_payloads(proposals=proposals)
+        if exchange_type == Ikev1ExchangeType.AGGRESSIVE:
+            payloads = self.get_key_exchange_payloads(proposals) + payloads
 
         initiator_spi = random.randint(0, 2**64 - 1)
         super().__init__(
@@ -461,7 +467,9 @@ class Ikev1SecurityAssociationAlgorithms(Ikev1SecurityAssociationBase):
             for algorithm in algorithms
         ]))
 
-        payloads = self._get_payloads(exchange_type=exchange_type, proposals=proposals)
+        payloads = self._get_payloads(proposals=proposals)
+        if exchange_type == Ikev1ExchangeType.AGGRESSIVE:
+            payloads = self.get_key_exchange_payloads(proposals) + payloads
 
         initiator_spi = random.randint(0, 2**64 - 1)
         super().__init__(
@@ -500,7 +508,7 @@ class Ikev1SecurityAssociationMandatoryMostPopular(Ikev1SecurityAssociationSpeci
 @attr.s
 class IKEClient():
     _last_processed_message_type: typing.Optional[Ikev2ExchangeType] = attr.ib(init=False, default=None)
-    server_messages: typing.Dict[Ikev2ExchangeType, IsakmpMessage] = attr.ib(init=False, default={})
+    server_messages: typing.Dict[Ikev2ExchangeType, typing.List[IsakmpMessage]] = attr.ib(init=False, default={})
 
     @classmethod
     def raise_response_error(cls, transfer):
@@ -526,15 +534,15 @@ class IKEv2ClientHandshake(IKEClient):
 
     @classmethod
     def _process_non_handshake_message(cls, message):
-        payload = message.payloads[0]
-        if payload.get_payload_type() == Ikev2PayloadType.NOTIFY:
+        try:
+            payload = message.get_payload_by_type(Ikev2PayloadType.NOTIFY)
             notify_type = payload.type
             if notify_type == Ikev2NotifyType.COOKIE:
                 raise IsakmpNotify(notify_type, payload)
             if notify_type.value.level == Ikev2NotifyLevel.ERROR:
                 raise IsakmpNotify(notify_type, payload)
-        else:
-            raise IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX)
+        except KeyError as e:
+            raise IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX) from e
 
     @classmethod
     def _process_invalid_message(cls, transfer):
@@ -633,23 +641,34 @@ class IKEv1ClientHandshake(IKEClient):
         Ikev1ExchangeType.AGGRESSIVE,
         Ikev1ExchangeType.INFORMATIONAL
     ]
+    _ACCEPTABLE_PAYLOAD_TYPES = [
+        Ikev1PayloadType.SECURITY_ASSOCIATION,
+        Ikev1PayloadType.KEY_EXCHANGE
+    ]
 
     def _process_handshake_message(self, message, last_exchange_type):
-        self.server_messages[message.exchange_type] = message
+        if message.exchange_type not in self.server_messages:
+            self.server_messages[message.exchange_type] = []
+
+        self.server_messages[message.exchange_type].append(message)
+
+        if message.exchange_type not in self._ACCEPTABLE_EXCHANGE_TYPES:
+            raise StopIteration()  # pragma: no cover
+
         if message.exchange_type == last_exchange_type:
             raise StopIteration()
 
     @classmethod
     def _process_non_handshake_message(cls, message):
-        payload = message.payloads[0]
-        if payload.get_payload_type() == Ikev1PayloadType.NOTIFICATION:
+        try:
+            payload = message.get_payload_by_type(Ikev1PayloadType.NOTIFICATION)
             notify_type = payload.notify_type
             if notify_type == Ikev1NotifyType.NO_PROPOSAL_CHOSEN:
                 raise IsakmpNotify(notify_type)
             if notify_type.value.level == Ikev1NotifyLevel.ERROR:
                 raise IsakmpNotify(notify_type)
-        else:
-            raise IsakmpNotify(Ikev1NotifyType.SITUATION_NOT_SUPPORTED)
+        except KeyError as e:
+            raise IsakmpNotify(Ikev1NotifyType.SITUATION_NOT_SUPPORTED) from e
 
     @classmethod
     def _process_invalid_message(cls, transfer):
@@ -674,21 +693,41 @@ class IKEv1ClientHandshake(IKEClient):
         receivable_byte_num = 0
         while True:
             try:
-                message, parsed_length = IsakmpMessage.parse_immutable(transfer.buffer)
+                responder_message, parsed_length = IsakmpMessage.parse_immutable(transfer.buffer)
                 transfer.flush_buffer(parsed_length)
 
-                if message.exchange_type not in self._ACCEPTABLE_EXCHANGE_TYPES:
+                if responder_message.exchange_type not in self._ACCEPTABLE_EXCHANGE_TYPES:
                     raise InvalidType()
 
-                if message.payloads[0].get_payload_type() == Ikev1PayloadType.SECURITY_ASSOCIATION:
-                    self._process_handshake_message(message, last_exchange_type)
+                if responder_message.payloads[0].get_payload_type() in self._ACCEPTABLE_PAYLOAD_TYPES:
+                    self._process_handshake_message(responder_message, last_exchange_type)
                 else:
-                    self._process_non_handshake_message(message)
+                    self._process_non_handshake_message(responder_message)
             except NotEnoughData as e:
                 receivable_byte_num = e.bytes_needed
             except (InvalidType, InvalidValue):
                 self._process_invalid_message(transfer)
             except StopIteration:
+                if (last_exchange_type == Ikev1ExchangeType.IDENTITY_PROTECTION and
+                        len(self.server_messages[Ikev1ExchangeType.IDENTITY_PROTECTION]) < 2):
+                    payload_security_association = responder_message.get_payload_by_type(
+                        Ikev1PayloadType.SECURITY_ASSOCIATION
+                    )
+                    key_exchange_payloads = Ikev1SecurityAssociationBase.get_key_exchange_payloads(
+                        payload_security_association.proposals
+                    )
+                    key_exchange_message = IsakmpMessage(
+                        version=init_message.version,
+                        initiator_spi=init_message.initiator_spi,
+                        responder_spi=responder_message.responder_spi,
+                        exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+                        flags=[],
+                        message_id=0,
+                        payloads=key_exchange_payloads
+                    )
+                    self._send_isakmp_message(transfer, key_exchange_message)
+                    continue
+
                 return
 
             try:

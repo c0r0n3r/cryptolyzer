@@ -13,15 +13,22 @@ import random
 from test.common.classes import TestThreadedServer
 
 from cryptodatahub.ike.algorithm import (
+    Ikev1AuthenticationMethod,
+    Ikev1DiffieHellmanGroup,
     Ikev1Doi,
+    Ikev1EncryptionAlgorithm,
+    Ikev1HashAlgorithm,
     Ikev1NotifyType,
     Ikev1ProtocolId,
     Ikev1PayloadType,
     Ikev1ExchangeType,
     Ikev2DiffieHellmanGroup,
+    Ikev2EncryptionAlgorithm,
     Ikev2ExchangeType,
+    Ikev2IntegrityAlgorithm,
     Ikev2NotifyType,
     Ikev2ProtocolId,
+    Ikev2PseudorandomFunction,
 )
 
 from cryptoparser.common.parse import ComposerBinary
@@ -29,11 +36,14 @@ from cryptoparser.ike.isakmp import IsakmpFlags, IsakmpMessage
 from cryptoparser.ike.version import IsakmpVersion
 from cryptoparser.ike.ikev1 import Ikev1PayloadNonce, Ikev1PayloadNotification
 from cryptoparser.ike.ikev2 import (
+    Ikev2NotifyPayloadInvalidKe,
     Ikev2PayloadNonce,
     Ikev2PayloadNotifyUnparsed,
 )
 
 from cryptolyzer.common.transfer import L4TransferBase, L4TransferSocketParams
+from cryptolyzer.ike.client import Ikev1SecurityAssociationProposalAlgorithms
+from cryptolyzer.ike.common import Ikev1CipherSuite, Ikev2CipherSuite
 from cryptolyzer.ike.server import (
     IkeServerConfiguration,
     IkeServerHandshakeBase,
@@ -42,6 +52,100 @@ from cryptolyzer.ike.server import (
     L7ServerIke,
     ServerResponseMode,
 )
+
+
+def get_ffdh_only_server_configuration():
+    """Server config with exactly 2 FFDH groups to shorten test run time."""
+    ikev1_suites = [
+        Ikev1CipherSuite.from_ikev1_security_association_proposal_algorithms(
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_768_BIT,
+                hash_algorithm=Ikev1HashAlgorithm.SHA,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=128,
+            )
+        ),
+        Ikev1CipherSuite.from_ikev1_security_association_proposal_algorithms(
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_1024_BIT,
+                hash_algorithm=Ikev1HashAlgorithm.SHA,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=128,
+            )
+        ),
+    ]
+    ikev2_suites = [
+        Ikev2CipherSuite.from_transform_ids(
+            encryption_transform_id=Ikev2EncryptionAlgorithm.ENCR_AES_CBC,
+            integrity_transform_id=Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
+            pseudorandom_transform_id=Ikev2PseudorandomFunction.PRF_HMAC_SHA1,
+            diffie_hellman_transform_id=Ikev2DiffieHellmanGroup.MODP_GROUP_768_BIT,
+            key_length=128,
+        ),
+        Ikev2CipherSuite.from_transform_ids(
+            encryption_transform_id=Ikev2EncryptionAlgorithm.ENCR_AES_CBC,
+            integrity_transform_id=Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
+            pseudorandom_transform_id=Ikev2PseudorandomFunction.PRF_HMAC_SHA1,
+            diffie_hellman_transform_id=Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT,
+            key_length=128,
+        ),
+    ]
+    return IkeServerConfiguration(
+        ikev1_cipher_suites=ikev1_suites,
+        ikev2_cipher_suites=ikev2_suites,
+    )
+
+
+def get_ffdh_single_server_configuration():
+    """Server config with only MODP_2048 for IKEv2. Triggers RFC-compliant INVALID_KE_PAYLOAD
+    when client sends KE for a different group (e.g. MODP_768) than server's selected group."""
+    ikev1_suites = [
+        Ikev1CipherSuite.from_ikev1_security_association_proposal_algorithms(
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_2048_BIT,
+                hash_algorithm=Ikev1HashAlgorithm.SHA,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=128,
+            )
+        ),
+    ]
+    ikev2_suites = [
+        Ikev2CipherSuite.from_transform_ids(
+            encryption_transform_id=Ikev2EncryptionAlgorithm.ENCR_AES_CBC,
+            integrity_transform_id=Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
+            pseudorandom_transform_id=Ikev2PseudorandomFunction.PRF_HMAC_SHA1,
+            diffie_hellman_transform_id=Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT,
+            key_length=128,
+        ),
+    ]
+    return IkeServerConfiguration(
+        ikev1_cipher_suites=ikev1_suites,
+        ikev2_cipher_suites=ikev2_suites,
+    )
+
+
+def get_ecdh_only_server_configuration():
+    """Server config that only accepts ECDH groups. Rejects FFDH proposals with NO_PROPOSAL_CHOSEN."""
+    ikev1_cipher_suite = Ikev1CipherSuite(
+        encryption_algorithm=BlockCipher.AES_128,
+        block_cipher_mode=BlockCipherMode.CBC,
+        diffie_hellman_group=Ikev1DiffieHellmanGroup.ECP_256_BIT.value.key_parameter,
+        hash_algorithm=Hash.SHA1,
+    )
+    ikev2_cipher_suite = Ikev2CipherSuite.from_transform_ids(
+        encryption_transform_id=Ikev2EncryptionAlgorithm.ENCR_AES_CBC,
+        integrity_transform_id=Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
+        pseudorandom_transform_id=Ikev2PseudorandomFunction.PRF_HMAC_SHA1,
+        diffie_hellman_transform_id=Ikev2DiffieHellmanGroup.ECP_GROUP_256_BIT,
+        key_length=128,
+    )
+    return IkeServerConfiguration(
+        ikev1_cipher_suites=[ikev1_cipher_suite],
+        ikev2_cipher_suites=[ikev2_cipher_suite],
+    )
 
 
 class L7ServerIkeTest(TestThreadedServer):
@@ -455,13 +559,12 @@ class _Ikev2ServerHandshakeAlwaysInvalidKePayload(Ikev2ServerHandshake):
             raise StopIteration()
 
         responder_spi = self._get_responder_spi()
-        required_group = Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT.value.code.to_bytes(2, byteorder='big')
-        notify = Ikev2PayloadNotifyUnparsed(
+        notify = Ikev2NotifyPayloadInvalidKe(
             flags=set(),
             protocol_id=Ikev2ProtocolId.IKE,
             type=Ikev2NotifyType.INVALID_KE_PAYLOAD,
             spi=b'',
-            data=required_group,
+            dh_group=Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT,
         )
         response = IsakmpMessage(
             version=message.version,

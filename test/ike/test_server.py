@@ -32,6 +32,7 @@ from cryptoparser.ike.ikev1 import (
     Ikev1AttributeEncryptionAlgorithm,
     Ikev1AttributeHashAlgorithm,
     Ikev1AttributeKeyLength,
+    Ikev1PayloadKeyExchange,
     Ikev1PayloadProposal,
     Ikev1PayloadSecurityAssociation,
     Ikev1PayloadTransform,
@@ -39,6 +40,8 @@ from cryptoparser.ike.ikev1 import (
 )
 from cryptoparser.ike.ikev2 import (
     Ikev2NotifyPayloadCookie,
+    Ikev2PayloadKeyExchange,
+    Ikev2PayloadNonce,
     Ikev2PayloadNotifyUnparsed,
     Ikev2PayloadSecurityAssociation,
     Ikev2Proposal as Ikev2ProposalPayload,
@@ -173,7 +176,6 @@ class TestIkeServerHandshakeIkev1(unittest.TestCase, _TestIkeServerHandshakeHelp
         self.assertEqual(parsed.payloads[0].notify_type, Ikev1NotifyType.NO_PROPOSAL_CHOSEN)
 
     def test_response_mode_partial_sends_truncated(self):
-        """Cover _handle_response_mode PARTIAL branch: sends header + 1 byte, raises StopIteration."""
         l7_server = self._create_server(IkeServerConfiguration(response_mode=ServerResponseMode.PARTIAL))
         l4_transfer = L4TransferCapture('localhost', 0, self._socket_params())
         l7_server.l4_transfer = l4_transfer
@@ -259,7 +261,6 @@ class TestIkeServerHandshakeIkev2(unittest.TestCase, _TestIkeServerHandshakeHelp
         self.assertEqual(parsed.payloads[0].type, Ikev2NotifyType.NO_PROPOSAL_CHOSEN)
 
     def test_response_mode_partial_sends_truncated(self):
-        """Cover _handle_response_mode PARTIAL branch: sends header + 1 byte, raises StopIteration."""
         l7_server = self._create_server(IkeServerConfiguration(response_mode=ServerResponseMode.PARTIAL))
         l4_transfer = L4TransferCapture('localhost', 0, self._socket_params())
         l7_server.l4_transfer = l4_transfer
@@ -347,6 +348,38 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             payloads=[sa_payload],
         )
 
+        # Phase 1: SA exchange — server responds with selected SA and waits for KE
+        handshake._process_handshake_message(message, None)  # pylint: disable=protected-access
+        parsed, _ = IsakmpMessage.parse_immutable(l4_transfer.last_sent)
+        self.assertIsInstance(parsed.payloads[0], Ikev1PayloadSecurityAssociation)
+
+        # Phase 2: KE+NONCE exchange — server responds with its own KE+NONCE
+        ke_message = IsakmpMessage(
+            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            initiator_spi=1, responder_spi=0,
+            exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+            flags=[IsakmpFlags.INITIATOR], message_id=0,
+            payloads=[Ikev1PayloadKeyExchange(key_exchange_data=b'\x00' * 128)],
+        )
+        with self.assertRaises(StopIteration):
+            handshake._process_handshake_message(ke_message, None)  # pylint: disable=protected-access
+        parsed, _ = IsakmpMessage.parse_immutable(l4_transfer.last_sent)
+        self.assertIsInstance(parsed.payloads[0], Ikev1PayloadKeyExchange)
+
+    def test_aggressive_mode_matching_proposal(self):
+        handshake, l4_transfer = self._make_handshake([self._MATCHING_CS])
+        sa_payload = _Ikev1ProposalFactory.make_sa(
+            Ikev1EncryptionAlgorithm.AES_CBC, 128,
+            Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.MODP_1024_BIT,
+        )
+        message = IsakmpMessage(
+            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            initiator_spi=1, responder_spi=0,
+            exchange_type=Ikev1ExchangeType.AGGRESSIVE,
+            flags=[IsakmpFlags.INITIATOR], message_id=0,
+            payloads=[sa_payload],
+        )
+
         with self.assertRaises(StopIteration):
             handshake._process_handshake_message(message, None)  # pylint: disable=protected-access
 
@@ -354,13 +387,13 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
         self.assertIsInstance(parsed.payloads[0], Ikev1PayloadSecurityAssociation)
 
     def test_non_matching_proposal_rejected(self):
-        non_matching_cs = Ikev1CipherSuite(
+        non_matching_cipher_suite = Ikev1CipherSuite(
             encryption_algorithm=BlockCipher.AES_256,
             block_cipher_mode=BlockCipherMode.CBC,
             diffie_hellman_group=DHParamWellKnown.RFC2539_1024_BIT_MODP_GROUP,
             hash_algorithm=Hash.SHA1,
         )
-        handshake, l4_transfer = self._make_handshake([non_matching_cs])
+        handshake, l4_transfer = self._make_handshake([non_matching_cipher_suite])
         sa_payload = _Ikev1ProposalFactory.make_sa(
             Ikev1EncryptionAlgorithm.AES_CBC, 128,
             Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.MODP_1024_BIT,
@@ -393,11 +426,23 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             payloads=[sa_payload],
         )
 
-        with self.assertRaises(StopIteration):
-            handshake._process_handshake_message(message, None)  # pylint: disable=protected-access
-
+        # Phase 1: SA exchange — server responds with selected SA and waits for KE
+        handshake._process_handshake_message(message, None)  # pylint: disable=protected-access
         parsed, _ = IsakmpMessage.parse_immutable(l4_transfer.last_sent)
         self.assertIsInstance(parsed.payloads[0], Ikev1PayloadSecurityAssociation)
+
+        # Phase 2: KE+NONCE exchange — server responds with its own KE+NONCE
+        ke_message = IsakmpMessage(
+            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            initiator_spi=1, responder_spi=0,
+            exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+            flags=[IsakmpFlags.INITIATOR], message_id=0,
+            payloads=[Ikev1PayloadKeyExchange(key_exchange_data=b'\x00' * 128)],
+        )
+        with self.assertRaises(StopIteration):
+            handshake._process_handshake_message(ke_message, None)  # pylint: disable=protected-access
+        parsed, _ = IsakmpMessage.parse_immutable(l4_transfer.last_sent)
+        self.assertIsInstance(parsed.payloads[0], Ikev1PayloadKeyExchange)
 
     def test_transform_missing_attribute_skipped(self):
         handshake, l4_transfer = self._make_handshake([self._MATCHING_CS])
@@ -486,16 +531,18 @@ class TestIkev2CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
 
         parsed, _ = IsakmpMessage.parse_immutable(l4_transfer.last_sent)
         self.assertIsInstance(parsed.payloads[0], Ikev2PayloadSecurityAssociation)
+        self.assertIsInstance(parsed.payloads[1], Ikev2PayloadKeyExchange)
+        self.assertIsInstance(parsed.payloads[2], Ikev2PayloadNonce)
 
     def test_non_matching_proposal_rejected(self):
-        non_matching_cs = Ikev2CipherSuite(
+        non_matching_cipher_suite = Ikev2CipherSuite(
             encryption_algorithm=BlockCipher.AES_256,
             block_cipher_mode=BlockCipherMode.CBC,
             integrity_algorithm=MAC.SHA1,
             pseudorandom_function=MAC.SHA1,
             diffie_hellman_group=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,
         )
-        handshake, l4_transfer = self._make_handshake([non_matching_cs])
+        handshake, l4_transfer = self._make_handshake([non_matching_cipher_suite])
         sa_payload = _Ikev2ProposalFactory.make_sa(
             Ikev2EncryptionAlgorithm.ENCR_AES_CBC, 128,
             Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
@@ -538,6 +585,8 @@ class TestIkev2CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
 
         parsed, _ = IsakmpMessage.parse_immutable(l4_transfer.last_sent)
         self.assertIsInstance(parsed.payloads[0], Ikev2PayloadSecurityAssociation)
+        self.assertIsInstance(parsed.payloads[1], Ikev2PayloadKeyExchange)
+        self.assertIsInstance(parsed.payloads[2], Ikev2PayloadNonce)
 
     def test_encryption_invalid_key_length_skipped(self):
         handshake, l4_transfer = self._make_handshake([self._MATCHING_CS])
