@@ -49,6 +49,7 @@ class AnalyzerAll(AnalyzerIKEBase):
         :type protocol_version: IsakmpVersion
         :rtype: AnalyzerResultAll
         """
+        super().analyze(analyzable, protocol_version)
         versions = None
 
         try:

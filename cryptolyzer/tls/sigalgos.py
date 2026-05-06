@@ -81,6 +81,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
         return supported_algorithms
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         supported_algorithms = []
         for client_hello_class in [
                     TlsHandshakeClientHelloAuthenticationRSA,

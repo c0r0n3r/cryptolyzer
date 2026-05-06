@@ -65,6 +65,15 @@ def parse_arg_socket_timeout(value):
     return value
 
 
+def parse_arg_throttle_delay(value):
+    value = float(value)
+
+    if value < 0:
+        raise argparse.ArgumentTypeError(f'{value} throttle delay must be non-negative')
+
+    return value
+
+
 def parse_arg_http_proxy(value):
     proxy_url = urllib3.util.parse_url(value)
 
@@ -113,6 +122,14 @@ def get_argument_parser():
         '(considered only if in the case of TCP connections)',
         dest="http_proxy",
         default=None,
+    )
+    parser.add_argument(
+        '--throttle-delay',
+        type=parse_arg_throttle_delay,
+        default=0.0,
+        metavar='seconds',
+        help='Delay between connection initiation attempts (default: %(default)s). '
+        'Use to avoid server rate-limiting when probing (e.g. IKE cookie challenge).',
     )
 
     parsers_analyzer = parser.add_subparsers(title='protocol', dest='protocol')
@@ -165,6 +182,7 @@ def main():
     l4_socket_params = L4TransferSocketParams(
         timeout=arguments.socket_timeout,
         http_proxy=arguments.http_proxy if arguments.http_proxy else None,
+        throttle_delay=arguments.throttle_delay,
     )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=arguments.parallel) as executor:

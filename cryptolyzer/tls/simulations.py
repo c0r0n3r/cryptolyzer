@@ -429,6 +429,7 @@ class AnalyzerSimulations(AnalyzerTlsBase):
         return merged_results
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         succeeded_clients, failed_clients = self._get_results(analyzable)
         succeeded_clients = self._get_merged_results(succeeded_clients)
         failed_clients = self._get_merged_results(failed_clients)

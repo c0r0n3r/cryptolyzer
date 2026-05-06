@@ -37,6 +37,7 @@ class AnalyzerVersions(AnalyzerSshBase):
         return 'Check which protocol versions supported by the server(s)'
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         supported_protocols = []
 
         server_messages = analyzable.do_handshake(last_message_type=SshProtocolMessage)

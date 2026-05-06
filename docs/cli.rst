@@ -44,6 +44,38 @@ case when we analyzed the protocol version supported by a service.
 
    cryptolyze tls simulate example.com
 
+Throttling
+~~~~~~~~~~
+
+Some analyses open many connections in rapid succession; to avoid triggering remote rate limits, cookie-challenges,
+or server-side half-open/unfinished connection limits (for example, SYN/handshake backlog or half-open connection
+quotas) you can add a delay between connection attempts using the top-level `--throttle-delay` option. The value is
+given in seconds (can be fractional).
+
+Default: `0.0` (no delay)
+
+Example:
+
+.. code:: shell
+
+   cryptolyze --throttle-delay 0.5 ike dhparams ike://example.com
+
+Use small delays (e.g. `0.1`–`1.0`) when probing services that may implement connection rate-limiting or active
+anti-abuse measures.
+
+When to use `--throttle-delay`:
+
+- **Avoid remote rate limits or cookie-challenges:** Use when the target enforces per-IP connection rate limits or
+   issues cookie challenges that ban fast bursts.
+- **Avoid server half-open/unfinished connection limits:** Use when probes may interrupt handshakes and leave the
+   server with half-open state or backlog.
+- **Prevent local resource exhaustion:** Use when many probes on the same host could exhaust ephemeral ports or file
+   descriptors.
+- **Reduce load during broad scans:** Use a delay when running many analyzers or scanning large address ranges to be
+   kinder to the target.
+- **Reduce fingerprinting and improve reliability:** Small delays (with optional jitter) make scanner timing less
+   predictable and reduce transient failures.
+
 Protocol Versions
 `````````````````
 

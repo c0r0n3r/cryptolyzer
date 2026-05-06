@@ -6,6 +6,7 @@ from cryptodatahub.ssh.algorithm import SshKexAlgorithm, SshEncryptionAlgorithm,
 from cryptoparser.common.base import Serializable, SerializableTextEncoder
 
 from cryptolyzer.common.exception import NetworkError
+from cryptolyzer.common.result import AnalyzerTargetSsh
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
 
@@ -99,8 +100,9 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
         self.assertFalse(algorithms_result.terrapin.value)
 
     def test_output(self):
+        target = AnalyzerTargetSsh('ssh', 'example.com', '127.0.0.1', 22)
         result = AnalyzerResultVulnerabilities(
-            target=None,
+            target=target,
             algorithms=AnalyzerResultVulnerabilityAlgorithms(
                 sweet32=True,
                 anonymous_dh=True,
@@ -124,7 +126,7 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
         Serializable.post_text_encoder = SerializableTextEncoder()
 
         result = AnalyzerResultVulnerabilities(
-            target=None,
+            target=target,
             algorithms=AnalyzerResultVulnerabilityAlgorithms(
                 sweet32=False,
                 anonymous_dh=False,

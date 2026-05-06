@@ -361,6 +361,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         return True, extension.record_size_limit
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         supported_protocol_names = self._analyze_alpn(analyzable, protocol_version)
         supported_next_protocol_names = self._analyze_npn(analyzable, protocol_version)
         supported_compression_methods = self._analyze_compression_methods(analyzable, protocol_version)

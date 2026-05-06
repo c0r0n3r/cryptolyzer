@@ -60,7 +60,7 @@ class AnalyzerDHParams(AnalyzerDHBase):
         :type analyzable: AnalyzerTargetIKE
         :type protocol_version: IsakmpVersion
         """
-
+        super().analyze(analyzable, protocol_version)
         dh_groups, key_reused = self._analyze(analyzable, protocol_version)
 
         return AnalyzerResultDHParams(

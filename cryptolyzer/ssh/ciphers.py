@@ -116,6 +116,7 @@ class AnalyzerCiphers(AnalyzerSshBase):
         LogSingleton().log(level=60, msg=f'Server offers {algorithm_name} {algorithm_name_list} ({protocol_version})')
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         server_messages = analyzable.do_handshake(last_message_type=SshMessageCode.KEXINIT)
         key_exchange_init_message = server_messages[SshKeyExchangeInit]
 

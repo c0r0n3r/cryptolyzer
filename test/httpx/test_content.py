@@ -186,10 +186,17 @@ class TestHttpContent(TestLoggerBase):
             b'</html>',
         ])
 
-        with mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=relative_links)):
+        mock_response = mock.Mock()
+        mock_response.headers = {'Content-Type': 'text/html; charset=utf-8'}
+        mock_response.data = relative_links
+
+        def mock_fetch(self, url):  # pylint: disable=unused-argument
+            object.__setattr__(self, '_response', mock_response)
+
+        with mock.patch.object(HttpFetcher, 'fetch', mock_fetch):
             analyzer_result = self.get_result('https://example.org')
             self.assertEqual(analyzer_result.unencrypted_sources, [])
-        with mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=relative_links)):
+        with mock.patch.object(HttpFetcher, 'fetch', mock_fetch):
             analyzer_result = self.get_result('http://example.org')
             self.assertEqual(len(analyzer_result.unencrypted_sources), 7)
 
@@ -207,7 +214,14 @@ class TestHttpContent(TestLoggerBase):
             b'  </body>',
             b'</html>',
         ])
-        with mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=absolute_links)):
+        mock_response_absolute = mock.Mock()
+        mock_response_absolute.headers = {'Content-Type': 'text/html; charset=utf-8'}
+        mock_response_absolute.data = absolute_links
+
+        def mock_fetch_absolute(self, url):  # pylint: disable=unused-argument
+            object.__setattr__(self, '_response', mock_response_absolute)
+
+        with mock.patch.object(HttpFetcher, 'fetch', mock_fetch_absolute):
             analyzer_result = self.get_result('http://example.org')
             self.assertEqual(len(analyzer_result.unencrypted_sources), 7)
 

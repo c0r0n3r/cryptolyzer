@@ -34,6 +34,7 @@ from cryptolyzer.__main__ import (
     main,
     parse_arg_parallel,
     parse_arg_socket_timeout,
+    parse_arg_throttle_delay,
     parse_arg_http_proxy,
 )
 from cryptolyzer.ja3.generate import AnalyzerGenerate
@@ -88,6 +89,13 @@ class TestMain(TestMainBase):
         )
 
         with self.assertRaises(argparse.ArgumentTypeError) as context_manager:
+            parse_arg_throttle_delay(-1)
+        self.assertEqual(
+            context_manager.exception.args,
+            ('-1.0 throttle delay must be non-negative',)
+        )
+
+        with self.assertRaises(argparse.ArgumentTypeError) as context_manager:
             parse_arg_http_proxy('https://proxy')
         self.assertEqual(
             context_manager.exception.args,
@@ -101,6 +109,7 @@ class TestMain(TestMainBase):
         self.assertEqual(parse_arg_parallel('1'), 1)
 
         self.assertEqual(parse_arg_socket_timeout(1), 1.0)
+        self.assertEqual(parse_arg_throttle_delay('0.5'), 0.5)
 
     def test_argument_parsing_parallel_error(self):
         with self.assertRaises(argparse.ArgumentTypeError) as context_manager:

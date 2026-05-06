@@ -7,6 +7,7 @@ import importlib
 import ipaddress
 import pathlib
 import pkgutil
+import time
 import urllib
 
 from cryptoparser.common.base import Serializable
@@ -128,27 +129,47 @@ class ProtocolHandlerBase(metaclass=abc.ABCMeta):
 
 
 class AnalyzerBase():
+    def __init__(self):
+        self._probe_attempt = 0
+
     @classmethod
     @abc.abstractmethod
     def get_name(cls):
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def analyze(self, analyzable):
-        raise NotImplementedError()
+    def analyze(self, analyzable):  # pylint: disable=unused-argument
+        self._reset_probe_throttle()
+
+    def _reset_probe_throttle(self):
+        """Reset probe attempt counter at the start of a new analysis."""
+        self._probe_attempt = 0
+
+    def _before_probe(self, analyzable):
+        """Call before each probe; sleeps (except before the first) when throttle_delay is set."""
+        self._probe_attempt += 1
+        if self._probe_attempt > 1:
+            params = getattr(analyzable, 'l4_socket_params', None)
+            delay = (getattr(params, 'throttle_delay', 0) or 0) if params else 0
+            if delay > 0:
+                time.sleep(delay)
 
 
 class AnalyzerResultBase(Serializable):
     pass
 
 
-class AnalyzerTlsBase():
+class AnalyzerTlsBase(AnalyzerBase):
     _ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS = [
         TlsAlertDescription.HANDSHAKE_FAILURE,  # no matching algorithms
         TlsAlertDescription.CLOSE_NOTIFY,  # no matching algorithms
         TlsAlertDescription.INSUFFICIENT_SECURITY,  # not enough secure matching algorithms
         TlsAlertDescription.ILLEGAL_PARAMETER  # unimplemented matching algorithms
     ]
+
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls):
+        raise NotImplementedError()
 
     @classmethod
     def get_clients(cls):
@@ -158,9 +179,8 @@ class AnalyzerTlsBase():
     def get_default_scheme(cls):
         return 'https'
 
-    @abc.abstractmethod
-    def analyze(self, analyzable, protocol_version):
-        raise NotImplementedError()
+    def analyze(self, analyzable, protocol_version):  # pylint: disable=arguments-differ,unused-argument
+        self._reset_probe_throttle()
 
 
 class ProtocolHandlerTlsBase(ProtocolHandlerBase):
@@ -229,7 +249,7 @@ class ProtocolHandlerIKEExactVersion(ProtocolHandlerIKEBase):
         raise NotImplementedError()
 
 
-class AnalyzerSshBase():
+class AnalyzerSshBase(AnalyzerBase):
     _KEXINIT_CIPHER_ATTRIBUTES = (
         'kex_algorithms',
         'host_key_algorithms',
@@ -240,6 +260,11 @@ class AnalyzerSshBase():
         'compression_algorithms_client_to_server',
         'compression_algorithms_server_to_client',
     )
+
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls):
+        raise NotImplementedError()
 
     @classmethod
     def get_clients(cls):
@@ -283,10 +308,15 @@ class AnalyzerSshBase():
 
     @abc.abstractmethod
     def analyze(self, analyzable):
+        self._reset_probe_throttle()
+
+
+class AnalyzerHttpBase(AnalyzerBase):
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls):
         raise NotImplementedError()
 
-
-class AnalyzerHttpBase():
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientHttpBase))
@@ -295,12 +325,16 @@ class AnalyzerHttpBase():
     def get_default_scheme(cls):
         return 'https'
 
+    def analyze(self, analyzable, protocol_version):  # pylint: disable=arguments-differ,unused-argument
+        self._reset_probe_throttle()
+
+
+class AnalyzerDnsRecordBase(AnalyzerBase):
+    @classmethod
     @abc.abstractmethod
-    def analyze(self, analyzable, protocol_version):
+    def get_name(cls):
         raise NotImplementedError()
 
-
-class AnalyzerDnsRecordBase():
     @classmethod
     def get_clients(cls):
         return list(get_leaf_classes(L7ClientDnsBase))
@@ -309,13 +343,17 @@ class AnalyzerDnsRecordBase():
     def get_default_scheme(cls):
         return 'dns'
 
-    @abc.abstractmethod
     def analyze(self, analyzable):
-        raise NotImplementedError()
+        self._reset_probe_throttle()
 
 
-class AnalyzerIKEBase():
+class AnalyzerIKEBase(AnalyzerBase):
     _MAX_PROPOSALS_PER_INIT_MESSAGE = 128
+
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls):
+        raise NotImplementedError()
 
     @classmethod
     def get_clients(cls):
@@ -327,6 +365,5 @@ class AnalyzerIKEBase():
     def get_default_scheme(cls):
         return 'ipsec'
 
-    @abc.abstractmethod
-    def analyze(self, analyzable, protocol_version):
-        raise NotImplementedError()
+    def analyze(self, analyzable, protocol_version):  # pylint: disable=arguments-differ,unused-argument
+        self._reset_probe_throttle()

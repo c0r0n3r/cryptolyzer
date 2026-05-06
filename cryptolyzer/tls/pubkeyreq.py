@@ -115,6 +115,7 @@ class AnalyzerPublicKeyRequest(AnalyzerTlsBase):
         return None, None, None
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         certificate_types, supported_signature_algorithms, distinguished_names = \
             self._analyze_requierd_certificates(analyzable, protocol_version)
 

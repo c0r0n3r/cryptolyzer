@@ -114,6 +114,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
         raise NotImplementedError()
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         supported_curves = OrderedDict()
         checkable_curves = None
         extension_supported = True

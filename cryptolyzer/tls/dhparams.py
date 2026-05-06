@@ -234,6 +234,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
         return named_groups
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, analyzable.address)
         is_tls_1_3 = protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2)
 

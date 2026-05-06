@@ -267,6 +267,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
         return True
 
     def analyze(self, analyzable, protocol_version):
+        super().analyze(analyzable, protocol_version)
         supported_protocols = []
 
         if self._is_ssl2_supported(analyzable):

@@ -178,6 +178,7 @@ class AnalyzerVulnerabilities(AnalyzerSshBase):
         return 'Check which vulnerabilities affect the server(s)'
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         LogSingleton().disabled = True
         analyzer_result_versions = AnalyzerVersions().analyze(analyzable)
         analyzer_result_ciphers = AnalyzerCiphers().analyze(analyzable)

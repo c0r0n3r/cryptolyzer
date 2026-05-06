@@ -17,7 +17,7 @@ from cryptolyzer.ssh.server import L7ServerSshBase
 
 @attr.s
 class AnalyzerResultGenerate(AnalyzerResultBase):
-    pass
+    target: str = attr.ib(validator=attr.validators.instance_of(str))
 
 
 class AnalyzerGenerate(AnalyzerBase):
@@ -38,6 +38,7 @@ class AnalyzerGenerate(AnalyzerBase):
         return 'ssh'
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         analyzable.max_handshake_count = 1
         analyzable.init_connection()
         client_messages = analyzable.do_ssh_handshake()

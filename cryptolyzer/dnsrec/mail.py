@@ -82,6 +82,7 @@ class AnalyzerDnsMail(AnalyzerDnsRecordBase):
         return 'Check mail-related DNS record(s)'
 
     def analyze(self, analyzable):
+        super().analyze(analyzable)
         mx_records = analyzable.get_mx_records()
 
         spf = analyzable.get_txt_record_spf_values()
