@@ -63,7 +63,7 @@ from cryptolyzer.ike.server import (
     ServerResponseMode,
 )
 
-from .classes import L4TransferCapture, L4TransferDummy
+from .classes import L4TransferCapture, L4TransferDummy, get_ecdh_only_server_configuration
 
 
 class _TestIkeServerHandshakeHelpers:
@@ -491,6 +491,45 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
 
         parsed, _ = IsakmpMessage.parse_immutable(l4_transfer.last_sent)
         self.assertEqual(parsed.payloads[0].notify_type, Ikev1NotifyType.NO_PROPOSAL_CHOSEN)
+
+    def test_ecdh_curves_config_accepts_ecp256_rejects_sect163(self):
+        """Server with curves config accepts ECP_256/ECP_384, rejects other ECDH groups."""
+        config = get_ecdh_only_server_configuration()
+        handshake, l4_transfer = self._make_handshake(config.ikev1_cipher_suites)
+
+        # ECP_256 with AES_CBC/SHA should be accepted
+        sa_ecp256 = _Ikev1ProposalFactory.make_sa(
+            Ikev1EncryptionAlgorithm.AES_CBC, 128,
+            Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.ECP_256_BIT,
+        )
+        message = IsakmpMessage(
+            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            initiator_spi=1, responder_spi=0,
+            exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+            flags=[IsakmpFlags.INITIATOR], message_id=0,
+            payloads=[sa_ecp256],
+        )
+        handshake._process_handshake_message(message, None)  # pylint: disable=protected-access
+        parsed, _ = IsakmpMessage.parse_immutable(l4_transfer.last_sent)
+        self.assertIsInstance(parsed.payloads[0], Ikev1PayloadSecurityAssociation)
+
+        # EC2N_163_BIT_1 (SECT163R1) should be rejected
+        handshake2, l4_transfer2 = self._make_handshake(config.ikev1_cipher_suites)
+        sa_sect163 = _Ikev1ProposalFactory.make_sa(
+            Ikev1EncryptionAlgorithm.AES_CBC, 128,
+            Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.EC2N_163_BIT_1,
+        )
+        message2 = IsakmpMessage(
+            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            initiator_spi=2, responder_spi=0,
+            exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+            flags=[IsakmpFlags.INITIATOR], message_id=0,
+            payloads=[sa_sect163],
+        )
+        with self.assertRaises(StopIteration):
+            handshake2._process_handshake_message(message2, None)  # pylint: disable=protected-access
+        parsed2, _ = IsakmpMessage.parse_immutable(l4_transfer2.last_sent)
+        self.assertEqual(parsed2.payloads[0].notify_type, Ikev1NotifyType.NO_PROPOSAL_CHOSEN)
 
 
 class TestIkev2CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHelpers):

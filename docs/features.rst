@@ -299,6 +299,8 @@ Supported analyzers by cryptographic protocol versions
 +===========================================+=======+=======+
 | Diffie-Hellman parameters (``dhparams``)  |   ✓   |   ✓   |
 +-------------------------------------------+-------+-------+
+| Elliptic-Curves (``curves``)              |   ✓   |   ✓   |
++-------------------------------------------+-------+-------+
 
 DNS
 ^^^
