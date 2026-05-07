@@ -28,7 +28,10 @@ from cryptolyzer.common.analyzer import AnalyzerIKEBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.utils import LogSingleton
 
-from cryptolyzer.ike.client import Ikev1SecurityAssociationProposalAlgorithms
+from cryptolyzer.ike.client import (
+    Ikev1SecurityAssociationBase,
+    Ikev1SecurityAssociationProposalAlgorithms,
+)
 from cryptolyzer.ike.exception import IsakmpNotify
 
 
@@ -140,11 +143,7 @@ class AnalyzerIKECommonBase(AnalyzerIKEBase):
         algorithms = []
         for dh_group in dh_groups:
             for encryption_algorithm in Ikev1EncryptionAlgorithm:
-                key_lengths = [
-                    bulk_cipher.value.key_size
-                    for bulk_cipher in encryption_algorithm.value.bulk_ciphers
-                    if bulk_cipher.value.key_size is not None
-                ]
+                key_lengths = Ikev1SecurityAssociationBase.get_key_lengths(encryption_algorithm)
                 for key_length in key_lengths:
                     for hash_algorithm in Ikev1HashAlgorithm:
                         for authentication_method in Ikev1AuthenticationMethod:
