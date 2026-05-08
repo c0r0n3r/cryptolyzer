@@ -8,6 +8,7 @@ except ImportError:
 
 import argparse
 import io
+import logging
 import sys
 import os
 
@@ -27,7 +28,7 @@ from cryptoparser.common.base import Serializable, SerializableTextEncoder
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 
-from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
+from cryptolyzer.common.utils import LogSingleton, SerializableTextEncoderHighlighted
 from cryptolyzer.__main__ import (
     get_argument_parser,
     get_protocol_handler_analyzer_and_uris,
@@ -195,3 +196,10 @@ class TestMain(TestMainBase):
             protocol_handler, analyzer, uris = get_protocol_handler_analyzer_and_uris(parser, arguments)
             self.assertEqual(list(map(lambda uri: uri.scheme, uris)), [analyzer.get_default_scheme()])
             protocol_handler.analyze(analyzer, uris[0])
+
+    def test_log_level(self):
+        self.addCleanup(LogSingleton().setLevel, logging.INFO)
+        with patch.object(sys, 'argv', ['cryptolyzer', '--log-level', 'debug', 'tls', 'versions', 'localhost']), \
+                patch('cryptolyzer.__main__.get_protocol_handler_analyzer_and_uris', return_value=(None, None, [])):
+            main()
+        self.assertEqual(LogSingleton().level, logging.DEBUG)

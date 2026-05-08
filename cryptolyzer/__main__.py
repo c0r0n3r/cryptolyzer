@@ -4,6 +4,7 @@
 
 import argparse
 import concurrent.futures
+import logging
 import colorama
 import urllib3
 
@@ -16,7 +17,7 @@ from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.exception import NetworkError, SecurityError
 from cryptolyzer.common.result import AnalyzerResultError
 from cryptolyzer.common.transfer import L4TransferSocketParams
-from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
+from cryptolyzer.common.utils import LogSingleton, SerializableTextEncoderHighlighted
 
 from cryptolyzer import __setup__
 
@@ -91,7 +92,10 @@ def get_argument_parser():
     parser.add_argument('--version', '-v', action='version', version='%(prog)s ' + __setup__.__version__)
     parser.add_argument(
         '--log-level',
-        choices=['debug', 'info', 'warning', 'error', 'critical'],
+        choices=[
+            logging.getLevelName(level).lower()
+            for level in (logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL)
+        ],
         default='info',
         help='level of logging (default: %(default)s)'
     )
@@ -170,9 +174,18 @@ def _print_result(analyzer_result, output_format):
         raise NotImplementedError()
 
 
+def _set_log_level(arguments):
+    log_level = logging.getLevelName(arguments.log_level.upper())
+    logger = LogSingleton()
+    logger.setLevel(log_level)
+    for handler in logger.handlers:
+        handler.setLevel(log_level)
+
+
 def main():
     parser = get_argument_parser()
     arguments = parser.parse_args()
+    _set_log_level(arguments)
     protocol_handler, analyzer, targets = get_protocol_handler_analyzer_and_uris(parser, arguments)
 
     if arguments.output_format == 'highlighted':
