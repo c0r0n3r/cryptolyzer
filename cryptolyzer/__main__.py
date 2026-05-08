@@ -13,7 +13,7 @@ from cryptodatahub.common.exception import InvalidValue
 from cryptoparser.common.base import Serializable
 from cryptoparser.common.exception import InvalidDataLength, InvalidType
 
-from cryptolyzer.common.analyzer import ProtocolHandlerBase
+from cryptolyzer.common.analyzer import AnalyzerIKEBase, ProtocolHandlerBase
 from cryptolyzer.common.exception import NetworkError, SecurityError
 from cryptolyzer.common.result import AnalyzerResultError
 from cryptolyzer.common.transfer import L4TransferSocketParams
@@ -143,6 +143,15 @@ def get_argument_parser():
         analyzers = protocol_handler.get_analyzers()
         parser_analyzer = parsers_analyzer.add_parser(protocol)
 
+        if protocol == 'ikev1':
+            parser_analyzer.add_argument(
+                '--strict-rfc-2409',
+                action='store_true',
+                help='Send one Proposal Payload per IKEv1 phase-1 message '
+                '(RFC 2409 §5 compliant). Required when probing strict '
+                'implementations such as libreswan; significantly slower.',
+            )
+
         parsers_plugin = parser_analyzer.add_subparsers(title='analyzer', dest='analyzer')
         parsers_plugin.required = True
         for analyzer_class in analyzers:
@@ -187,6 +196,9 @@ def main():
     arguments = parser.parse_args()
     _set_log_level(arguments)
     protocol_handler, analyzer, targets = get_protocol_handler_analyzer_and_uris(parser, arguments)
+
+    if getattr(arguments, 'strict_rfc_2409', False):
+        AnalyzerIKEBase.set_strict_rfc_2409_compliance(True)
 
     if arguments.output_format == 'highlighted':
         colorama.init(strip=False)

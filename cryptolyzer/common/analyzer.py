@@ -351,6 +351,10 @@ class AnalyzerIKEBase(AnalyzerBase):
     _MAX_PROPOSALS_PER_INIT_MESSAGE = 128
 
     @classmethod
+    def set_strict_rfc_2409_compliance(cls, enabled):
+        cls._MAX_PROPOSALS_PER_INIT_MESSAGE = 1 if enabled else 128
+
+    @classmethod
     @abc.abstractmethod
     def get_name(cls):
         raise NotImplementedError()
