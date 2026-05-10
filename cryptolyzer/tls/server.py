@@ -628,15 +628,16 @@ class L7ServerTlsPOP3(L7ServerStartTlsTextBase):
 
 class L7ServerTlsIMAPBase(L7ServerStartTlsBase):
     """
-    Minimal IMAP STARTTLS test server.
+    Minimal IMAP STARTTLS test server (RFC 3501 / RFC 2595).
 
-    It implements what `imaplib.IMAP4` needs for:
+    Implements:
     - initial untagged welcome message
     - CAPABILITY exchange during connection setup
-    - tagged STARTTLS extension command (via `xatom('STARTTLS')`)
+    - tagged STARTTLS extension command
 
-    After STARTTLS negotiation response is sent, the base `L7ServerTlsBase`
-    continues with the normal TLS handshake parsing over the same socket.
+    After the STARTTLS negotiation response is sent, the base
+    `L7ServerTlsBase` continues with the normal TLS handshake parsing
+    over the same socket.
     """
 
     @classmethod
@@ -678,8 +679,8 @@ class L7ServerTlsIMAPBase(L7ServerStartTlsBase):
 
     @classmethod
     def _get_starttls_response_type(cls):
-        # imaplib returns {OK,NO,BAD} as the response "type". Returning `NO`
-        # makes the client take the error path.
+        # {OK,NO,BAD} are IMAP tagged response types (RFC 3501).
+        # Returning `NO` makes the client take the error path.
         return b'OK' if cls._is_starttls_ok() else b'NO'
 
     @staticmethod
@@ -691,7 +692,6 @@ class L7ServerTlsIMAPBase(L7ServerStartTlsBase):
     def _init_l7(self):
         self.send(self._get_greeting())
 
-        # imaplib initialization: CAPABILITY command
         self.l4_transfer.receive_line()
         capability_cmd = bytes(self.buffer).strip()
         tag = self._parse_imap_tag(capability_cmd)
@@ -703,7 +703,6 @@ class L7ServerTlsIMAPBase(L7ServerStartTlsBase):
         self.send(b'* CAPABILITY ' + self._get_capabilities() + b'\r\n')
         self.send(tag + b' OK CAPABILITY completed\r\n')
 
-        # ClientIMAP._init_l7: STARTTLS extension command (via xatom)
         self.l4_transfer.receive_line()
         starttls_cmd = bytes(self.buffer).strip()
         starttls_tag = self._parse_imap_tag(starttls_cmd)
@@ -740,6 +739,17 @@ class L7ServerTlsIMAPStartTLSBad(L7ServerTlsIMAPBase):
     @classmethod
     def _is_starttls_ok(cls):
         return False
+
+
+class L7ServerTlsIMAPInvalidGreeting(L7ServerTlsIMAP):
+    @classmethod
+    def _get_greeting(cls):
+        return b'\xff\xff\xff\xff\r\n'
+
+
+class L7ServerTlsIMAPEarlyClose(L7ServerTlsIMAP):
+    def _init_l7(self):
+        raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
 
 
 class L7ServerTlsXMPPBase(L7ServerStartTlsBase):

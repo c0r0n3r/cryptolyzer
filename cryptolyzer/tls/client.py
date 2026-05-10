@@ -6,12 +6,10 @@
 import abc
 
 import ftplib
-import imaplib
 
 import collections
 import re
 import socket
-import sys
 
 import attr
 
@@ -1022,20 +1020,10 @@ class L7ClientIMAPS(L7ClientTlsBase):
         return 993
 
 
-class IMAP4(imaplib.IMAP4):
-    def __init__(self, host, port, l4_socket_params):
-        self.l4_socket_params = l4_socket_params
-        super().__init__(host, port)
+class ClientIMAP(L7ClientStartTlsTextBase):
+    _CAPABILITY_TAG = 'A0001'
+    _STARTTLS_TAG = 'A0002'
 
-    def open(self, *args, **kwargs):  # pylint: disable=arguments-differ,signature-differs,unused-argument
-        self.host = args[0]
-        self.port = args[1]
-        self.sock = socket.create_connection((self.host, self.port), self.l4_socket_params.timeout)
-        file = self.sock.makefile('rb')
-        setattr(self, '_file' if sys.version_info.major > 3 or sys.version_info.minor >= 14 else 'file', file)
-
-
-class ClientIMAP(L7ClientStartTlsBase):
     @classmethod
     def get_scheme(cls):
         return 'imap'
@@ -1045,27 +1033,65 @@ class ClientIMAP(L7ClientStartTlsBase):
         return 143
 
     @property
-    def _capabilities(self):
-        return self._l7_client.capabilities
+    def _capabilities_command(self):
+        return self._CAPABILITY_TAG + ' CAPABILITY'
+
+    @property
+    def _starttls_command(self):
+        return self._STARTTLS_TAG + ' STARTTLS'
+
+    @property
+    def _starttls_ok_result(self):
+        return self._STARTTLS_TAG + ' OK'
+
+    @property
+    def _capabilities_ok_result(self):
+        return '* CAPABILITY '
+
+    @property
+    def _capabilities_terminator(self):
+        return self._CAPABILITY_TAG
+
+    def _get_capabilities(self):
+        self.l4_transfer.send((self._capabilities_command + self._line_sep).encode(self._encoding))
+
+        capabilities = collections.OrderedDict()
+        while True:
+            line = self._flush_line()
+            if line.startswith(self._capabilities_ok_result):
+                for capability in line[len(self._capabilities_ok_result):].split():
+                    capabilities[capability] = None
+            elif line.startswith(self._capabilities_terminator + ' '):
+                break
+
+        return capabilities
 
     def _init_l7(self):
         try:
-            self._l7_client = IMAP4(self.ip, self.port, self.l4_socket_params)
-            self.l4_transfer.init_connection(self._l7_client.socket())
+            self._l7_client = L7ClientTls(self.address, self.port, self.l4_socket_params)
+            self._l7_client.init_connection()
+            self.l4_transfer = self._l7_client.l4_transfer
 
-            if 'STARTTLS' not in self._capabilities:
+            self._fill_greeting()
+
+            capabilities = self._get_capabilities()
+            if 'STARTTLS' not in capabilities:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-            response, _ = self._l7_client.xatom('STARTTLS')
-            if response != 'OK':
+
+            self.l4_transfer.send((self._starttls_command + self._line_sep).encode(self._encoding))
+            self.l4_transfer.receive_line()
+            starttls_ok_result = self._starttls_ok_result.encode(self._encoding)
+            if self.l4_transfer.buffer[:len(starttls_ok_result)] == starttls_ok_result:
+                self.l4_transfer.flush_buffer()
+            else:
                 raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY)
-        except imaplib.IMAP4.error as e:
+        except UnicodeDecodeError as e:
+            raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
+        except NotEnoughData as e:
             raise SecurityError(SecurityErrorType.UNSUPPORTED_SECURITY) from e
 
     def _deinit_l7(self):
-        try:
-            self._l7_client.shutdown()
-        except IMAP4.error:
-            pass
+        pass
 
 
 class L7ClientFTPS(L7ClientTlsBase):

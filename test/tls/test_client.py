@@ -3,7 +3,6 @@
 # pylint: disable=too-many-lines
 
 import ftplib
-import imaplib
 import socket
 import unittest
 from unittest import mock
@@ -75,6 +74,8 @@ from cryptolyzer.tls.server import (
     L7ServerTlsBase,
     L7ServerTlsIMAP,
     L7ServerTlsIMAPBase,
+    L7ServerTlsIMAPEarlyClose,
+    L7ServerTlsIMAPInvalidGreeting,
     L7ServerTlsIMAPNoStartTLS,
     L7ServerTlsIMAPStartTLSBad,
     L7ServerTlsXMPP,
@@ -361,28 +362,6 @@ class TestClientIMAP(TestL7ClientBase):
         )
         self.assertEqual(result.versions, [])
 
-    @mock.patch.object(imaplib.IMAP4, '__init__', side_effect=imaplib.IMAP4.error)
-    def test_error_imap_error(self, _):
-        threaded_server = self._start_imap_server(L7ServerTlsIMAP)
-        _, result = self.get_result(
-            'imap',
-            'localhost',
-            threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
-        )
-        self.assertEqual(result.versions, [])
-
-    @mock.patch.object(imaplib.IMAP4, 'shutdown', side_effect=imaplib.IMAP4.error)
-    def test_error_imap_shutdown_error(self, _):
-        threaded_server = self._start_imap_server(L7ServerTlsIMAPNoStartTLS)
-        _, result = self.get_result(
-            'imap',
-            'localhost',
-            threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
-        )
-        self.assertEqual(result.versions, [])
-
     def test_imap_client(self):
         threaded_server = self._start_imap_server(L7ServerTlsIMAP)
         _, result = self.get_result(
@@ -395,6 +374,26 @@ class TestClientIMAP(TestL7ClientBase):
 
     def test_error_starttls_error(self):
         threaded_server = self._start_imap_server(L7ServerTlsIMAPStartTLSBad)
+        _, result = self.get_result(
+            'imap',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
+        )
+        self.assertEqual(result.versions, [])
+
+    def test_error_invalid_greeting(self):
+        threaded_server = self._start_imap_server(L7ServerTlsIMAPInvalidGreeting)
+        _, result = self.get_result(
+            'imap',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
+        )
+        self.assertEqual(result.versions, [])
+
+    def test_error_early_close(self):
+        threaded_server = self._start_imap_server(L7ServerTlsIMAPEarlyClose)
         _, result = self.get_result(
             'imap',
             'localhost',
