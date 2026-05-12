@@ -2,11 +2,9 @@
 """Tests for TLS 1.3 handshake key schedule and AEAD record decryption."""
 
 import unittest
-from unittest.mock import Mock, patch
 
 from cryptodatahub.common.algorithm import Hash, MAC, NamedGroup
 from cryptodatahub.tls.algorithm import TlsCipherSuite
-from cryptoparser.tls.version import TlsVersion
 
 from cryptolyzer.tls.crypto import (
     Tls13HandshakeDecryptor,
@@ -18,6 +16,7 @@ from cryptolyzer.common.crypto import HashCryptodome, HmacCryptodome
 
 class TestTls13HandshakeDecryptorCryptodome(unittest.TestCase):
     """TLS 1.3 key schedule + AEAD record decryption tests (RFC 8448 §3)."""
+    # pylint: disable=protected-access
 
     def test_error_non_tls13_cipher_suite(self):
         """Non-TLS 1.3 cipher suite raises ValueError."""
@@ -129,7 +128,6 @@ class TestTls13HandshakeDecryptorCryptodome(unittest.TestCase):
         aad = b''
         with self.assertRaises(Exception):
             decryptor.decrypt(ciphertext_with_tag, aad)
-
 
     def test_tls10_cipher_suite_version_check(self):
         """TLS 1.0 cipher suite triggers version check error."""

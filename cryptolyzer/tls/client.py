@@ -58,6 +58,7 @@ from cryptoparser.tls.extension import (
     TlsExtensionSignatureAlgorithms,
     TlsExtensionSignatureAlgorithmsCert,
     TlsExtensionSupportedVersionsClient,
+    TlsExtensionType,
     TlsExtensionsClient,
     TlsKeyShareEntry,
     TlsNamedCurve,
@@ -70,6 +71,7 @@ from cryptoparser.tls.openvpn import (
 from cryptoparser.tls.record import TlsRecord, SslRecord
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
+from cryptolyzer.tls.crypto import Tls13HandshakeDecryptorCryptodome
 from cryptolyzer.common.dhparam import (
     DHParamWellKnown,
     get_dh_ephemeral_key_forged,
@@ -78,7 +80,7 @@ from cryptolyzer.common.dhparam import (
 )
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP, L7TransferBase
-from cryptolyzer.common.utils import buffer_flush, buffer_is_plain_text
+from cryptolyzer.common.utils import LogSingleton, buffer_flush, buffer_is_plain_text
 
 from cryptolyzer.tls.application import L7OpenVpnBase
 from cryptolyzer.tls.exception import TlsAlert
@@ -103,6 +105,7 @@ RFC7919_WELL_KNOWN_TO_NAMED_CURVE = {
 
 
 def key_share_entry_from_named_curve(named_curve):
+    """Build a ``TlsKeyShareEntry`` with deterministic forged material (legacy probes, simulations, DH params)."""
     if named_curve.value.named_group is None:
         raise NotImplementedError(named_curve)
 
@@ -122,7 +125,7 @@ def key_share_entry_from_named_curve(named_curve):
             )
         )
 
-    raise NotImplementedError()
+    raise NotImplementedError(named_curve)
 
 
 class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
@@ -214,9 +217,12 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
                     signature_algorithm.value.hash_algorithm is not None)
             ]
 
-            extensions.extend(self._get_tls1_3_extensions(
-                protocol_versions, signature_algorithms_cert, key_share_curves
-            ))
+            present_extension_types = set(map(type, extensions))
+            extensions.extend(
+                ext
+                for ext in self._get_tls1_3_extensions(protocol_versions, signature_algorithms_cert, key_share_curves)
+                if type(ext) not in present_extension_types
+            )
         elif len(protocol_versions) > 1:
             raise NotImplementedError(protocol_versions)
 
@@ -268,6 +274,7 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             named_curves,
             signature_algorithms,
             key_share_curves=None,
+            extensions=None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         _cipher_suites = [
             cipher_suite
@@ -276,56 +283,62 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2)
         ]
 
+        if extensions is None:
+            extensions = []
+
         super().__init__(
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
             named_curves=named_curves,
             signature_algorithms=signature_algorithms,
-            extensions=[],
             key_share_curves=key_share_curves,
+            extensions=list(extensions),
         )
 
 
 class TlsHandshakeClientHelloAuthenticationRSA(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
-    def __init__(self, protocol_version, hostname):
+    def __init__(self, protocol_version, hostname, named_curves=None, extensions=None):
         super().__init__(
             hostname=hostname,
             protocol_version=protocol_version,
             authentications=[Authentication.RSA, ],
-            named_curves=None,
+            named_curves=named_curves,
             signature_algorithms=None,
+            extensions=extensions,
         )
 
 
 class TlsHandshakeClientHelloAuthenticationDSS(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
-    def __init__(self, protocol_version, hostname):
+    def __init__(self, protocol_version, hostname, named_curves=None, extensions=None):
         super().__init__(
             protocol_version=protocol_version,
             hostname=hostname,
             authentications=[Authentication.DSS, ],
-            named_curves=None,
+            named_curves=named_curves,
             signature_algorithms=None,
+            extensions=extensions,
         )
 
 
 class TlsHandshakeClientHelloAuthenticationECDSA(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
-    def __init__(self, protocol_version, hostname):
+    def __init__(self, protocol_version, hostname, named_curves=None, extensions=None):
         super().__init__(
             hostname=hostname,
             protocol_version=protocol_version,
             authentications=[Authentication.ECDSA, ],
-            named_curves=None,
+            named_curves=named_curves,
             signature_algorithms=None,
+            extensions=extensions,
         )
 
 
 class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthenticationBase):
     # pylint: disable=too-many-ancestors
-    def __init__(self, protocol_version, hostname):
+    def __init__(self, protocol_version, hostname, named_curves=None, extensions=None):
         super().__init__(
             protocol_version=protocol_version,
             hostname=hostname,
@@ -334,8 +347,9 @@ class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthentic
                 Authentication.GOST_R3410_12_256,
                 Authentication.GOST_R3410_12_512,
             ],
-            named_curves=None,
+            named_curves=named_curves,
             signature_algorithms=None,
+            extensions=extensions,
         )
 
 
@@ -612,17 +626,24 @@ class L7ClientTlsBase(L7TransferBase, metaclass=abc.ABCMeta):
         self.l4_transfer = L4ClientTCP(self.address, self.port, self.l4_socket_params, self.ip)
         self.l4_transfer.init_connection()
 
-    def _do_handshake(
+    def _do_handshake(  # pylint: disable=too-many-arguments,too-many-positional-arguments
             self,
             l7_client,
             hello_message,
             record_version,
-            last_handshake_message_type
+            last_handshake_message_type,
+            tls13_handshake_protection=None,
     ):
         self.init_connection()
 
         try:
-            l7_client.do_handshake(self, hello_message, record_version, last_handshake_message_type)
+            l7_client.do_handshake(
+                self,
+                hello_message,
+                record_version,
+                last_handshake_message_type,
+                tls13_handshake_protection=tls13_handshake_protection,
+            )
         finally:
             self._close_connection()
 
@@ -640,13 +661,15 @@ class L7ClientTlsBase(L7TransferBase, metaclass=abc.ABCMeta):
             self,
             hello_message,
             record_version=TlsProtocolVersion(TlsVersion.TLS1),
-            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO,
+            tls13_handshake_protection=None,
     ):
         return self._do_handshake(
             TlsClientHandshake(),
             hello_message,
             record_version,
-            last_handshake_message_type
+            last_handshake_message_type,
+            tls13_handshake_protection=tls13_handshake_protection,
         )
 
 
@@ -1468,11 +1491,79 @@ class TlsClient():
         raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
 
     @abc.abstractmethod
-    def do_handshake(self, transfer, hello_message, record_version, last_handshake_message_type):
+    def do_handshake(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+            self,
+            transfer,
+            hello_message,
+            record_version,
+            last_handshake_message_type,
+            tls13_handshake_protection=None,
+    ):
         raise NotImplementedError()
 
 
 class TlsClientHandshake(TlsClient):
+    def __init__(self):
+        self.server_messages = {}
+        self._tls13_record_decryptor = None
+        self._tls13_handshake_key_exchange_by_named_curve = None
+        self._client_hello_for_tls13 = None
+
+    def _tls13_try_init_handshake_decryptor(  # pylint: disable=too-many-return-statements
+            self, server_hello, last_handshake_message_type,
+    ):
+        if last_handshake_message_type != TlsHandshakeType.CERTIFICATE:
+            return
+        if server_hello.random == TLS_HANDSHAKE_HELLO_RETRY_REQUEST_RANDOM:
+            return
+        if server_hello.cipher_suite.value.last_version != TlsVersion.TLS1_3:
+            return
+
+        try:
+            key_share_extension = server_hello.extensions.get_item_by_type(TlsExtensionType.KEY_SHARE)
+        except KeyError:
+            LogSingleton().log(
+                level=10,
+                msg='TLS 1.3 record decryptor init skipped: server omitted key_share extension',
+            )
+            return
+
+        entry = key_share_extension.key_share_entry
+        client_key_exchange = self._tls13_handshake_key_exchange_by_named_curve.get(entry.group)
+        if client_key_exchange is None:
+            return
+
+        try:
+            shared_secret = client_key_exchange.compute_shared_secret(bytes(entry.key_exchange))
+            client_hello = self._client_hello_for_tls13
+            transcript_hash = Tls13HandshakeDecryptorCryptodome.transcript_hash(
+                server_hello.cipher_suite,
+                client_hello.compose() + server_hello.compose(),
+            )
+            self._tls13_record_decryptor = Tls13HandshakeDecryptorCryptodome(
+                server_hello.cipher_suite,
+                shared_secret,
+                transcript_hash,
+            )
+        except NotImplementedError as error:
+            LogSingleton().log(
+                level=10,
+                msg=f'TLS 1.3 record decryptor init skipped: unsupported group; error={error}',
+            )
+            self._tls13_record_decryptor = None
+        except KeyError as error:
+            LogSingleton().log(
+                level=10,
+                msg=f'TLS 1.3 record decryptor init skipped: unmapped algorithm; error={error}',
+            )
+            self._tls13_record_decryptor = None
+        except ValueError as error:
+            LogSingleton().log(
+                level=10,
+                msg=f'TLS 1.3 record decryptor init skipped: {error}',
+            )
+            self._tls13_record_decryptor = None
+
     def _process_handshake_message(self, protocol_version, message, last_handshake_message_type):
         handshake_type = message.get_handshake_type()
         is_repeated_messages = handshake_type in self.server_messages
@@ -1486,6 +1577,9 @@ class TlsClientHandshake(TlsClient):
                 not message.protocol_version == protocol_version):
             raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
 
+        if handshake_type == TlsHandshakeType.SERVER_HELLO:
+            self._tls13_try_init_handshake_decryptor(message, last_handshake_message_type)
+
         if last_handshake_message_type is None:
             if handshake_type == TlsHandshakeType.SERVER_HELLO_DONE:
                 raise StopIteration()
@@ -1497,16 +1591,21 @@ class TlsClientHandshake(TlsClient):
         if handshake_type == last_handshake_message_type:
             raise StopIteration
 
-    @classmethod
-    def _process_non_handshake_message(cls, content_type, message, last_handshake_message_type):
+    def _process_non_handshake_message(self, content_type, message, last_handshake_message_type):
         if content_type == TlsContentType.ALERT:
             if (message.level == TlsAlertLevel.FATAL or
                     message.description == TlsAlertDescription.CLOSE_NOTIFY):
                 raise TlsAlert(message.description)
-        elif last_handshake_message_type is None and content_type == TlsContentType.CHANGE_CIPHER_SPEC:
+            return
+        if last_handshake_message_type is None and content_type == TlsContentType.CHANGE_CIPHER_SPEC:
             raise StopIteration
-        else:
-            raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
+        if (
+                last_handshake_message_type == TlsHandshakeType.CERTIFICATE and
+                content_type == TlsContentType.CHANGE_CIPHER_SPEC and
+                self._tls13_record_decryptor is not None
+        ):
+            return
+        raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
 
     @classmethod
     def _process_invalid_message(cls, transfer):
@@ -1523,14 +1622,19 @@ class TlsClientHandshake(TlsClient):
 
             raise e
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-branches,too-many-locals
     def do_handshake(
             self,
             transfer,
             hello_message,
             record_version=TlsProtocolVersion(TlsVersion.SSL3),
-            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE,
+            tls13_handshake_protection=None,
     ):
         self.server_messages = {}
+        self._tls13_record_decryptor = None
+        self._tls13_handshake_key_exchange_by_named_curve = tls13_handshake_protection
+        self._client_hello_for_tls13 = hello_message
         transfer.flush_buffer()
         self._send_hello(transfer, hello_message, record_version)
 
@@ -1539,10 +1643,25 @@ class TlsClientHandshake(TlsClient):
         while True:
             try:
                 record, parsed_length = TlsRecord.parse_immutable(transfer.buffer)
-                message_buffer += record.fragment
                 transfer.flush_buffer(parsed_length)
 
-                subprotocol_parser = TlsSubprotocolMessageParser(record.content_type)
+                if (
+                        record.content_type == TlsContentType.APPLICATION_DATA and
+                        self._tls13_record_decryptor is not None
+                ):
+                    additional_data = self._tls13_record_decryptor.compute_additional_data(record)
+                    try:
+                        plaintext = self._tls13_record_decryptor.decrypt(record.fragment, additional_data)
+                    except ValueError as error:
+                        raise TlsAlert(TlsAlertDescription.BAD_RECORD_MAC) from error
+
+                    content_type, inner_payload_bytes = self._tls13_record_decryptor.split_inner_plaintext(plaintext)
+                    message_buffer += inner_payload_bytes
+                else:
+                    message_buffer += record.fragment
+                    content_type = record.content_type
+
+                subprotocol_parser = TlsSubprotocolMessageParser(content_type)
 
                 while message_buffer:
                     try:
@@ -1553,12 +1672,16 @@ class TlsClientHandshake(TlsClient):
 
                     message_buffer = message_buffer[parsed_length:]
 
-                    if record.content_type == TlsContentType.HANDSHAKE:
+                    if content_type == TlsContentType.HANDSHAKE:
                         self._process_handshake_message(
                             hello_message.protocol_version, message, last_handshake_message_type
                         )
                     else:
-                        self._process_non_handshake_message(record.content_type, message, last_handshake_message_type)
+                        self._process_non_handshake_message(
+                            content_type,
+                            message,
+                            last_handshake_message_type,
+                        )
 
                 # transfer buffer may contain another record or another record should be received
                 continue
@@ -1591,13 +1714,15 @@ class SslHandshakeClientHelloAnyAlgorithm(SslHandshakeClientHello):
 
 
 class SslClientHandshake(TlsClient):
-    def do_handshake(
+    def do_handshake(  # pylint: disable=too-many-arguments,too-many-positional-arguments
             self,
             transfer,
             hello_message=None,
             record_version=TlsVersion.SSL2,
-            last_handshake_message_type=SslMessageType.SERVER_HELLO
+            last_handshake_message_type=SslMessageType.SERVER_HELLO,
+            tls13_handshake_protection=None,
     ):
+        del record_version, tls13_handshake_protection
         ssl_record = SslRecord(hello_message)
         transfer.send(ssl_record.compose())
 
@@ -1710,13 +1835,15 @@ class ClientOpenVpnBase(L7ClientTlsBase, L7OpenVpnBase):
             self,
             hello_message,
             record_version=TlsProtocolVersion(TlsVersion.TLS1),
-            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO,
+            tls13_handshake_protection=None,
     ):
         return self._do_handshake(
             TlsClientOpenVpn(),
             hello_message,
             record_version,
-            last_handshake_message_type
+            last_handshake_message_type,
+            tls13_handshake_protection=tls13_handshake_protection,
         )
 
     def _init_connection(self):

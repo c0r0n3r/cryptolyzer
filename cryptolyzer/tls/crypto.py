@@ -56,7 +56,7 @@ class Tls13CipherSuiteDerivationParameters:
 
 
 @attr.s
-class Tls13HandshakeDecryptor(HandshakeDecryptorBase):
+class Tls13HandshakeDecryptor(HandshakeDecryptorBase):  # pylint: disable=too-many-instance-attributes
     """TLS 1.3 handshake HKDF key schedule + AEAD record decryption (RFC 8446 §7.1, §5.2).
 
     Backend-neutral: inject HMAC, hash, and AEAD cipher factory for testing.
@@ -117,17 +117,6 @@ class Tls13HandshakeDecryptor(HandshakeDecryptorBase):
         if parameters is None:
             raise ValueError(f'{cipher_suite.name} is not supported by {cls.__name__}')
         return parameters
-
-    @classmethod
-    def transcript_hash(
-        cls,
-        cipher_suite: TlsCipherSuite,
-        handshake_messages: bytes | bytearray,
-        *,
-        hash_primitive: HashBase,
-    ) -> bytes:
-        """``Transcript-Hash`` octets for the negotiated HKDF hash (RFC 8446 §7.1)."""
-        return hash_primitive.digest(bytes(handshake_messages))
 
     def __attrs_post_init__(self) -> None:
         if TlsProtocolVersion(self.cipher_suite.value.initial_version) <= TlsProtocolVersion(TlsVersion.TLS1_2):
@@ -220,16 +209,11 @@ class Tls13HandshakeDecryptorCryptodome(Tls13HandshakeDecryptor):
         super().__attrs_post_init__()
 
     @classmethod
-    def transcript_hash(
-        cls,
-        cipher_suite: TlsCipherSuite,
-        handshake_messages: bytes | bytearray,
-    ) -> bytes:
+    def transcript_hash(cls, cipher_suite: TlsCipherSuite, handshake_messages: bytes | bytearray) -> bytes:
+        """``Transcript-Hash`` octets for the negotiated HKDF hash (RFC 8446 §7.1)."""
         parameters = Tls13HandshakeDecryptor.get_cipher_suite_derivation_parameters(cipher_suite)
         hash_primitive = HashCryptodome(hash_algorithm=parameters.hkdf_hash)
-        return Tls13HandshakeDecryptor.transcript_hash(
-            cipher_suite, handshake_messages, hash_primitive=hash_primitive
-        )
+        return hash_primitive.digest(bytes(handshake_messages))
 
 
 class _EphemeralKeyExchangeBackendCryptodome:
