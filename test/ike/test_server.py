@@ -688,6 +688,55 @@ class TestL7ServerIke(unittest.TestCase):
         self.assertEqual(L7ServerIke.get_default_port(), 45000)
 
 
+class _L4TransferMalformedThenValid(L4TransferDummy):
+    """Delivers a structurally invalid ISAKMP header on the first
+    ``receive()`` call and a valid one on the second — drives
+    ``L7ServerIkeBase._get_handshake_class``'s malformed-message retry
+    loop (flush + close_client + retry) without a live socket."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pending_chunks = []
+        self.close_client_calls = 0
+
+    def _receive_bytes(self, receivable_byte_num, flags):  # pylint: disable=unused-argument
+        return self.pending_chunks.pop(0)
+
+    def close_client(self):
+        self.close_client_calls += 1
+        self.flush_buffer()
+
+
+class TestL7ServerIkeGetHandshakeClass(unittest.TestCase, _TestIkeServerHandshakeHelpers):
+    def test_malformed_message_flushes_and_closes_client_before_retry(self):
+        # ISAKMP header (RFC 2408 §3.1 / RFC 7296 §3.1): 8-octet
+        # initiator SPI + 8-octet responder SPI + 1-octet next payload
+        # + 1-octet version, where the version's high nibble must be
+        # IkeVersion 1 or 2. A high nibble of 0xf is neither, so
+        # IsakmpProtocolVersion._parse raises InvalidType — the version
+        # byte sits at offset 17 (8 + 8 + 1).
+        malformed = bytes(17) + b'\xf0' + bytes(10)
+        self.assertEqual(len(malformed), IsakmpMessage.HEADER_SIZE)
+
+        valid_message_bytes = IsakmpMessage(
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
+            initiator_spi=1, responder_spi=0,
+            exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
+            flags=[IsakmpFlags.INITIATOR], message_id=0,
+            payloads=[Ikev2PayloadNonce(flags=set(), nonce_data=b'\x00' * 16)],
+        ).compose()
+
+        l7_server = self._create_server()
+        fake_transfer = _L4TransferMalformedThenValid('localhost', 0, self._socket_params())
+        fake_transfer.pending_chunks = [malformed, valid_message_bytes]
+        l7_server.l4_transfer = fake_transfer
+
+        handshake_class = l7_server._get_handshake_class()  # pylint: disable=protected-access
+
+        self.assertIs(handshake_class, Ikev2ServerHandshake)
+        self.assertEqual(fake_transfer.close_client_calls, 1)
+
+
 class TestIkev2GenerateKeNoncePayloadsEcdh(unittest.TestCase):
     def test_ecdh_group_forges_ecdh_key(self):
         sa = _Ikev2ProposalFactory.make_sa(

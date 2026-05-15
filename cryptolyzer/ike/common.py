@@ -150,7 +150,7 @@ class AnalyzerIKECommonBase(AnalyzerIKEBase):
         algorithms = []
         for dh_group in dh_groups:
             for encryption_algorithm in Ikev1EncryptionAlgorithm:
-                key_lengths = Ikev1SecurityAssociationBase.get_key_lengths(encryption_algorithm)
+                key_lengths = Ikev1SecurityAssociationBase.get_encryption_algorithm_key_lengths(encryption_algorithm)
                 for key_length in key_lengths:
                     for hash_algorithm in Ikev1HashAlgorithm:
                         for authentication_method in Ikev1AuthenticationMethod:

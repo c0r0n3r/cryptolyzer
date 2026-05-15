@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
+# pylint: disable=too-many-lines
+
 import abc
 import itertools
 import secrets
@@ -26,12 +28,14 @@ from cryptodatahub.ike.algorithm import (
     Ikev2DiffieHellmanGroup,
     Ikev2EncryptionAlgorithm,
     Ikev2ExchangeType,
+    Ikev2HashAlgorithm,
     Ikev2IntegrityAlgorithm,
     Ikev2NotifyLevel,
     Ikev2NotifyType,
     Ikev2PayloadType,
     Ikev2ProtocolId,
     Ikev2PseudorandomFunction,
+    Ikev2CertificateType,
 )
 
 from cryptodatahub.ike.version import IkeVersion
@@ -53,14 +57,18 @@ from cryptoparser.ike.ikev1 import (
     Ikev1AttributeAuthenticationMethod,
     Ikev1AttributeEncryptionAlgorithm,
     Ikev1AttributeHashAlgorithm,
+    Ikev1PayloadCertificateRequest,
+    Ikev1CertificateType,
 )
 from cryptoparser.ike.ikev2 import (
     Ikev2Proposal,
     Ikev2PayloadKeyExchange,
     Ikev2NotifyPayloadCookie,
+    Ikev2PayloadCertificateRequest,
     Ikev2PayloadNonce,
     Ikev2PayloadNotifyBase,
     Ikev2PayloadFlags,
+    Ikev2NotifyPayloadSignatureHashAlgorithms,
     Ikev2PayloadSecurityAssociation,
     Ikev2PayloadDelete,
     Ikev2TransformDhGroup,
@@ -84,17 +92,26 @@ from cryptolyzer.common.dhparam import (
     get_ecdh_ephemeral_key_forged,
     int_to_bytes,
 )
+from cryptolyzer.common.crypto import EphemeralKeyExchangeBase
 from cryptolyzer.common.transfer import L4ClientUDP, L7TransferBase
+from cryptolyzer.ike.crypto import dhe_ephemeral_material_backend
 from cryptolyzer.ike.exception import IsakmpNotify
+from cryptolyzer.ike.isakmp import parse_ike_message
 
 
-class Ikev2SecurityAssociationBase(IsakmpMessage):
-    _TRANSFORM_CLASS_BY_TRANSFORM_ID = {
-        Ikev2PseudorandomFunction: Ikev2TransformPrf,
-        Ikev2DiffieHellmanGroup: Ikev2TransformDhGroup,
-        Ikev2EncryptionAlgorithm: Ikev2TransformEncryptionAlgorithm,
-        Ikev2IntegrityAlgorithm: Ikev2TransformIntegrity,
-    }
+class IkeSecurityAssociationBase(IsakmpMessage):
+    @staticmethod
+    def _split_dh_groups(dh_groups, backend_supported=None):
+        ffdh_groups = [
+            dh_group for dh_group in dh_groups
+            if isinstance(dh_group.value.key_parameter, DHParamWellKnown)
+        ]
+        ecdh_groups = [
+            dh_group for dh_group in dh_groups
+            if isinstance(dh_group.value.key_parameter, NamedGroup)
+            and (backend_supported is None or dh_group in backend_supported)
+        ]
+        return ffdh_groups, ecdh_groups
 
     @staticmethod
     def get_encryption_algorithm_key_lengths(encryption_algorithm):
@@ -105,7 +122,34 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         bulk_ciphers = list(encryption_algorithm.value.bulk_ciphers)
         if len(bulk_ciphers) == 1:
             return [None]
-        return [bulk_cipher.cipher.value.key_size for bulk_cipher in bulk_ciphers]
+        return [
+            bulk_cipher.cipher.value.key_size
+            for bulk_cipher in bulk_ciphers
+            if bulk_cipher.cipher.value.key_size is not None
+        ]
+
+    @staticmethod
+    def _build_key_exchange_data(dh_group, ephemeral=None):
+        if ephemeral is not None:
+            return dhe_ephemeral_material_backend.key_exchange_wire_bytes(dh_group, ephemeral)
+        key_parameter = dh_group.value.key_parameter
+        if isinstance(key_parameter, NamedGroup):
+            return get_ecdh_ephemeral_key_forged(key_parameter, add_point_format_octet=False)
+        if isinstance(key_parameter, DHParamWellKnown):
+            return int_to_bytes(
+                get_dh_ephemeral_key_forged(key_parameter.value.parameter_numbers.p),
+                key_parameter.value.key_size // 8,
+            )
+        return None
+
+
+class Ikev2SecurityAssociationBase(IkeSecurityAssociationBase):
+    _TRANSFORM_CLASS_BY_TRANSFORM_ID = {
+        Ikev2PseudorandomFunction: Ikev2TransformPrf,
+        Ikev2DiffieHellmanGroup: Ikev2TransformDhGroup,
+        Ikev2EncryptionAlgorithm: Ikev2TransformEncryptionAlgorithm,
+        Ikev2IntegrityAlgorithm: Ikev2TransformIntegrity,
+    }
 
     @classmethod
     def expand_encryption_algorithms_to_tuples(cls, encryption_algorithms):
@@ -210,6 +254,36 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         return proposals
 
     @classmethod
+    def append_key_exchange_payload(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        cls,
+        payloads: list[typing.Any],
+        diffie_hellman_groups: list[Ikev2DiffieHellmanGroup],
+        ecdh_groups: list[Ikev2DiffieHellmanGroup],
+        ffdh_groups: list[Ikev2DiffieHellmanGroup],
+        ephemeral_key_exchange: typing.Optional[EphemeralKeyExchangeBase],
+        key_exchange_dh_group: typing.Optional[Ikev2DiffieHellmanGroup],
+    ) -> None:
+        if key_exchange_dh_group is not None:
+            dh_group = key_exchange_dh_group
+        elif list(diffie_hellman_groups) == list(Ikev2DiffieHellmanGroup):
+            dh_group = ecdh_groups[0] if ecdh_groups else ffdh_groups[0]
+        else:
+            dh_group = diffie_hellman_groups[0]
+
+        key_exchange_data = cls._build_key_exchange_data(dh_group, ephemeral=ephemeral_key_exchange)
+        if key_exchange_data is not None:
+            payload_key_exchange = Ikev2PayloadKeyExchange(
+                flags=set(),
+                dh_group=dh_group,
+                key_exchange_data=key_exchange_data,
+            )
+            LogSingleton().log(
+                level=40,
+                msg=f'Sending KE payload; length={len(payload_key_exchange.key_exchange_data) * 8}'
+            )
+            payloads.append(payload_key_exchange)
+
+    @classmethod
     def _get_payloads(
         cls,
         encryption_algorithm_tuples: list[tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
@@ -220,6 +294,9 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         nonce: typing.Optional[typing.Union[bytes, bytearray]] = None,
         key_exchange_dh_group: typing.Optional[Ikev2DiffieHellmanGroup] = None,
         extra_notify_payloads: typing.Optional[typing.Iterable[Ikev2PayloadNotifyBase]] = None,
+        cert_request: typing.Optional[typing.Union[bytes, bytearray]] = None,
+        ephemeral_key_exchange: typing.Optional[EphemeralKeyExchangeBase] = None,
+        signature_hash_algorithms: typing.Optional[typing.Iterable[Ikev2HashAlgorithm]] = None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         payloads = []
 
@@ -233,63 +310,23 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
                 cookie=cookie,
             ))
 
-        ecdh_groups = list(filter(
-            lambda dh_group: isinstance(dh_group.value.key_parameter, NamedGroup),
-            diffie_hellman_groups
-        ))
-        ffdh_groups = list(filter(
-            lambda dh_group: isinstance(dh_group.value.key_parameter, DHParamWellKnown),
-            diffie_hellman_groups
-        ))
-        proposals = cls._get_proposals(
-            encryption_algorithm_tuples=encryption_algorithm_tuples,
-            diffie_hellman_groups=diffie_hellman_groups,
-            pseudorandom_functions=pseudorandom_functions,
-            integrity_algorithms=integrity_algorithms,
-            ecdh_groups=ecdh_groups,
-            ffdh_groups=ffdh_groups,
-        )
+        ffdh_groups, ecdh_groups = cls._split_dh_groups(diffie_hellman_groups)
         payloads.append(Ikev2PayloadSecurityAssociation(
             flags=set([Ikev2PayloadFlags.CRITICAL, ]),
-            proposals=proposals
+            proposals=cls._get_proposals(
+                encryption_algorithm_tuples=encryption_algorithm_tuples,
+                diffie_hellman_groups=diffie_hellman_groups,
+                pseudorandom_functions=pseudorandom_functions,
+                integrity_algorithms=integrity_algorithms,
+                ecdh_groups=ecdh_groups,
+                ffdh_groups=ffdh_groups,
+            ),
         ))
 
-        # Caller decides which DH group to key the KE payload for. Falls back
-        # to the legacy heuristic when no explicit choice is given: prefer the
-        # first ECDH group when the full default DH set was passed (initial
-        # probe of any-DH-supported analyses), else key for the first DH in
-        # the caller-provided list.
-        if key_exchange_dh_group is not None:
-            dh_group = key_exchange_dh_group
-        elif list(diffie_hellman_groups) == list(Ikev2DiffieHellmanGroup):
-            dh_group = ecdh_groups[0] if ecdh_groups else ffdh_groups[0]
-        else:
-            dh_group = diffie_hellman_groups[0]
-
-        payload_key_exchange = None
-        if isinstance(dh_group.value.key_parameter, NamedGroup):
-            payload_key_exchange = Ikev2PayloadKeyExchange(
-                flags=set(),
-                dh_group=dh_group,
-                key_exchange_data=get_ecdh_ephemeral_key_forged(
-                    dh_group.value.key_parameter, add_point_format_octet=False
-                ),
-            )
-        elif isinstance(dh_group.value.key_parameter, DHParamWellKnown):
-            payload_key_exchange = Ikev2PayloadKeyExchange(
-                flags=set(),
-                dh_group=dh_group,
-                key_exchange_data=int_to_bytes(
-                    get_dh_ephemeral_key_forged(dh_group.value.key_parameter.value.parameter_numbers.p),
-                    dh_group.value.key_parameter.value.key_size // 8
-                )
-            )
-        if payload_key_exchange is not None:
-            LogSingleton().log(
-                level=40,
-                msg=f'Sending KE payload; length={len(payload_key_exchange.key_exchange_data) * 8}'
-            )
-            payloads.append(payload_key_exchange)
+        cls.append_key_exchange_payload(
+            payloads, diffie_hellman_groups, ecdh_groups, ffdh_groups,
+            ephemeral_key_exchange, key_exchange_dh_group,
+        )
 
         if nonce is None:
             nonce = secrets.token_bytes(32)
@@ -300,6 +337,22 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
 
         if extra_notify_payloads is not None:
             payloads.extend(extra_notify_payloads)
+
+        if cert_request is not None:
+            payloads.append(Ikev2PayloadCertificateRequest(
+                flags=set(),
+                cert_encoding=Ikev2CertificateType.X509_CERTIFICATE_SIGNATURE,
+                certification_authority=cert_request,
+            ))
+
+        if signature_hash_algorithms is not None:
+            payloads.append(Ikev2NotifyPayloadSignatureHashAlgorithms(
+                flags=set(),
+                protocol_id=Ikev2ProtocolId.IKE,
+                type=Ikev2NotifyType.SIGNATURE_HASH_ALGORITHMS,
+                spi=b'',
+                hash_algorithms=tuple(signature_hash_algorithms),
+            ))
 
         return payloads
 
@@ -313,6 +366,11 @@ class Ikev2SecurityAssociationSpecialization(Ikev2SecurityAssociationBase):
             integrity_algorithms=tuple(Ikev2IntegrityAlgorithm),
             cookie=None,
             key_exchange_dh_group=None,
+            nonce=None,
+            cert_request=None,
+            ephemeral_key_exchange=None,
+            signature_hash_algorithms=None,
+            initiator_spi=None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         if encryption_algorithm_tuples is None:
             encryption_algorithm_tuples = self.expand_encryption_algorithms_to_tuples(
@@ -325,11 +383,15 @@ class Ikev2SecurityAssociationSpecialization(Ikev2SecurityAssociationBase):
             integrity_algorithms=integrity_algorithms,
             cookie=cookie,
             key_exchange_dh_group=key_exchange_dh_group,
+            nonce=nonce,
+            cert_request=cert_request,
+            ephemeral_key_exchange=ephemeral_key_exchange,
+            signature_hash_algorithms=signature_hash_algorithms,
         )
 
         super().__init__(
             version=IsakmpProtocolVersion(IkeVersion.V2, 0),
-            initiator_spi=secrets.randbits(64),
+            initiator_spi=secrets.randbits(64) if initiator_spi is None else initiator_spi,
             responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
             flags=[IsakmpFlags.INITIATOR],
@@ -364,26 +426,13 @@ class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
         )
 
 
-class Ikev1SecurityAssociationBase(IsakmpMessage):
+class Ikev1SecurityAssociationBase(IkeSecurityAssociationBase):
     _TRANSFORM_CLASS_BY_TRANSFORM_ID = {
         Ikev1HashAlgorithm: Ikev1AttributeHashAlgorithm,
         Ikev1EncryptionAlgorithm: Ikev1AttributeEncryptionAlgorithm,
         Ikev1DiffieHellmanGroup: Ikev1AttributeDiffieHellmanGroup,
         Ikev1AuthenticationMethod: Ikev1AttributeAuthenticationMethod,
     }
-
-    @classmethod
-    def get_key_lengths(cls, encryption_algorithm):
-        bulk_ciphers = list(encryption_algorithm.value.bulk_ciphers)
-        single_key_size = len(bulk_ciphers) == 1
-        if single_key_size:
-            return [None]
-
-        return [
-            bulk_cipher.cipher.value.key_size
-            for bulk_cipher in bulk_ciphers
-            if bulk_cipher.cipher.value.key_size is not None
-        ]
 
     @classmethod
     def get_proposals(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -396,7 +445,7 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
     ) -> list[Ikev1PayloadProposal]:
         key_lengths: list[int] = []
         if key_length is None:
-            key_lengths.extend(cls.get_key_lengths(encryption_algorithm))
+            key_lengths.extend(cls.get_encryption_algorithm_key_lengths(encryption_algorithm))
         else:
             key_lengths.append(key_length)
 
@@ -427,7 +476,6 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
         return proposals
 
     @classmethod
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def _get_proposals(
         cls,
         encryption_algorithms: list[Ikev1EncryptionAlgorithm],
@@ -435,7 +483,7 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
         hash_algorithms: list[Ikev1HashAlgorithm],
         authentication_methods: list[Ikev1AuthenticationMethod],
         key_length: typing.Optional[int] = None,
-    ) -> list[Ikev1PayloadProposal]:
+    ) -> list[Ikev1PayloadProposal]: # pylint: disable=too-many-arguments,too-many-positional-arguments
         proposals = []
         for encryption_algorithm in encryption_algorithms:
             for hash_algorithm in hash_algorithms:
@@ -456,41 +504,36 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
         cls,
         proposals: list[Ikev1PayloadProposal]
     ) -> tuple[typing.Optional[Ikev1DiffieHellmanGroup], typing.Optional[Ikev1DiffieHellmanGroup]]:
-        ffdh_group = None
-        ecdh_group = None
-
-        for proposal in proposals:
-            for transform in proposal.transforms:
-                for attribute in transform.attributes:
-                    if isinstance(attribute, Ikev1AttributeDiffieHellmanGroup):
-                        dh_group = attribute.value
-                        if isinstance(dh_group.value.key_parameter, DHParamWellKnown):
-                            ffdh_group = dh_group
-                        elif isinstance(dh_group.value.key_parameter, NamedGroup):
-                            ecdh_group = dh_group
-
-                        if ffdh_group and ecdh_group:
-                            return ffdh_group, ecdh_group
-
-        return ffdh_group, ecdh_group
+        dh_groups = [
+            attribute.value
+            for proposal in proposals
+            for transform in proposal.transforms
+            for attribute in transform.attributes
+            if isinstance(attribute, Ikev1AttributeDiffieHellmanGroup)
+        ]
+        backend_supported = frozenset(dhe_ephemeral_material_backend.supported_ikev1_dh_groups())
+        ffdh_groups, ecdh_groups = cls._split_dh_groups(dh_groups, backend_supported=backend_supported)
+        return (
+            ffdh_groups[0] if ffdh_groups else None,
+            ecdh_groups[0] if ecdh_groups else None,
+        )
 
     @classmethod
     def get_key_exchange_payloads(cls, proposals: list[Ikev1PayloadProposal]):
         payloads = []
         ffdh_group, ecdh_group = cls._get_dh_groups(proposals)
 
+        if ffdh_group is None and ecdh_group is None:
+            raise ValueError('no supported Diffie-Hellman group in proposals')
+
         if ecdh_group:
+            ephemeral = dhe_ephemeral_material_backend.create_ephemeral_material(ecdh_group)
             payloads.append(Ikev1PayloadKeyExchange(
-                key_exchange_data=get_ecdh_ephemeral_key_forged(
-                    ecdh_group.value.key_parameter, add_point_format_octet=False
-                ),
+                key_exchange_data=cls._build_key_exchange_data(ecdh_group, ephemeral=ephemeral),
             ))
         elif ffdh_group:
             payloads.append(Ikev1PayloadKeyExchange(
-                key_exchange_data=int_to_bytes(
-                    get_dh_ephemeral_key_forged(ffdh_group.value.key_parameter.value.parameter_numbers.p),
-                    ffdh_group.value.key_parameter.value.key_size // 8
-                )
+                key_exchange_data=cls._build_key_exchange_data(ffdh_group),
             ))
 
         payloads.append(Ikev1PayloadNonce(
@@ -503,6 +546,7 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
     def _get_payloads(
         cls,
         proposals: list[Ikev1PayloadProposal],
+        cert_request: typing.Optional[bytes] = None,
     ):
         payloads = []
 
@@ -512,6 +556,12 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
             proposals=proposals
         )
         payloads.append(payload_security_association)
+
+        if cert_request is not None:
+            payloads.append(Ikev1PayloadCertificateRequest(
+                cert_encoding=Ikev1CertificateType.X509_CERTIFICATE_SIGNATURE,
+                certification_authority=cert_request,
+            ))
 
         return payloads
 
@@ -701,7 +751,7 @@ class IKEv2ClientHandshake(IKEClient):
         receivable_byte_num = 0
         while True:
             try:
-                message, parsed_length = IsakmpMessage.parse_immutable(transfer.buffer)
+                message, parsed_length = parse_ike_message(transfer.buffer)
                 transfer.flush_buffer(parsed_length)
 
                 if message.exchange_type != Ikev2ExchangeType.IKE_SA_INIT:
@@ -811,7 +861,7 @@ class IKEv1ClientHandshake(IKEClient):
         receivable_byte_num = 0
         while True:
             try:
-                responder_message, parsed_length = IsakmpMessage.parse_immutable(transfer.buffer)
+                responder_message, parsed_length = parse_ike_message(transfer.buffer)
                 transfer.flush_buffer(parsed_length)
 
                 if responder_message.exchange_type not in self._ACCEPTABLE_EXCHANGE_TYPES:
