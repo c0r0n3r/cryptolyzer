@@ -58,6 +58,8 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 return [], []
             if alert.description in (TlsAlertDescription.DECODE_ERROR, TlsAlertDescription.INTERNAL_ERROR):
                 return [], remaining_cipher_suites
+        elif alert.description == TlsAlertDescription.PROTOCOL_VERSION:
+            raise StopIteration
         if alert.description == TlsAlertDescription.INTERNAL_ERROR:  # maybe too many handshake request
             if retried_internal_error:
                 return [], []
