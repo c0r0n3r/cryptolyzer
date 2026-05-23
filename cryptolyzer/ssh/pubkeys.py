@@ -1,12 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict
+import collections
+import enum
 
 import attr
+import urllib3
 
 from cryptodatahub.common.algorithm import Authentication
-
+from cryptodatahub.common.grade import Grade, GradeableSimple
+from cryptodatahub.common.types import CryptoDataParamsNamed
+from cryptodatahub.common.utils import hash_bytes
 
 from cryptodatahub.ssh.algorithm import SshHostKeyType
 from cryptoparser.ssh.key import SshPublicKeyBase
@@ -19,6 +23,8 @@ from cryptolyzer.common.analyzer import AnalyzerSshBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultSsh, AnalyzerTargetSsh
 from cryptolyzer.common.utils import LogSingleton
+
+from cryptolyzer.dnsrec.client import L7ClientDns
 
 from cryptolyzer.ssh.ciphers import AnalyzerCiphers
 from cryptolyzer.ssh.client import (
@@ -41,19 +47,45 @@ from cryptolyzer.ssh.client import (
 )
 
 
+@attr.s(frozen=True)
+class SshFpVerificationStatusParams(CryptoDataParamsNamed, GradeableSimple):
+    _grade = attr.ib(validator=attr.validators.instance_of(Grade))
+
+    @property
+    def grade(self):
+        return self._grade
+
+
+class SshFpVerificationStatus(enum.Enum):
+    MISSING = SshFpVerificationStatusParams(name='missing', long_name=None, grade=Grade.DEPRECATED)
+    MATCH = SshFpVerificationStatusParams(name='match', long_name=None, grade=Grade.SECURE)
+    MISMATCH = SshFpVerificationStatusParams(name='mismatch', long_name=None, grade=Grade.INSECURE)
+
+
+@attr.s
+class SshPublicKeyWithSshfpState:
+    public_key = attr.ib(validator=attr.validators.instance_of(SshPublicKeyBase))
+    sshfp_status = attr.ib(
+        validator=attr.validators.instance_of(SshFpVerificationStatus),
+        metadata={'human_readable_name': 'DNS Fingerprint Status'},
+    )
+
+
 @attr.s
 class AnalyzerResultPublicKeys(AnalyzerResultSsh):
     """
     :class: Analyzer result relates to a host keys/certificates.
 
-    :param public_keys: List of host keys/certificates.
+    :param public_keys: List of host keys/certificates, each paired with its SSHFP DNS verification status.
     """
 
-    public_keys = attr.ib(validator=attr.validators.deep_iterable(attr.validators.instance_of(SshPublicKeyBase)))
+    public_keys = attr.ib(
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(SshPublicKeyWithSshfpState))
+    )
 
 
 class AnalyzerPublicKeys(AnalyzerSshBase):
-    _KEY_EXCHANGE_INIT_MESSAGES_BY_TYPE = OrderedDict([
+    _KEY_EXCHANGE_INIT_MESSAGES_BY_TYPE = collections.OrderedDict([
         ((SshHostKeyType.HOST_KEY, Authentication.DSS), SshKeyExchangeInitHostKeyDSS()),
         ((SshHostKeyType.HOST_KEY, Authentication.ECDSA), SshKeyExchangeInitHostKeyECDSA()),
         ((SshHostKeyType.HOST_KEY, Authentication.EDDSA), SshKeyExchangeInitHostKeyED25519()),
@@ -85,6 +117,36 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
             lambda server_message: issubclass(server_message, SshDHKeyExchangeReplyBase),
             server_messages
         )))
+
+    @classmethod
+    def _compute_sshfp_status(cls, sshfp_records, public_key):
+        key_auth = public_key.host_key_algorithm.value.signature.value.key_type
+        matching_records = [
+            r for r in sshfp_records
+            if r.algorithm.value.algorithm == key_auth
+        ]
+        if not matching_records:
+            return SshFpVerificationStatus.MISSING
+
+        for record in matching_records:
+            expected = hash_bytes(record.fingerprint_type.value.hash, public_key.key_bytes)
+            if record.fingerprint == expected:
+                return SshFpVerificationStatus.MATCH
+
+        return SshFpVerificationStatus.MISMATCH
+
+    @classmethod
+    def _get_sshfp_states(cls, address, host_public_keys):
+        try:
+            dns_client = L7ClientDns.from_uri(urllib3.util.parse_url(f'dns://{address}'))
+            sshfp_records = dns_client.get_sshfp_records()
+        except NetworkError:
+            sshfp_records = []
+
+        return [
+            SshPublicKeyWithSshfpState(host_public_key, cls._compute_sshfp_status(sshfp_records, host_public_key))
+            for host_public_key in host_public_keys
+        ]
 
     def analyze(self, analyzable):
         super().analyze(analyzable)
@@ -159,5 +221,5 @@ class AnalyzerPublicKeys(AnalyzerSshBase):
 
         return AnalyzerResultPublicKeys(
             AnalyzerTargetSsh.from_l7_client(analyzable),
-            host_public_keys,
+            self._get_sshfp_states(analyzable.address, host_public_keys),
         )
