@@ -216,7 +216,9 @@ class Ikev1ServerHandshake(IkeServerHandshakeBase):
         payloads = []
         if ecdh_group:
             payloads.append(Ikev1PayloadKeyExchange(
-                key_exchange_data=get_ecdh_ephemeral_key_forged(ecdh_group.value.key_parameter)[1:],
+                key_exchange_data=get_ecdh_ephemeral_key_forged(
+                    ecdh_group.value.key_parameter, add_point_format_octet=False
+                ),
             ))
         elif ffdh_group:
             payloads.append(Ikev1PayloadKeyExchange(
@@ -416,8 +418,8 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
             dh_group = dh_transform.transform_id
             if isinstance(dh_group.value.key_parameter, NamedGroup):
                 key_exchange_data = get_ecdh_ephemeral_key_forged(
-                    dh_group.value.key_parameter
-                )[1:]
+                    dh_group.value.key_parameter, add_point_format_octet=False
+                )
             else:
                 key_exchange_data = int_to_bytes(
                     get_dh_ephemeral_key_forged(dh_group.value.key_parameter.value.parameter_numbers.p),

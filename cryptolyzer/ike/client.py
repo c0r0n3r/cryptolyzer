@@ -186,7 +186,9 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
             payload_key_exchange = Ikev2PayloadKeyExchange(
                 flags=set(),
                 dh_group=dh_group,
-                key_exchange_data=get_ecdh_ephemeral_key_forged(dh_group.value.key_parameter)[1:],
+                key_exchange_data=get_ecdh_ephemeral_key_forged(
+                    dh_group.value.key_parameter, add_point_format_octet=False
+                ),
             )
             payloads.append(payload_key_exchange)
         elif isinstance(dh_group.value.key_parameter, DHParamWellKnown):
@@ -377,7 +379,9 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
 
         if ecdh_group:
             payloads.append(Ikev1PayloadKeyExchange(
-                key_exchange_data=get_ecdh_ephemeral_key_forged(ecdh_group.value.key_parameter)[1:],
+                key_exchange_data=get_ecdh_ephemeral_key_forged(
+                    ecdh_group.value.key_parameter, add_point_format_octet=False
+                ),
             ))
         elif ffdh_group:
             payloads.append(Ikev1PayloadKeyExchange(
