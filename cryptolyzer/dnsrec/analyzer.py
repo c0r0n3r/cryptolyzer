@@ -5,6 +5,7 @@ from cryptolyzer.common.analyzer import ProtocolHandlerBase
 
 from cryptolyzer.dnsrec.dnssec import AnalyzerDnsSec
 from cryptolyzer.dnsrec.mail import AnalyzerDnsMail
+from cryptolyzer.dnsrec.sshfp import AnalyzerDnsSshfp
 
 
 class ProtocolHandlerDnsRecordBase(ProtocolHandlerBase):
@@ -24,6 +25,7 @@ class ProtocolHandlerDnsRecordBase(ProtocolHandlerBase):
         return (
             AnalyzerDnsSec,
             AnalyzerDnsMail,
+            AnalyzerDnsSshfp,
         )
 
     @classmethod
