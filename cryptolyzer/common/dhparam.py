@@ -63,24 +63,34 @@ def get_dh_ephemeral_key_forged(prime):
     return prime // 2 + 1
 
 
-def get_ecdh_ephemeral_key_forged(named_group):
+def get_ecdh_ephemeral_key_forged(named_group, add_point_format_octet=True):
+    """Return a forged ECDH ephemeral public key for ``named_group``.
+
+    Only the uncompressed point format (SEC1 / X9.62) is supported for
+    Weierstrass curves; X25519 and X448 always use raw key bytes (RFC 7748).
+
+    :param add_point_format_octet: When True, the returned bytes for a
+        Weierstrass curve include the leading 0x04 point-format octet that
+        marks an uncompressed point. X25519 and X448 are unaffected.
+    """
     key_size_in_bytes = int(math.ceil(named_group.value.size / 8))
 
     if named_group in [NamedGroup.CURVE25519, NamedGroup.CURVE448]:
-        ephemeral_public_key_bytes = key_size_in_bytes * b'\xff'
-    else:
-        try:
-            well_know_ec_param = ECParamWellKnown.from_named_group(named_group)
-        except InvalidValue as e:
-            raise NotImplementedError(named_group) from e
+        return key_size_in_bytes * b'\xff'
 
-        ephemeral_public_key_bytes = bytearray().join([
-            b'\x04',  # uncompressed point format
-            int_to_bytes(well_know_ec_param.value.parameter_numbers.x, key_size_in_bytes),
-            int_to_bytes(well_know_ec_param.value.parameter_numbers.y, key_size_in_bytes),
-        ])
+    try:
+        well_know_ec_param = ECParamWellKnown.from_named_group(named_group)
+    except InvalidValue as e:
+        raise NotImplementedError(named_group) from e
 
-    return ephemeral_public_key_bytes
+    parts = []
+    if add_point_format_octet:
+        parts.append(b'\x04')
+    parts.extend([
+        int_to_bytes(well_know_ec_param.value.parameter_numbers.x, key_size_in_bytes),
+        int_to_bytes(well_know_ec_param.value.parameter_numbers.y, key_size_in_bytes),
+    ])
+    return bytearray().join(parts)
 
 
 def parse_tls_dh_params(param_bytes):
