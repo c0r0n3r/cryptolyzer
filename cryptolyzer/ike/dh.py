@@ -8,7 +8,6 @@ from cryptodatahub.ike.algorithm import (
     Ikev1NotifyType,
     Ikev1PayloadType,
     Ikev2DiffieHellmanGroup,
-    Ikev2EncryptionAlgorithm,
     Ikev2IntegrityAlgorithm,
     Ikev2PseudorandomFunction,
     Ikev2ExchangeType,
@@ -141,7 +140,6 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
             try:
                 init_message = Ikev2SecurityAssociationSpecialization(
                     diffie_hellman_groups=checkable_dh_groups,
-                    encryption_algorithms=list(Ikev2EncryptionAlgorithm),
                     integrity_algorithms=list(Ikev2IntegrityAlgorithm),
                     pseudorandom_functions=list(Ikev2PseudorandomFunction),
                 )
