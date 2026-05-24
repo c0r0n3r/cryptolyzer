@@ -197,7 +197,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
 
-        result = self.get_result('archive.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        result = self.get_result('documentfreedom.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [
             TlsNamedCurve.FFDHE2048,
             TlsNamedCurve.FFDHE3072,

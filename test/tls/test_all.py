@@ -148,7 +148,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertFalse(result.vulns.dhparams.weak_dh.value)
         self.assertTrue(result.vulns.versions.early_tls_version.value)
 
-        result = self.get_result('archive.org', 443)
+        result = self.get_result('documentfreedom.org', 443)
         self.assertEqual(result.dhparams.groups, [
             TlsNamedCurve.FFDHE2048,
             TlsNamedCurve.FFDHE3072,
@@ -156,7 +156,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
             TlsNamedCurve.FFDHE6144,
             TlsNamedCurve.FFDHE8192,
         ])
-        self.assertEqual(result.dhparams.dhparam.key_size.value, 2048)
+        self.assertIsNone(result.dhparams.dhparam)
 
         result = self.get_result('xenproject.org', 443)
         self.assertTrue(all(map(
