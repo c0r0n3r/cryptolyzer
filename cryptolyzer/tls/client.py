@@ -153,15 +153,22 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
         return signature_algorithms
 
     @classmethod
-    def _get_tls1_3_extensions(cls, protocol_versions, signature_algorithms):
+    def _get_tls1_3_extensions(cls, protocol_versions, signature_algorithms_cert, key_share_curves=None):
+        key_share_entries = []
+        if key_share_curves:
+            for curve in key_share_curves:
+                try:
+                    key_share_entries.append(key_share_entry_from_named_curve(curve))
+                except NotImplementedError:
+                    pass
         extensions = [
             TlsExtensionKeyShareReservedClient([]),
-            TlsExtensionKeyShareClient([]),
+            TlsExtensionKeyShareClient(key_share_entries),
             TlsExtensionSupportedVersionsClient(protocol_versions),
         ]
 
-        if signature_algorithms:
-            extensions.append(TlsExtensionSignatureAlgorithmsCert(signature_algorithms))
+        if signature_algorithms_cert:
+            extensions.append(TlsExtensionSignatureAlgorithmsCert(signature_algorithms_cert))
 
         return extensions
 
@@ -172,7 +179,8 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
             cipher_suites,
             named_curves,
             signature_algorithms,
-            extensions
+            extensions,
+            key_share_curves=None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         protocol_version_min = min(protocol_versions)
         protocol_version_max = max(protocol_versions)
@@ -196,7 +204,19 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
                 if TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2)
             ]
 
-            extensions.extend(self._get_tls1_3_extensions(protocol_versions, signature_algorithms))
+            # signature_algorithms_cert includes all algorithms valid for cert chain validation
+            # (broader than signature_algorithms which is filtered for CertificateVerify)
+            authentications_not_exist_in_tls1_3 = [Authentication.ANONYMOUS, Authentication.DSS]
+            signature_algorithms_cert = [
+                signature_algorithm
+                for signature_algorithm in TlsSignatureAndHashAlgorithm
+                if (signature_algorithm.value.signature_algorithm not in authentications_not_exist_in_tls1_3 and
+                    signature_algorithm.value.hash_algorithm is not None)
+            ]
+
+            extensions.extend(self._get_tls1_3_extensions(
+                protocol_versions, signature_algorithms_cert, key_share_curves
+            ))
         elif len(protocol_versions) > 1:
             raise NotImplementedError(protocol_versions)
 
@@ -247,6 +267,7 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             authentications,
             named_curves,
             signature_algorithms,
+            key_share_curves=None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         _cipher_suites = [
             cipher_suite
@@ -261,7 +282,8 @@ class TlsHandshakeClientHelloAuthenticationBase(  # pylint: disable=too-many-anc
             cipher_suites=_cipher_suites,
             named_curves=named_curves,
             signature_algorithms=signature_algorithms,
-            extensions=[]
+            extensions=[],
+            key_share_curves=key_share_curves,
         )
 
 
@@ -314,6 +336,22 @@ class TlsHandshakeClientHelloAuthenticationGOST(TlsHandshakeClientHelloAuthentic
             ],
             named_curves=None,
             signature_algorithms=None,
+        )
+
+
+class TlsHandshakeClientHelloAuthenticationSM2(TlsHandshakeClientHelloAuthenticationBase):
+    # pylint: disable=too-many-ancestors
+    NAMED_CURVES = [TlsNamedCurve.CURVESM2]
+    KEY_SHARE_CURVES = [TlsNamedCurve.CURVESM2]
+
+    def __init__(self, protocol_version, hostname):
+        super().__init__(
+            protocol_version=protocol_version,
+            hostname=hostname,
+            authentications=[Authentication.SM2],
+            named_curves=self.NAMED_CURVES,
+            signature_algorithms=None,
+            key_share_curves=self.KEY_SHARE_CURVES,
         )
 
 

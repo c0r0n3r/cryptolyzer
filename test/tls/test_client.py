@@ -42,6 +42,7 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeServerHello,
     TlsHandshakeType,
 )
+from cryptoparser.tls.extension import TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import (
@@ -55,7 +56,9 @@ from cryptolyzer.tls.client import (
     SslHandshakeClientHelloAnyAlgorithm,
     TlsAlert,
     TlsHandshakeClientHelloAnyAlgorithm,
+    TlsHandshakeClientHelloAuthenticationSM2,
     TlsHandshakeClientHelloBlockCipherModeCBC,
+    TlsHandshakeClientHelloSpecalization,
     TlsHandshakeClientHelloBulkCipherBlockSize64,
     TlsHandshakeClientHelloBulkCipherNull,
     TlsHandshakeClientHelloKeyExchangeAnonymousDH,
@@ -139,6 +142,24 @@ class TestTlsHandshakeClientHello(unittest.TestCase):
             TlsHandshakeClientHelloStreamCipherRC4.CIPHER_SUITES
 
         )
+
+    def test_authentication_sm2_tls1_3(self):
+        client_hello = TlsHandshakeClientHelloAuthenticationSM2(
+            TlsProtocolVersion(TlsVersion.TLS1_3), self._HOSTNAME
+        )
+        self.assertIsNotNone(client_hello)
+
+    def test_key_share_curve_not_implemented(self):
+        client_hello = TlsHandshakeClientHelloSpecalization(
+            hostname=self._HOSTNAME,
+            protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1_3)],
+            cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            named_curves=None,
+            signature_algorithms=None,
+            extensions=[],
+            key_share_curves=[TlsNamedCurve.ARBITRARY_EXPLICIT_PRIME_CURVES],
+        )
+        self.assertIsNotNone(client_hello)
 
 
 class L7ServerTlsFatalResponse(TlsServerHandshake):

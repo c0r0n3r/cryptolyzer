@@ -21,6 +21,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationGOST,
     TlsHandshakeClientHelloAuthenticationRSA,
+    TlsHandshakeClientHelloAuthenticationSM2,
     TlsHandshakeClientHelloAuthenticationDeprecated,
 )
 from cryptolyzer.tls.exception import TlsAlert
@@ -54,8 +55,10 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
     @staticmethod
     def _handle_tls_alert(alert, retried_internal_error, checkable_cipher_suites, remaining_cipher_suites):
         if len(checkable_cipher_suites) == len(remaining_cipher_suites):
-            if alert.description in [TlsAlertDescription.PROTOCOL_VERSION, TlsAlertDescription.UNRECOGNIZED_NAME]:
+            if alert.description == TlsAlertDescription.UNRECOGNIZED_NAME:
                 return [], []
+            if alert.description == TlsAlertDescription.PROTOCOL_VERSION:
+                return [], remaining_cipher_suites
             if alert.description in (TlsAlertDescription.DECODE_ERROR, TlsAlertDescription.INTERNAL_ERROR):
                 return [], remaining_cipher_suites
         elif alert.description == TlsAlertDescription.PROTOCOL_VERSION:
@@ -73,7 +76,10 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         raise alert
 
     @classmethod
-    def _next_accepted_cipher_suites(cls, l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
+    def _next_accepted_cipher_suites(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+            cls, l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+            named_curves=None, key_share_curves=None,
+    ):
         if protocol_version.version == TlsVersion.SSL2:
             client_hello = SslHandshakeClientHelloAnyAlgorithm()
             client_hello.cipher_suites = TlsCipherSuiteVector(remaining_cipher_suites)
@@ -87,9 +93,10 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
             l7_client.address,
             [protocol_version, ],
             remaining_cipher_suites,
-            named_curves=None,
+            named_curves=named_curves,
             signature_algorithms=None,
-            extensions=[]
+            extensions=[],
+            key_share_curves=key_share_curves,
         )
         server_messages = l7_client.do_tls_handshake(
             client_hello,
@@ -103,7 +110,10 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 break
 
     @classmethod
-    def _get_accepted_cipher_suites(cls, l7_client, protocol_version, checkable_cipher_suites):
+    def _get_accepted_cipher_suites(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+            cls, l7_client, protocol_version, checkable_cipher_suites,
+            named_curves=None, key_share_curves=None,
+    ):
         retried_internal_error = False
         accepted_cipher_suites = []
         remaining_cipher_suites = copy.copy(checkable_cipher_suites)
@@ -114,7 +124,8 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                     time.sleep(1)
 
                 cls._next_accepted_cipher_suites(
-                    l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites
+                    l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+                    named_curves=named_curves, key_share_curves=key_share_curves,
                 )
                 LogSingleton().log(
                     level=60, msg=f'Server offers cipher suite {accepted_cipher_suites[-1].name} ({protocol_version})'
@@ -164,10 +175,15 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         client_hello_messsages_in_order_of_probability.append(
             TlsHandshakeClientHelloAuthenticationGOST(protocol_version, l7_client.address)
         )
+        client_hello_messsages_in_order_of_probability.append(
+            TlsHandshakeClientHelloAuthenticationSM2(protocol_version, l7_client.address)
+        )
         for client_hello in client_hello_messsages_in_order_of_probability:
             accepted_cipher_suites.extend(
                 cls._get_accepted_cipher_suites(
-                    l7_client, protocol_version, list(client_hello.cipher_suites)
+                    l7_client, protocol_version, list(client_hello.cipher_suites),
+                    named_curves=getattr(client_hello, 'NAMED_CURVES', None),
+                    key_share_curves=getattr(client_hello, 'KEY_SHARE_CURVES', None),
                 )[0]
             )
 
