@@ -359,3 +359,13 @@ class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instanc
             self.assertTrue(certificate_chain.contains_anchor)
             self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False, False])
             self.assertTrue(certificate_chain.revoked)
+
+    def test_empty_chain(self):
+        certificate_chain = CertificateChainX509Validator()([])
+        self.assertIsNone(certificate_chain.ordered)
+
+    @mock.patch('cryptolyzer.common.x509.certvalidator.context.ValidationContext')
+    @mock.patch('cryptolyzer.common.x509.certvalidator.CertificateValidator')
+    def test_ca_only_chain(self, _, __):
+        certificate_chain = CertificateChainX509Validator()([self.trusted_root_ca])
+        self.assertIsNotNone(certificate_chain)

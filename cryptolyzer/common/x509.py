@@ -160,6 +160,12 @@ class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
             if not item.is_ca
         ]
 
+        # Self-signed CA cert: is_ca=True keeps it out of end_entity_certs.
+        if not end_entity_certs:
+            if not items:
+                return
+            end_entity_certs = [self._get_asn1crypto_certificate(items[0])]
+
         context = certvalidator.context.ValidationContext(
             extra_trust_roots=extra_trust_roots,
             weak_hash_algos=set(),
