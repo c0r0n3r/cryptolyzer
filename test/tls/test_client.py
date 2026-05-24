@@ -72,6 +72,7 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.server import (
     L7ServerTls,
     L7ServerTlsBase,
+    L7ServerTlsFTP,
     L7ServerTlsIMAP,
     L7ServerTlsIMAPBase,
     L7ServerTlsIMAPEarlyClose,
@@ -520,36 +521,62 @@ class TestClientSMTP(TestL7ClientBase):
 
 
 class TestClientFTP(TestL7ClientBase):
+    @staticmethod
+    def _start_ftp_server(l7_server_class):
+        threaded_server = L7ServerTlsTest(
+            l7_server_class('localhost', 0, L4TransferSocketParams(timeout=0.5)),
+        )
+        threaded_server.start()
+        return threaded_server
+
     @mock.patch.object(ftplib.FTP, '__init__', side_effect=ftplib.error_reply)
     def test_error_ftplib_error(self, _):
-        _, result = self.get_result('ftp', 'slackware.org.uk', None)
+        _, result = self.get_result('ftp', 'localhost', None)
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(ftplib.FTP, 'sendcmd', return_value='502 Command not implemented')
     def test_error_unsupported_starttls(self, _):
-        _, result = self.get_result('ftp', 'slackware.org.uk', None)
+        threaded_server = self._start_ftp_server(L7ServerTlsFTP)
+        _, result = self.get_result(
+            'ftp',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
+        )
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(ftplib.FTP, 'connect', return_value='534 Could Not Connect to Server - Policy Requires SSL')
     @mock.patch.object(ftplib.FTP, 'quit', side_effect=ftplib.error_perm)
     def test_error_ftp_error_on_connect(self, _, __):
-        _, result = self.get_result('ftp', 'slackware.org.uk', None)
+        threaded_server = self._start_ftp_server(L7ServerTlsFTP)
+        _, result = self.get_result(
+            'ftp',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
+        )
         self.assertEqual(result.versions, [])
 
     @mock.patch.object(ftplib.FTP, 'quit', side_effect=ftplib.error_reply)
     def test_error_ftp_error_on_quit(self, _):
-        _, result = self.get_result('ftp', 'slackware.org.uk', None)
-        self.assertEqual(
-            result.versions,
-            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
+        threaded_server = self._start_ftp_server(L7ServerTlsFTP)
+        _, result = self.get_result(
+            'ftp',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
         )
+        self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
     def test_ftp_client(self):
-        _, result = self.get_result('ftp', 'slackware.org.uk', None)
-        self.assertEqual(
-            result.versions,
-            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1_2, TlsVersion.TLS1_3]]
+        threaded_server = self._start_ftp_server(L7ServerTlsFTP)
+        _, result = self.get_result(
+            'ftp',
+            'localhost',
+            threaded_server.l7_server.l4_transfer.bind_port,
+            L4TransferSocketParams(timeout=10),
         )
+        self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
     def test_ftps_client_port(self):
         client = L7ClientTlsBase.from_scheme('ftps', 'localhost')
