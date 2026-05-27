@@ -35,9 +35,11 @@ from cryptodatahub.ike.algorithm import (
     Ikev2PseudorandomFunction,
 )
 
+from cryptodatahub.ike.version import IkeVersion
+
 from cryptoparser.common.exception import NotEnoughData, InvalidType
 from cryptoparser.ike.isakmp import IsakmpMessage, IsakmpFlags
-from cryptoparser.ike.version import IsakmpVersion, IsakmpProtocolVersion
+from cryptoparser.ike.version import IsakmpProtocolVersion
 from cryptoparser.ike.ikev1 import (
     Ikev1Situation,
     Ikev1PayloadKeyExchange,
@@ -113,7 +115,8 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         for transform_id in encryption_algorithms:
             transform_class = cls._TRANSFORM_CLASS_BY_TRANSFORM_ID[type(transform_id)]
             for bulk_cipher in transform_id.value.bulk_ciphers:
-                key_length = bulk_cipher.value.key_size if bulk_cipher.value.key_size is not None else 0
+                key_size = bulk_cipher.cipher.value.key_size
+                key_length = key_size if key_size is not None else 0
                 transforms.append(transform_class(transform_id=transform_id, key_length=key_length))
 
         if ecdh_groups:
@@ -225,7 +228,7 @@ class Ikev2SecurityAssociationSpecialization(Ikev2SecurityAssociationBase):
         )
 
         super().__init__(
-            version=IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=random.randint(0, 2**64 - 1),
             responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
@@ -247,7 +250,7 @@ class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
 
         initiator_spi = random.randint(0, 2**64 - 1)
         super().__init__(
-            version=IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=initiator_spi,
             responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
@@ -273,9 +276,9 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
             return [None]
 
         return [
-            bulk_cipher.value.key_size
+            bulk_cipher.cipher.value.key_size
             for bulk_cipher in bulk_ciphers
-            if bulk_cipher.value.key_size is not None
+            if bulk_cipher.cipher.value.key_size is not None
         ]
 
     @classmethod
@@ -431,7 +434,7 @@ class Ikev1SecurityAssociationSpecialization(Ikev1SecurityAssociationBase):
 
         initiator_spi = random.randint(0, 2**64 - 1)
         super().__init__(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=initiator_spi,
             responder_spi=0,
             exchange_type=exchange_type,
@@ -484,7 +487,7 @@ class Ikev1SecurityAssociationAlgorithms(Ikev1SecurityAssociationBase):
 
         initiator_spi = random.randint(0, 2**64 - 1)
         super().__init__(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=initiator_spi,
             responder_spi=0,
             exchange_type=exchange_type,

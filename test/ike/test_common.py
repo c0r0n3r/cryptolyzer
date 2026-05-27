@@ -21,7 +21,7 @@ from cryptolyzer.ike.common import Ikev1CipherSuite, Ikev2CipherSuite
 class TestIkev1CipherSuite(unittest.TestCase):
     def test_from_proposal_algorithms(self):
         algorithms = Ikev1SecurityAssociationProposalAlgorithms(
-            encryption_algorithm=Ikev1EncryptionAlgorithm.DES3_CBC,
+            encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
             diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_2048_BIT,
             hash_algorithm=Ikev1HashAlgorithm.MD5,
             authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,

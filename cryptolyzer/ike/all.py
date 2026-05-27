@@ -46,7 +46,7 @@ class AnalyzerAll(AnalyzerIKEBase):
     def analyze(self, analyzable, protocol_version):
         """
         :type analyzable: AnalyzerTargetIKE
-        :type protocol_version: IsakmpVersion
+        :type protocol_version: IkeVersion
         :rtype: AnalyzerResultAll
         """
         super().analyze(analyzable, protocol_version)

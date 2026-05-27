@@ -12,7 +12,9 @@ from cryptodatahub.ike.algorithm import (
     Ikev1NotifyType,
 )
 
-from cryptoparser.ike.version import IsakmpVersion, IsakmpProtocolVersion
+from cryptodatahub.ike.version import IkeVersion
+
+from cryptoparser.ike.version import IsakmpProtocolVersion
 from cryptolyzer.common.analyzer import AnalyzerIKEBase
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
@@ -97,7 +99,7 @@ class AnalyzerVersions(AnalyzerIKEBase):
             ),
             [Ikev2NotifyType.NO_PROPOSAL_CHOSEN, Ikev2NotifyType.INVALID_KE_PAYLOAD],
         ):
-            supported_versions.append(IsakmpProtocolVersion(IsakmpVersion.V2, 0))
+            supported_versions.append(IsakmpProtocolVersion(IkeVersion.V2, 0))
 
         if self._probe_version(
             analyzable,
@@ -107,7 +109,7 @@ class AnalyzerVersions(AnalyzerIKEBase):
             ),
             [Ikev1NotifyType.NO_PROPOSAL_CHOSEN],
         ):
-            supported_versions.append(IsakmpProtocolVersion(IsakmpVersion.V1, 0))
+            supported_versions.append(IsakmpProtocolVersion(IkeVersion.V1, 0))
 
         return AnalyzerResultVersions(
             target=AnalyzerTargetIke.from_l7_client(analyzable),

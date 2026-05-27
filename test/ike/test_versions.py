@@ -12,7 +12,9 @@ from test.ike.classes import (
 )
 
 from cryptodatahub.ike.algorithm import Ikev1NotifyType, Ikev2NotifyType
-from cryptoparser.ike.version import IsakmpProtocolVersion, IsakmpVersion
+from cryptodatahub.ike.version import IkeVersion
+
+from cryptoparser.ike.version import IsakmpProtocolVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4ClientUDP, L4TransferSocketParams
@@ -117,8 +119,8 @@ class TestIkeVersions(TestLoggerBase):
         self.assertEqual(
             result.versions,
             [
-                IsakmpProtocolVersion(IsakmpVersion.V1, 0),
-                IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+                IsakmpProtocolVersion(IkeVersion.V1, 0),
+                IsakmpProtocolVersion(IkeVersion.V2, 0),
             ],
         )
         log_output = '\n'.join(self.get_log_lines())
@@ -181,8 +183,8 @@ class TestIkeVersions(TestLoggerBase):
         self.assertEqual(
             result.versions,
             [
-                IsakmpProtocolVersion(IsakmpVersion.V1, 0),
-                IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+                IsakmpProtocolVersion(IkeVersion.V1, 0),
+                IsakmpProtocolVersion(IkeVersion.V2, 0),
             ],
         )
 
@@ -203,8 +205,8 @@ class TestIkeVersions(TestLoggerBase):
         self.assertEqual(
             result.versions,
             [
-                IsakmpProtocolVersion(IsakmpVersion.V1, 0),
-                IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+                IsakmpProtocolVersion(IkeVersion.V1, 0),
+                IsakmpProtocolVersion(IkeVersion.V2, 0),
             ],
         )
         log_output = '\n'.join(self.get_log_lines())
@@ -215,17 +217,17 @@ class TestIkeVersions(TestLoggerBase):
         result = self._get_result('moon.strongswan.org', 500, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(
             result.versions,
-            [IsakmpProtocolVersion(IsakmpVersion.V1, 0), IsakmpProtocolVersion(IsakmpVersion.V2, 0)],
+            [IsakmpProtocolVersion(IkeVersion.V1, 0), IsakmpProtocolVersion(IkeVersion.V2, 0)],
         )
 
         result = self._get_result('82.138.51.230', 500, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(
             result.versions,
-            [IsakmpProtocolVersion(IsakmpVersion.V2, 0)],
+            [IsakmpProtocolVersion(IkeVersion.V2, 0)],
         )
 
         result = self._get_result('public-vpn-213.opengw.net', 500, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(
             result.versions,
-            [IsakmpProtocolVersion(IsakmpVersion.V1, 0)],
+            [IsakmpProtocolVersion(IkeVersion.V1, 0)],
         )

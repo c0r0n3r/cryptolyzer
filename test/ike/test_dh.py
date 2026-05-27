@@ -16,7 +16,7 @@ from cryptodatahub.ike.algorithm import (
     Ikev2DiffieHellmanGroup,
     Ikev2NotifyType,
 )
-from cryptoparser.ike.version import IsakmpVersion
+from cryptodatahub.ike.version import IkeVersion
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.ike.client import L7ClientIPsecBase
 from cryptolyzer.ike.dh import AnalyzerDHBase
@@ -109,7 +109,7 @@ class TestAnalyzerDHBase(TestLoggerBase):
 
     def _run_test_no_proposal_chosen(self, protocol_version):
         l7_client = self._make_mock_client()
-        if protocol_version == IsakmpVersion.V1:
+        if protocol_version == IkeVersion.V1:
             l7_client.do_ikev1_handshake.side_effect = IsakmpNotify(Ikev1NotifyType.NO_PROPOSAL_CHOSEN)
         else:
             l7_client.do_ikev2_handshake.side_effect = IsakmpNotify(Ikev2NotifyType.NO_PROPOSAL_CHOSEN)
@@ -119,7 +119,7 @@ class TestAnalyzerDHBase(TestLoggerBase):
 
         self.assertEqual(len(result.groups), 0)
         self.assertGreater(
-            l7_client.do_ikev1_handshake.call_count if protocol_version == IsakmpVersion.V1
+            l7_client.do_ikev1_handshake.call_count if protocol_version == IkeVersion.V1
             else l7_client.do_ikev2_handshake.call_count,
             0,
             'Analyzer must probe at least one Diffie-Hellman group',
@@ -128,21 +128,21 @@ class TestAnalyzerDHBase(TestLoggerBase):
         self.assertIn('No proposal chosen', log_output)
 
     def test_ikev1(self):
-        self._run_test_success(IsakmpVersion.V1, self.get_expected_groups_ikev1())
+        self._run_test_success(IkeVersion.V1, self.get_expected_groups_ikev1())
 
     def test_ikev2(self):
-        self._run_test_success(IsakmpVersion.V2, self.get_expected_groups_ikev2())
+        self._run_test_success(IkeVersion.V2, self.get_expected_groups_ikev2())
 
     def test_ikev1_no_proposal_chosen(self):
-        self._run_test_no_proposal_chosen(IsakmpVersion.V1)
+        self._run_test_no_proposal_chosen(IkeVersion.V1)
 
     def test_ikev2_no_proposal_chosen(self):
-        self._run_test_no_proposal_chosen(IsakmpVersion.V2)
+        self._run_test_no_proposal_chosen(IkeVersion.V2)
 
     def _run_test_no_response(self, protocol_version):
         l7_client = self._make_mock_client()
         no_response = NetworkError(NetworkErrorType.NO_RESPONSE)
-        if protocol_version == IsakmpVersion.V1:
+        if protocol_version == IkeVersion.V1:
             l7_client.do_ikev1_handshake.side_effect = no_response
         else:
             l7_client.do_ikev2_handshake.side_effect = no_response
@@ -152,7 +152,7 @@ class TestAnalyzerDHBase(TestLoggerBase):
 
         self.assertEqual(len(result.groups), 0)
         self.assertGreater(
-            l7_client.do_ikev1_handshake.call_count if protocol_version == IsakmpVersion.V1
+            l7_client.do_ikev1_handshake.call_count if protocol_version == IkeVersion.V1
             else l7_client.do_ikev2_handshake.call_count,
             0,
             'Analyzer must probe at least one Diffie-Hellman group',
@@ -161,10 +161,10 @@ class TestAnalyzerDHBase(TestLoggerBase):
         self.assertIn('No response', log_output)
 
     def test_ikev1_no_response(self):
-        self._run_test_no_response(IsakmpVersion.V1)
+        self._run_test_no_response(IkeVersion.V1)
 
     def test_ikev2_no_response(self):
-        self._run_test_no_response(IsakmpVersion.V2)
+        self._run_test_no_response(IkeVersion.V2)
 
     def _run_test_no_connection(self, protocol_version):
         threaded_server = create_ike_server(
@@ -188,10 +188,10 @@ class TestAnalyzerDHBase(TestLoggerBase):
         threaded_server.join()
 
     def test_ikev1_no_connection(self):
-        self._run_test_no_connection(IsakmpVersion.V1)
+        self._run_test_no_connection(IkeVersion.V1)
 
     def test_ikev2_no_connection(self):
-        self._run_test_no_connection(IsakmpVersion.V2)
+        self._run_test_no_connection(IkeVersion.V2)
 
     def test_ikev1_error_notify_is_raised(self):
         threaded_server = create_ike_server(
@@ -208,7 +208,7 @@ class TestAnalyzerDHBase(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                IsakmpVersion.V1,
+                IkeVersion.V1,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.notify, Ikev1NotifyType.INVALID_PAYLOAD_TYPE)
@@ -230,7 +230,7 @@ class TestAnalyzerDHBase(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                IsakmpVersion.V2,
+                IkeVersion.V2,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.notify, Ikev2NotifyType.INVALID_SYNTAX)

@@ -333,7 +333,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         result = self.get_result('3des.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         triple_des_block_ciphers = [
-            BlockCipher.TRIPLE_DES,
+            BlockCipher.TRIPLE_DES_168,
             BlockCipher.TRIPLE_DES_EDE,
         ]
 

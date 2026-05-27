@@ -6,12 +6,13 @@ import typing
 
 import attr
 
+from cryptodatahub.ike.version import IkeVersion
+
 from cryptoparser.common.base import Serializable
 from cryptoparser.httpx.version import HttpVersion
 from cryptoparser.ike.version import IsakmpProtocolVersion
 from cryptoparser.ssh.version import SshProtocolVersion
 from cryptoparser.tls.version import TlsProtocolVersion
-from cryptoparser.ike.version import IsakmpVersion
 
 from cryptolyzer.common.transfer import L7TransferBase
 
@@ -115,7 +116,7 @@ class AnalyzerTargetDnsRecord(AnalyzerTargetBase):
 class AnalyzerTargetIKE(AnalyzerTarget):
     proto_version = attr.ib(
         default=None,
-        validator=attr.validators.optional(attr.validators.instance_of(IsakmpVersion)),
+        validator=attr.validators.optional(attr.validators.instance_of(IkeVersion)),
         metadata={'human_readable_name': 'Protocol Version'}
     )
 

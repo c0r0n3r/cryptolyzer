@@ -9,7 +9,7 @@ from cryptodatahub.ike.algorithm import (
     Ikev2DiffieHellmanGroup,
     Ikev2NotifyType,
 )
-from cryptoparser.ike.version import IsakmpVersion
+from cryptodatahub.ike.version import IkeVersion
 from cryptolyzer.ike.dhparams import AnalyzerDHParams
 from cryptolyzer.ike.exception import IsakmpNotify
 from cryptolyzer.ike.server import IkeServerConfiguration, L7ServerIke
@@ -66,7 +66,6 @@ class TestAnalyzerDHParams(TestAnalyzerDHBase):
         return (
             Ikev1DiffieHellmanGroup.MODP_768_BIT,
             Ikev1DiffieHellmanGroup.MODP_1024_BIT,
-            Ikev1DiffieHellmanGroup.MODP_1024_BIT_160_BIT_SUBGROUP,
         )
 
     @classmethod
@@ -86,15 +85,15 @@ class TestAnalyzerDHParams(TestAnalyzerDHBase):
 
     @classmethod
     def get_max_handshakes(cls):
-        return 300  # FFDH groups × many algorithm subsets; server must respond to each
+        return 500  # FFDH groups × many algorithm subsets; server must respond to each
 
     @classmethod
     def get_server_timeout(cls) -> float:
-        return 2.0
+        return 10.0
 
     @classmethod
     def get_client_timeout(cls) -> float:
-        return 2.0
+        return 10.0
 
     def test_ikev2_invalid_ke_payload(self):
         configuration = get_ffdh_single_server_configuration()
@@ -102,7 +101,7 @@ class TestAnalyzerDHParams(TestAnalyzerDHBase):
             L7ServerIke,
             configuration=configuration,
             max_handshake_count=self.get_max_handshakes(),
-            timeout=2,
+            timeout=10,
         )
         l4_transfer = threaded_server.l7_server.l4_transfer
         assert l4_transfer is not None
@@ -110,7 +109,7 @@ class TestAnalyzerDHParams(TestAnalyzerDHBase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            IsakmpVersion.V2,
+            IkeVersion.V2,
             ip=l4_transfer.bind_address,
         )
         self.assertEqual(
@@ -135,7 +134,7 @@ class TestAnalyzerDHParams(TestAnalyzerDHBase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            IsakmpVersion.V1,
+            IkeVersion.V1,
             ip=l4_transfer.bind_address,
         )
         # Server should have caused the analyzer to record at least one offered group

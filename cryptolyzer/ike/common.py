@@ -59,8 +59,8 @@ class Ikev1CipherSuite:
         cls,
         algorithms: Ikev1SecurityAssociationProposalAlgorithms
     ):
-        for encryption_algorithm in algorithms.encryption_algorithm.value.bulk_ciphers:
-            if encryption_algorithm.value.key_size == algorithms.key_length:
+        for bulk_cipher_entry in algorithms.encryption_algorithm.value.bulk_ciphers:
+            if bulk_cipher_entry.cipher.value.key_size == algorithms.key_length:
                 break
         else:
             raise ValueError(
@@ -69,7 +69,7 @@ class Ikev1CipherSuite:
             )
 
         return cls(
-            encryption_algorithm=encryption_algorithm,
+            encryption_algorithm=bulk_cipher_entry.cipher,
             block_cipher_mode=algorithms.encryption_algorithm.value.block_cipher_mode,
             diffie_hellman_group=algorithms.diffie_hellman_group.value.key_parameter,
             hash_algorithm=algorithms.hash_algorithm.value.hash,
@@ -108,8 +108,8 @@ class Ikev2CipherSuite:
         diffie_hellman_transform_id: Ikev2DiffieHellmanGroup,
         key_length: int,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
-        for encryption_algorithm in encryption_transform_id.value.bulk_ciphers:
-            if encryption_algorithm.value.key_size == key_length:
+        for bulk_cipher_entry in encryption_transform_id.value.bulk_ciphers:
+            if bulk_cipher_entry.cipher.value.key_size == key_length:
                 break
         else:
             raise ValueError(
@@ -119,7 +119,7 @@ class Ikev2CipherSuite:
 
         integrity_algorithm = None if integrity_transform_id.value.hmac is None else integrity_transform_id.value.hmac
         return cls(
-            encryption_algorithm=encryption_algorithm,
+            encryption_algorithm=bulk_cipher_entry.cipher,
             block_cipher_mode=encryption_transform_id.value.block_cipher_mode,
             pseudorandom_function=pseudorandom_transform_id.value.mac,
             diffie_hellman_group=diffie_hellman_transform_id.value.key_parameter,

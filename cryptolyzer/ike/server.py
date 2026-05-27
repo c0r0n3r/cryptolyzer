@@ -22,10 +22,10 @@ from cryptodatahub.ike.algorithm import (
     MAC,
 )
 
-from cryptoparser.common.exception import InvalidType
+from cryptodatahub.ike.version import IkeVersion
 
+from cryptoparser.common.exception import InvalidType
 from cryptoparser.ike.isakmp import IsakmpMessage, IsakmpFlags
-from cryptoparser.ike.version import IsakmpVersion
 from cryptoparser.ike.ikev1 import (
     Ikev1AttributeDiffieHellmanGroup,
     Ikev1AttributeEncryptionAlgorithm,
@@ -276,10 +276,10 @@ class Ikev1ServerHandshake(IkeServerHandshakeBase):
         key_length = key_length_attribute.value if key_length_attribute is not None else None
         encryption_algorithm = encryption_attribute.value
 
-        for bulk_cipher in encryption_algorithm.value.bulk_ciphers:
-            if bulk_cipher.value.key_size == key_length:
+        for bulk_cipher_entry in encryption_algorithm.value.bulk_ciphers:
+            if bulk_cipher_entry.cipher.value.key_size == key_length:
                 return Ikev1TransformResolved(
-                    encryption_algorithm=bulk_cipher,
+                    encryption_algorithm=bulk_cipher_entry.cipher,
                     block_cipher_mode=encryption_algorithm.value.block_cipher_mode,
                     diffie_hellman_group=diffie_hellman_group_attribute.value.value.key_parameter,
                     hash_algorithm=hash_attribute.value.value.hash,
@@ -292,11 +292,11 @@ class Ikev1ServerHandshake(IkeServerHandshakeBase):
         sa_payload: Ikev1PayloadSecurityAssociation,
     ) -> typing.Optional[Ikev1PayloadSecurityAssociation]:
         if not sa_payload.proposals:
-            LogSingleton().log(level=60, msg=f'No proposals; version={IsakmpVersion.V1}')
+            LogSingleton().log(level=60, msg=f'No proposals; version={IkeVersion.V1}')
             return None
 
         if not self.configuration.ikev1_cipher_suites:
-            LogSingleton().log(level=60, msg=f'No cipher_suites config, accepting first; version={IsakmpVersion.V1}')
+            LogSingleton().log(level=60, msg=f'No cipher_suites config, accepting first; version={IkeVersion.V1}')
             return self._make_selected_sa(sa_payload, sa_payload.proposals[0])
 
         for proposal in sa_payload.proposals:
@@ -321,7 +321,7 @@ class Ikev1ServerHandshake(IkeServerHandshakeBase):
         message: IsakmpMessage,
         last_handshake_message_type: typing.Any,
     ) -> typing.NoReturn:  # pylint: disable=unused-argument
-        self.client_messages = {'ike_version': IsakmpVersion.V1, 'message': message}
+        self.client_messages = {'ike_version': IkeVersion.V1, 'message': message}
 
         self._handle_response_mode(message)
 
@@ -459,10 +459,10 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
     ) -> typing.Optional[Ikev2TransformResolved]:
         """Resolve IKEv2 transforms into (enc, mode, integrity, prf, dh) or None."""
 
-        for bulk_cipher in encryption_transform.transform_id.value.bulk_ciphers:
-            if bulk_cipher.value.key_size == encryption_transform.key_length:
+        for bulk_cipher_entry in encryption_transform.transform_id.value.bulk_ciphers:
+            if bulk_cipher_entry.cipher.value.key_size == encryption_transform.key_length:
                 return Ikev2TransformResolved(
-                    encryption_algorithm=bulk_cipher,
+                    encryption_algorithm=bulk_cipher_entry.cipher,
                     block_cipher_mode=encryption_transform.transform_id.value.block_cipher_mode,
                     integrity_algorithm=integrity_transform.transform_id.value.hmac,
                     pseudorandom_function=pseudorandom_function_transform.transform_id.value.mac,
@@ -650,7 +650,7 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
         message: IsakmpMessage,
         last_handshake_message_type: typing.Any,
     ) -> None:  # pylint: disable=unused-argument
-        self.client_messages = {'ike_version': IsakmpVersion.V2, 'message': message}
+        self.client_messages = {'ike_version': IkeVersion.V2, 'message': message}
 
         self._handle_response_mode(message)
 
@@ -714,9 +714,9 @@ class L7ServerIkeBase(L7ServerBase):
                     self.l4_transfer.close_client()
                 continue
 
-            if message.version.major == IsakmpVersion.V1:
+            if message.version.major == IkeVersion.V1:
                 return Ikev1ServerHandshake
-            if message.version.major == IsakmpVersion.V2:
+            if message.version.major == IkeVersion.V2:
                 return Ikev2ServerHandshake
 
             raise NotImplementedError(message.version)
