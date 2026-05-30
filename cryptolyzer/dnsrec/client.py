@@ -17,6 +17,7 @@ from cryptoparser.dnsrec.record import (
     DnsRecordDs,
     DnsRecordMx,
     DnsRecordRrsig,
+    DnsRecordSshfp,
     DnsRecordTxt,
 )
 from cryptoparser.dnsrec.txt import (
@@ -141,6 +142,21 @@ class L7ClientDnsBase():
 
     def get_txt_record_mta_sts_values(self):
         return self._get_txt_record_value('MTA-STS', '_mta-sts', DnsRecordTxtValueMtaSts)
+
+    def get_sshfp_records(self, domain_prefix=None):
+        sshfp_records = self._get_record_list(DnsRrType.SSHFP, DnsRecordSshfp, domain_prefix)
+        self._log_records(
+            'SSHFP',
+            map(
+                lambda sshfp_record: (
+                    f'{sshfp_record.algorithm.value.algorithm.value.name} / '
+                    f'{sshfp_record.fingerprint_type.value.hash.value.name}'
+                ),
+                sshfp_records
+            )
+        )
+
+        return sshfp_records
 
     def get_dnskey_records(self, domain_prefix=None):
         dnskey_records = self._get_record_list(DnsRrType.DNSKEY, DnsRecordDnskey, domain_prefix)
