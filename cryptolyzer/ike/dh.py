@@ -152,7 +152,6 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
                     dh_group = e.payload.dh_group
                     accepted_dh_groups.append(dh_group)
                     checkable_dh_groups.remove(dh_group)
-                    del checkable_dh_groups[0]
                     continue
 
                 LogSingleton().log(level=60, msg=f'Notify response from server; notify={e.notify}')
