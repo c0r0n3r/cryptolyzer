@@ -266,6 +266,19 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
     }
 
     @classmethod
+    def get_key_lengths(cls, encryption_algorithm):
+        bulk_ciphers = list(encryption_algorithm.value.bulk_ciphers)
+        single_key_size = len(bulk_ciphers) == 1
+        if single_key_size:
+            return [None]
+
+        return [
+            bulk_cipher.value.key_size
+            for bulk_cipher in bulk_ciphers
+            if bulk_cipher.value.key_size is not None
+        ]
+
+    @classmethod
     def get_proposals(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         cls,
         encryption_algorithm: Ikev1EncryptionAlgorithm,
@@ -276,11 +289,7 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
     ) -> typing.List[Ikev1PayloadProposal]:
         key_lengths: typing.List[int] = []
         if key_length is None:
-            key_lengths.extend([
-                bulk_cipher.value.key_size
-                for bulk_cipher in encryption_algorithm.value.bulk_ciphers
-                if bulk_cipher.value.key_size is not None
-            ])
+            key_lengths.extend(cls.get_key_lengths(encryption_algorithm))
         else:
             key_lengths.append(key_length)
 
@@ -288,13 +297,15 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
         for _key_length in key_lengths:
             attributes = [
                 Ikev1AttributeEncryptionAlgorithm(encryption_algorithm),
-                Ikev1AttributeKeyLength(_key_length),
                 Ikev1AttributeHashAlgorithm(hash_algorithm),
                 Ikev1AttributeDiffieHellmanGroup(diffie_hellman_group),
                 Ikev1AttributeAuthenticationMethod(authentication_method),
                 Ikev1AttributeLifeType(value=Ikev1LifeType.SECONDS),
                 Ikev1AttributeLifeDuration(value=86400),
             ]
+
+            if _key_length is not None:
+                attributes.append(Ikev1AttributeKeyLength(_key_length))
 
             proposal = Ikev1PayloadProposal(
                 protocol_id=Ikev1ProtocolId.ISAKMP,
