@@ -33,13 +33,15 @@ class TestAnalyzerDHParamsUnit(unittest.TestCase):
 
     def test_ikev2_error_notify_in_key_reuse_check(self):
         analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
         with unittest.mock.patch.object(
             analyzer,
             '_check_ikev2_key_reuse',
             side_effect=IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX),
         ):
             with self.assertRaises(IsakmpNotify) as ctx:
-                analyzer._analyze_ikev2(unittest.mock.MagicMock())  # pylint: disable=protected-access
+                analyzer._analyze_ikev2(l7_client)  # pylint: disable=protected-access
         self.assertEqual(ctx.exception.notify, Ikev2NotifyType.INVALID_SYNTAX)
 
 
