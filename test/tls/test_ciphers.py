@@ -76,8 +76,10 @@ ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES = (  # pylint: disable=protected-access
 INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE = None
 
 
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
 def _wrapped_next_accepted_cipher_suites_internal_error_once(
-        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
+        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+        named_curves=None, key_share_curves=None):
     if globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] is None:
         globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] = True
     elif globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] is True:
@@ -88,15 +90,19 @@ def _wrapped_next_accepted_cipher_suites_internal_error_once(
         l7_client,
         protocol_version,
         remaining_cipher_suites,
-        accepted_cipher_suites
+        accepted_cipher_suites,
+        named_curves=named_curves,
+        key_share_curves=key_share_curves,
     )
 
 
 INTERNAL_ERROR_SHOULD_BE_RAISED = False
 
 
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
 def _wrapped_next_accepted_cipher_suites_internal_error_multiple(
-        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
+        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+        named_curves=None, key_share_curves=None):
     if not globals()['INTERNAL_ERROR_SHOULD_BE_RAISED']:
         globals()['INTERNAL_ERROR_SHOULD_BE_RAISED'] = True
     else:
@@ -106,12 +112,16 @@ def _wrapped_next_accepted_cipher_suites_internal_error_multiple(
         l7_client,
         protocol_version,
         remaining_cipher_suites,
-        accepted_cipher_suites
+        accepted_cipher_suites,
+        named_curves=named_curves,
+        key_share_curves=key_share_curves,
     )
 
 
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
 def _wrapped_next_accepted_cipher_suites_response_error(
-        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites):
+        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+        named_curves=None, key_share_curves=None):
     if len(accepted_cipher_suites) == 1:
         raise SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
 
@@ -119,11 +129,29 @@ def _wrapped_next_accepted_cipher_suites_response_error(
         l7_client,
         protocol_version,
         remaining_cipher_suites,
-        accepted_cipher_suites
+        accepted_cipher_suites,
+        named_curves=named_curves,
+        key_share_curves=key_share_curves,
     )
 
 
-class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):
+PROTOCOL_VERSION_SHOULD_BE_RAISED = False
+
+
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
+def _wrapped_next_accepted_cipher_suites_protocol_version_mid_scan(
+        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+        named_curves=None, key_share_curves=None):
+    if globals()['PROTOCOL_VERSION_SHOULD_BE_RAISED']:
+        raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
+    globals()['PROTOCOL_VERSION_SHOULD_BE_RAISED'] = True
+    return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
+        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+        named_curves=named_curves, key_share_curves=key_share_curves,
+    )
+
+
+class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable=too-many-public-methods
     @classmethod
     def _get_main_func(cls):
         return main
@@ -170,12 +198,33 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME),
+    )
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_get_accepted_cipher_suites_fallback',
+        return_value=[]
+    )
+    def test_error_unrecognized_name(self, mocked_fallback, _):
+        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        self.assertEqual(len(result.cipher_suites), 0)
+        self.assertEqual(mocked_fallback.call_count, 0)
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        wraps=_wrapped_next_accepted_cipher_suites_protocol_version_mid_scan
+    )
+    def test_error_protocol_version_mid_scan(self, _):
+        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        self.assertEqual(len(result.cipher_suites), 1)
+
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
         side_effect=TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
     )
     def test_error_internal_error(self, mocked_next_accepted_cipher_suites):
         result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 0)
-        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 5)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 6)
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
@@ -184,7 +233,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):
     def test_error_insufficient_security(self, mocked_next_accepted_cipher_suites):
         result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 0)
-        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 5)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 6)
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
@@ -193,7 +242,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):
     def test_error_illegal_parameter(self, mocked_next_accepted_cipher_suites):
         result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 0)
-        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 5)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 6)
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
