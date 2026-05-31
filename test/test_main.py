@@ -28,6 +28,7 @@ from cryptoparser.common.base import Serializable, SerializableTextEncoder
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 
+from cryptolyzer.common.analyzer import AnalyzerIKEBase
 from cryptolyzer.common.utils import LogSingleton, SerializableTextEncoderHighlighted
 from cryptolyzer.__main__ import (
     get_argument_parser,
@@ -203,3 +204,10 @@ class TestMain(TestMainBase):
                 patch('cryptolyzer.__main__.get_protocol_handler_analyzer_and_uris', return_value=(None, None, [])):
             main()
         self.assertEqual(LogSingleton().level, logging.DEBUG)
+
+    def test_strict_rfc_2409(self):
+        self.addCleanup(AnalyzerIKEBase.set_strict_rfc_2409_compliance, False)
+        with patch.object(sys, 'argv', ['cryptolyzer', 'ikev1', '--strict-rfc-2409', 'dhparams', 'localhost']), \
+                patch('cryptolyzer.__main__.get_protocol_handler_analyzer_and_uris', return_value=(None, None, [])):
+            main()
+        self.assertEqual(AnalyzerIKEBase._MAX_PROPOSALS_PER_INIT_MESSAGE, 1)  # pylint: disable=protected-access
