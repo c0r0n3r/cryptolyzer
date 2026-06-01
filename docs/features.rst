@@ -11,6 +11,7 @@ Differentiators
 -  checks supported Diffie-Hellman (group exchange) key sizes
 -  checks supported host certificates, X.509 certificates and chains
 -  analyzes server protocol version string to identify application server vendor and version
+-  verifies host keys against `SSHFP <https://www.rfc-editor.org/rfc/rfc4255>`__ DNS records
 
 Versions
 """"""""
@@ -61,6 +62,7 @@ Differentiators
    or `wolfSSL <https://www.wolfssl.com>`__
 -  checks `GOST <https://en.wikipedia.org/wiki/GOST>`__ (national standards of the Russian Federation and CIS countries)
    cipher suites
+-  checks `ShangMi (SM) <https://www.rfc-editor.org/rfc/rfc8998>`__ (national standards of China) cipher suites
 -  checks `post-quantum <https://en.wikipedia.org/wiki/Post-quantum_cryptography>`__ elliptic curves
    (`Kyber <https://en.wikipedia.org/wiki/Kyber>`__)
 -  checks TLS 1.3 draft versions, not just final version
@@ -326,3 +328,5 @@ Analyzers
    -  `DNSKEY <https://www.rfc-editor.org/rfc/rfc4034#section-2>`__
    -  `DS <https://www.rfc-editor.org/rfc/rfc4034#section-5>`__
    -  `RRSIG <https://www.rfc-editor.org/rfc/rfc4034#section-3>`__
+
+-  `SSHFP <https://www.rfc-editor.org/rfc/rfc4255>`__ records for SSH host key fingerprint verification

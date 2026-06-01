@@ -3,6 +3,47 @@ Changelog
 =========
 
 ------------------
+1.2.1 - 2026-06-02
+------------------
+
+Features
+========
+
+-  DNS (``dnsrec``)
+
+   -  add SSHFP DNS record retrieval (#172)
+
+-  SSH (``ssh``)
+
+   -  add SSHFP fingerprint verification for host keys (#172)
+
+-  TLS (``tls``)
+
+   -  Cipher Suites (``ciphers``)
+
+      -  add ShangMi (SM2) cipher suite scanning support (#173)
+
+-  IKE (``ike``)
+
+   -  add option for strict RFC 2409 compliance (#174)
+
+Notable fixes
+=============
+
+-  Generic
+
+   -  make log level option effective
+
+-  TLS (``tls``)
+
+   -  stop cipher suite analysis on protocol version alert
+
+-  IKE (``ike``)
+
+   -  send the key length attribute when required (#175)
+   -  report all supported Diffie-Hellman groups and elliptic curves (#176)
+
+------------------
 1.2.0 - 2026-05-05
 ------------------
 
