@@ -6,6 +6,7 @@ from unittest import mock
 from test.common.classes import TestMainBase
 
 from cryptoparser.tls.extension import TlsExtensionsBase, TlsNamedCurve
+from cryptoparser.tls.subprotocol import TlsHandshakeType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.dhparam import (
@@ -44,6 +45,16 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
+    @mock.patch.object(AnalyzerDHParams, '_get_server_messages')
+    def test_error_missing_key_share_extension_in_server_hello(self, get_server_messages):
+        server_hello = mock.Mock()
+        server_hello.extensions.get_item_by_type.side_effect = KeyError
+        get_server_messages.return_value = {TlsHandshakeType.SERVER_HELLO: server_hello}
+
+        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        self.assertEqual(result.groups, [])
+        self.assertEqual(result.dhparam, None)
+
     @mock.patch.object(AnalyzerDHParams, '_get_public_key', side_effect=StopIteration)
     def test_error_no_respoinse_during_key_reuse_check(self, _):
         result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
@@ -58,7 +69,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertIsNone(result.dhparam)
         self.assertEqual(result.key_reuse, None)
 
-        result = self.get_result('gimp.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        result = self.get_result('documentfreedom.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [
             TlsNamedCurve.FFDHE2048,
             TlsNamedCurve.FFDHE3072,
