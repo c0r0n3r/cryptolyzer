@@ -275,6 +275,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(
             trusted_root_chain.trust_roots,
             {
+                Entity.ANDROID: True,
                 Entity.APPLE: True,
                 Entity.GOOGLE: True,
                 Entity.MICROSOFT: True,
@@ -294,6 +295,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(
             self_signed_chain.trust_roots,
             {
+                Entity.ANDROID: False,
                 Entity.APPLE: False,
                 Entity.GOOGLE: False,
                 Entity.MICROSOFT: False,
@@ -312,6 +314,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(
             untrusted_root_chain.trust_roots,
             {
+                Entity.ANDROID: False,
                 Entity.APPLE: False,
                 Entity.GOOGLE: False,
                 Entity.MICROSOFT: False,
@@ -334,6 +337,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(
             incomplete_chain.trust_roots,
             {
+                Entity.ANDROID: False,
                 Entity.APPLE: False,
                 Entity.GOOGLE: False,
                 Entity.MICROSOFT: False,
@@ -402,6 +406,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                 self.assertEqual(
                     pubkey.certificate_chain.trust_roots,
                     {
+                        Entity.ANDROID: False,
                         Entity.APPLE: False,
                         Entity.GOOGLE: False,
                         Entity.MICROSOFT: False,
@@ -424,6 +429,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                 self.assertEqual(
                     pubkey.certificate_chain.trust_roots,
                     {
+                        Entity.ANDROID: True,
                         Entity.APPLE: True,
                         Entity.GOOGLE: True,
                         Entity.MICROSOFT: True,
@@ -465,6 +471,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                 self.assertEqual(
                     pubkey.certificate_chain.trust_roots,
                     {
+                        Entity.ANDROID: True,
                         Entity.APPLE: True,
                         Entity.GOOGLE: True,
                         Entity.MICROSOFT: True,
