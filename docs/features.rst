@@ -306,6 +306,47 @@ Supported analyzers by cryptographic protocol versions
 +-------------------------------------------+-------+-------+
 | Elliptic-Curves (``curves``)              |   ✓   |   ✓   |
 +-------------------------------------------+-------+-------+
+| Extensions (``extensions``)               |   ✓   |   ✓   |
++-------------------------------------------+-------+-------+
+
+Extensions
+""""""""""
+
+The ``extensions`` analyzer detects IKE protocol extensions advertised by
+the server during the initial SA-setup phase (``IKE_SA_INIT`` for IKEv2).
+The probe sends a single ``IKE_SA_INIT`` request that includes the
+initiator-side notifications required by RFC 7383, RFC 8784, RFC 9242 and
+RFC 6023, then harvests the responder's status-level Notify and Vendor ID
+payloads.
+
+Detected IKEv2 notifications:
+
+-  ``IKEV2_FRAGMENTATION_SUPPORTED`` (`RFC 7383 <https://tools.ietf.org/html/rfc7383>`__)
+-  ``USE_PPK`` (`RFC 8784 <https://tools.ietf.org/html/rfc8784>`__)
+-  ``INTERMEDIATE_EXCHANGE_SUPPORTED`` (`RFC 9242 <https://tools.ietf.org/html/rfc9242>`__)
+-  ``CHILDLESS_IKEV2_SUPPORTED`` (`RFC 6023 <https://tools.ietf.org/html/rfc6023>`__)
+-  ``SIGNATURE_HASH_ALGORITHMS`` (`RFC 7427 <https://tools.ietf.org/html/rfc7427>`__)
+-  ``MULTIPLE_AUTH_SUPPORTED`` (`RFC 4739 <https://tools.ietf.org/html/rfc4739>`__)
+-  ``NAT_DETECTION_SOURCE_IP`` / ``NAT_DETECTION_DESTINATION_IP``
+   (`RFC 7296 §2.23 <https://tools.ietf.org/html/rfc7296#section-2.23>`__)
+-  ``REDIRECT_SUPPORTED`` (`RFC 5685 <https://tools.ietf.org/html/rfc5685>`__);
+   opportunistic detection only - the gateway does not echo
+   ``REDIRECT_SUPPORTED`` and only sends ``REDIRECT`` when actually
+   redirecting.
+
+Vendor IDs (IKEv1 and IKEv2) are matched against the cryptodatahub
+``IkeVendorId`` registry which contains well-known constants for NAT-T
+drafts and RFC 3947, RFC 3706 DPD, XAUTH, Cisco family, strongSwan,
+racoon, Microsoft, Netscreen, Fortinet, Aruba and other implementations.
+Matched VIDs surface by their lowercased enum name; unknown VIDs are
+dropped.
+
+Notifies whose advertisement occurs only inside the encrypted
+``IKE_AUTH`` exchange (MOBIKE, USE_AGGFRAG, CLONE_IKE_SA_SUPPORTED,
+HTTP_CERT_LOOKUP_SUPPORTED, INITIAL_CONTACT, IPCOMP_SUPPORTED,
+ADDITIONAL_TS_POSSIBLE, ESP_TFC_PADDING_NOT_SUPPORTED, IP4_ALLOWED,
+IP6_ALLOWED) are not observable under the ``IKE_SA_INIT``-only probe
+model and therefore do not appear in the result.
 
 DNS
 ^^^

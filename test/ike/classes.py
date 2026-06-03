@@ -733,6 +733,7 @@ def create_ike_server(
     *,
     max_handshake_count=2,
     configuration=None,
+    timeout=None,
     **kwargs
 ):
     """Create and start a threaded IKE server. Returns L7ServerIkeTest ready for use.
@@ -741,10 +742,11 @@ def create_ike_server(
     """
     if configuration is None:
         configuration = IkeServerConfiguration()
+    l4_socket_params = OFFLINE_L4_SOCKET_PARAMS if timeout is None else L4TransferSocketParams(timeout=timeout)
     threaded_server = L7ServerIkeTest(server_class(  # type: ignore[call-arg]
         'localhost',
         0,
-        OFFLINE_L4_SOCKET_PARAMS,
+        l4_socket_params,
         configuration=configuration,
         max_handshake_count=max_handshake_count,
         **kwargs

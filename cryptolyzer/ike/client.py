@@ -339,7 +339,7 @@ class Ikev2SecurityAssociationSpecialization(Ikev2SecurityAssociationBase):
 
 
 class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
-    def __init__(self, cookie=None, extra_notify_payloads=None):
+    def __init__(self, cookie=None, extra_notify_payloads=None, key_exchange_dh_group=None):
         payloads = self._get_payloads(
             encryption_algorithm_tuples=self.expand_encryption_algorithms_to_tuples(
                 Ikev2EncryptionAlgorithm
@@ -348,6 +348,7 @@ class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
             pseudorandom_functions=list(Ikev2PseudorandomFunction),
             integrity_algorithms=list(Ikev2IntegrityAlgorithm),
             cookie=cookie,
+            key_exchange_dh_group=key_exchange_dh_group,
             extra_notify_payloads=extra_notify_payloads,
         )
 
@@ -660,7 +661,7 @@ class IKEv2ClientHandshake(IKEClient):
                 raise IsakmpNotify(notify_type, payload)
             if notify_type.value.level == Ikev2NotifyLevel.ERROR:
                 raise IsakmpNotify(notify_type, payload)
-        except KeyError as e:
+        except (KeyError, IndexError) as e:
             raise IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX) from e
 
     @classmethod
@@ -786,7 +787,7 @@ class IKEv1ClientHandshake(IKEClient):
                 raise IsakmpNotify(notify_type)
             if notify_type.value.level == Ikev1NotifyLevel.ERROR:
                 raise IsakmpNotify(notify_type)
-        except KeyError as e:
+        except (KeyError, IndexError) as e:
             raise IsakmpNotify(Ikev1NotifyType.SITUATION_NOT_SUPPORTED) from e
 
     @classmethod

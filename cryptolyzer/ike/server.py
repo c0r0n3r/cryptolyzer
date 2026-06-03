@@ -454,21 +454,36 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
     @staticmethod
     def _resolve_ikev2_transform(
         encryption_transform: Ikev2TransformEncryptionAlgorithm,
-        integrity_transform: Ikev2TransformIntegrity,
+        integrity_transform: typing.Optional[Ikev2TransformIntegrity],
         pseudorandom_function_transform: Ikev2TransformPrf,
         diffie_hellman_group_transform: Ikev2TransformDhGroup,
     ) -> typing.Optional[Ikev2TransformResolved]:
         """Resolve IKEv2 transforms into (enc, mode, integrity, prf, dh) or None."""
 
-        for bulk_cipher_entry in encryption_transform.transform_id.value.bulk_ciphers:
+        integrity_algorithm = (
+            None if integrity_transform is None
+            else integrity_transform.transform_id.value.hmac
+        )
+        bulk_ciphers = list(encryption_transform.transform_id.value.bulk_ciphers)
+        for bulk_cipher_entry in bulk_ciphers:
             if bulk_cipher_entry.cipher.value.key_size == encryption_transform.key_length:
                 return Ikev2TransformResolved(
                     encryption_algorithm=bulk_cipher_entry.cipher,
                     block_cipher_mode=encryption_transform.transform_id.value.block_cipher_mode,
-                    integrity_algorithm=integrity_transform.transform_id.value.hmac,
+                    integrity_algorithm=integrity_algorithm,
                     pseudorandom_function=pseudorandom_function_transform.transform_id.value.mac,
                     diffie_hellman_group=diffie_hellman_group_transform.transform_id.value.key_parameter,
                 )
+
+        if len(bulk_ciphers) == 1 and encryption_transform.key_length is None:
+            bulk_cipher_entry = bulk_ciphers[0]
+            return Ikev2TransformResolved(
+                encryption_algorithm=bulk_cipher_entry.cipher,
+                block_cipher_mode=encryption_transform.transform_id.value.block_cipher_mode,
+                integrity_algorithm=integrity_algorithm,
+                pseudorandom_function=pseudorandom_function_transform.transform_id.value.mac,
+                diffie_hellman_group=diffie_hellman_group_transform.transform_id.value.key_parameter,
+            )
 
         return None
 
@@ -480,7 +495,7 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
 
         Returns a dict of selected transforms keyed by transform type, or None.
         """
-        encription_transforms = list(filter(
+        encryption_transforms = list(filter(
             lambda transform: isinstance(transform, Ikev2TransformEncryptionAlgorithm),
             proposal.transforms
         ))
@@ -497,9 +512,15 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
             proposal.transforms
         ))
 
-        for encryption_transform in encription_transforms:
+        for encryption_transform in encryption_transforms:
+            # AEAD proposals carry no INTEG transform (RFC 7296 §3.3.5);
+            # use [None] so the product still yields one tuple per (prf, dh) pair.
+            integrity_items = (
+                [None] if encryption_transform.transform_id.value.aead
+                else integrity_transforms
+            )
             for integrity_transform, prf_transform, dh_group_transform in itertools.product(
-                integrity_transforms,
+                integrity_items,
                 prf_transforms,
                 dh_group_transforms,
             ):
@@ -518,12 +539,14 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
                             cipher_suite.integrity_algorithm == resolved.integrity_algorithm and
                             cipher_suite.pseudorandom_function == resolved.pseudorandom_function and
                             cipher_suite.diffie_hellman_group == resolved.diffie_hellman_group):
-                        return {
+                        selected = {
                             encryption_transform.get_transform_type(): encryption_transform,
-                            integrity_transform.get_transform_type(): integrity_transform,
                             prf_transform.get_transform_type(): prf_transform,
                             dh_group_transform.get_transform_type(): dh_group_transform,
                         }
+                        if integrity_transform is not None:
+                            selected[integrity_transform.get_transform_type()] = integrity_transform
+                        return selected
         return None
 
     def _select_sa_from_client(
