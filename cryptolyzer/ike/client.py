@@ -59,6 +59,7 @@ from cryptoparser.ike.ikev2 import (
     Ikev2PayloadKeyExchange,
     Ikev2NotifyPayloadCookie,
     Ikev2PayloadNonce,
+    Ikev2PayloadNotifyBase,
     Ikev2PayloadFlags,
     Ikev2PayloadSecurityAssociation,
     Ikev2PayloadDelete,
@@ -218,6 +219,7 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         cookie: typing.Optional[typing.Union[bytes, bytearray]] = None,
         nonce: typing.Optional[typing.Union[bytes, bytearray]] = None,
         key_exchange_dh_group: typing.Optional[Ikev2DiffieHellmanGroup] = None,
+        extra_notify_payloads: typing.Optional[typing.Iterable[Ikev2PayloadNotifyBase]] = None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         payloads = []
 
@@ -247,11 +249,10 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
             ecdh_groups=ecdh_groups,
             ffdh_groups=ffdh_groups,
         )
-        payload_security_association = Ikev2PayloadSecurityAssociation(
+        payloads.append(Ikev2PayloadSecurityAssociation(
             flags=set([Ikev2PayloadFlags.CRITICAL, ]),
             proposals=proposals
-        )
-        payloads.append(payload_security_association)
+        ))
 
         # Caller decides which DH group to key the KE payload for. Falls back
         # to the legacy heuristic when no explicit choice is given: prefer the
@@ -297,6 +298,9 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
             nonce_data=nonce,
         ))
 
+        if extra_notify_payloads is not None:
+            payloads.extend(extra_notify_payloads)
+
         return payloads
 
 
@@ -335,7 +339,7 @@ class Ikev2SecurityAssociationSpecialization(Ikev2SecurityAssociationBase):
 
 
 class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
-    def __init__(self, cookie=None):
+    def __init__(self, cookie=None, extra_notify_payloads=None):
         payloads = self._get_payloads(
             encryption_algorithm_tuples=self.expand_encryption_algorithms_to_tuples(
                 Ikev2EncryptionAlgorithm
@@ -344,6 +348,7 @@ class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
             pseudorandom_functions=list(Ikev2PseudorandomFunction),
             integrity_algorithms=list(Ikev2IntegrityAlgorithm),
             cookie=cookie,
+            extra_notify_payloads=extra_notify_payloads,
         )
 
         initiator_spi = random.randint(0, 2**64 - 1)
