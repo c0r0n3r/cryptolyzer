@@ -105,7 +105,61 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         ecdh_groups: typing.List[Ikev2DiffieHellmanGroup],
         ffdh_groups: typing.List[Ikev2DiffieHellmanGroup],
     ) -> typing.List[Ikev2Proposal]:
+        # RFC 7296 §2.7 / §3.3 and RFC 5282 §8: an IKE SA proposal that
+        # contains AEAD (combined-mode) encryption MUST NOT carry a
+        # non-NONE integrity transform; conversely, a non-AEAD proposal
+        # requires integrity. If both cipher families are offered they
+        # MUST live in separate proposals within the same SA payload.
+        aead_encryption_algorithms = [
+            encryption_algorithm
+            for encryption_algorithm in encryption_algorithms
+            if encryption_algorithm.value.aead
+        ]
+        non_aead_encryption_algorithms = [
+            encryption_algorithm
+            for encryption_algorithm in encryption_algorithms
+            if not encryption_algorithm.value.aead
+        ]
+        non_none_integrity_algorithms = [
+            integrity_algorithm
+            for integrity_algorithm in integrity_algorithms
+            if integrity_algorithm != Ikev2IntegrityAlgorithm.NONE
+        ]
+
         proposals: typing.List[Ikev2Proposal] = []
+        if non_aead_encryption_algorithms and non_none_integrity_algorithms:
+            proposals.extend(cls._build_proposals_for_family(
+                non_aead_encryption_algorithms,
+                diffie_hellman_groups,
+                pseudorandom_functions,
+                non_none_integrity_algorithms,
+                ecdh_groups,
+                ffdh_groups,
+            ))
+        if aead_encryption_algorithms:
+            # RFC 7296 §3.3: AEAD proposal "MUST either offer no integrity
+            # algorithm or a single integrity algorithm of 'NONE', with no
+            # integrity algorithm being the RECOMMENDED method."
+            proposals.extend(cls._build_proposals_for_family(
+                aead_encryption_algorithms,
+                diffie_hellman_groups,
+                pseudorandom_functions,
+                [],
+                ecdh_groups,
+                ffdh_groups,
+            ))
+        return proposals
+
+    @classmethod
+    def _build_proposals_for_family(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        cls,
+        encryption_algorithms: typing.List[Ikev2EncryptionAlgorithm],
+        diffie_hellman_groups: typing.List[Ikev2DiffieHellmanGroup],
+        pseudorandom_functions: typing.List[Ikev2PseudorandomFunction],
+        integrity_algorithms: typing.List[Ikev2IntegrityAlgorithm],
+        ecdh_groups: typing.List[Ikev2DiffieHellmanGroup],
+        ffdh_groups: typing.List[Ikev2DiffieHellmanGroup],
+    ) -> typing.List[Ikev2Proposal]:
         transforms: typing.List[Transform] = []
         for transform_ids in [pseudorandom_functions, integrity_algorithms, diffie_hellman_groups]:
             for transform_id in transform_ids:
@@ -119,18 +173,17 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
                 key_length = key_size if key_size is not None else 0
                 transforms.append(transform_class(transform_id=transform_id, key_length=key_length))
 
+        proposals: typing.List[Ikev2Proposal] = []
         if ecdh_groups:
             proposals.append(Ikev2Proposal(
                 protocol_id=Ikev2ProtocolId.IKE,
                 transforms=transforms + list(map(Ikev2TransformDhGroup, ecdh_groups))
             ))
-
         if ffdh_groups:
             proposals.append(Ikev2Proposal(
                 protocol_id=Ikev2ProtocolId.IKE,
                 transforms=transforms + list(map(Ikev2TransformDhGroup, ffdh_groups))
             ))
-
         return proposals
 
     @classmethod
