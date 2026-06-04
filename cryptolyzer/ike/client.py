@@ -168,10 +168,19 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
 
         for transform_id in encryption_algorithms:
             transform_class = cls._TRANSFORM_CLASS_BY_TRANSFORM_ID[type(transform_id)]
+            # RFC 7296 §3.3.5: the Key Length attribute MUST NOT be used
+            # with transforms that use a fixed-length key. An IKE encryption
+            # algorithm entry is variable-key iff its bulk_ciphers list
+            # enumerates multiple key-size variants; entries with a single
+            # bulk cipher (3DES, IDEA, ChaCha20-Poly1305) are fixed-key and
+            # MUST omit the attribute regardless of that cipher's key_size.
+            has_variable_key_length = len(transform_id.value.bulk_ciphers) > 1
             for bulk_cipher in transform_id.value.bulk_ciphers:
-                key_size = bulk_cipher.cipher.value.key_size
-                key_length = key_size if key_size is not None else 0
-                transforms.append(transform_class(transform_id=transform_id, key_length=key_length))
+                key_length = bulk_cipher.cipher.value.key_size if has_variable_key_length else None
+                transforms.append(transform_class(
+                    transform_id=transform_id,
+                    key_length=key_length,
+                ))
 
         proposals: typing.List[Ikev2Proposal] = []
         if ecdh_groups:
