@@ -164,5 +164,5 @@ the [NLnet project page](https://nlnet.nl/project/CryptoLyzer-IKE).
 
 ## Credits
 
-- Icons made by [Freepik](https://www.flaticon.com/authors/freepik) from
-  [Flaticon](https://www.flaticon.com/).
+- Icons made by [Freepik](https://www.flaticon.com/authors/freepik) from [Flaticon](https://www.flaticon.com/).
+- [Miel Verkerken](https://github.com/mielverkerken)
