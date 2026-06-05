@@ -47,15 +47,15 @@ GnuTLS, LibreSSL, or wolfSSL. As a result, CryptoLyzer recognizes more TLS ciphe
 
 | Feature                                       | CryptoLyzer | testssl.sh | sslyze | ssh-audit |
 |-----------------------------------------------|:-----------:|:----------:|:------:|:---------:|
-| TLS/SSL analysis                              |      ✓      |     ✓     |    ✓   |     ✗     |
-| SSH analysis                                  |      ✓      |     ✗     |    ✗   |     ✓     |
-| IKE (version) analysis                        |      ✓      |     ✗     |    ✗   |     ✓     |
-| HTTP security headers                         |      ✓      |  partial  |    ✗   |     ✗     |
-| DNS records (DNSSEC, DMARC, SPF, …)           |      ✓      |     ✗     |    ✗   |     ✗     |
-| 400+ cipher suites (incl. GOST, post-quantum) |      ✓      |     ✗     |    ✗   |    n/a    |
-| JA3 / HASSH fingerprint generation            |      ✓      |     ✗     |    ✗   |     ✗     |
-| Python API                                    |      ✓      |     ✗     |    ✓   |     ✗     |
-| Windows support                               |      ✓      |     ✗     |    ✓   |     ✓     |
+| TLS/SSL analysis                              |      ✓      |      ✓     |    ✓   |     ✗     |
+| SSH analysis                                  |      ✓      |      ✗     |    ✗   |     ✓     |
+| IKE analysis                                  |   partial   |      ✗     |    ✗   |     ✗     |
+| HTTP security headers                         |      ✓      |   partial  |    ✗   |     ✗     |
+| DNS records (DNSSEC, DMARC, SPF, …)           |      ✓      |      ✗     |    ✗   |     ✗     |
+| 400+ cipher suites (incl. GOST, post-quantum) |      ✓      |      ✗     |    ✗   |    n/a    |
+| JA3 / HASSH fingerprint generation            |      ✓      |      ✗     |    ✗   |     ✗     |
+| Python API                                    |      ✓      |      ✗     |    ✓   |     ✗     |
+| Windows support                               |      ✓      |      ✗     |    ✓   |     ✓     |
 
 ## Usage
 
