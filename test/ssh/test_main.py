@@ -26,7 +26,7 @@ from cryptolyzer.ssh.versions import AnalyzerVersions
 
 from cryptolyzer.__main__ import main, get_argument_parser, get_protocol_handler_analyzer_and_uris
 
-from cryptolyzer.hassh.generate import AnalyzerGenerate
+from cryptolyzer.fingerprint.generate import AnalyzerGenerate
 
 from .classes import L7ServerSshTest
 
@@ -85,11 +85,11 @@ class TestMain(TestMainBase):
             ProtocolHandlerSshVersionIndependent().analyze(AnalyzerVersions(), url).as_json() + '\n'
         )
 
-    def test_arguments_hassh_generate(self):
-        with patch.object(sys, 'argv', ['cryptolyzer', 'hassh', 'generate', 'localhost']), \
+    def test_arguments_fingerprint_generate_ssh(self):
+        with patch.object(sys, 'argv', ['cryptolyzer', 'fingerprint', 'generate', 'ssh://localhost']), \
                 patch.object(AnalyzerGenerate, 'analyze', return_value=None):
             parser = get_argument_parser()
             arguments = parser.parse_args()
             protocol_handler, analyzer, uris = get_protocol_handler_analyzer_and_uris(parser, arguments)
-            self.assertEqual(list(map(lambda uri: uri.scheme, uris)), [analyzer.get_default_scheme()])
+            self.assertEqual(list(map(lambda uri: uri.scheme, uris)), ['ssh'])
             protocol_handler.analyze(analyzer, uris[0])

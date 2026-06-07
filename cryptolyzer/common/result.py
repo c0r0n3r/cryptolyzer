@@ -140,6 +140,11 @@ class AnalyzerResultBase(Serializable):
 
 
 @attr.s
+class AnalyzerResultFingerprintGenerate(AnalyzerResultBase):
+    target: str = attr.ib(validator=attr.validators.instance_of(str))
+
+
+@attr.s
 class AnalyzerResultError(AnalyzerResultBase):
     target: typing.Union[AnalyzerTargetBase, L7TransferBase, str] = attr.ib(
         validator=attr.validators.instance_of((AnalyzerTargetBase, L7TransferBase, str))

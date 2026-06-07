@@ -9,10 +9,10 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve
 
-from cryptolyzer.ja3.decode import AnalyzerDecode, JA3ClientTag
+from cryptolyzer.fingerprint.decode import AnalyzerDecode, JA3ClientTag
 
 
-class TestJA3Decode(unittest.TestCase):
+class TestFingerprintDecode(unittest.TestCase):
     @staticmethod
     def get_result(tag_str):
         analyzer = AnalyzerDecode()

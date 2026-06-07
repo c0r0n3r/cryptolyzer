@@ -29,12 +29,12 @@ class JA3ClientTag():
     @classmethod
     def get_supported_schemes(cls):
         return {
-            'tag'
+            'ja3'
         }
 
     @classmethod
     def get_scheme(cls):
-        return 'tag'
+        return 'ja3'
 
     @classmethod
     def from_scheme(cls, scheme, address, l4_socket_params):  # pylint: disable=unused-argument
@@ -74,7 +74,7 @@ class AnalyzerDecode(AnalyzerBase):
 
     @classmethod
     def get_help(cls):
-        return 'Decode JA3 tag(s)'
+        return 'Decode fingerprint(s)'
 
     @classmethod
     def get_clients(cls):
@@ -82,7 +82,7 @@ class AnalyzerDecode(AnalyzerBase):
 
     @classmethod
     def get_default_scheme(cls):
-        return 'tag'
+        return 'ja3'
 
     @staticmethod
     def _numeric_string_to_bytes(numeric, size):

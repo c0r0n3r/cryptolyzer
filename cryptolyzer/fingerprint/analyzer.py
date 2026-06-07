@@ -3,17 +3,19 @@
 
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 
-from cryptolyzer.hassh.generate import AnalyzerGenerate
+from cryptolyzer.fingerprint.decode import AnalyzerDecode
+from cryptolyzer.fingerprint.generate import AnalyzerGenerate
 
 
-class ProtocolHandlerHASSHBase(ProtocolHandlerBase):
+class ProtocolHandlerFingerprint(ProtocolHandlerBase):
     @classmethod
     def get_protocol(cls):
-        return 'hassh'
+        return 'fingerprint'
 
     @classmethod
     def get_analyzers(cls):
         return (
+            AnalyzerDecode,
             AnalyzerGenerate,
         )
 
