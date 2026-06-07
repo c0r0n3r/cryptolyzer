@@ -51,7 +51,7 @@ class TestAnalyzerCurves(TestAnalyzerDHBase):
 
     @classmethod
     def get_max_handshakes(cls):
-        return 500  # ECDH groups × algorithm subsets; server must respond to each
+        return 5000  # ECDH groups × algorithm subsets; IKEv1 enumerates many EC2N variants
 
     @classmethod
     def get_server_timeout(cls) -> float:
