@@ -280,6 +280,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                 Entity.GOOGLE: True,
                 Entity.MICROSOFT: True,
                 Entity.MOZILLA: True,
+                Entity.OPENJDK: True,
                 Entity.ORACLE: True,
             }
         )
@@ -300,6 +301,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                 Entity.GOOGLE: False,
                 Entity.MICROSOFT: False,
                 Entity.MOZILLA: False,
+                Entity.OPENJDK: False,
                 Entity.ORACLE: False,
             }
         )
@@ -319,6 +321,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                 Entity.GOOGLE: False,
                 Entity.MICROSOFT: False,
                 Entity.MOZILLA: False,
+                Entity.OPENJDK: False,
                 Entity.ORACLE: False,
             }
         )
@@ -342,6 +345,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                 Entity.GOOGLE: False,
                 Entity.MICROSOFT: False,
                 Entity.MOZILLA: False,
+                Entity.OPENJDK: False,
                 Entity.ORACLE: False,
             }
         )
@@ -411,6 +415,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                         Entity.GOOGLE: False,
                         Entity.MICROSOFT: False,
                         Entity.MOZILLA: False,
+                        Entity.OPENJDK: False,
                         Entity.ORACLE: False,
                     }
                 )
@@ -434,6 +439,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                         Entity.GOOGLE: True,
                         Entity.MICROSOFT: True,
                         Entity.MOZILLA: True,
+                        Entity.OPENJDK: True,
                         Entity.ORACLE: True,
                     }
                 )
@@ -476,6 +482,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                         Entity.GOOGLE: True,
                         Entity.MICROSOFT: True,
                         Entity.MOZILLA: True,
+                        Entity.OPENJDK: True,
                         Entity.ORACLE: True,
                     }
                 )

@@ -272,7 +272,10 @@ class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instanc
 
         self.assertEqual(certificate_chain.ordered, None)
         self.assertEqual(certificate_chain.contains_anchor, None)
-        self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False, False, False])
+        self.assertEqual(
+            list(certificate_chain.trust_roots.values()),
+            [False, False, False, False, False, False, False],
+        )
         self.assertEqual(certificate_chain.revoked, None)
 
     def test_trusted_contains_anchor(self):
@@ -284,7 +287,7 @@ class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instanc
 
         self.assertTrue(certificate_chain.ordered)
         self.assertTrue(certificate_chain.contains_anchor)
-        self.assertEqual(list(certificate_chain.trust_roots.values()), [True, True, True, True, True, True])
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [True, True, True, True, True, True, True])
         self.assertFalse(certificate_chain.revoked)
 
     def test_trusted_no_anchor(self):
@@ -295,7 +298,7 @@ class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instanc
 
         self.assertTrue(certificate_chain.ordered)
         self.assertFalse(certificate_chain.contains_anchor)
-        self.assertEqual(list(certificate_chain.trust_roots.values()), [True, True, True, True, True, True])
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [True, True, True, True, True, True, True])
         self.assertFalse(certificate_chain.revoked)
 
     def test_trusted_unordered(self):
@@ -306,7 +309,7 @@ class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instanc
 
         self.assertFalse(certificate_chain.ordered)
         self.assertFalse(certificate_chain.contains_anchor)
-        self.assertEqual(list(certificate_chain.trust_roots.values()), [True, True, True, True, True, True])
+        self.assertEqual(list(certificate_chain.trust_roots.values()), [True, True, True, True, True, True, True])
         self.assertFalse(certificate_chain.revoked)
 
     def test_untrusted_incomplete(self):
@@ -317,7 +320,10 @@ class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instanc
 
         self.assertEqual(certificate_chain.ordered, None)
         self.assertEqual(certificate_chain.contains_anchor, None)
-        self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False, False, False])
+        self.assertEqual(
+            list(certificate_chain.trust_roots.values()),
+            [False, False, False, False, False, False, False],
+        )
         self.assertFalse(certificate_chain.revoked)
 
     def test_untrusted_ordered(self):
@@ -329,7 +335,10 @@ class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instanc
 
         self.assertTrue(certificate_chain.ordered)
         self.assertTrue(certificate_chain.contains_anchor)
-        self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False, False, False])
+        self.assertEqual(
+            list(certificate_chain.trust_roots.values()),
+            [False, False, False, False, False, False, False],
+        )
         self.assertFalse(certificate_chain.revoked)
 
     def test_untrusted_unordered(self):
@@ -341,7 +350,10 @@ class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instanc
 
         self.assertFalse(certificate_chain.ordered)
         self.assertTrue(certificate_chain.contains_anchor)
-        self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False, False, False])
+        self.assertEqual(
+            list(certificate_chain.trust_roots.values()),
+            [False, False, False, False, False, False, False],
+        )
         self.assertFalse(certificate_chain.revoked)
 
     def test_untrusted_revoked(self):
@@ -357,7 +369,10 @@ class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instanc
 
             self.assertTrue(certificate_chain.ordered)
             self.assertTrue(certificate_chain.contains_anchor)
-            self.assertEqual(list(certificate_chain.trust_roots.values()), [False, False, False, False, False, False])
+            self.assertEqual(
+                list(certificate_chain.trust_roots.values()),
+                [False, False, False, False, False, False, False],
+            )
             self.assertTrue(certificate_chain.revoked)
 
     def test_empty_chain(self):
