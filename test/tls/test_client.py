@@ -3,6 +3,7 @@
 # pylint: disable=too-many-lines
 
 import ftplib
+import logging
 import socket
 import unittest
 from unittest import mock
@@ -90,6 +91,7 @@ from cryptolyzer.common.exception import (
     SecurityErrorType
 )
 from cryptolyzer.common.transfer import L4TransferSocketParams
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.server import (
     L7ServerTls,
     L7ServerTlsBase,
@@ -269,8 +271,13 @@ class TestTls13SplitInnerPlaintext(unittest.TestCase):
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.BAD_RECORD_MAC)
 
 
-class TestTls13TryInitHandshakeDecryptor(unittest.TestCase):
+class TestTls13TryInitHandshakeDecryptor(TestLoggerBase):
     # pylint: disable=protected-access
+
+    def setUp(self):
+        super().setUp()
+        self.addCleanup(LogSingleton().setLevel, LogSingleton().level)
+        LogSingleton().setLevel(logging.DEBUG)
 
     @staticmethod
     def _make_handshake(protection=None):
@@ -350,6 +357,44 @@ class TestTls13TryInitHandshakeDecryptor(unittest.TestCase):
         server_hello = self._server_hello(extensions=extensions)
         handshake._tls13_try_init_handshake_decryptor(server_hello, TlsHandshakeType.CERTIFICATE)
         self.assertIsNone(handshake._tls13_record_decryptor)
+
+    def test_skips_decryptor_on_unsupported_group(self):
+        key_exchange = mock.Mock()
+        key_exchange.compute_shared_secret.side_effect = NotImplementedError('unsupported group')
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: key_exchange})
+        key_share_extension = mock.Mock(spec=TlsExtensionKeyShareServer)
+        entry = mock.Mock(spec=TlsKeyShareEntry)
+        entry.group = TlsNamedCurve.SECP256R1
+        entry.key_exchange = b'\x04' + b'\x00' * 64
+        key_share_extension.key_share_entry = entry
+        extensions = mock.Mock()
+        extensions.get_item_by_type.return_value = key_share_extension
+        server_hello = self._server_hello(extensions=extensions)
+        handshake._tls13_try_init_handshake_decryptor(server_hello, TlsHandshakeType.CERTIFICATE)
+        self.assertIsNone(handshake._tls13_record_decryptor)
+        self.assertIn(
+            'TLS 1.3 record decryptor init skipped; reason=unsupported group',
+            '\n'.join(self.get_log_lines()),
+        )
+
+    def test_skips_decryptor_on_unmapped_algorithm(self):
+        key_exchange = mock.Mock()
+        key_exchange.compute_shared_secret.side_effect = KeyError('unmapped algorithm')
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: key_exchange})
+        key_share_extension = mock.Mock(spec=TlsExtensionKeyShareServer)
+        entry = mock.Mock(spec=TlsKeyShareEntry)
+        entry.group = TlsNamedCurve.SECP256R1
+        entry.key_exchange = b'\x04' + b'\x00' * 64
+        key_share_extension.key_share_entry = entry
+        extensions = mock.Mock()
+        extensions.get_item_by_type.return_value = key_share_extension
+        server_hello = self._server_hello(extensions=extensions)
+        handshake._tls13_try_init_handshake_decryptor(server_hello, TlsHandshakeType.CERTIFICATE)
+        self.assertIsNone(handshake._tls13_record_decryptor)
+        self.assertIn(
+            'TLS 1.3 record decryptor init skipped; reason=unmapped algorithm',
+            '\n'.join(self.get_log_lines()),
+        )
 
 
 class TestTls13RecordDecryptError(unittest.TestCase):

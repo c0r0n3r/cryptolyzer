@@ -1524,7 +1524,7 @@ class TlsClientHandshake(TlsClient):
         except KeyError:
             LogSingleton().log(
                 level=10,
-                msg='TLS 1.3 record decryptor init skipped: server omitted key_share extension',
+                msg='TLS 1.3 record decryptor init skipped; reason=server omitted key share extension',
             )
             return
 
@@ -1548,19 +1548,19 @@ class TlsClientHandshake(TlsClient):
         except NotImplementedError as error:
             LogSingleton().log(
                 level=10,
-                msg=f'TLS 1.3 record decryptor init skipped: unsupported group; error={error}',
+                msg=f'TLS 1.3 record decryptor init skipped; reason=unsupported group, error={error}',
             )
             self._tls13_record_decryptor = None
         except KeyError as error:
             LogSingleton().log(
                 level=10,
-                msg=f'TLS 1.3 record decryptor init skipped: unmapped algorithm; error={error}',
+                msg=f'TLS 1.3 record decryptor init skipped; reason=unmapped algorithm, error={error}',
             )
             self._tls13_record_decryptor = None
         except ValueError as error:
             LogSingleton().log(
                 level=10,
-                msg=f'TLS 1.3 record decryptor init skipped: {error}',
+                msg=f'TLS 1.3 record decryptor init skipped; error={error}',
             )
             self._tls13_record_decryptor = None
 
