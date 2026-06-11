@@ -140,8 +140,13 @@ class AnalyzerResultBase(Serializable):
 
 
 @attr.s
-class AnalyzerResultFingerprintGenerate(AnalyzerResultBase):
-    target: str = attr.ib(validator=attr.validators.instance_of(str))
+class FingerprintBase(Serializable):
+    pass
+
+
+@attr.s
+class AnalyzerResultFingerprint(AnalyzerResultBase):
+    target: FingerprintBase = attr.ib(validator=attr.validators.instance_of(FingerprintBase))
 
 
 @attr.s

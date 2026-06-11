@@ -92,10 +92,19 @@ class TestFingerprintGenerateTls(TestLoggerBase):
     def test_tag_minimal(self):
         hello_message = TlsHandshakeClientHello([TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5])
         result = self.get_result(hello_message)
-        self.assertEqual(result.target, '771,3,,,')
+        self.assertEqual(result.target.ja3.tag, '771,3,,,')
+        self.assertEqual(result.target.ja4.raw, 't12i010000_0003__')
+        self.assertEqual(result.target.ja4.raw_original, 't12i010000_0003__')
+        self.assertTrue(result.target.ja4.tag.startswith('t12i010000_'))
+        # one cipher, no extensions: the original-order hashed form equals the sorted one
+        self.assertEqual(result.target.ja4.tag_original, result.target.ja4.tag)
+        markdown = result.as_markdown()
+        self.assertIn('* JA3:', markdown)
+        self.assertIn('* JA4:', markdown)
         self.assertEqual(
             self.log_stream.getvalue(),
-            f'Client offers TLS client hello which JA3 tag is "{result.target}"\n'
+            f'Client offers TLS client hello which JA3 tag is "{result.target.ja3.tag}"\n'
+            f'Client offers TLS client hello which JA4 tag is "{result.target.ja4.tag}"\n'
         )
 
     def test_tag_one_element_lists(self):
@@ -112,10 +121,14 @@ class TestFingerprintGenerateTls(TestLoggerBase):
             ])
         )
         result = self.get_result(hello_message)
-        self.assertEqual(result.target, '771,3,11-10,1,0')
+        self.assertEqual(result.target.ja3.tag, '771,3,11-10,1,0')
+        self.assertEqual(result.target.ja4.raw, 't12i010200_0003_000a,000b_')
+        self.assertEqual(result.target.ja4.raw_original, 't12i010200_0003_000b,000a_')
+        self.assertTrue(result.target.ja4.tag.startswith('t12i010200_'))
         self.assertEqual(
             self.log_stream.getvalue(),
-            f'Client offers TLS client hello which JA3 tag is "{result.target}"\n'
+            f'Client offers TLS client hello which JA3 tag is "{result.target.ja3.tag}"\n'
+            f'Client offers TLS client hello which JA4 tag is "{result.target.ja4.tag}"\n'
         )
 
     def test_tag_two_element_lists(self):
@@ -137,10 +150,17 @@ class TestFingerprintGenerateTls(TestLoggerBase):
             ])
         )
         result = self.get_result(hello_message)
-        self.assertEqual(result.target, '771,13-12,11-10,3-2,1-0')
+        self.assertEqual(result.target.ja3.tag, '771,13-12,11-10,3-2,1-0')
+        self.assertEqual(result.target.ja4.raw, 't12i020200_000c,000d_000a,000b_')
+        self.assertEqual(result.target.ja4.raw_original, 't12i020200_000d,000c_000b,000a_')
+        self.assertTrue(result.target.ja4.tag.startswith('t12i020200_'))
+        # cipher and extension order differ from sorted, so the original-order hashed form differs
+        self.assertTrue(result.target.ja4.tag_original.startswith('t12i020200_'))
+        self.assertNotEqual(result.target.ja4.tag, result.target.ja4.tag_original)
         self.assertEqual(
             self.log_stream.getvalue(),
-            f'Client offers TLS client hello which JA3 tag is "{result.target}"\n'
+            f'Client offers TLS client hello which JA3 tag is "{result.target.ja3.tag}"\n'
+            f'Client offers TLS client hello which JA4 tag is "{result.target.ja4.tag}"\n'
         )
 
 
@@ -185,8 +205,8 @@ class TestFingerprintGenerateSsh(TestLoggerBase):
         )
 
         result = self.get_result(key_exchange_init_message)
-        self.assertEqual(result.target, '8effcf59ef85dc9e494617cdc5fe0517')
+        self.assertEqual(result.target.hassh, '8effcf59ef85dc9e494617cdc5fe0517')
         self.assertEqual(
             self.log_stream.getvalue(),
-            f'Client offers SSH key exchange init which HASSH fingerprint is "{result.target}"\n'
+            f'Client offers SSH key exchange init which HASSH fingerprint is "{result.target.hassh}"\n'
         )

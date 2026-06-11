@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import abc
-import hashlib
-
-import attr
 
 from cryptoparser.common.utils import get_leaf_classes
 from cryptoparser.ssh.subprotocol import SshMessageCode
@@ -12,21 +9,13 @@ from cryptoparser.tls.subprotocol import TlsHandshakeType
 
 from cryptolyzer.common.analyzer import AnalyzerBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
-from cryptolyzer.common.result import AnalyzerResultFingerprintGenerate
+from cryptolyzer.common.result import AnalyzerResultFingerprint
 from cryptolyzer.common.utils import LogSingleton
+
+from cryptolyzer.fingerprint.tag import JA3Fingerprint, JA4Fingerprint, SshFingerprint, TlsFingerprint
 
 from cryptolyzer.ssh.server import L7ServerSshBase
 from cryptolyzer.tls.server import L7ServerTlsBase
-
-
-@attr.s
-class AnalyzerResultGenerateTls(AnalyzerResultFingerprintGenerate):
-    target_hash = attr.ib(init=False, validator=attr.validators.instance_of(str))
-
-    def __attrs_post_init__(self):
-        tag_hash = hashlib.md5()
-        tag_hash.update(self.target.encode('ascii'))
-        self.target_hash = tag_hash.hexdigest()
 
 
 class _FingerprintGeneratorBase():
@@ -57,10 +46,20 @@ class _TlsFingerprintGenerator(_FingerprintGeneratorBase):
         return analyzable.do_handshake()
 
     def get_result(self, client_messages):
-        return AnalyzerResultGenerateTls(client_messages[0][TlsHandshakeType.CLIENT_HELLO].ja3())
+        client_hello = client_messages[0][TlsHandshakeType.CLIENT_HELLO]
+        ja4 = client_hello.ja4()
+        return AnalyzerResultFingerprint(TlsFingerprint(
+            JA3Fingerprint.from_tag(client_hello.ja3()),
+            JA4Fingerprint.from_tags(
+                ja4.fingerprint, ja4.fingerprint_original, ja4.fingerprint_raw, ja4.fingerprint_raw_original
+            ),
+        ))
 
     def get_log_messages(self, result):
-        return (f'Client offers TLS client hello which JA3 tag is "{result.target}"',)
+        return (
+            f'Client offers TLS client hello which JA3 tag is "{result.target.ja3.tag}"',
+            f'Client offers TLS client hello which JA4 tag is "{result.target.ja4.tag}"',
+        )
 
 
 class _SshFingerprintGenerator(_FingerprintGeneratorBase):
@@ -72,10 +71,12 @@ class _SshFingerprintGenerator(_FingerprintGeneratorBase):
         return analyzable.do_ssh_handshake()
 
     def get_result(self, client_messages):
-        return AnalyzerResultFingerprintGenerate(client_messages[0][SshMessageCode.KEXINIT].hassh)
+        return AnalyzerResultFingerprint(
+            SshFingerprint(client_messages[0][SshMessageCode.KEXINIT].hassh)
+        )
 
     def get_log_messages(self, result):
-        return (f'Client offers SSH key exchange init which HASSH fingerprint is "{result.target}"',)
+        return (f'Client offers SSH key exchange init which HASSH fingerprint is "{result.target.hassh}"',)
 
 
 class AnalyzerGenerate(AnalyzerBase):
