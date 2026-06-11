@@ -4,22 +4,16 @@
 import hashlib
 import attr
 
-from cryptodatahub.tls.algorithm import TlsECPointFormat
+from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsSignatureAndHashAlgorithm
 
-from cryptoparser.common.parse import ComposerBinary
-
-from cryptoparser.tls.extension import (
-    TlsECPointFormatFactory,
-    TlsExtensionType,
-    TlsExtensionTypeFactory,
-    TlsNamedCurve,
-    TlsNamedCurveFactory,
-)
-from cryptoparser.tls.subprotocol import TlsCipherSuite, TlsCipherSuiteVector
+from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve
+from cryptoparser.tls.subprotocol import TlsCipherSuite
 from cryptoparser.tls.version import TlsProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerBase
 from cryptolyzer.common.result import AnalyzerResultBase
+
+from cryptolyzer.fingerprint.tag import parse_ja3_tag, parse_ja4_raw_tag
 
 
 @attr.s
@@ -39,6 +33,25 @@ class JA3ClientTag():
     @classmethod
     def from_scheme(cls, scheme, address, l4_socket_params):  # pylint: disable=unused-argument
         return JA3ClientTag(address)
+
+
+@attr.s
+class JA4ClientTag():
+    tag = attr.ib(validator=attr.validators.instance_of(str))
+
+    @classmethod
+    def get_supported_schemes(cls):
+        return {
+            'ja4'
+        }
+
+    @classmethod
+    def get_scheme(cls):
+        return 'ja4'
+
+    @classmethod
+    def from_scheme(cls, scheme, address, l4_socket_params):  # pylint: disable=unused-argument
+        return JA4ClientTag(address)
 
 
 @attr.s
@@ -67,6 +80,25 @@ class AnalyzerResultDecode(AnalyzerResultBase):
         self.target_hash = tag_hash.hexdigest()
 
 
+@attr.s
+class AnalyzerResultDecodeJA4(AnalyzerResultBase):
+    target: str = attr.ib(validator=attr.validators.instance_of(str))
+    tls_protocol_version = attr.ib(
+        validator=attr.validators.instance_of(TlsProtocolVersion),
+    )
+    server_name = attr.ib(validator=attr.validators.instance_of(bool))
+    application_layer_protocol = attr.ib(validator=attr.validators.instance_of(str))
+    cipher_suites = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsCipherSuite))
+    )
+    extension_types = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsExtensionType))
+    )
+    signature_algorithms = attr.ib(
+        validator=attr.validators.deep_iterable(member_validator=attr.validators.in_(TlsSignatureAndHashAlgorithm))
+    )
+
+
 class AnalyzerDecode(AnalyzerBase):
     @classmethod
     def get_name(cls):
@@ -78,57 +110,16 @@ class AnalyzerDecode(AnalyzerBase):
 
     @classmethod
     def get_clients(cls):
-        return [JA3ClientTag, ]
+        return [JA3ClientTag, JA4ClientTag]
 
     @classmethod
     def get_default_scheme(cls):
         return 'ja3'
 
-    @staticmethod
-    def _numeric_string_to_bytes(numeric, size):
-        composer = ComposerBinary()
-        composer.compose_numeric(int(numeric), size)
-        return composer.composed_bytes
-
     def analyze(self, analyzable):
         super().analyze(analyzable)
-        tls_protocol_version, cipher_suites, extension_types, named_curves, ec_point_formats = analyzable.tag.split(',')
 
-        tls_protocol_version = TlsProtocolVersion.parse_exact_size(
-            self._numeric_string_to_bytes(tls_protocol_version, 2)
-        )
+        if isinstance(analyzable, JA4ClientTag):
+            return AnalyzerResultDecodeJA4(analyzable.tag, *parse_ja4_raw_tag(analyzable.tag))
 
-        if cipher_suites:
-            cipher_suites = cipher_suites.split('-')
-            cipher_suites_header = self._numeric_string_to_bytes(len(cipher_suites) * 2, 2)
-            cipher_suites = b''.join([
-                bytes(self._numeric_string_to_bytes(cipher_suite, 2))
-                for cipher_suite in cipher_suites
-            ])
-            cipher_suites = list(TlsCipherSuiteVector.parse_exact_size(cipher_suites_header + cipher_suites))
-        else:
-            cipher_suites = []
-
-        extension_types = [
-            TlsExtensionTypeFactory.parse_exact_size(self._numeric_string_to_bytes(extension, 2))
-            for extension in extension_types.split('-')
-        ] if extension_types else []
-
-        named_curves = [
-            TlsNamedCurveFactory.parse_exact_size(self._numeric_string_to_bytes(named_curve, 2))
-            for named_curve in named_curves.split('-')
-        ] if named_curves else []
-
-        ec_point_formats = [
-            TlsECPointFormatFactory.parse_exact_size(self._numeric_string_to_bytes(ec_point_format, 1))
-            for ec_point_format in ec_point_formats.split('-')
-        ] if ec_point_formats else []
-
-        return AnalyzerResultDecode(
-            analyzable.tag,
-            tls_protocol_version,
-            cipher_suites,
-            extension_types,
-            named_curves,
-            ec_point_formats,
-        )
+        return AnalyzerResultDecode(analyzable.tag, *parse_ja3_tag(analyzable.tag))

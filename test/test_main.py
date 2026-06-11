@@ -181,11 +181,23 @@ class TestMain(TestMainBase):
             result.as_markdown() + '\n',
         )
 
+    def test_analyzer_output_fingerprint_decode_ja4(self):
+        tag = 't13d0101h2_1301_002b_0403'
+        result = test.fingerprint.test_decode.TestFingerprintDecodeJA4.get_result(tag)
+        self.assertEqual(
+            self._get_test_analyzer_result_json('fingerprint', 'decode', f'ja4://{tag}'),
+            result.as_json() + '\n',
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result_markdown('fingerprint', 'decode', f'ja4://{tag}'),
+            result.as_markdown() + '\n',
+        )
+
     def test_analyzer_output_fingerprint_generate(self):
         hello_message = TlsHandshakeClientHello([TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5])
 
         self.assertEqual(
-            test.fingerprint.test_generate.TestFingerprintGenerateTls.get_result(hello_message).target,
+            test.fingerprint.test_generate.TestFingerprintGenerateTls.get_result(hello_message).target.ja3.tag,
             hello_message.ja3()
         )
 

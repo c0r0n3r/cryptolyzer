@@ -3,13 +3,14 @@
 
 import unittest
 
+from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.tls.algorithm import TlsECPointFormat
 
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve
 
-from cryptolyzer.fingerprint.decode import AnalyzerDecode, JA3ClientTag
+from cryptolyzer.fingerprint.decode import AnalyzerDecode, JA3ClientTag, JA4ClientTag
 
 
 class TestFingerprintDecode(unittest.TestCase):
@@ -56,3 +57,32 @@ class TestFingerprintDecode(unittest.TestCase):
             result.ec_point_formats,
             [TlsECPointFormat.ANSIX962_COMPRESSED_PRIME, TlsECPointFormat.UNCOMPRESSED]
         )
+
+
+class TestFingerprintDecodeJA4(unittest.TestCase):
+    @staticmethod
+    def get_result(tag_str):
+        analyzer = AnalyzerDecode()
+        return analyzer.analyze(JA4ClientTag(tag_str))
+
+    def test_tag_raw(self):
+        result = self.get_result('t13d0101h2_1301_002b_0403')
+        self.assertEqual(result.tls_protocol_version, TlsProtocolVersion(TlsVersion.TLS1_3))
+        self.assertTrue(result.server_name)
+        self.assertEqual(result.application_layer_protocol, 'h2')
+        self.assertEqual(result.cipher_suites, [TlsCipherSuite.TLS_AES_128_GCM_SHA256])
+        self.assertEqual(result.extension_types, [TlsExtensionType.SUPPORTED_VERSIONS])
+        self.assertEqual(len(result.signature_algorithms), 1)
+
+    def test_tag_empty_lists(self):
+        result = self.get_result('t12i010000_002f__')
+        self.assertEqual(result.tls_protocol_version, TlsProtocolVersion(TlsVersion.TLS1_2))
+        self.assertFalse(result.server_name)
+        self.assertEqual(result.application_layer_protocol, '00')
+        self.assertEqual(result.cipher_suites, [TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA])
+        self.assertEqual(result.extension_types, [])
+        self.assertEqual(result.signature_algorithms, [])
+
+    def test_tag_hashed_form_rejected(self):
+        with self.assertRaises(InvalidValue):
+            self.get_result('t13d1516h2_8daaf6152771_e5627efa2ab1')
