@@ -3,6 +3,7 @@
 # pylint: disable=too-many-lines
 
 import ftplib
+import logging
 import socket
 import unittest
 from unittest import mock
@@ -12,11 +13,20 @@ from test.common.classes import TestLoggerBase
 import urllib3
 
 
+from cryptodatahub.common.algorithm import Authentication
 from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptodatahub.common.exception import InvalidValue
 
 from cryptoparser.common.exception import NotEnoughData, InvalidType
-from cryptoparser.tls.ciphersuite import SslCipherKind
+from cryptoparser.tls.ciphersuite import SslCipherKind, TlsCipherSuite
+from cryptoparser.tls.extension import (
+    TlsExtensionKeyShareClient,
+    TlsExtensionKeyShareServer,
+    TlsExtensionSignatureAlgorithms,
+    TlsExtensionSignatureAlgorithmsCert,
+    TlsKeyShareEntry,
+    TlsNamedCurve,
+)
 from cryptoparser.tls.ldap import LDAPMessageParsableBase, LDAPExtendedResponseStartTLS, LDAPResultCode
 from cryptoparser.tls.mysql import MySQLCapability, MySQLRecord, MySQLCharacterSet, MySQLHandshakeV10, MySQLVersion
 from cryptoparser.tls.openvpn import (
@@ -25,8 +35,6 @@ from cryptoparser.tls.openvpn import (
     OpenVpnPacketWrapperTcp,
 )
 from cryptoparser.tls.rdp import COTPConnectionConfirm, TPKT, RDPNegotiationResponse
-
-from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.record import ParsableBase, TlsRecord, SslRecord
 from cryptoparser.tls.subprotocol import (
     SslErrorMessage,
@@ -34,6 +42,7 @@ from cryptoparser.tls.subprotocol import (
     SslHandshakeClientHello,
     SslHandshakeServerHello,
     SslMessageType,
+    TLS_HANDSHAKE_HELLO_RETRY_REQUEST_RANDOM,
     TlsAlertDescription,
     TlsAlertLevel,
     TlsAlertMessage,
@@ -42,11 +51,12 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeServerHello,
     TlsHandshakeType,
 )
-from cryptoparser.tls.extension import TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import (
     ClientOpenVpnBase,
+    ClientPOP3,
+    ClientRDP,
     ClientXMPPClient,
     ClientXMPPServer,
     L7ClientHTTPS,
@@ -55,14 +65,23 @@ from cryptolyzer.tls.client import (
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
     TlsAlert,
+    TlsClientHandshake,
     TlsHandshakeClientHelloAnyAlgorithm,
+    TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationSM2,
+    TlsHandshakeClientHelloKeyExchangeECDHx,
     TlsHandshakeClientHelloBlockCipherModeCBC,
     TlsHandshakeClientHelloSpecalization,
     TlsHandshakeClientHelloBulkCipherBlockSize64,
     TlsHandshakeClientHelloBulkCipherNull,
     TlsHandshakeClientHelloKeyExchangeAnonymousDH,
     TlsHandshakeClientHelloStreamCipherRC4,
+    key_share_entry_from_named_curve,
+)
+from cryptolyzer.tls.crypto import (
+    Tls13HandshakeDecryptor,
+    _EphemeralKeyExchangeBackendCryptodome,
+    dhe_ephemeral_material_backend,
 )
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.exception import (
@@ -72,6 +91,7 @@ from cryptolyzer.common.exception import (
     SecurityErrorType
 )
 from cryptolyzer.common.transfer import L4TransferSocketParams
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.server import (
     L7ServerTls,
     L7ServerTlsBase,
@@ -160,6 +180,393 @@ class TestTlsHandshakeClientHello(unittest.TestCase):
             key_share_curves=[TlsNamedCurve.ARBITRARY_EXPLICIT_PRIME_CURVES],
         )
         self.assertIsNotNone(client_hello)
+
+
+class TestTls13ClientHelloKeyShare(unittest.TestCase):
+    # pylint: disable=protected-access
+
+    def test_full_named_curve_list_uses_bounded_key_share(self):
+        full = list(TlsNamedCurve)
+        subset = _EphemeralKeyExchangeBackendCryptodome._select_curves_for_tls13_key_share(full)
+        self.assertLess(len(subset), len(full))
+        self.assertLessEqual(len(subset), 8)
+
+    def test_tls13_client_hello_default_key_share_is_empty(self):
+        hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1_3)], 'localhost'
+        )
+        key_share_extensions = [
+            extension for extension in hello.extensions
+            if isinstance(extension, TlsExtensionKeyShareClient)
+        ]
+        self.assertEqual(len(key_share_extensions), 1)
+        for extension in key_share_extensions:
+            self.assertEqual(len(extension.key_share_entries), 0)
+
+    def test_tls13_pubkeys_client_hello_fills_key_share(self):
+        pubkeys_extensions, _pubkeys_key_exchange = dhe_ephemeral_material_backend.build_tls13_key_shares()
+        hello = TlsHandshakeClientHelloAuthenticationRSA(
+            TlsProtocolVersion(TlsVersion.TLS1_3),
+            'localhost',
+            extensions=pubkeys_extensions,
+        )
+        key_share_extensions = [
+            extension for extension in hello.extensions
+            if isinstance(extension, TlsExtensionKeyShareClient)
+        ]
+        self.assertEqual(len(key_share_extensions), 1)
+        for extension in key_share_extensions:
+            self.assertGreater(len(extension.key_share_entries), 0)
+
+    def test_named_curves_for_tls13_no_preferred(self):
+        preferred = _EphemeralKeyExchangeBackendCryptodome._TLS13_KEY_SHARE_PREFERRED_ORDER
+        full_offer = _EphemeralKeyExchangeBackendCryptodome._TLS13_KEY_SHARE_CURVE_COUNT_FULL_OFFER
+        non_preferred = [curve for curve in TlsNamedCurve if curve not in preferred]
+        large_subset = non_preferred[:full_offer + 1]
+        result = _EphemeralKeyExchangeBackendCryptodome._select_curves_for_tls13_key_share(large_subset)
+        self.assertEqual(result, large_subset[:full_offer])
+
+    def test_key_share_entry_elliptic_curve(self):
+        entry = key_share_entry_from_named_curve(TlsNamedCurve.SECP256R1)
+        self.assertEqual(entry.group, TlsNamedCurve.SECP256R1)
+        self.assertGreater(len(entry.key_exchange), 0)
+
+    def test_key_share_entry_finite_field(self):
+        entry = key_share_entry_from_named_curve(TlsNamedCurve.FFDHE2048)
+        self.assertEqual(entry.group, TlsNamedCurve.FFDHE2048)
+        self.assertGreater(len(entry.key_exchange), 0)
+
+    def test_key_share_entry_named_group_none(self):
+        none_group = next(curve for curve in TlsNamedCurve if curve.value.named_group is None)
+        with self.assertRaises(NotImplementedError):
+            key_share_entry_from_named_curve(none_group)
+
+    def test_tls13_pubkeys_key_share_extensions_skips_none_named_group(self):
+        none_group_curves = [curve for curve in TlsNamedCurve if curve.value.named_group is None]
+        self.assertGreater(len(none_group_curves), 0)
+        extensions, key_exchange = dhe_ephemeral_material_backend.build_tls13_key_shares(none_group_curves)
+        self.assertEqual(len(extensions[0].key_share_entries), 0)
+        self.assertEqual(key_exchange, {})
+
+    def test_tls13_pubkeys_key_share_extensions_skips_unsupported_curve(self):
+        with mock.patch(
+            'cryptolyzer.tls.crypto._EphemeralKeyExchangeBackendCryptodome.create_ephemeral_material',
+            side_effect=NotImplementedError('unsupported')
+        ):
+            extensions, key_exchange = dhe_ephemeral_material_backend.build_tls13_key_shares([TlsNamedCurve.SECP256R1])
+        self.assertEqual(len(extensions[0].key_share_entries), 0)
+        self.assertEqual(key_exchange, {})
+
+
+class TestTls13SplitInnerPlaintext(unittest.TestCase):
+    def test_strips_trailing_zero_padding(self):
+        inner_plaintext = b'\x01\x02\x03' + bytes([TlsContentType.HANDSHAKE]) + b'\x00\x00'
+        content_type, payload = Tls13HandshakeDecryptor.split_inner_plaintext(inner_plaintext)
+        self.assertEqual(content_type, TlsContentType.HANDSHAKE)
+        self.assertEqual(payload, b'\x01\x02\x03')
+
+    def test_all_zero_raises_bad_record_mac(self):
+        with self.assertRaises(TlsAlert) as context_manager:
+            Tls13HandshakeDecryptor.split_inner_plaintext(b'\x00\x00\x00')
+        self.assertEqual(context_manager.exception.description, TlsAlertDescription.BAD_RECORD_MAC)
+
+
+class TestTls13TryInitHandshakeDecryptor(TestLoggerBase):
+    # pylint: disable=protected-access
+
+    def setUp(self):
+        super().setUp()
+        self.addCleanup(LogSingleton().setLevel, LogSingleton().level)
+        LogSingleton().setLevel(logging.DEBUG)
+
+    @staticmethod
+    def _make_handshake(protection=None):
+        handshake = TlsClientHandshake()
+        handshake.server_messages = {}
+        handshake._tls13_handshake_key_exchange_by_named_curve = protection
+        handshake._client_hello_for_tls13 = None
+        handshake._tls13_record_decryptor = None
+        return handshake
+
+    @staticmethod
+    def _server_hello(*, random=b'\x00' * 32, last_version=TlsVersion.TLS1_3, extensions=None):
+        server_hello = mock.Mock()
+        server_hello.random = random
+        server_hello.cipher_suite = mock.Mock()
+        server_hello.cipher_suite.value.last_version = last_version
+        if extensions is None:
+            extensions = mock.Mock()
+            extensions.get_item_by_type.side_effect = KeyError
+        server_hello.extensions = extensions
+        return server_hello
+
+    def test_returns_when_no_protection(self):
+        handshake = self._make_handshake(protection=None)
+        handshake._tls13_try_init_handshake_decryptor(self._server_hello(), TlsHandshakeType.CERTIFICATE)
+        self.assertIsNone(handshake._tls13_record_decryptor)
+
+    def test_returns_when_last_handshake_message_not_certificate(self):
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: mock.Mock()})
+        handshake._tls13_try_init_handshake_decryptor(
+            self._server_hello(), TlsHandshakeType.SERVER_HELLO_DONE
+        )
+        self.assertIsNone(handshake._tls13_record_decryptor)
+
+    def test_returns_on_hello_retry_request_random(self):
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: mock.Mock()})
+        server_hello = self._server_hello(random=TLS_HANDSHAKE_HELLO_RETRY_REQUEST_RANDOM)
+        handshake._tls13_try_init_handshake_decryptor(server_hello, TlsHandshakeType.CERTIFICATE)
+        self.assertIsNone(handshake._tls13_record_decryptor)
+
+    def test_returns_when_cipher_suite_not_tls13(self):
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: mock.Mock()})
+        server_hello = self._server_hello(last_version=TlsVersion.TLS1_2)
+        handshake._tls13_try_init_handshake_decryptor(server_hello, TlsHandshakeType.CERTIFICATE)
+        self.assertIsNone(handshake._tls13_record_decryptor)
+
+    def test_returns_when_key_share_extension_missing(self):
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: mock.Mock()})
+        handshake._tls13_try_init_handshake_decryptor(
+            self._server_hello(), TlsHandshakeType.CERTIFICATE
+        )
+        self.assertIsNone(handshake._tls13_record_decryptor)
+
+    def test_returns_when_group_not_in_protection(self):
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: mock.Mock()})
+        key_share_extension = mock.Mock(spec=TlsExtensionKeyShareServer)
+        entry = mock.Mock(spec=TlsKeyShareEntry)
+        entry.group = TlsNamedCurve.SECP384R1
+        key_share_extension.key_share_entry = entry
+        extensions = mock.Mock()
+        extensions.get_item_by_type.return_value = key_share_extension
+        server_hello = self._server_hello(extensions=extensions)
+        handshake._tls13_try_init_handshake_decryptor(server_hello, TlsHandshakeType.CERTIFICATE)
+        self.assertIsNone(handshake._tls13_record_decryptor)
+
+    def test_swallows_compute_shared_secret_failures(self):
+        key_exchange = mock.Mock()
+        key_exchange.compute_shared_secret.side_effect = ValueError('bad key')
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: key_exchange})
+        key_share_extension = mock.Mock(spec=TlsExtensionKeyShareServer)
+        entry = mock.Mock(spec=TlsKeyShareEntry)
+        entry.group = TlsNamedCurve.SECP256R1
+        entry.key_exchange = b'\x04' + b'\x00' * 64
+        key_share_extension.key_share_entry = entry
+        extensions = mock.Mock()
+        extensions.get_item_by_type.return_value = key_share_extension
+        server_hello = self._server_hello(extensions=extensions)
+        handshake._tls13_try_init_handshake_decryptor(server_hello, TlsHandshakeType.CERTIFICATE)
+        self.assertIsNone(handshake._tls13_record_decryptor)
+
+    def test_skips_decryptor_on_unsupported_group(self):
+        key_exchange = mock.Mock()
+        key_exchange.compute_shared_secret.side_effect = NotImplementedError('unsupported group')
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: key_exchange})
+        key_share_extension = mock.Mock(spec=TlsExtensionKeyShareServer)
+        entry = mock.Mock(spec=TlsKeyShareEntry)
+        entry.group = TlsNamedCurve.SECP256R1
+        entry.key_exchange = b'\x04' + b'\x00' * 64
+        key_share_extension.key_share_entry = entry
+        extensions = mock.Mock()
+        extensions.get_item_by_type.return_value = key_share_extension
+        server_hello = self._server_hello(extensions=extensions)
+        handshake._tls13_try_init_handshake_decryptor(server_hello, TlsHandshakeType.CERTIFICATE)
+        self.assertIsNone(handshake._tls13_record_decryptor)
+        self.assertIn(
+            'TLS 1.3 record decryptor init skipped; reason=unsupported group',
+            '\n'.join(self.get_log_lines()),
+        )
+
+    def test_skips_decryptor_on_unmapped_algorithm(self):
+        key_exchange = mock.Mock()
+        key_exchange.compute_shared_secret.side_effect = KeyError('unmapped algorithm')
+        handshake = self._make_handshake(protection={TlsNamedCurve.SECP256R1: key_exchange})
+        key_share_extension = mock.Mock(spec=TlsExtensionKeyShareServer)
+        entry = mock.Mock(spec=TlsKeyShareEntry)
+        entry.group = TlsNamedCurve.SECP256R1
+        entry.key_exchange = b'\x04' + b'\x00' * 64
+        key_share_extension.key_share_entry = entry
+        extensions = mock.Mock()
+        extensions.get_item_by_type.return_value = key_share_extension
+        server_hello = self._server_hello(extensions=extensions)
+        handshake._tls13_try_init_handshake_decryptor(server_hello, TlsHandshakeType.CERTIFICATE)
+        self.assertIsNone(handshake._tls13_record_decryptor)
+        self.assertIn(
+            'TLS 1.3 record decryptor init skipped; reason=unmapped algorithm',
+            '\n'.join(self.get_log_lines()),
+        )
+
+
+class TestTls13RecordDecryptError(unittest.TestCase):
+    # pylint: disable=protected-access
+
+    def test_value_error_on_decrypt_raises_bad_record_mac(self):
+        application_record = TlsRecord(
+            b'\x00' * 32,
+            TlsProtocolVersion(TlsVersion.TLS1_2),
+            TlsContentType.APPLICATION_DATA,
+        )
+        record_bytes = application_record.compose()
+
+        decryptor = mock.Mock()
+        decryptor.decrypt.side_effect = ValueError('bad mac')
+
+        handshake = TlsClientHandshake()
+
+        def fake_send_hello(_transfer, _hello, _record_version):
+            handshake._tls13_record_decryptor = decryptor
+
+        transfer = mock.Mock()
+        transfer.buffer = record_bytes
+        transfer.flush_buffer = mock.Mock()
+
+        hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1_3)], 'localhost',
+        )
+
+        with mock.patch.object(TlsClientHandshake, '_send_hello', side_effect=fake_send_hello):
+            with self.assertRaises(TlsAlert) as context_manager:
+                handshake.do_handshake(transfer, hello)
+        self.assertEqual(context_manager.exception.description, TlsAlertDescription.BAD_RECORD_MAC)
+
+
+class TestTlsClientHandshakeSendHello(unittest.TestCase):
+    # pylint: disable=protected-access
+
+    def test_send_socket_timeout_raises_no_connection(self):
+        hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1_2)], 'localhost',
+        )
+        transfer = mock.Mock()
+        transfer.send.side_effect = socket.timeout('timed out')
+        with self.assertRaises(NetworkError) as context_manager:
+            TlsClientHandshake._send_hello(transfer, hello, TlsProtocolVersion(TlsVersion.TLS1_2))
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    def test_send_other_exception_propagates(self):
+        hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1_2)], 'localhost',
+        )
+        transfer = mock.Mock()
+        transfer.send.side_effect = RuntimeError('boom')
+        with self.assertRaises(RuntimeError):
+            TlsClientHandshake._send_hello(transfer, hello, TlsProtocolVersion(TlsVersion.TLS1_2))
+
+
+class TestTlsClientHandshakeProcessHandshakeMessage(unittest.TestCase):
+    # pylint: disable=protected-access
+
+    @staticmethod
+    def _make_handshake():
+        handshake = TlsClientHandshake()
+        handshake.server_messages = {}
+        handshake._tls13_handshake_key_exchange_by_named_curve = None
+        handshake._client_hello_for_tls13 = None
+        handshake._tls13_record_decryptor = None
+        return handshake
+
+    @staticmethod
+    def _server_hello(*, last_version=TlsVersion.TLS1_2, protocol_version=None):
+        server_hello = mock.Mock()
+        server_hello.get_handshake_type.return_value = TlsHandshakeType.SERVER_HELLO
+        server_hello.random = TLS_HANDSHAKE_HELLO_RETRY_REQUEST_RANDOM
+        server_hello.cipher_suite = mock.Mock()
+        server_hello.cipher_suite.value.last_version = last_version
+        server_hello.protocol_version = (
+            protocol_version if protocol_version is not None
+            else TlsProtocolVersion(TlsVersion.TLS1_2)
+        )
+        return server_hello
+
+    def test_repeated_handshake_message_raises_unexpected(self):
+        handshake = self._make_handshake()
+        handshake.server_messages[TlsHandshakeType.SERVER_HELLO] = self._server_hello()
+        with self.assertRaises(TlsAlert) as context_manager:
+            handshake._process_handshake_message(
+                TlsProtocolVersion(TlsVersion.TLS1_2), self._server_hello(), None,
+            )
+        self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
+
+    def test_mismatching_protocol_version_raises(self):
+        handshake = self._make_handshake()
+        server_hello = self._server_hello(protocol_version=TlsProtocolVersion(TlsVersion.TLS1_1))
+        server_hello.random = b'\x00' * 32
+        with self.assertRaises(TlsAlert) as context_manager:
+            handshake._process_handshake_message(
+                TlsProtocolVersion(TlsVersion.TLS1_2), server_hello, None,
+            )
+        self.assertEqual(context_manager.exception.description, TlsAlertDescription.PROTOCOL_VERSION)
+
+    def test_server_hello_done_stops_iteration_when_last_is_none(self):
+        handshake = self._make_handshake()
+        message = mock.Mock()
+        message.get_handshake_type.return_value = TlsHandshakeType.SERVER_HELLO_DONE
+        with self.assertRaises(StopIteration):
+            handshake._process_handshake_message(
+                TlsProtocolVersion(TlsVersion.TLS1_2), message, None,
+            )
+
+    def test_tls13_server_hello_stops_iteration_when_last_is_none(self):
+        handshake = self._make_handshake()
+        server_hello = self._server_hello(last_version=TlsVersion.TLS1_3)
+        server_hello.random = b'\x00' * 32
+        server_hello.protocol_version = TlsProtocolVersion(TlsVersion.TLS1_3)
+        with self.assertRaises(StopIteration):
+            handshake._process_handshake_message(
+                TlsProtocolVersion(TlsVersion.TLS1_3), server_hello, None,
+            )
+
+
+class TestTlsClientHelloKeyExchangeECDHxDefaults(unittest.TestCase):
+    def test_default_named_curves(self):
+        hello = TlsHandshakeClientHelloKeyExchangeECDHx(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'localhost',
+        )
+        self.assertGreater(len(hello.cipher_suites), 0)
+
+
+class TestDefaultPorts(unittest.TestCase):
+    def test_pop3_default_port(self):
+        self.assertEqual(ClientPOP3.get_default_port(), 110)
+
+    def test_rdp_default_port(self):
+        self.assertEqual(ClientRDP.get_default_port(), 3389)
+
+
+class TestSignatureAlgorithmsBranches(unittest.TestCase):
+    @staticmethod
+    def _sigalg_authentications(hello):
+        for ext in hello.extensions:
+            if isinstance(ext, (TlsExtensionSignatureAlgorithms, TlsExtensionSignatureAlgorithmsCert)):
+                return {sigalg.value.signature_algorithm for sigalg in ext.hash_and_signature_algorithms}
+        return set()
+
+    def test_tls13_typed_rsa_includes_rsa(self):
+        hello = TlsHandshakeClientHelloAuthenticationRSA(
+            TlsProtocolVersion(TlsVersion.TLS1_3), 'localhost'
+        )
+        self.assertIn(Authentication.RSA, self._sigalg_authentications(hello))
+
+    def test_tls12_typed_rsa_includes_rsa(self):
+        hello = TlsHandshakeClientHelloAuthenticationRSA(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'localhost'
+        )
+        self.assertIn(Authentication.RSA, self._sigalg_authentications(hello))
+
+    def test_mixed_pre_tls12_and_tls13_excludes_dss_and_anonymous(self):
+        hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1), TlsProtocolVersion(TlsVersion.TLS1_3)],
+            'localhost',
+        )
+        authentications = self._sigalg_authentications(hello)
+        self.assertNotIn(Authentication.DSS, authentications)
+        self.assertNotIn(Authentication.ANONYMOUS, authentications)
+
+    def test_pre_tls12_only_has_no_signature_algorithms(self):
+        hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1)], 'localhost'
+        )
+        self.assertEqual(self._sigalg_authentications(hello), set())
 
 
 class L7ServerTlsFatalResponse(TlsServerHandshake):
@@ -812,6 +1219,11 @@ class TestClientPostgreSQL(TestL7ClientBase):
         _, result = self._get_mock_server_response('postgresql')
         self.assertEqual(result.versions, [])
 
+    @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(b'S', ))
+    def test_starttls_acknowledged_then_tls_fails(self, _):
+        _, result = self._get_mock_server_response('postgresql')
+        self.assertEqual(result.versions, [])
+
     def test_default_port(self):
         l7_client = L7ClientTlsBase.from_scheme('postgresql', 'localhost')
         self.assertEqual(l7_client.port, 5432)
@@ -1296,6 +1708,20 @@ class TestSslClientHandshake(unittest.TestCase):
             L7ClientTls('badssl.com', 443, L4TransferSocketParams(timeout=10)).do_ssl_handshake(
                 SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CIPHER_ERROR)
+
+    @mock.patch.object(
+        SslRecord, 'parse_exact_size',
+        return_value=SslRecord(SslHandshakeServerHello(
+            certificate=b'',
+            cipher_kinds=[],
+            connection_id=b'',
+        ))
+    )
+    def test_server_hello_completes_handshake(self, _):
+        result = L7ClientTls('badssl.com', 443, L4TransferSocketParams(timeout=10)).do_ssl_handshake(
+            SslHandshakeClientHello(list(SslCipherKind)),
+        )
+        self.assertIn(SslMessageType.SERVER_HELLO, result)
 
     @mock.patch.object(L4ClientTCP, 'receive', side_effect=NotEnoughData(100))
     @mock.patch.object(

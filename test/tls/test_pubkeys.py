@@ -507,3 +507,29 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
         self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')
+
+    def test_tls13_real(self):
+        result = self.get_result(
+            'www.cloudflare.com', 443,
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+            l4_socket_params=L4TransferSocketParams(timeout=10),
+        )
+        self.assertGreater(len(result.pubkeys), 0)
+        for pubkey in result.pubkeys:
+            with self.subTest(pubkey=pubkey):
+                self.assertGreater(len(pubkey.certificate_chain.items), 0)
+
+    @mock.patch(
+        'cryptolyzer.tls.pubkeys.dhe_ephemeral_material_backend.build_tls13_key_shares',
+        side_effect=NotImplementedError('no supported curves')
+    )
+    @mock.patch.object(
+        AnalyzerPublicKeys, '_get_server_messages', return_value={}
+    )
+    def test_tls13_key_share_not_implemented(self, *_):
+        result = self.get_result(
+            'www.cloudflare.com', 443,
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+            l4_socket_params=L4TransferSocketParams(timeout=10),
+        )
+        self.assertEqual(len(result.pubkeys), 0)

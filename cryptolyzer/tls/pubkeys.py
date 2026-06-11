@@ -9,14 +9,17 @@ import asn1crypto.ocsp
 from cryptoparser.common.base import Serializable
 from cryptoparser.common.x509 import SignedCertificateTimestampList
 from cryptoparser.tls.subprotocol import TlsHandshakeType, TlsAlertDescription
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 from cryptoparser.tls.extension import (
     TlsExtensionCertificateStatusRequestClient,
     TlsExtensionSignedCertificateTimestampClient,
     TlsExtensionType,
     TlsCertificateStatusType,
+    TlsNamedCurve,
 )
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
+from cryptolyzer.tls.crypto import dhe_ephemeral_material_backend
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.common.x509 import (
     CertificateChainX509,
@@ -119,10 +122,17 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         if TlsHandshakeType.CERTIFICATE not in server_messages:
             return
 
-        x509_public_keys = [
-            PublicKeyX509.from_der(public_key_bytes.certificate)
-            for public_key_bytes in server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain
-        ]
+        cert_handshake = server_messages[TlsHandshakeType.CERTIFICATE]
+        if hasattr(cert_handshake, 'certificate_entries'):
+            certificate_der_octets = (
+                entry.certificate.certificate for entry in cert_handshake.certificate_entries
+            )
+        else:
+            certificate_der_octets = (
+                public_key_bytes.certificate for public_key_bytes in cert_handshake.certificate_chain
+            )
+
+        x509_public_keys = [PublicKeyX509.from_der(octets) for octets in certificate_der_octets]
 
         try:
             certificate_status = cls._get_certificate_status(server_messages)
@@ -165,13 +175,35 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 pass
 
     @staticmethod
-    def _get_server_messages(l7_client, client_hello, sni_sent, client_hello_messages):
+    def _tls13_pubkeys_named_curves_supported_by_backend():
+        backend_groups = set(dhe_ephemeral_material_backend.supported_named_groups())
+        return [
+            tls_named_curve
+            for tls_named_curve in TlsNamedCurve
+            if tls_named_curve.value.named_group in backend_groups
+        ]
+
+    @staticmethod
+    def _get_server_messages(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+            l7_client,
+            client_hello,
+            sni_sent,
+            client_hello_messages,
+            protocol_version,
+            tls13_handshake_protection=None,
+    ):
+        if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2):
+            last_handshake_message_type = TlsHandshakeType.CERTIFICATE
+        else:
+            last_handshake_message_type = TlsHandshakeType.SERVER_HELLO_DONE
+
         server_messages = []
 
         try:
             server_messages = l7_client.do_tls_handshake(
                 client_hello,
-                last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
+                last_handshake_message_type=last_handshake_message_type,
+                tls13_handshake_protection=tls13_handshake_protection,
             )
         except TlsAlert as e:
             if e.description == TlsAlertDescription.UNRECOGNIZED_NAME:
@@ -196,12 +228,41 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
         super().analyze(analyzable, protocol_version)
         results = []
 
+        supported_named_curves = None
+        if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2):
+            supported_named_curves = self._tls13_pubkeys_named_curves_supported_by_backend()
+            try:
+                key_share_extensions, tls13_key_exchange_by_curve = (
+                    dhe_ephemeral_material_backend.build_tls13_key_shares(supported_named_curves)
+                )
+            except NotImplementedError as error:
+                LogSingleton().log(level=40, msg=str(error))
+                key_share_extensions = []
+                tls13_key_exchange_by_curve = {}
+        else:
+            key_share_extensions = []
+            tls13_key_exchange_by_curve = {}
+
+        if tls13_key_exchange_by_curve:
+            tls13_handshake_protection = tls13_key_exchange_by_curve
+        else:
+            tls13_handshake_protection = None
+
         for hostname in [None, analyzable.address]:
+            client_hello_params = {
+                'protocol_version': protocol_version,
+                'hostname': hostname,
+            }
+
+            if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2):
+                client_hello_params['extensions'] = key_share_extensions
+                client_hello_params['named_curves'] = supported_named_curves
+
             client_hello_messages = [
-                TlsHandshakeClientHelloAuthenticationDSS(protocol_version, hostname),
-                TlsHandshakeClientHelloAuthenticationRSA(protocol_version, hostname),
-                TlsHandshakeClientHelloAuthenticationECDSA(protocol_version, hostname),
-                TlsHandshakeClientHelloAuthenticationGOST(protocol_version, hostname),
+                TlsHandshakeClientHelloAuthenticationDSS(**client_hello_params),
+                TlsHandshakeClientHelloAuthenticationRSA(**client_hello_params),
+                TlsHandshakeClientHelloAuthenticationECDSA(**client_hello_params),
+                TlsHandshakeClientHelloAuthenticationGOST(**client_hello_params),
             ]
             for client_hello in client_hello_messages:
                 sni_sent = hostname is not None
@@ -211,7 +272,12 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 ])
                 try:
                     server_messages = self._get_server_messages(
-                        analyzable, client_hello, sni_sent, client_hello_messages
+                        analyzable,
+                        client_hello,
+                        sni_sent,
+                        client_hello_messages,
+                        protocol_version,
+                        tls13_handshake_protection=tls13_handshake_protection,
                     )
                 except StopIteration:
                     break

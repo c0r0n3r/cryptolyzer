@@ -86,7 +86,7 @@ class ProtocolHandlerTls13(ProtocolHandlerTlsExactVersion):
 
         # Temporarily remove analyzers need encrypted packets
         return tuple(filter(
-            lambda analyzer: analyzer not in [AnalyzerPublicKeys, AnalyzerPublicKeyRequest, ],
+            lambda analyzer: analyzer != AnalyzerPublicKeyRequest,
             analyzers
         ))
 
