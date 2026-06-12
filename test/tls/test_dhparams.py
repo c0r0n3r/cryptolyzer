@@ -18,7 +18,7 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
 from cryptolyzer.__main__ import main
 
@@ -54,6 +54,14 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
+
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_tls_handshake',
+        side_effect=TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
+    )
+    def test_error_tls_alert_unexpected(self, _):
+        with self.assertRaises(UnexpectedAlertError):
+            self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
 
     @mock.patch.object(AnalyzerDHParams, '_get_server_messages')
     def test_error_missing_key_share_extension_in_server_hello(self, get_server_messages):

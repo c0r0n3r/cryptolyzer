@@ -33,7 +33,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationGOST,
 )
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
@@ -214,7 +214,7 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                     TlsAlertDescription.INTERNAL_ERROR,
                     TlsAlertDescription.DECODE_ERROR,
             ]:
-                raise e
+                raise UnexpectedAlertError(e.description) from e
         except NetworkError as e:
             if e.error != NetworkErrorType.NO_RESPONSE:
                 raise e

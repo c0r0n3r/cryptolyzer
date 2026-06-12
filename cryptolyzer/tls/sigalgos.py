@@ -20,7 +20,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationGOST,
     TlsHandshakeClientHelloAuthenticationRSA,
 )
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
 
 @attr.s
@@ -68,7 +68,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
                     TlsAlertDescription.INTERNAL_ERROR,
                 ]
                 if e.description not in acceptable_alerts:
-                    raise e
+                    raise UnexpectedAlertError(e.description) from e
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e

@@ -14,7 +14,7 @@ from cryptoparser.common.base import Serializable
 from cryptoparser.common.exception import InvalidDataLength, InvalidType
 
 from cryptolyzer.common.analyzer import AnalyzerIKEBase, ProtocolHandlerBase
-from cryptolyzer.common.exception import NetworkError, SecurityError
+from cryptolyzer.common.exception import NetworkError, SecurityError, UnexpectedError
 from cryptolyzer.common.result import AnalyzerResultError
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton, SerializableTextEncoderHighlighted
@@ -168,7 +168,7 @@ def get_argument_parser():
 def _analyze_target(protocol_handler, analyzer, target, l4_socket_params):
     try:
         return protocol_handler.analyze(analyzer, target, l4_socket_params)
-    except (NetworkError, SecurityError, InvalidDataLength, InvalidType, InvalidValue) as e:
+    except (NetworkError, SecurityError, UnexpectedError, InvalidDataLength, InvalidType, InvalidValue) as e:
         return AnalyzerResultError(str(target), str(e))
 
 

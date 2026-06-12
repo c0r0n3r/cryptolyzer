@@ -73,3 +73,11 @@ class SecurityError(ValueError):
 
     def __str__(self):
         return self.error.value.long_description
+
+
+@attr.s
+class UnexpectedError(ValueError):
+    description: str = attr.ib(validator=attr.validators.instance_of(str))
+
+    def __str__(self):
+        return self.description

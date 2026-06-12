@@ -24,7 +24,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationDeprecated,
 )
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
 
 @attr.s
@@ -82,7 +82,7 @@ class AnalyzerPublicKeyRequest(AnalyzerTlsBase):
                 if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
                     break
 
-                raise e
+                raise UnexpectedAlertError(e.description) from e
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     raise e
