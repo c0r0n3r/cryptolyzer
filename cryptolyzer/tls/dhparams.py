@@ -112,6 +112,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             )
         except TlsAlert as e:
             acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                TlsAlertDescription.PROTOCOL_VERSION,
                 TlsAlertDescription.INTERNAL_ERROR,
                 TlsAlertDescription.UNRECOGNIZED_NAME
             ]

@@ -6,7 +6,7 @@ from unittest import mock
 from test.common.classes import TestMainBase
 
 from cryptoparser.tls.extension import TlsExtensionsBase, TlsNamedCurve
-from cryptoparser.tls.subprotocol import TlsHandshakeType
+from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.dhparam import (
@@ -18,6 +18,7 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
+from cryptolyzer.tls.exception import TlsAlert
 
 from cryptolyzer.__main__ import main
 
@@ -42,6 +43,15 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
     @mock.patch.object(TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError)
     def test_error_missing_key_share_extension(self, _):
         result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        self.assertEqual(result.groups, [])
+        self.assertEqual(result.dhparam, None)
+
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_tls_handshake',
+        side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
+    )
+    def test_error_tls_alert_protocol_version(self, _):
+        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
