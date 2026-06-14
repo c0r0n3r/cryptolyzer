@@ -35,9 +35,11 @@ from cryptodatahub.ike.algorithm import (
     Ikev2PseudorandomFunction,
 )
 
+from cryptodatahub.ike.version import IkeVersion
+
 from cryptoparser.common.exception import NotEnoughData, InvalidType
 from cryptoparser.ike.isakmp import IsakmpMessage, IsakmpFlags
-from cryptoparser.ike.version import IsakmpVersion, IsakmpProtocolVersion
+from cryptoparser.ike.version import IsakmpProtocolVersion
 from cryptoparser.ike.ikev1 import (
     Ikev1Situation,
     Ikev1PayloadKeyExchange,
@@ -68,6 +70,7 @@ from cryptoparser.ike.ikev2 import (
     Transform,
 )
 
+from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.common.exception import (
     SecurityError,
     SecurityErrorType,
@@ -93,52 +96,129 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         Ikev2IntegrityAlgorithm: Ikev2TransformIntegrity,
     }
 
+    @staticmethod
+    def get_encryption_algorithm_key_lengths(encryption_algorithm):
+        # RFC 7296 §3.3.5: fixed-key entries (single bulk_ciphers) MUST omit
+        # the Key Length attribute → use None as the wire-level marker.
+        # Variable-key entries enumerate one wire-level transform per
+        # bulk_ciphers entry, each carrying its per-cipher key_size.
+        bulk_ciphers = list(encryption_algorithm.value.bulk_ciphers)
+        if len(bulk_ciphers) == 1:
+            return [None]
+        return [bulk_cipher.cipher.value.key_size for bulk_cipher in bulk_ciphers]
+
+    @classmethod
+    def expand_encryption_algorithms_to_tuples(cls, encryption_algorithms):
+        return [
+            (encryption_algorithm, key_length)
+            for encryption_algorithm in encryption_algorithms
+            for key_length in cls.get_encryption_algorithm_key_lengths(encryption_algorithm)
+        ]
+
     @classmethod
     def _get_proposals(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         cls,
-        encryption_algorithms: typing.List[Ikev2EncryptionAlgorithm],
+        encryption_algorithm_tuples: typing.List[typing.Tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
         diffie_hellman_groups: typing.List[Ikev2DiffieHellmanGroup],
         pseudorandom_functions: typing.List[Ikev2PseudorandomFunction],
         integrity_algorithms: typing.List[Ikev2IntegrityAlgorithm],
         ecdh_groups: typing.List[Ikev2DiffieHellmanGroup],
         ffdh_groups: typing.List[Ikev2DiffieHellmanGroup],
     ) -> typing.List[Ikev2Proposal]:
+        # RFC 7296 §2.7 / §3.3 and RFC 5282 §8: an IKE SA proposal that
+        # contains AEAD (combined-mode) encryption MUST NOT carry a
+        # non-NONE integrity transform; conversely, a non-AEAD proposal
+        # requires integrity. If both cipher families are offered they
+        # MUST live in separate proposals within the same SA payload.
+        aead_encryption_algorithm_tuples = [
+            encryption_algorithm_tuple
+            for encryption_algorithm_tuple in encryption_algorithm_tuples
+            if encryption_algorithm_tuple[0].value.aead
+        ]
+        non_aead_encryption_algorithm_tuples = [
+            encryption_algorithm_tuple
+            for encryption_algorithm_tuple in encryption_algorithm_tuples
+            if not encryption_algorithm_tuple[0].value.aead
+        ]
+        non_none_integrity_algorithms = [
+            integrity_algorithm
+            for integrity_algorithm in integrity_algorithms
+            if integrity_algorithm != Ikev2IntegrityAlgorithm.NONE
+        ]
+
         proposals: typing.List[Ikev2Proposal] = []
+        if non_aead_encryption_algorithm_tuples and non_none_integrity_algorithms:
+            proposals.extend(cls._build_proposals_for_family(
+                non_aead_encryption_algorithm_tuples,
+                diffie_hellman_groups,
+                pseudorandom_functions,
+                non_none_integrity_algorithms,
+                ecdh_groups,
+                ffdh_groups,
+            ))
+        if aead_encryption_algorithm_tuples:
+            # RFC 7296 §3.3: AEAD proposal "MUST either offer no integrity
+            # algorithm or a single integrity algorithm of 'NONE', with no
+            # integrity algorithm being the RECOMMENDED method."
+            proposals.extend(cls._build_proposals_for_family(
+                aead_encryption_algorithm_tuples,
+                diffie_hellman_groups,
+                pseudorandom_functions,
+                [],
+                ecdh_groups,
+                ffdh_groups,
+            ))
+        return proposals
+
+    @classmethod
+    def _build_proposals_for_family(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        cls,
+        encryption_algorithm_tuples: typing.List[typing.Tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
+        diffie_hellman_groups: typing.List[Ikev2DiffieHellmanGroup],
+        pseudorandom_functions: typing.List[Ikev2PseudorandomFunction],
+        integrity_algorithms: typing.List[Ikev2IntegrityAlgorithm],
+        ecdh_groups: typing.List[Ikev2DiffieHellmanGroup],
+        ffdh_groups: typing.List[Ikev2DiffieHellmanGroup],
+    ) -> typing.List[Ikev2Proposal]:
         transforms: typing.List[Transform] = []
         for transform_ids in [pseudorandom_functions, integrity_algorithms, diffie_hellman_groups]:
             for transform_id in transform_ids:
                 transform_class = cls._TRANSFORM_CLASS_BY_TRANSFORM_ID[type(transform_id)]
                 transforms.append(transform_class(transform_id=transform_id))
 
-        for transform_id in encryption_algorithms:
+        # Each (encryption_algorithm, key_length) tuple becomes exactly one
+        # wire-level transform; the analyzer drives per-key-size granularity
+        # by enumerating these tuples (see get_encryption_algorithm_key_lengths).
+        for transform_id, key_length in encryption_algorithm_tuples:
             transform_class = cls._TRANSFORM_CLASS_BY_TRANSFORM_ID[type(transform_id)]
-            for bulk_cipher in transform_id.value.bulk_ciphers:
-                key_length = bulk_cipher.value.key_size if bulk_cipher.value.key_size is not None else 0
-                transforms.append(transform_class(transform_id=transform_id, key_length=key_length))
+            transforms.append(transform_class(
+                transform_id=transform_id,
+                key_length=key_length,
+            ))
 
+        proposals: typing.List[Ikev2Proposal] = []
         if ecdh_groups:
             proposals.append(Ikev2Proposal(
                 protocol_id=Ikev2ProtocolId.IKE,
                 transforms=transforms + list(map(Ikev2TransformDhGroup, ecdh_groups))
             ))
-
         if ffdh_groups:
             proposals.append(Ikev2Proposal(
                 protocol_id=Ikev2ProtocolId.IKE,
                 transforms=transforms + list(map(Ikev2TransformDhGroup, ffdh_groups))
             ))
-
         return proposals
 
     @classmethod
     def _get_payloads(
         cls,
-        encryption_algorithms: typing.List[Ikev2EncryptionAlgorithm],
+        encryption_algorithm_tuples: typing.List[typing.Tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
         diffie_hellman_groups: typing.List[Ikev2DiffieHellmanGroup],
         pseudorandom_functions: typing.List[Ikev2PseudorandomFunction],
         integrity_algorithms: typing.List[Ikev2IntegrityAlgorithm],
         cookie: typing.Optional[typing.Union[bytes, bytearray]] = None,
         nonce: typing.Optional[typing.Union[bytes, bytearray]] = None,
+        key_exchange_dh_group: typing.Optional[Ikev2DiffieHellmanGroup] = None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         payloads = []
 
@@ -161,7 +241,7 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
             diffie_hellman_groups
         ))
         proposals = cls._get_proposals(
-            encryption_algorithms=encryption_algorithms,
+            encryption_algorithm_tuples=encryption_algorithm_tuples,
             diffie_hellman_groups=diffie_hellman_groups,
             pseudorandom_functions=pseudorandom_functions,
             integrity_algorithms=integrity_algorithms,
@@ -174,18 +254,27 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         )
         payloads.append(payload_security_association)
 
-        if list(diffie_hellman_groups) == list(Ikev2DiffieHellmanGroup):
+        # Caller decides which DH group to key the KE payload for. Falls back
+        # to the legacy heuristic when no explicit choice is given: prefer the
+        # first ECDH group when the full default DH set was passed (initial
+        # probe of any-DH-supported analyses), else key for the first DH in
+        # the caller-provided list.
+        if key_exchange_dh_group is not None:
+            dh_group = key_exchange_dh_group
+        elif list(diffie_hellman_groups) == list(Ikev2DiffieHellmanGroup):
             dh_group = ecdh_groups[0] if ecdh_groups else ffdh_groups[0]
         else:
             dh_group = diffie_hellman_groups[0]
 
+        payload_key_exchange = None
         if isinstance(dh_group.value.key_parameter, NamedGroup):
             payload_key_exchange = Ikev2PayloadKeyExchange(
                 flags=set(),
                 dh_group=dh_group,
-                key_exchange_data=get_ecdh_ephemeral_key_forged(dh_group.value.key_parameter)[1:],
+                key_exchange_data=get_ecdh_ephemeral_key_forged(
+                    dh_group.value.key_parameter, add_point_format_octet=False
+                ),
             )
-            payloads.append(payload_key_exchange)
         elif isinstance(dh_group.value.key_parameter, DHParamWellKnown):
             payload_key_exchange = Ikev2PayloadKeyExchange(
                 flags=set(),
@@ -194,6 +283,11 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
                     get_dh_ephemeral_key_forged(dh_group.value.key_parameter.value.parameter_numbers.p),
                     dh_group.value.key_parameter.value.key_size // 8
                 )
+            )
+        if payload_key_exchange is not None:
+            LogSingleton().log(
+                level=40,
+                msg=f'Sending KE payload; length={len(payload_key_exchange.key_exchange_data) * 8}'
             )
             payloads.append(payload_key_exchange)
 
@@ -210,22 +304,28 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
 class Ikev2SecurityAssociationSpecialization(Ikev2SecurityAssociationBase):
     def __init__(
             self,
-            encryption_algorithms=tuple(Ikev2EncryptionAlgorithm),
+            encryption_algorithm_tuples=None,
             diffie_hellman_groups=tuple(Ikev2DiffieHellmanGroup),
             pseudorandom_functions=tuple(Ikev2PseudorandomFunction),
             integrity_algorithms=tuple(Ikev2IntegrityAlgorithm),
             cookie=None,
+            key_exchange_dh_group=None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        if encryption_algorithm_tuples is None:
+            encryption_algorithm_tuples = self.expand_encryption_algorithms_to_tuples(
+                Ikev2EncryptionAlgorithm
+            )
         payloads = self._get_payloads(
-            encryption_algorithms=encryption_algorithms,
+            encryption_algorithm_tuples=encryption_algorithm_tuples,
             diffie_hellman_groups=diffie_hellman_groups,
             pseudorandom_functions=pseudorandom_functions,
             integrity_algorithms=integrity_algorithms,
             cookie=cookie,
+            key_exchange_dh_group=key_exchange_dh_group,
         )
 
         super().__init__(
-            version=IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=random.randint(0, 2**64 - 1),
             responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
@@ -238,7 +338,9 @@ class Ikev2SecurityAssociationSpecialization(Ikev2SecurityAssociationBase):
 class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
     def __init__(self, cookie=None):
         payloads = self._get_payloads(
-            encryption_algorithms=list(Ikev2EncryptionAlgorithm),
+            encryption_algorithm_tuples=self.expand_encryption_algorithms_to_tuples(
+                Ikev2EncryptionAlgorithm
+            ),
             diffie_hellman_groups=list(Ikev2DiffieHellmanGroup),
             pseudorandom_functions=list(Ikev2PseudorandomFunction),
             integrity_algorithms=list(Ikev2IntegrityAlgorithm),
@@ -247,7 +349,7 @@ class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
 
         initiator_spi = random.randint(0, 2**64 - 1)
         super().__init__(
-            version=IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=initiator_spi,
             responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
@@ -273,9 +375,9 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
             return [None]
 
         return [
-            bulk_cipher.value.key_size
+            bulk_cipher.cipher.value.key_size
             for bulk_cipher in bulk_ciphers
-            if bulk_cipher.value.key_size is not None
+            if bulk_cipher.cipher.value.key_size is not None
         ]
 
     @classmethod
@@ -374,7 +476,9 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
 
         if ecdh_group:
             payloads.append(Ikev1PayloadKeyExchange(
-                key_exchange_data=get_ecdh_ephemeral_key_forged(ecdh_group.value.key_parameter)[1:],
+                key_exchange_data=get_ecdh_ephemeral_key_forged(
+                    ecdh_group.value.key_parameter, add_point_format_octet=False
+                ),
             ))
         elif ffdh_group:
             payloads.append(Ikev1PayloadKeyExchange(
@@ -431,7 +535,7 @@ class Ikev1SecurityAssociationSpecialization(Ikev1SecurityAssociationBase):
 
         initiator_spi = random.randint(0, 2**64 - 1)
         super().__init__(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=initiator_spi,
             responder_spi=0,
             exchange_type=exchange_type,
@@ -484,7 +588,7 @@ class Ikev1SecurityAssociationAlgorithms(Ikev1SecurityAssociationBase):
 
         initiator_spi = random.randint(0, 2**64 - 1)
         super().__init__(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=initiator_spi,
             responder_spi=0,
             exchange_type=exchange_type,
@@ -727,6 +831,12 @@ class IKEv1ClientHandshake(IKEClient):
                     key_exchange_payloads = Ikev1SecurityAssociationBase.get_key_exchange_payloads(
                         payload_security_association.proposals
                     )
+                    if key_exchange_payloads:
+                        ke_data = key_exchange_payloads[0].key_exchange_data
+                        LogSingleton().log(
+                            level=40,
+                            msg=f'Sending KE payload; length={len(ke_data) * 8}'
+                        )
                     key_exchange_message = IsakmpMessage(
                         version=init_message.version,
                         initiator_spi=init_message.initiator_spi,
@@ -781,6 +891,9 @@ class L7ClientIPsecBase(L7TransferBase, metaclass=abc.ABCMeta):
 
         try:
             l7_client.do_handshake(self, init_message, last_exchange_type)
+        except IsakmpNotify as e:
+            e.server_messages = l7_client.server_messages
+            raise
         finally:
             self._close_connection()
 

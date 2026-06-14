@@ -8,7 +8,6 @@ from cryptodatahub.ike.algorithm import (
     Ikev1NotifyType,
     Ikev1PayloadType,
     Ikev2DiffieHellmanGroup,
-    Ikev2EncryptionAlgorithm,
     Ikev2IntegrityAlgorithm,
     Ikev2PseudorandomFunction,
     Ikev2ExchangeType,
@@ -17,7 +16,7 @@ from cryptodatahub.ike.algorithm import (
     Ikev2TransformType,
 )
 
-from cryptoparser.ike.version import IsakmpVersion
+from cryptodatahub.ike.version import IkeVersion
 
 from cryptolyzer.ike.client import (
     Ikev1SecurityAssociationAlgorithms,
@@ -141,7 +140,6 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
             try:
                 init_message = Ikev2SecurityAssociationSpecialization(
                     diffie_hellman_groups=checkable_dh_groups,
-                    encryption_algorithms=list(Ikev2EncryptionAlgorithm),
                     integrity_algorithms=list(Ikev2IntegrityAlgorithm),
                     pseudorandom_functions=list(Ikev2PseudorandomFunction),
                 )
@@ -179,15 +177,15 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
 
         return accepted_dh_groups, key_reused
 
-    def _analyze(self, analyzable, protocol_version: IsakmpVersion):
+    def _analyze(self, analyzable, protocol_version: IkeVersion):
         """
         :type analyzable: AnalyzerTargetIKE
-        :type protocol_version: IsakmpVersion
+        :type protocol_version: IkeVersion
         """
-        if protocol_version == IsakmpVersion.V2:
+        if protocol_version == IkeVersion.V2:
             return self._analyze_ikev2(analyzable)
 
-        if protocol_version == IsakmpVersion.V1:
+        if protocol_version == IkeVersion.V1:
             return self._analyze_ikev1(analyzable)
 
         raise NotImplementedError()

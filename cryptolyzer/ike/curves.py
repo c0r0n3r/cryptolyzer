@@ -4,13 +4,13 @@ import typing
 
 import attr
 
-from cryptodatahub.common.algorithm import NamedGroup
+from cryptodatahub.common.algorithm import NamedGroup, NamedGroupType
 from cryptodatahub.ike.algorithm import (
     Ikev1DiffieHellmanGroup,
     Ikev2DiffieHellmanGroup,
 )
 
-from cryptoparser.ike.version import IsakmpVersion
+from cryptodatahub.ike.version import IkeVersion
 
 from cryptolyzer.ike.dh import AnalyzerDHBase
 from cryptolyzer.common.result import AnalyzerResultIKE
@@ -47,7 +47,10 @@ class AnalyzerCurves(AnalyzerDHBase):
     @classmethod
     def _get_dh_groups(cls, dh_group_type):
         return list(filter(
-            lambda named_group: isinstance(named_group.value.key_parameter, NamedGroup),
+            lambda named_group: (
+                isinstance(named_group.value.key_parameter, NamedGroup)
+                and named_group.value.key_parameter.value.group_type != NamedGroupType.HYBRID_PQS
+            ),
             dh_group_type
         ))
 
@@ -55,10 +58,10 @@ class AnalyzerCurves(AnalyzerDHBase):
     def _get_dh_group_name(cls):
         return 'elliptic curve'
 
-    def analyze(self, analyzable, protocol_version: IsakmpVersion):
+    def analyze(self, analyzable, protocol_version: IkeVersion):
         """
         :type analyzable: AnalyzerTargetIKE
-        :type protocol_version: IsakmpVersion
+        :type protocol_version: IkeVersion
         """
         super().analyze(analyzable, protocol_version)
         dh_groups, key_reused = self._analyze(analyzable, protocol_version)

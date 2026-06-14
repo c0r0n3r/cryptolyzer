@@ -565,7 +565,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
     def test_cookie_handling(self):
         # Cookie handling is a client-side behavior; test it without starting a real server.
         init_message = Ikev2SecurityAssociationSpecialization(
-            encryption_algorithms=(tuple(Ikev2EncryptionAlgorithm)[0],),
+            encryption_algorithm_tuples=((tuple(Ikev2EncryptionAlgorithm)[0], 128),),
             diffie_hellman_groups=(tuple(Ikev2DiffieHellmanGroup)[0],),
             pseudorandom_functions=(tuple(Ikev2PseudorandomFunction)[0],),
             integrity_algorithms=(tuple(Ikev2IntegrityAlgorithm)[0],),
@@ -712,7 +712,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
 
     def test_error_unparsable_message(self):
         init_message = Ikev2SecurityAssociationSpecialization(
-            encryption_algorithms=(tuple(Ikev2EncryptionAlgorithm)[0],),
+            encryption_algorithm_tuples=((tuple(Ikev2EncryptionAlgorithm)[0], 128),),
             diffie_hellman_groups=(tuple(Ikev2DiffieHellmanGroup)[0],),
             pseudorandom_functions=(tuple(Ikev2PseudorandomFunction)[0],),
             integrity_algorithms=(tuple(Ikev2IntegrityAlgorithm)[0],),

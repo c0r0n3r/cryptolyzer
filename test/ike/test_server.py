@@ -24,9 +24,11 @@ from cryptodatahub.ike.algorithm import (
     MAC,
 )
 
+from cryptodatahub.ike.version import IkeVersion
+
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.ike.isakmp import IsakmpMessage, IsakmpFlags
-from cryptoparser.ike.version import IsakmpProtocolVersion, IsakmpVersion
+from cryptoparser.ike.version import IsakmpProtocolVersion
 from cryptoparser.ike.ikev1 import (
     Ikev1AttributeDiffieHellmanGroup,
     Ikev1AttributeEncryptionAlgorithm,
@@ -131,7 +133,7 @@ class TestIkeServerHandshakeIkev1(unittest.TestCase, _TestIkeServerHandshakeHelp
         if payloads is None:
             payloads = []
         return IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1,
             responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
@@ -197,7 +199,7 @@ class TestIkeServerHandshakeIkev2(unittest.TestCase, _TestIkeServerHandshakeHelp
             payloads = []
 
         return IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=1,
             responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
@@ -341,7 +343,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.MODP_1024_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -355,7 +357,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
 
         # Phase 2: KE+NONCE exchange — server responds with its own KE+NONCE
         ke_message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -373,7 +375,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.MODP_1024_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev1ExchangeType.AGGRESSIVE,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -399,7 +401,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.MODP_1024_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -419,7 +421,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.MODP_1024_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -433,7 +435,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
 
         # Phase 2: KE+NONCE exchange — server responds with its own KE+NONCE
         ke_message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -459,7 +461,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             proposals=[proposal],
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -479,7 +481,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.MODP_1024_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -503,7 +505,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.ECP_256_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -520,7 +522,7 @@ class TestIkev1CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev1HashAlgorithm.SHA, Ikev1DiffieHellmanGroup.EC2N_163_BIT_1,
         )
         message2 = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V1, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=2, responder_spi=0,
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -558,7 +560,7 @@ class TestIkev2CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -589,7 +591,7 @@ class TestIkev2CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -612,7 +614,7 @@ class TestIkev2CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -636,7 +638,7 @@ class TestIkev2CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
             Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT,
         )
         message = IsakmpMessage(
-            version=IsakmpProtocolVersion(IsakmpVersion.V2, 0),
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=1, responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
             flags=[IsakmpFlags.INITIATOR], message_id=0,
@@ -657,3 +659,18 @@ class TestL7ServerIke(unittest.TestCase):
 
     def test_default_port(self):
         self.assertEqual(L7ServerIke.get_default_port(), 45000)
+
+
+class TestIkev2GenerateKeNoncePayloadsEcdh(unittest.TestCase):
+    def test_ecdh_group_forges_ecdh_key(self):
+        sa = _Ikev2ProposalFactory.make_sa(
+            Ikev2EncryptionAlgorithm.ENCR_AES_CBC, 128,
+            Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96,
+            Ikev2PseudorandomFunction.PRF_HMAC_SHA1,
+            Ikev2DiffieHellmanGroup.ECP_GROUP_256_BIT,
+        )
+        # pylint: disable=protected-access
+        payloads = Ikev2ServerHandshake._generate_ke_nonce_payloads(sa)
+        ke_payload = next(p for p in payloads if isinstance(p, Ikev2PayloadKeyExchange))
+        self.assertEqual(ke_payload.dh_group, Ikev2DiffieHellmanGroup.ECP_GROUP_256_BIT)
+        self.assertGreater(len(ke_payload.key_exchange_data), 0)

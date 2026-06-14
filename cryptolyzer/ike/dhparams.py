@@ -10,7 +10,7 @@ from cryptodatahub.ike.algorithm import (
     Ikev2DiffieHellmanGroup,
 )
 
-from cryptoparser.ike.version import IsakmpVersion
+from cryptodatahub.ike.version import IkeVersion
 
 from cryptolyzer.ike.dh import AnalyzerDHBase
 from cryptolyzer.common.result import AnalyzerResultIKE
@@ -55,10 +55,10 @@ class AnalyzerDHParams(AnalyzerDHBase):
     def _get_dh_group_name(cls):
         return 'Diffie-Hellman group'
 
-    def analyze(self, analyzable, protocol_version: IsakmpVersion):
+    def analyze(self, analyzable, protocol_version: IkeVersion):
         """
         :type analyzable: AnalyzerTargetIKE
-        :type protocol_version: IsakmpVersion
+        :type protocol_version: IkeVersion
         """
         super().analyze(analyzable, protocol_version)
         dh_groups, key_reused = self._analyze(analyzable, protocol_version)

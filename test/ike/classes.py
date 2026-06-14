@@ -31,9 +31,10 @@ from cryptodatahub.ike.algorithm import (
     Ikev2PseudorandomFunction,
 )
 
+from cryptodatahub.ike.version import IkeVersion
+
 from cryptoparser.common.parse import ComposerBinary
 from cryptoparser.ike.isakmp import IsakmpFlags, IsakmpMessage
-from cryptoparser.ike.version import IsakmpVersion
 from cryptoparser.ike.ikev1 import Ikev1PayloadNonce, Ikev1PayloadNotification
 from cryptoparser.ike.ikev2 import (
     Ikev2NotifyPayloadInvalidKe,
@@ -444,7 +445,7 @@ class _IkeServerHandshakeNoProposalChosen(IkeServerHandshakeBase):
             raise StopIteration()
 
         responder_spi = self._get_responder_spi()
-        if message.version.major == IsakmpVersion.V1:
+        if message.version.major == IkeVersion.V1:
             notify = Ikev1PayloadNotification(
                 doi=Ikev1Doi.IPSEC,
                 protocol_id=Ikev1ProtocolId.ISAKMP,
@@ -463,7 +464,7 @@ class _IkeServerHandshakeNoProposalChosen(IkeServerHandshakeBase):
                 payloads=[notify],
             )
             self.l7_transfer.send(self.compose_ikev1_message_with_real_first_payload(response))
-        elif message.version.major == IsakmpVersion.V2:
+        elif message.version.major == IkeVersion.V2:
             notify = Ikev2PayloadNotifyUnparsed(
                 flags=set(),
                 protocol_id=Ikev2ProtocolId.IKE,
@@ -529,7 +530,7 @@ class L7ServerIkeNotify(L7ServerIke):
                     raise StopIteration()
 
                 responder_spi = self._get_responder_spi()
-                if message.version.major == IsakmpVersion.V2:
+                if message.version.major == IkeVersion.V2:
                     notify = Ikev2PayloadNotifyUnparsed(
                         flags=set(),
                         protocol_id=Ikev2ProtocolId.IKE,
