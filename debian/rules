@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+export SETUPTOOLS_SCM_PRETEND_VERSION := 1.2.1
+export PYBUILD_NAME := cryptolyzer
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_test:
+
+override_dh_install:
+	mkdir -p debian/cryptolyzer/usr/bin
+	mv debian/python3-cryptolyzer/usr/bin/cryptolyze debian/cryptolyzer/usr/bin/
+	rmdir --ignore-fail-on-non-empty debian/python3-cryptolyzer/usr/bin

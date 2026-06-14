@@ -1,0 +1,5 @@
+cryptolyzer (1.2.1) unstable; urgency=low
+
+  * Initial Debian packaging.
+
+ -- Szilárd Pfeiffer <coroner@pfeifferszilard.hu>  Sun, 14 Jun 2026 00:00:00 +0200
