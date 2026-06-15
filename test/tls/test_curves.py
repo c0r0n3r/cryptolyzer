@@ -15,7 +15,7 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4ClientTCP, L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase, TlsHandshakeClientHelloAnyAlgorithm
 from cryptolyzer.tls.curves import AnalyzerCurves
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
 from cryptolyzer.__main__ import main
 
@@ -96,9 +96,9 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
         )
         threaded_server.wait_for_server_listen()
 
-        with self.assertRaises(TlsAlert) as context_manager:
+        with self.assertRaises(UnexpectedAlertError) as context_manager:
             self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
-        self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
+        self.assertEqual(str(context_manager.exception), 'alert message received (unexpected_message)')
 
     def test_curves(self):
         result = self.get_result(

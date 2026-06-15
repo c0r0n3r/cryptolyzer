@@ -28,7 +28,7 @@ from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 from cryptolyzer.tls.server import L7ServerTls, L7ServerStartTlsTextBase, TlsServerHandshake
 
 
@@ -75,9 +75,9 @@ class TestTlsCases:
             side_effect=TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
         )
         def test_error_tls_alert(self, _):
-            with self.assertRaises(TlsAlert) as context_manager:
+            with self.assertRaises(UnexpectedAlertError) as context_manager:
                 self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
-            self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
+            self.assertEqual(str(context_manager.exception), 'alert message received (unexpected_message)')
 
 
 class L7ServerTlsTest(TestThreadedServer):

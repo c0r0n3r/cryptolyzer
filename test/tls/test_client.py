@@ -92,6 +92,7 @@ from cryptolyzer.common.exception import (
 )
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
+from cryptolyzer.tls.exception import UnexpectedAlertError
 from cryptolyzer.tls.server import (
     L7ServerTls,
     L7ServerTlsBase,
@@ -1653,9 +1654,9 @@ class TestTlsClientHandshake(TestL7ClientBase):
         )
     )
     def test_error_non_handshake_message(self, _):
-        with self.assertRaises(TlsAlert) as context_manager:
+        with self.assertRaises(UnexpectedAlertError) as context_manager:
             self.get_result('https', 'badssl.com', None, L4TransferSocketParams(timeout=10))
-        self.assertEqual(context_manager.exception.description, TlsAlertDescription.UNEXPECTED_MESSAGE)
+        self.assertEqual(str(context_manager.exception), 'alert message received (unexpected_message)')
 
     @mock.patch.object(L7ServerTlsBase, '_get_handshake_class', return_value=L7ServerTlsFatalResponse)
     def test_error_fatal_alert(self, _):

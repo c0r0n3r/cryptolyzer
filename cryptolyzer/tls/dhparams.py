@@ -31,7 +31,7 @@ from cryptolyzer.tls.client import (
     RFC7919_WELL_KNOWN_TO_NAMED_CURVE,
     key_share_entry_from_named_curve,
 )
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
 
 @attr.s
@@ -112,11 +112,12 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             )
         except TlsAlert as e:
             acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
+                TlsAlertDescription.PROTOCOL_VERSION,
                 TlsAlertDescription.INTERNAL_ERROR,
                 TlsAlertDescription.UNRECOGNIZED_NAME
             ]
             if e.description not in acceptable_alerts:
-                raise e
+                raise UnexpectedAlertError(e.description) from e
         except NetworkError as e:
             if e.error != NetworkErrorType.NO_RESPONSE:
                 raise e

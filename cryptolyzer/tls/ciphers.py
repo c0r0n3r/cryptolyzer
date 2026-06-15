@@ -24,7 +24,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationSM2,
     TlsHandshakeClientHelloAuthenticationDeprecated,
 )
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
 
 @attr.s
@@ -73,7 +73,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         if alert.description in AnalyzerCipherSuites._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
             raise StopIteration
 
-        raise alert
+        raise UnexpectedAlertError(alert.description) from alert
 
     @classmethod
     def _next_accepted_cipher_suites(  # pylint: disable=too-many-arguments,too-many-positional-arguments

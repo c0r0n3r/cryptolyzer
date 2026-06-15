@@ -27,7 +27,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationDeprecated,
 )
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
 
 @attr.s
@@ -148,7 +148,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
                         alerts_unsupported_tls_version = exc.args[0]
                         continue
 
-                    raise e
+                    raise UnexpectedAlertError(e.description) from e
                 except NetworkError as e:
                     alerts_unsupported_tls_version = False
 

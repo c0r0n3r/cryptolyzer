@@ -19,7 +19,7 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType, Securit
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.client import TlsHandshakeClientHelloKeyExchangeECDHx
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
 
 @attr.s
@@ -101,7 +101,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
             if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
                 raise StopIteration(extension_supported) from e
 
-            raise e
+            raise UnexpectedAlertError(e.description) from e
         except SecurityError as e:
             if checkable_curves is None:
                 extension_supported = None
