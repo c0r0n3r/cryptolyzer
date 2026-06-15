@@ -82,7 +82,7 @@ readme = {file = 'README.md', content-type = 'text/markdown'}
 license = {text = 'MPL-2.0'}
 
 dependencies = [
-    'oscrypto @ git+https://github.com/wbond/oscrypto.git@d5f3437',
+    'oscrypto',
     'attrs',
     'bs4',
     'certvalidator',
@@ -101,6 +101,9 @@ docs = [
     'sphinx>=8.0',
     'sphinx-sitemap',
 ]
+tests = [
+    'pyfakefs',
+]
 
 [project.scripts]
 cryptolyze = 'cryptolyzer.__main__:main'
@@ -116,7 +119,7 @@ Source = 'https://gitlab.com/coroner/cryptolyzer'
 technical_name = 'cryptolyzer'
 
 [tool.setuptools.packages.find]
-exclude = ['submodules']
+include = ['cryptolyzer*']
 
 [tool.tox]
 envlist = [
