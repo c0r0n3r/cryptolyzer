@@ -1,5 +1,5 @@
 Name:           cryptolyzer
-Version:        1.2.1
+Version:        1.3.0
 Release:        1%{?dist}
 Summary:        Multi-protocol cryptographic configuration analyzer
 
@@ -17,7 +17,7 @@ BuildRequires:  python3-attrs
 BuildRequires:  python3-beautifulsoup4
 BuildRequires:  python3-certvalidator
 BuildRequires:  python3-colorama
-BuildRequires:  python3-cryptoparser >= 1.2.1
+BuildRequires:  python3-cryptoparser >= 1.3.0
 BuildRequires:  python3-dateutil
 %if 0%{?suse_version}
 BuildRequires:  python3-dnspython
@@ -45,7 +45,7 @@ Requires:       python3-attrs
 Requires:       python3-beautifulsoup4
 Requires:       python3-certvalidator
 Requires:       python3-colorama
-Requires:       python3-cryptoparser >= 1.2.1
+Requires:       python3-cryptoparser >= 1.3.0
 Requires:       python3-dateutil
 %if 0%{?suse_version}
 Requires:       python3-dnspython
@@ -88,3 +88,12 @@ export SETUPTOOLS_SCM_PRETEND_VERSION=%{version}
 
 %files
 %{_bindir}/cryptolyze
+
+%changelog
+* Mon Jun 15 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.3.0-1
+- add Debian and RPM packaging (#181)
+- add JA4 tag generation and decoding (#178)
+- unify the ja3 and hassh commands into the fingerprint command (#178)
+- add TLS 1.3 support to the public key analyzer (#171)
+- add IKE cipher suite checker (#168)
+- report unhandled alert as analysis error instead of stopping the run (#180)

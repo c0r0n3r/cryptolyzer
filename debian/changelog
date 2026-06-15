@@ -1,3 +1,14 @@
+cryptolyzer (1.3.0) unstable; urgency=low
+
+  * add Debian and RPM packaging (#181)
+  * add JA4 tag generation and decoding (#178)
+  * unify the ja3 and hassh commands into the fingerprint command (#178)
+  * add TLS 1.3 support to the public key analyzer (#171)
+  * add IKE cipher suite checker (#168)
+  * report unhandled alert as analysis error instead of stopping the run (#180)
+
+ -- Szilárd Pfeiffer <coroner@pfeifferszilard.hu>  Mon, 15 Jun 2026 21:14:01 +0200
+
 cryptolyzer (1.2.1) unstable; urgency=low
 
   * Initial Debian packaging.

@@ -105,7 +105,7 @@ dockerhub:
 
 obs:
   image:
-    name: coroner/python_obs:1.1.2
+    name: coroner/python_obs:1.2.5
     pull_policy: always
   stage: deploy
   variables:

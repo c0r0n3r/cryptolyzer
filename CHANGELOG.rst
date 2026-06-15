@@ -3,6 +3,41 @@ Changelog
 =========
 
 ------------------
+1.3.0 - 2026-06-15
+------------------
+
+Features
+========
+
+-  Generic
+
+   -  add Debian and RPM packaging (#181)
+
+-  Fingerprint (``fingerprint``)
+
+   -  add JA4 tag generation and decoding (#178)
+   -  unify the ja3 and hassh commands into the fingerprint command (#178)
+
+-  TLS (``tls``)
+
+   -  Public Keys (``pubkeys``)
+
+      -  add support for protocol version 1.3 (#171)
+
+-  IKE (``ike``)
+
+   -  Cipher Suites (``ciphers``)
+
+      -  add cipher suite checker (#168)
+
+Notable fixes
+=============
+
+-  TLS (``tls``)
+
+   -  report unhandled alert as analysis error instead of stopping the run (#180)
+
+------------------
 1.2.1 - 2026-06-02
 ------------------
 
