@@ -14,8 +14,8 @@ import os
 
 from test.common.classes import TestMainBase
 
-import test.ja3.test_decode
-import test.ja3.test_generate
+import test.fingerprint.test_decode
+import test.fingerprint.test_generate
 
 import test.tls.test_versions
 import test.tls.test_vulnerabilities
@@ -39,7 +39,7 @@ from cryptolyzer.__main__ import (
     parse_arg_throttle_delay,
     parse_arg_http_proxy,
 )
-from cryptolyzer.ja3.generate import AnalyzerGenerate
+from cryptolyzer.fingerprint.generate import AnalyzerGenerate
 from cryptolyzer.tls.versions import AnalyzerVersions
 
 
@@ -79,7 +79,7 @@ class TestMain(TestMainBase):
             'cryptolyze: error: argument -p/--http-proxy: only HTTP proxy is supported'
         )
         self._test_argument_error(
-            ['cryptolyzer', 'ja3', 'decode', 'unsupportedformat://tag'],
+            ['cryptolyzer', 'fingerprint', 'decode', 'unsupportedformat://tag'],
             'error: unsupported protocol: unsupportedformat'
         )
 
@@ -170,27 +170,39 @@ class TestMain(TestMainBase):
                                                                 scheme='https')
             self._check_highlighted_output(func, func_arguments, cli_arguments)
 
-    def test_analyzer_output_ja3_decode(self):
-        result = test.ja3.test_decode.TestJA3Decode.get_result('771,7-6,5-4,3-2,1-0')
+    def test_analyzer_output_fingerprint_decode(self):
+        result = test.fingerprint.test_decode.TestFingerprintDecode.get_result('771,7-6,5-4,3-2,1-0')
         self.assertEqual(
-            self._get_test_analyzer_result_json('ja3', 'decode', '771,7-6,5-4,3-2,1-0'),
+            self._get_test_analyzer_result_json('fingerprint', 'decode', '771,7-6,5-4,3-2,1-0'),
             result.as_json() + '\n',
         )
         self.assertEqual(
-            self._get_test_analyzer_result_markdown('ja3', 'decode', '771,7-6,5-4,3-2,1-0'),
+            self._get_test_analyzer_result_markdown('fingerprint', 'decode', '771,7-6,5-4,3-2,1-0'),
             result.as_markdown() + '\n',
         )
 
-    def test_analyzer_output_ja3_generate(self):
+    def test_analyzer_output_fingerprint_decode_ja4(self):
+        tag = 't13d0101h2_1301_002b_0403'
+        result = test.fingerprint.test_decode.TestFingerprintDecodeJA4.get_result(tag)
+        self.assertEqual(
+            self._get_test_analyzer_result_json('fingerprint', 'decode', f'ja4://{tag}'),
+            result.as_json() + '\n',
+        )
+        self.assertEqual(
+            self._get_test_analyzer_result_markdown('fingerprint', 'decode', f'ja4://{tag}'),
+            result.as_markdown() + '\n',
+        )
+
+    def test_analyzer_output_fingerprint_generate(self):
         hello_message = TlsHandshakeClientHello([TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5])
 
         self.assertEqual(
-            test.ja3.test_generate.TestJA3Generate.get_result(hello_message).target,
+            test.fingerprint.test_generate.TestFingerprintGenerateTls.get_result(hello_message).target.ja3.tag,
             hello_message.ja3()
         )
 
-    def test_arguments_ja3_generate(self):
-        with patch.object(sys, 'argv', ['cryptolyzer', 'ja3', 'generate', 'localhost']), \
+    def test_arguments_fingerprint_generate(self):
+        with patch.object(sys, 'argv', ['cryptolyzer', 'fingerprint', 'generate', 'localhost']), \
                 patch.object(AnalyzerGenerate, 'analyze', return_value=None):
             parser = get_argument_parser()
             arguments = parser.parse_args()

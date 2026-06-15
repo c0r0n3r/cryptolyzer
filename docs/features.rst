@@ -236,7 +236,10 @@ Fingerprinting
 
 2. decodes existing `JA3 tags <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`__
    by showing human-readable format of the TLS parameters represented by the tag
-3. generates `HASSH tag <https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/>`__) of SSH clients
+3. generates `JA4 tag <https://github.com/FoxIO-LLC/ja4>`__ of any connecting TLS client
+4. decodes existing `JA4 tags <https://github.com/FoxIO-LLC/ja4>`__ (raw form) by showing
+   human-readable format of the TLS parameters represented by the tag
+5. generates `HASSH tag <https://engineering.salesforce.com/open-sourcing-hassh-abed3ae5044c/>`__) of SSH clients
 
 Hypertext Transfer Protocol (HTTP)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

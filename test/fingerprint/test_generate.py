@@ -1,0 +1,212 @@
+# SPDX-License-Identifier: MPL-2.0
+# -*- coding: utf-8 -*-
+
+import time
+
+from test.common.classes import TestThreadedServer, TestLoggerBase
+
+
+from cryptodatahub.ssh.algorithm import (
+    SshCompressionAlgorithm,
+    SshEncryptionAlgorithm,
+    SshHostKeyAlgorithm,
+    SshKexAlgorithm,
+    SshMacAlgorithm,
+)
+from cryptodatahub.tls.algorithm import TlsECPointFormat
+from cryptoparser.tls.ciphersuite import TlsCipherSuite
+from cryptoparser.tls.extension import (
+    TlsExtensionsClient,
+    TlsExtensionECPointFormats,
+    TlsExtensionEllipticCurves,
+    TlsNamedCurve,
+)
+from cryptoparser.tls.subprotocol import TlsHandshakeClientHello, TlsAlertDescription
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
+
+from cryptolyzer.common.exception import NetworkError
+from cryptolyzer.common.transfer import L4TransferSocketParams
+from cryptolyzer.fingerprint.generate import AnalyzerGenerate
+
+from cryptolyzer.ssh.client import L7ClientSsh, SshKeyExchangeInitAnyAlgorithm
+from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
+from cryptolyzer.tls.client import L7ClientTls, TlsAlert
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
+
+
+class TlsAnalyzerThread(TestThreadedServer):
+    def __init__(self, configuration=None):
+        self.l7_server = L7ServerTls('localhost', 0, configuration=configuration)
+        super().__init__(self.l7_server)
+
+        self.analyzer = AnalyzerGenerate()
+        self.result = None
+
+    def run(self):
+        self.result = self.analyzer.analyze(self.l7_server)
+
+
+class SshAnalyzerThread(TestThreadedServer):
+    def __init__(self, configuration=None):
+        self.l7_server = L7ServerSsh('localhost', 0, configuration=configuration)
+        super().__init__(self.l7_server)
+
+        self.analyzer = AnalyzerGenerate()
+        self.result = None
+
+    def run(self):
+        self.result = self.analyzer.analyze(self.l7_server)
+
+
+class TestFingerprintGenerateTls(TestLoggerBase):
+    @staticmethod
+    def get_result(hello_message):
+        analyzer_thread = TlsAnalyzerThread(TlsServerConfiguration(protocol_versions=[]))
+        analyzer_thread.wait_for_server_listen()
+
+        l7_client = L7ClientTls(
+            analyzer_thread.l7_server.address,
+            analyzer_thread.l7_server.l4_transfer.bind_port,
+            ip=analyzer_thread.l7_server.ip
+        )
+        try:
+            l7_client.do_tls_handshake(hello_message=hello_message)
+        except TlsAlert as e:
+            if e.description != TlsAlertDescription.PROTOCOL_VERSION:
+                raise ValueError from e
+        else:
+            raise ValueError
+
+        analyzer_thread.join()
+        return analyzer_thread.result
+
+    def test_error_no_connection(self):
+        with self.assertRaisesRegex(NetworkError, 'connection to target cannot be established'):
+            configuration = TlsServerConfiguration(protocol_versions=[])
+            l7_server = L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.1), configuration=configuration)
+            l7_server.init_connection()
+            analyzer = AnalyzerGenerate()
+            analyzer.analyze(l7_server)
+            time.sleep(1)
+
+    def test_tag_minimal(self):
+        hello_message = TlsHandshakeClientHello([TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5])
+        result = self.get_result(hello_message)
+        self.assertEqual(result.target.ja3.tag, '771,3,,,')
+        self.assertEqual(result.target.ja4.raw, 't12i010000_0003__')
+        self.assertEqual(result.target.ja4.raw_original, 't12i010000_0003__')
+        self.assertTrue(result.target.ja4.tag.startswith('t12i010000_'))
+        # one cipher, no extensions: the original-order hashed form equals the sorted one
+        self.assertEqual(result.target.ja4.tag_original, result.target.ja4.tag)
+        markdown = result.as_markdown()
+        self.assertIn('* JA3:', markdown)
+        self.assertIn('* JA4:', markdown)
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            f'Client offers TLS client hello which JA3 tag is "{result.target.ja3.tag}"\n'
+            f'Client offers TLS client hello which JA4 tag is "{result.target.ja4.tag}"\n'
+        )
+
+    def test_tag_one_element_lists(self):
+        hello_message = TlsHandshakeClientHello(
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            cipher_suites=[TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5],
+            extensions=TlsExtensionsClient([
+                TlsExtensionECPointFormats([
+                    TlsECPointFormat.UNCOMPRESSED,
+                ]),
+                TlsExtensionEllipticCurves([
+                    TlsNamedCurve.SECT163K1,
+                ]),
+            ])
+        )
+        result = self.get_result(hello_message)
+        self.assertEqual(result.target.ja3.tag, '771,3,11-10,1,0')
+        self.assertEqual(result.target.ja4.raw, 't12i010200_0003_000a,000b_')
+        self.assertEqual(result.target.ja4.raw_original, 't12i010200_0003_000b,000a_')
+        self.assertTrue(result.target.ja4.tag.startswith('t12i010200_'))
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            f'Client offers TLS client hello which JA3 tag is "{result.target.ja3.tag}"\n'
+            f'Client offers TLS client hello which JA4 tag is "{result.target.ja4.tag}"\n'
+        )
+
+    def test_tag_two_element_lists(self):
+        hello_message = TlsHandshakeClientHello(
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            cipher_suites=[
+                TlsCipherSuite.TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA,
+                TlsCipherSuite.TLS_DH_DSS_WITH_DES_CBC_SHA,
+            ],
+            extensions=TlsExtensionsClient([
+                TlsExtensionECPointFormats([
+                    TlsECPointFormat.ANSIX962_COMPRESSED_PRIME,
+                    TlsECPointFormat.UNCOMPRESSED,
+                ]),
+                TlsExtensionEllipticCurves([
+                    TlsNamedCurve.SECT163R2,
+                    TlsNamedCurve.SECT163R1,
+                ]),
+            ])
+        )
+        result = self.get_result(hello_message)
+        self.assertEqual(result.target.ja3.tag, '771,13-12,11-10,3-2,1-0')
+        self.assertEqual(result.target.ja4.raw, 't12i020200_000c,000d_000a,000b_')
+        self.assertEqual(result.target.ja4.raw_original, 't12i020200_000d,000c_000b,000a_')
+        self.assertTrue(result.target.ja4.tag.startswith('t12i020200_'))
+        # cipher and extension order differ from sorted, so the original-order hashed form differs
+        self.assertTrue(result.target.ja4.tag_original.startswith('t12i020200_'))
+        self.assertNotEqual(result.target.ja4.tag, result.target.ja4.tag_original)
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            f'Client offers TLS client hello which JA3 tag is "{result.target.ja3.tag}"\n'
+            f'Client offers TLS client hello which JA4 tag is "{result.target.ja4.tag}"\n'
+        )
+
+
+class TestFingerprintGenerateSsh(TestLoggerBase):
+    @staticmethod
+    def get_result(key_exchange_init_message):
+        analyzer_thread = SshAnalyzerThread(SshServerConfiguration())
+        analyzer_thread.wait_for_server_listen()
+
+        l7_client = L7ClientSsh(
+            analyzer_thread.l7_server.address,
+            analyzer_thread.l7_server.l4_transfer.bind_port,
+            ip=analyzer_thread.l7_server.ip
+        )
+        l7_client.do_handshake(key_exchange_init_message=key_exchange_init_message)
+
+        analyzer_thread.join()
+        return analyzer_thread.result
+
+    def test_error_no_connection(self):
+        with self.assertRaisesRegex(NetworkError, 'connection to target cannot be established'):
+            configuration = SshServerConfiguration()
+            l7_server = L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.1), configuration=configuration)
+            l7_server.init_connection()
+            analyzer = AnalyzerGenerate()
+            analyzer.analyze(l7_server)
+            time.sleep(1)
+
+    def test_tag_minimal(self):
+        def get_sorted_enum(enum_class):
+            return tuple(sorted(enum_class, key=lambda algorithm: algorithm.name))
+
+        key_exchange_init_message = SshKeyExchangeInitAnyAlgorithm(
+            kex_algorithms=get_sorted_enum(SshKexAlgorithm),
+            host_key_algorithms=get_sorted_enum(SshHostKeyAlgorithm),
+            encryption_algorithms_client_to_server=get_sorted_enum(SshEncryptionAlgorithm),
+            encryption_algorithms_server_to_client=get_sorted_enum(SshEncryptionAlgorithm),
+            mac_algorithms_client_to_server=get_sorted_enum(SshMacAlgorithm),
+            mac_algorithms_server_to_client=get_sorted_enum(SshMacAlgorithm),
+            compression_algorithms_client_to_server=get_sorted_enum(SshCompressionAlgorithm),
+            compression_algorithms_server_to_client=get_sorted_enum(SshCompressionAlgorithm),
+        )
+
+        result = self.get_result(key_exchange_init_message)
+        self.assertEqual(result.target.hassh, '8effcf59ef85dc9e494617cdc5fe0517')
+        self.assertEqual(
+            self.log_stream.getvalue(),
+            f'Client offers SSH key exchange init which HASSH fingerprint is "{result.target.hassh}"\n'
+        )
