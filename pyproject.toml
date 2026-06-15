@@ -100,9 +100,11 @@ dependencies = [
 docs = [
     'sphinx>=8.0',
     'sphinx-sitemap',
+    'docutils',
 ]
 tests = [
     'pyfakefs',
+    'coverage',
 ]
 
 [project.scripts]
