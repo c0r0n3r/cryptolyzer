@@ -75,6 +75,15 @@ def get_ffdh_only_server_configuration():
                 key_length=128,
             )
         ),
+        Ikev1CipherSuite.from_ikev1_security_association_proposal_algorithms(
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_1024_BIT_160_BIT_SUBGROUP,
+                hash_algorithm=Ikev1HashAlgorithm.SHA,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=128,
+            )
+        ),
     ]
     ikev2_suites = [
         Ikev2CipherSuite.from_transform_ids(

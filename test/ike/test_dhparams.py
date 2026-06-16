@@ -65,6 +65,7 @@ class TestAnalyzerDHParams(TestAnalyzerDHBase):
         return (
             Ikev1DiffieHellmanGroup.MODP_768_BIT,
             Ikev1DiffieHellmanGroup.MODP_1024_BIT,
+            Ikev1DiffieHellmanGroup.MODP_1024_BIT_160_BIT_SUBGROUP,
         )
 
     @classmethod
