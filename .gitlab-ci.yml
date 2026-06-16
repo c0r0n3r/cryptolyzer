@@ -14,6 +14,10 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   PYTHONPATH: "submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub"
 
+# Full-suite jobs run every live network test under coverage; raise above the 1h default.
+.long_running:
+  timeout: 2h
+
 pylint:
   image: python:3.14-slim
   stage: earlytest
@@ -25,41 +29,49 @@ pep8:
   script: tox -e pep8
 
 python314:
+  extends: .long_running
   image: python:3.14-slim
   stage: earlytest
   script: tox -e py314
 
 python39:
+  extends: .long_running
   image: python:3.9-slim
   stage: fulltest
   script: tox -e py39
 
 python310:
+  extends: .long_running
   image: python:3.10-slim
   stage: fulltest
   script: tox -e py310
 
 python311:
+  extends: .long_running
   image: python:3.11-slim
   stage: fulltest
   script: tox -e py311
 
 python312:
+  extends: .long_running
   image: python:3.12-slim
   stage: fulltest
   script: tox -e py312
 
 python313:
+  extends: .long_running
   image: python:3.13-slim
   stage: fulltest
   script: tox -e py313
 
 pythonrc:
+  extends: .long_running
   image: python:3.15-rc-slim
   stage: fulltest
   script: tox -e py315
 
 coveralls:
+  extends: .long_running
   image: python:3.12-slim
   variables:
     CI_NAME: gitlab
