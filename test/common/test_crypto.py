@@ -652,9 +652,8 @@ class TestCypherStreamCryptodomeAdditional(unittest.TestCase):
 
 
 class TestCmacCryptodome(unittest.TestCase):
-    """PyCryptodome-backed AES-CMAC (RFC 4493 core, RFC 4494 AES-CMAC-96,
-    RFC 4615 AES-CMAC-PRF-128) — the block-cipher-MAC sibling of
-    :class:`HmacCryptodome`."""
+    """PyCryptodome-backed AES-CMAC (RFC 4493 core, RFC 4494 AES-CMAC-96, RFC 4615 AES-CMAC-PRF-128) — the
+    block-cipher-MAC sibling of :class:`HmacCryptodome`."""
 
     def test_error_unsupported_mac(self):
         with self.assertRaises(InvalidValue) as ctx:
@@ -737,8 +736,7 @@ class TestCmacCryptodome(unittest.TestCase):
 
 
 class TestGmacCryptodome(unittest.TestCase):
-    """PyCryptodome-backed AES-GMAC (RFC 4543) — GCM run with empty
-    plaintext, AAD as the authenticated-only message."""
+    """PyCryptodome-backed AES-GMAC (RFC 4543) — GCM run with empty plaintext, AAD as the authenticated-only message."""
 
     def test_error_unsupported_block_cipher(self):
         with self.assertRaises(InvalidValue) as ctx:
