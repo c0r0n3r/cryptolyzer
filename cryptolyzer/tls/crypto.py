@@ -7,6 +7,7 @@ import typing
 import attr
 
 from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, Hash, MAC, NamedGroup
+from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.tls.algorithm import TlsCipherSuite
 
 from cryptoparser.common.parse import ComposerBinary
@@ -271,7 +272,7 @@ class _EphemeralKeyExchangeBackendCryptodome:
                 continue
             try:
                 key_exchange = cls.create_ephemeral_material(tls_named_curve.value.named_group)
-            except (NotImplementedError, ValueError):
+            except (NotImplementedError, ValueError, InvalidValue):
                 continue
 
             key_share_entries.append(TlsKeyShareEntry(tls_named_curve, key_exchange.public_key_bytes))

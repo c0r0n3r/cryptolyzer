@@ -10,8 +10,15 @@ import asn1crypto.keys
 import attr
 
 import Crypto.Cipher.AES
+import Crypto.Cipher.Blowfish
+import Crypto.Cipher.CAST
 import Crypto.Cipher.ChaCha20_Poly1305
+import Crypto.Cipher.DES
+import Crypto.Cipher.DES3
+import Crypto.Hash.CMAC
 import Crypto.Hash.HMAC
+import Crypto.Hash.MD5
+import Crypto.Hash.SHA1
 import Crypto.Hash.SHA256
 import Crypto.Hash.SHA384
 import Crypto.Hash.SHA512
@@ -19,8 +26,10 @@ import Crypto.Protocol.DH
 import Crypto.PublicKey.ECC
 
 from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, Hash, MAC, NamedGroup, NamedGroupType
+from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.common.parameter import DHParamWellKnown
 
+from cryptoparser.common.exception import NotEnoughData, TooMuchData
 from cryptoparser.common.parse import ComposerBinary
 
 
@@ -33,10 +42,7 @@ class EphemeralKeyExchangeBase(abc.ABC):
     _shared_secret = attr.ib(init=False, repr=False)
 
     def __attrs_post_init__(self) -> None:
-        try:
-            self._is_group_supported()
-        except NotImplementedError as e:
-            raise ValueError(f'{e.args[0].value.name} is not supported by {type(self).__name__}') from e
+        self._is_group_supported()
 
         self.generate_key_pair()
 
@@ -112,9 +118,11 @@ class EphemeralKeyExchangeFiniteField(EphemeralKeyExchangeBase):
 
 @attr.s
 class EphemeralKeyExchangeEllipticCurveCryptodome(EphemeralKeyExchangeEllipticCurve):
-    """PyCryptodome-backed elliptic-curve ephemeral key agreement."""
+    """Class for elliptic-curve ephemeral key agreement supported by PyCryptodome."""
 
     _NAMED_GROUP_TO_CURVE_NAME: typing.ClassVar[dict[NamedGroup, str]] = {
+        NamedGroup.PRIME192V1: 'p192',
+        NamedGroup.SECP224R1: 'p224',
         NamedGroup.PRIME256V1: 'p256',
         NamedGroup.SECP384R1: 'p384',
         NamedGroup.SECP521R1: 'p521',
@@ -128,14 +136,13 @@ class EphemeralKeyExchangeEllipticCurveCryptodome(EphemeralKeyExchangeEllipticCu
 
     def _is_group_supported(self) -> None:
         if self.named_group not in self._NAMED_GROUP_TO_CURVE_NAME:
-            raise NotImplementedError(self.named_group)
+            raise InvalidValue(self.named_group, NamedGroup)
 
     def generate_key_pair(self) -> None:
         curve_name = self._NAMED_GROUP_TO_CURVE_NAME[self.named_group]
         self._private_key = Crypto.PublicKey.ECC.generate(curve=curve_name)
 
     def _import_peer_elliptic_curve_public_key(self, key_bytes: bytes | bytearray) -> Crypto.PublicKey.ECC.EccKey:
-        """Import the peer's elliptic-curve public key octets."""
         key_bytes = bytes(key_bytes)
 
         if self.named_group in (NamedGroup.CURVE25519, NamedGroup.CURVE448):
@@ -163,7 +170,7 @@ class EphemeralKeyExchangeEllipticCurveCryptodome(EphemeralKeyExchangeEllipticCu
 
 @attr.s
 class EphemeralKeyExchangeFiniteFieldCryptodome(EphemeralKeyExchangeFiniteField):
-    """PyCryptodome-backed finite-field ephemeral key agreement."""
+    """Class for finite-finite ephemeral key agreement supported by PyCryptodome."""
 
     def _is_group_supported(self) -> None:
         pass
@@ -216,6 +223,15 @@ class CypherBase(abc.ABC):
         """Decrypt ``ciphertext`` and verify the AEAD ``tag`` against ``additional_data``."""
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def encrypt_and_digest(
+        self,
+        plaintext: bytes | bytearray,
+        additional_data: bytes | bytearray,
+    ) -> tuple[bytes, bytes]:
+        """AEAD-encrypt ``plaintext`` over ``additional_data``; return ``(ciphertext, tag)``."""
+        raise NotImplementedError()
+
 
 @attr.s
 class CypherBlockBase(CypherBase):
@@ -241,36 +257,80 @@ class CypherStreamBase(CypherBase):
 
 @attr.s
 class CypherBlockCryptodome(CypherBlockBase):
-    """PyCryptodome-backed block cipher."""
+    """Class for block ciphers supported by PyCryptodome."""
 
-    _BLOCK_CIPHER_TO_MODULE: typing.ClassVar[dict[BlockCipher, typing.Any]] = {
+    _BLOCK_CIPHER_MAP: typing.ClassVar[dict[BlockCipher, typing.Any]] = {
         BlockCipher.AES_128: Crypto.Cipher.AES,
+        BlockCipher.AES_192: Crypto.Cipher.AES,
         BlockCipher.AES_256: Crypto.Cipher.AES,
+        BlockCipher.TRIPLE_DES_168: Crypto.Cipher.DES3,
+        BlockCipher.DES: Crypto.Cipher.DES,
+        BlockCipher.BLOWFISH_128: Crypto.Cipher.Blowfish,
+        BlockCipher.BLOWFISH_256: Crypto.Cipher.Blowfish,
+        BlockCipher.CAST5_128: Crypto.Cipher.CAST,
     }
 
-    _BLOCK_CIPHER_MODE_TO_CONSTANT: typing.ClassVar[dict[BlockCipherMode, int]] = {
+    _BLOCK_CIPHER_MODE_MAP: typing.ClassVar[dict[BlockCipherMode, int]] = {
         BlockCipherMode.GCM: Crypto.Cipher.AES.MODE_GCM,
+        BlockCipherMode.GCM_8: Crypto.Cipher.AES.MODE_GCM,
+        BlockCipherMode.GCM_12: Crypto.Cipher.AES.MODE_GCM,
+        BlockCipherMode.CCM_8: Crypto.Cipher.AES.MODE_CCM,
+        BlockCipherMode.CCM_12: Crypto.Cipher.AES.MODE_CCM,
+        BlockCipherMode.CCM_16: Crypto.Cipher.AES.MODE_CCM,
+        BlockCipherMode.CBC: Crypto.Cipher.AES.MODE_CBC,
+        BlockCipherMode.CTR: Crypto.Cipher.AES.MODE_CTR,
     }
+
+    _BLOCK_CIPHER_MODES_IV: typing.ClassVar[frozenset[BlockCipherMode]] = frozenset({
+        BlockCipherMode.CBC,
+    })
+
+    _BLOCK_SIZED_NONCE_MODES: typing.ClassVar[frozenset[BlockCipherMode]] = frozenset({
+        BlockCipherMode.CBC,
+    })
+
+    mac_len: int | None = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(int)),
+    )
+    initial_value: int | None = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(int)),
+    )
 
     def __attrs_post_init__(self) -> None:
-        try:
-            self._is_block_cipher_supported()
-            self._is_block_cipher_mode_supported()
-        except NotImplementedError as e:
-            raise ValueError(f'{e.args[0].name} is not supported by {type(self).__name__}') from e
+        self._is_block_cipher_supported()
+        self._is_block_cipher_mode_supported()
+
+        if self.block_cipher_mode in self._BLOCK_SIZED_NONCE_MODES:
+            expected_nonce_length = self.bulk_cipher.value.block_size // 8
+            if len(self.nonce) < expected_nonce_length:
+                raise NotEnoughData(bytes_needed=expected_nonce_length - len(self.nonce))
+            if len(self.nonce) > expected_nonce_length:
+                raise TooMuchData(bytes_needed=len(self.nonce) - expected_nonce_length)
 
     def _is_block_cipher_supported(self) -> None:
-        if self.bulk_cipher not in self._BLOCK_CIPHER_TO_MODULE:
-            raise NotImplementedError(self.bulk_cipher)
+        if self.bulk_cipher not in self._BLOCK_CIPHER_MAP:
+            raise InvalidValue(self.bulk_cipher, BlockCipher)
 
     def _is_block_cipher_mode_supported(self) -> None:
-        if self.block_cipher_mode not in self._BLOCK_CIPHER_MODE_TO_CONSTANT:
-            raise NotImplementedError(self.block_cipher_mode)
+        if self.block_cipher_mode not in self._BLOCK_CIPHER_MODE_MAP:
+            raise InvalidValue(self.block_cipher_mode, BlockCipherMode)
 
     def _new_cipher(self) -> typing.Any:
-        module = self._BLOCK_CIPHER_TO_MODULE[self.bulk_cipher]
-        mode = self._BLOCK_CIPHER_MODE_TO_CONSTANT[self.block_cipher_mode]
-        return module.new(self.key, mode, nonce=self.nonce)
+        module = self._BLOCK_CIPHER_MAP[self.bulk_cipher]
+        kwargs = {'mode': self._BLOCK_CIPHER_MODE_MAP[self.block_cipher_mode]}
+
+        if self.block_cipher_mode in self._BLOCK_CIPHER_MODES_IV:
+            kwargs['iv'] = self.nonce
+        else:
+            kwargs['nonce'] = self.nonce
+        if self.mac_len is not None:
+            kwargs['mac_len'] = self.mac_len
+        if self.initial_value is not None:
+            kwargs['initial_value'] = self.initial_value
+
+        return module.new(self.key, **kwargs)
 
     def encrypt(self, plaintext: bytes | bytearray) -> bytes:
         return self._new_cipher().encrypt(bytes(plaintext))
@@ -288,36 +348,41 @@ class CypherBlockCryptodome(CypherBlockBase):
         cipher.update(bytes(additional_data))
         return cipher.decrypt_and_verify(bytes(ciphertext), bytes(tag))
 
+    def encrypt_and_digest(
+        self,
+        plaintext: bytes | bytearray,
+        additional_data: bytes | bytearray,
+    ) -> tuple[bytes, bytes]:
+        cipher = self._new_cipher()
+        cipher.update(bytes(additional_data))
+        return cipher.encrypt_and_digest(bytes(plaintext))
+
 
 @attr.s
 class CypherStreamCryptodome(CypherStreamBase):
-    """PyCryptodome-backed stream cipher."""
+    """Class for stream ciphers supported by PyCryptodome."""
 
-    _STREAM_CIPHER_TO_MODULE = {
+    _STREAM_CIPHER_MAP = {
         BlockCipher.CHACHA20: Crypto.Cipher.ChaCha20_Poly1305,
     }
 
     def __attrs_post_init__(self) -> None:
-        try:
-            self._is_block_cipher_supported()
-            self._is_stream_cipher_supported()
-        except NotImplementedError as e:
-            raise ValueError(f'{e.args[0].name} is not supported by {type(self).__name__}') from e
+        self._is_block_cipher_supported()
+        self._is_stream_cipher_supported()
 
     def _is_block_cipher_supported(self) -> None:
-        if self.bulk_cipher not in self._STREAM_CIPHER_TO_MODULE:
-            raise NotImplementedError(self.bulk_cipher)
+        pass
 
     def _is_stream_cipher_supported(self) -> None:
-        if self.bulk_cipher not in self._STREAM_CIPHER_TO_MODULE:
-            raise NotImplementedError(self.bulk_cipher)
+        if self.bulk_cipher not in self._STREAM_CIPHER_MAP:
+            raise InvalidValue(self.bulk_cipher, BlockCipher)
 
     def encrypt(self, plaintext: bytes | bytearray) -> bytes:
-        module = self._STREAM_CIPHER_TO_MODULE[self.bulk_cipher]
+        module = self._STREAM_CIPHER_MAP[self.bulk_cipher]
         return module.new(key=self.key, nonce=self.nonce).encrypt(plaintext)
 
     def decrypt(self, ciphertext: bytes | bytearray) -> bytes:
-        module = self._STREAM_CIPHER_TO_MODULE[self.bulk_cipher]
+        module = self._STREAM_CIPHER_MAP[self.bulk_cipher]
         return module.new(key=self.key, nonce=self.nonce).decrypt(ciphertext)
 
     def decrypt_and_verify(
@@ -326,28 +391,40 @@ class CypherStreamCryptodome(CypherStreamBase):
         tag: bytes | bytearray,
         additional_data: bytes | bytearray,
     ) -> bytes:
-        module = self._STREAM_CIPHER_TO_MODULE[self.bulk_cipher]
+        module = self._STREAM_CIPHER_MAP[self.bulk_cipher]
         cipher = module.new(key=self.key, nonce=self.nonce)
         cipher.update(bytes(additional_data))
         return cipher.decrypt_and_verify(bytes(ciphertext), bytes(tag))
 
+    def encrypt_and_digest(
+        self,
+        plaintext: bytes | bytearray,
+        additional_data: bytes | bytearray,
+    ) -> tuple[bytes, bytes]:
+        module = self._STREAM_CIPHER_MAP[self.bulk_cipher]
+        cipher = module.new(key=self.key, nonce=self.nonce)
+        cipher.update(bytes(additional_data))
+        return cipher.encrypt_and_digest(bytes(plaintext))
+
 
 @attr.s
 class HashBase(abc.ABC):
-    """Abstract base class for cryptographic hash primitives."""
+    """Abstract base class for hash algorithms."""
+
+    _HASH_MAP: typing.ClassVar[dict[Hash, typing.Any]] = {}
 
     hash_algorithm = attr.ib(validator=attr.validators.instance_of(Hash))
 
     def __attrs_post_init__(self) -> None:
-        try:
-            self._is_hash_supported()
-        except NotImplementedError as e:
-            raise ValueError(f'{e.args[0].name} is not supported by {type(self).__name__}') from e
+        self._is_hash_supported()
 
-    @abc.abstractmethod
+    @classmethod
+    def get_supported_hashes(cls) -> frozenset[Hash]:
+        return frozenset(cls._HASH_MAP)
+
     def _is_hash_supported(self) -> None:
-        """Whether the configured hash algorithm is supported by this backend."""
-        raise NotImplementedError()
+        if self.hash_algorithm not in self._HASH_MAP:
+            raise InvalidValue(self.hash_algorithm, Hash)
 
     @abc.abstractmethod
     def digest(self, data: bytes | bytearray) -> bytes:
@@ -357,22 +434,18 @@ class HashBase(abc.ABC):
 
 @attr.s
 class HashCryptodome(HashBase):
-    """PyCryptodome-backed hash."""
+    """Class for hash algorithms supported by PyCryptodome."""
 
-    _HASH_TO_MODULE: typing.ClassVar[dict[Hash, typing.Any]] = {
+    _HASH_MAP: typing.ClassVar[dict[Hash, typing.Any]] = {
+        Hash.SHA1: Crypto.Hash.SHA1,
         Hash.SHA2_256: Crypto.Hash.SHA256,
         Hash.SHA2_384: Crypto.Hash.SHA384,
         Hash.SHA2_512: Crypto.Hash.SHA512,
     }
 
-    def _is_hash_supported(self) -> None:
-        if self.hash_algorithm not in self._HASH_TO_MODULE:
-            raise NotImplementedError(self.hash_algorithm)
-
     @property
     def digestmod_class(self) -> typing.Any:
-        """Underlying hash module suitable for HMAC ``digestmod``."""
-        return self._HASH_TO_MODULE[self.hash_algorithm]
+        return self._HASH_MAP[self.hash_algorithm]
 
     def digest(self, data: bytes | bytearray) -> bytes:
         return self.digestmod_class.new(bytes(data)).digest()
@@ -380,15 +453,12 @@ class HashCryptodome(HashBase):
 
 @attr.s
 class HmacBase(abc.ABC):
-    """Abstract base class for HMAC primitives."""
+    """Abstract base class for HMAC algorithms."""
 
     mac_algorithm: MAC = attr.ib(validator=attr.validators.instance_of(MAC))
 
     def __attrs_post_init__(self) -> None:
-        try:
-            self._is_mac_supported()
-        except NotImplementedError as e:
-            raise ValueError(f'{e.args[0].name} is not supported by {type(self).__name__}') from e
+        self._is_mac_supported()
 
     @abc.abstractmethod
     def _is_mac_supported(self) -> None:
@@ -400,24 +470,120 @@ class HmacBase(abc.ABC):
         """Keyed HMAC digest of ``data`` under ``key``."""
         raise NotImplementedError()
 
+    @classmethod
+    def for_algorithm(cls, mac_algorithm: MAC) -> HmacBase:
+        """Return the concrete :class:`HmacBase` implementation that
+        handles ``mac_algorithm``: :class:`CmacCryptodome` for block-cipher
+        MACs (AES-CMAC-*), :class:`HmacCryptodome` for hash-based MACs
+        (MD5/SHA1/SHA2).
+        """
+        if mac_algorithm in CmacCryptodome._CMAC_MAP:  # pylint: disable=protected-access
+            return CmacCryptodome(mac_algorithm=mac_algorithm)
+        return HmacCryptodome(mac_algorithm=mac_algorithm)
+
 
 @attr.s
 class HmacCryptodome(HmacBase):
-    """PyCryptodome-backed HMAC."""
+    """Class for HMAC algorithms supported by PyCryptodome."""
 
-    _MAC_TO_HASH_MODULE: typing.ClassVar[dict[MAC, typing.Any]] = {
+    _HMAC_MAP: typing.ClassVar[dict[MAC, typing.Any]] = {
+        MAC.MD5: Crypto.Hash.MD5,
+        MAC.SHA1: Crypto.Hash.SHA1,
         MAC.SHA2_256: Crypto.Hash.SHA256,
         MAC.SHA2_384: Crypto.Hash.SHA384,
         MAC.SHA2_512: Crypto.Hash.SHA512,
     }
 
     def _is_mac_supported(self) -> None:
-        if self.mac_algorithm not in self._MAC_TO_HASH_MODULE:
-            raise NotImplementedError(self.mac_algorithm)
+        if self.mac_algorithm not in self._HMAC_MAP:
+            raise InvalidValue(self.mac_algorithm, MAC)
 
     def digest(self, key: bytes | bytearray, data: bytes | bytearray) -> bytes:
-        hash_module = self._MAC_TO_HASH_MODULE[self.mac_algorithm]
+        hash_module = self._HMAC_MAP[self.mac_algorithm]
         return Crypto.Hash.HMAC.new(bytes(key), bytes(data), digestmod=hash_module).digest()
+
+
+@attr.s
+class CmacCryptodome(HmacBase):
+    """Class for CMAC algorithms supported by PyCryptodome."""
+
+    _CMAC_MAP: typing.ClassVar[dict[MAC, typing.Any]] = {
+        MAC.AES_CMAC_96: Crypto.Cipher.AES,
+        MAC.AES_CMAC_PRF_128: Crypto.Cipher.AES,
+    }
+
+    # RFC 4493 §2.4: 16 octets
+    _AES_CMAC_KEY_LENGTH: typing.ClassVar[int] = 16
+
+    def _is_mac_supported(self) -> None:
+        if self.mac_algorithm not in self._CMAC_MAP:
+            raise InvalidValue(self.mac_algorithm, MAC)
+
+    def digest(self, key: bytes | bytearray, data: bytes | bytearray) -> bytes:
+        cipher_module = self._CMAC_MAP[self.mac_algorithm]
+        key_bytes = bytes(key)
+        if self.mac_algorithm is MAC.AES_CMAC_PRF_128:
+            # RFC 4615 §3: when ``VariableKey`` length is not 16 octets, derive the 16-octet PRF key via
+            # ``K = AES-CMAC(0^128, VariableKey)``.
+            if len(key_bytes) != self._AES_CMAC_KEY_LENGTH:
+                key_bytes = Crypto.Hash.CMAC.new(
+                    b'\x00' * self._AES_CMAC_KEY_LENGTH,
+                    ciphermod=cipher_module,
+                ).update(key_bytes).digest()
+        else:
+            # RFC 4494 §2: AES-CMAC-96 is pinned to a 16-octet AES-128 key.
+            if len(key_bytes) < self._AES_CMAC_KEY_LENGTH:
+                raise NotEnoughData(bytes_needed=self._AES_CMAC_KEY_LENGTH - len(key_bytes))
+            if len(key_bytes) > self._AES_CMAC_KEY_LENGTH:
+                raise TooMuchData(bytes_needed=len(key_bytes) - self._AES_CMAC_KEY_LENGTH)
+
+        return Crypto.Hash.CMAC.new(key_bytes, ciphermod=cipher_module).update(bytes(data)).digest()
+
+
+@attr.s
+class GmacCryptodome:
+    """Class for GMAC algorithms supported by PyCryptodome."""
+
+    block_cipher: BlockCipher = attr.ib(validator=attr.validators.instance_of(BlockCipher))
+
+    def __attrs_post_init__(self) -> None:
+        if self.block_cipher not in (
+            BlockCipher.AES_128, BlockCipher.AES_192, BlockCipher.AES_256,
+        ):
+            raise InvalidValue(self.block_cipher, BlockCipher)
+
+    #: GCM nonce length pinned by RFC 4543 §3.2: 4-octet salt + 8-octet per-packet IV = 12 octets. PyCryptodome silently
+    #: accepts any nonce length ≥ 1 and re-hashes non-12-octet nonces through GHASH, which produces a different ``J0``
+    #: and a tag that no RFC-conformant peer will match. Enforce the length here so a caller cannot accidentally supply
+    #: the AES block-size (16) IV that CBC-encryption paths would extract as ``wire_iv``.
+    _GCM_NONCE_LENGTH: typing.ClassVar[int] = 12
+
+    def digest(
+        self,
+        key: bytes | bytearray,
+        nonce: bytes | bytearray,
+        additional_data: bytes | bytearray,
+    ) -> bytes:
+        """Compute AES-GMAC tag over ``additional_data`` under ``key``.
+
+        :param key: AES key (16 / 24 / 32 octets).
+        :param nonce: 12-octet GCM nonce (``salt || wire_iv`` per RFC 4543 §5.1: 4-octet salt from ``SK_ai`` tail,
+            8-octet per-packet IV from the SK payload).
+        :param additional_data: authenticated-only data. GCM ciphertext is empty.
+        :return: 16-octet tag; caller truncates to the ICV length.
+        :raises ValueError: if ``nonce`` length is not exactly 12
+            octets (RFC 4543 §3.2).
+        """
+        if len(nonce) < self._GCM_NONCE_LENGTH:
+            raise NotEnoughData(bytes_needed=self._GCM_NONCE_LENGTH - len(nonce))
+        if len(nonce) > self._GCM_NONCE_LENGTH:
+            raise TooMuchData(bytes_needed=len(nonce) - self._GCM_NONCE_LENGTH)
+
+        cipher = Crypto.Cipher.AES.new(bytes(key), Crypto.Cipher.AES.MODE_GCM, nonce=bytes(nonce))
+        cipher.update(bytes(additional_data))
+        _, tag = cipher.encrypt_and_digest(b'')
+
+        return tag
 
 
 class HandshakeKeyScheduleBase(abc.ABC):
@@ -466,6 +632,36 @@ class AeadRecordDecryptorBase(abc.ABC):
     @abc.abstractmethod
     def decrypt(self, ciphertext: bytes | bytearray, additional_data: bytes | bytearray) -> bytes:
         """Decrypt and verify one record; ``ciphertext`` includes the tag."""
+        raise NotImplementedError()
+
+
+class NonAeadRecordDecryptorBase(abc.ABC):
+    """Abstract base class for non-AEAD record decryptors.
+
+    Sibling to :class:`AeadRecordDecryptorBase`: signature takes an explicit ``integrity_check_value`` rather than AEAD
+    ``additional_data``.
+    """
+
+    @property
+    @abc.abstractmethod
+    def integrity_check_value_length_bytes(self) -> int:
+        """Octet length of the ICV trailing the encrypted body."""
+        raise NotImplementedError()
+
+    @property
+    @abc.abstractmethod
+    def record_initialization_vector_length_bytes(self) -> int:
+        """IV length the on-wire body is prefixed with."""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def decrypt(
+        self,
+        ciphertext: bytes | bytearray,
+        integrity_check_value: bytes | bytearray,
+        signed_octets: bytes | bytearray,
+    ) -> bytes:
+        """Decrypt the body and verify ``integrity_check_value`` against ``signed_octets``."""
         raise NotImplementedError()
 
 
