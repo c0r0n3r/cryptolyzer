@@ -82,13 +82,10 @@ from .classes import L7ServerTlsTest, L7ServerStartTlsTest
 class TestL7ServerBase(unittest.TestCase):
     def setUp(self):
         self.threaded_server = None
-        if sys.version_info.major == 3 and sys.version_info.minor == 4:
-            if sys.implementation == 'cpython':
-                self.ssl_exception_reason = 'WRONG_SSL_VERSION'
-            else:
-                self.ssl_exception_reason = 'SSLV3_ALERT_HANDSHAKE_FAILURE'
+        if sys.version_info.major == 3 and sys.version_info.minor == 4 and sys.implementation == 'cpython':
+            self.ssl_exception_reason = 'WRONG_SSL_VERSION'
         else:
-            self.ssl_exception_reason = 'UNEXPECTED_MESSAGE'
+            self.ssl_exception_reason = 'SSLV3_ALERT_HANDSHAKE_FAILURE'
 
     @staticmethod
     def create_server(configuration=None, l7_server_class=L7ServerTls):
@@ -255,13 +252,12 @@ class TestL7ServerTls(TestL7ServerBase):
 
 class TestL7ServerTls13(TestL7ServerBase):
     def setUp(self):
-        self.threaded_server = self.create_server()
+        self.threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256]
+        ))
 
     def test_handshake(self):
-        self._test_tls_handshake(
-            TlsProtocolVersion(TlsVersion.TLS1_3),
-            TlsHandshakeType.HELLO_RETRY_REQUEST
-        )
+        self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_3))
 
 
 class TestL7ServerTlsFallbackToSsl(TestL7ServerBase):

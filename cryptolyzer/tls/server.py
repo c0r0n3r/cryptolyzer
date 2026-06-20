@@ -50,7 +50,6 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertMessage,
     TlsCipherSuite,
     TlsContentType,
-    TlsHandshakeHelloRetryRequest,
     TlsHandshakeServerHello,
     TlsHandshakeType,
     TlsSubprotocolMessageParser,
@@ -206,31 +205,27 @@ class TlsServerHandshake(TlsServer):
         if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2):
             extensions.append(TlsExtensionSupportedVersionsServer(protocol_version))
 
-        if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2):
-            server_hello = TlsHandshakeHelloRetryRequest(
-                protocol_version=protocol_version,
-                cipher_suite=message.cipher_suites[0],
-                extensions=extensions,
-            )
+        preferred_cipher_suite_list = self.configuration.cipher_suites
+        selectable_cipher_suite_set = set(message.cipher_suites)
+        for cipher_suite in preferred_cipher_suite_list:
+            if cipher_suite in selectable_cipher_suite_set:
+                choosen_cipher_suite = cipher_suite
+                break
         else:
-            preferred_cipher_suite_list = self.configuration.cipher_suites
-            selectable_cipher_suite_set = set(message.cipher_suites)
-            for cipher_suite in preferred_cipher_suite_list:
-                if cipher_suite in selectable_cipher_suite_set:
-                    choosen_cipher_suite = cipher_suite
-                    break
-            else:
-                self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
-                raise StopIteration()
+            self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
+            raise StopIteration()
 
-            server_hello = TlsHandshakeServerHello(
-                protocol_version=protocol_version,
-                cipher_suite=choosen_cipher_suite,
-                random=message.random,
-                extensions=extensions,
-            )
-
-        return server_hello
+        wire_protocol_version = (
+            TlsProtocolVersion(TlsVersion.TLS1_2)
+            if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2)
+            else protocol_version
+        )
+        return TlsHandshakeServerHello(
+            protocol_version=wire_protocol_version,
+            cipher_suite=choosen_cipher_suite,
+            random=message.random,
+            extensions=extensions,
+        )
 
     def _process_handshake_message(self, message, last_handshake_message_type):
         self._last_processed_message_type = message.get_handshake_type()
