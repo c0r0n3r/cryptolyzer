@@ -189,6 +189,20 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_fallback.call_count, 0)
 
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+        side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION),
+    )
+    @mock.patch.object(
+        AnalyzerCipherSuites, '_get_accepted_cipher_suites_fallback',
+        return_value=[]
+    )
+    def test_error_protocol_version(self, mocked_next_accepted_cipher_suites, _):
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(len(result.cipher_suites), 0)
+        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 1)
+
     def test_error_protocol_version_mid_scan(self):
         threaded_server = self.create_server()
         with mock.patch.object(AnalyzerCipherSuites, '_next_accepted_cipher_suites',
