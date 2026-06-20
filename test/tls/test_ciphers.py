@@ -344,10 +344,19 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             for cipher_suite in result.cipher_suites
         ))
 
-    @live_server
     def test_tls_1_3(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[
+                TlsCipherSuite.TLS_AES_128_GCM_SHA256,
+                TlsCipherSuite.TLS_AES_256_GCM_SHA384,
+                TlsCipherSuite.TLS_CHACHA20_POLY1305_SHA256,
+            ]
+        ))
         self.assertEqual(
-            self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).cipher_suites,
+            self.get_result(
+                'localhost', threaded_server.l7_server.l4_transfer.bind_port,
+                TlsProtocolVersion(TlsVersion.TLS1_3)
+            ).cipher_suites,
             [
                 TlsCipherSuite.TLS_AES_128_GCM_SHA256,
                 TlsCipherSuite.TLS_AES_256_GCM_SHA384,
@@ -364,9 +373,9 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).cipher_suites, []
         )
 
-    @live_server
     def test_json(self):
-        result = self.get_result('mozill.old.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result)
 
     @live_server
