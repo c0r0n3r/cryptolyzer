@@ -252,9 +252,10 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.cipher_suites), 1)
 
-    @live_server
     def test_long_cipher_suite_list_intolerance(self):
-        self.assertFalse(self.get_result('8.8.8.8', 443).long_cipher_suite_list_intolerance)
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertFalse(result.long_cipher_suite_list_intolerance)
 
         threaded_server = L7ServerTlsTest(
             L7ServerTlsLongCipherSuiteListIntolerance('localhost', 0, L4TransferSocketParams(timeout=0.2)),
@@ -264,9 +265,18 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.long_cipher_suite_list_intolerance)
 
-    @live_server
     def test_cbc(self):
-        result = self.get_result('cbc.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[
+                TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+                TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
+                TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA,
+                TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+                TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
+                TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
+            ]
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         self.assertEqual(result.cipher_suite_preference, True)
         self.assertEqual(
@@ -291,9 +301,14 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             ]
         )
 
-    @live_server
     def test_rc4(self):
-        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[
+                TlsCipherSuite.TLS_RSA_EXPORT_WITH_RC4_40_MD5,
+                TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA,
+            ]
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         rc4_block_ciphers = [
             BlockCipher.RC4_40,
@@ -305,16 +320,23 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             for cipher_suite in result.cipher_suites
         ))
 
-    @live_server
     def test_rc4_md5(self):
-        result = self.get_result('rc4-md5.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_RC4_128_MD5]
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         self.assertEqual(result.cipher_suite_preference, None)
-        self.assertEqual(result.cipher_suites, [TlsCipherSuite.TLS_RSA_WITH_RC4_128_MD5, ])
+        self.assertEqual(result.cipher_suites, [TlsCipherSuite.TLS_RSA_WITH_RC4_128_MD5])
 
-    @live_server
     def test_triple_des(self):
-        result = self.get_result('3des.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[
+                TlsCipherSuite.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+                TlsCipherSuite.TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
+            ]
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         triple_des_block_ciphers = [
             BlockCipher.TRIPLE_DES_168,
@@ -326,18 +348,28 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             for cipher_suite in result.cipher_suites
         ))
 
-    @live_server
     def test_anon(self):
-        result = self.get_result('null.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[
+                TlsCipherSuite.TLS_NULL_WITH_NULL_NULL,
+                TlsCipherSuite.TLS_DH_anon_EXPORT_WITH_RC4_40_MD5,
+            ]
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         self.assertTrue(all(
             'NULL' in cipher_suite.name or 'anon' in cipher_suite.name
             for cipher_suite in result.cipher_suites
         ))
 
-    @live_server
     def test_rsa(self):
-        result = self.get_result('static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[
+                TlsCipherSuite.TLS_RSA_WITH_NULL_MD5,
+                TlsCipherSuite.TLS_RSA_WITH_RC4_128_MD5,
+            ]
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         self.assertTrue(all(
             cipher_suite.value.authentication == Authentication.RSA
