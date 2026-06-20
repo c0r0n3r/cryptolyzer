@@ -74,49 +74,56 @@ ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES = (  # pylint: disable=protected-access
     AnalyzerCipherSuites._next_accepted_cipher_suites  # pylint: disable=protected-access
 )
 
-INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE = None
+
+class _ProtocolVersionMidScanWrapper:
+    def __init__(self):
+        self._should_raise = False
+
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def __call__(self, l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+                 named_curves=None, key_share_curves=None):
+        if self._should_raise:
+            raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
+        self._should_raise = True
+        return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
+            l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+            named_curves=named_curves, key_share_curves=key_share_curves,
+        )
 
 
-# pylint: disable-next=too-many-arguments,too-many-positional-arguments
-def _wrapped_next_accepted_cipher_suites_internal_error_once(
-        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
-        named_curves=None, key_share_curves=None):
-    if globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] is None:
-        globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] = True
-    elif globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] is True:
-        globals()['INTERNAL_ERROR_SHOULD_BE_RAISED_ONCE'] = False
-        raise TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
+class _InternalErrorOnceWrapper:
+    def __init__(self):
+        self._state = None
 
-    return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
-        l7_client,
-        protocol_version,
-        remaining_cipher_suites,
-        accepted_cipher_suites,
-        named_curves=named_curves,
-        key_share_curves=key_share_curves,
-    )
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def __call__(self, l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+                 named_curves=None, key_share_curves=None):
+        if self._state is None:
+            self._state = True
+        elif self._state is True:
+            self._state = False
+            raise TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
+        return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
+            l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+            named_curves=named_curves, key_share_curves=key_share_curves,
+        )
 
 
-INTERNAL_ERROR_SHOULD_BE_RAISED = False
+class _InternalErrorMultipleWrapper:
+    def __init__(self):
+        self._should_raise = False
 
-
-# pylint: disable-next=too-many-arguments,too-many-positional-arguments
-def _wrapped_next_accepted_cipher_suites_internal_error_multiple(
-        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
-        named_curves=None, key_share_curves=None):
-    if not globals()['INTERNAL_ERROR_SHOULD_BE_RAISED']:
-        globals()['INTERNAL_ERROR_SHOULD_BE_RAISED'] = True
-    else:
-        raise TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
-
-    return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
-        l7_client,
-        protocol_version,
-        remaining_cipher_suites,
-        accepted_cipher_suites,
-        named_curves=named_curves,
-        key_share_curves=key_share_curves,
-    )
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def __call__(self, l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+                 named_curves=None, key_share_curves=None):
+        if not self._should_raise:
+            self._should_raise = True
+        else:
+            raise TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
+        return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
+            l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
+            named_curves=named_curves, key_share_curves=key_share_curves,
+        )
 
 
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments
@@ -133,22 +140,6 @@ def _wrapped_next_accepted_cipher_suites_response_error(
         accepted_cipher_suites,
         named_curves=named_curves,
         key_share_curves=key_share_curves,
-    )
-
-
-PROTOCOL_VERSION_SHOULD_BE_RAISED = False
-
-
-# pylint: disable-next=too-many-arguments,too-many-positional-arguments
-def _wrapped_next_accepted_cipher_suites_protocol_version_mid_scan(
-        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
-        named_curves=None, key_share_curves=None):
-    if globals()['PROTOCOL_VERSION_SHOULD_BE_RAISED']:
-        raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
-    globals()['PROTOCOL_VERSION_SHOULD_BE_RAISED'] = True
-    return ORIGINAL_NEXT_ACCEPTED_CIPHER_SUITES(
-        l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
-        named_curves=named_curves, key_share_curves=key_share_curves,
     )
 
 
@@ -199,13 +190,11 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_fallback.call_count, 0)
 
-    @live_server
-    @mock.patch.object(
-        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
-        wraps=_wrapped_next_accepted_cipher_suites_protocol_version_mid_scan
-    )
-    def test_error_protocol_version_mid_scan(self, _):
-        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+    def test_error_protocol_version_mid_scan(self):
+        threaded_server = self.create_server()
+        with mock.patch.object(AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+                               wraps=_ProtocolVersionMidScanWrapper()):
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.cipher_suites), 1)
 
     @mock.patch.object(
@@ -238,36 +227,29 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 6)
 
-    @live_server
-    @mock.patch.object(
-        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
-        wraps=_wrapped_next_accepted_cipher_suites_internal_error_once
-    )
     @mock.patch('time.sleep', return_value=None)
-    def test_error_internal_error_once(self, _, __):
-        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertEqual(result.cipher_suites, [
-            TlsCipherSuite.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
-            TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA,
-        ])
+    def test_error_internal_error_once(self, _):
+        threaded_server = self.create_server()
+        with mock.patch.object(AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+                               wraps=_InternalErrorOnceWrapper()):
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(result.cipher_suites, [TlsCipherSuite.TLS_RSA_WITH_RC2_CBC_MD5])
 
-    @live_server
-    @mock.patch.object(
-        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
-        wraps=_wrapped_next_accepted_cipher_suites_internal_error_multiple
-    )
     @mock.patch('time.sleep', return_value=None)
-    def test_error_internal_error_multiple(self, _, __):
-        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+    def test_error_internal_error_multiple(self, _):
+        threaded_server = self.create_server()
+        with mock.patch.object(AnalyzerCipherSuites, '_next_accepted_cipher_suites',
+                               wraps=_InternalErrorMultipleWrapper()):
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.cipher_suites, [])
 
-    @live_server
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
         wraps=_wrapped_next_accepted_cipher_suites_response_error
     )
     def test_error_response_error_no_response_last_time(self, _):
-        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.cipher_suites), 1)
 
     @live_server
