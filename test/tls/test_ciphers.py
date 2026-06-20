@@ -5,7 +5,6 @@ import unittest
 from unittest import mock
 
 from test.common.classes import TestMainBase
-from test.common.markers import live_server
 
 from cryptodatahub.common.algorithm import Authentication, BlockCipher
 
@@ -410,10 +409,16 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result)
 
-    @live_server
     def test_output(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            '127.0.0.1', 0,
+            L4TransferSocketParams(timeout=5.0),
+            configuration=TlsServerConfiguration(cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_RC4_128_MD5])
+        ))
+        threaded_server.wait_for_server_listen()
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1), 'ciphers', 'rc4-md5.badssl.com', 443, timeout=10, scheme='tls'
+            TlsProtocolVersion(TlsVersion.TLS1), 'ciphers', '127.0.0.1',
+            threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
         )
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
