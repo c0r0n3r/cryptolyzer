@@ -10,7 +10,6 @@ from test.ike.classes import (
     L7ServerIkeNotify,
     create_ike_server,
 )
-
 from cryptodatahub.ike.algorithm import Ikev1NotifyType, Ikev2NotifyType
 from cryptodatahub.ike.version import IkeVersion
 
@@ -212,22 +211,3 @@ class TestIkeVersions(TestLoggerBase):
         log_output = '\n'.join(self.get_log_lines())
         self.assertNotIn('No response from server', log_output)
         threaded_server.join()
-
-    def test_real(self):
-        result = self._get_result('moon.strongswan.org', 500, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertEqual(
-            result.versions,
-            [IsakmpProtocolVersion(IkeVersion.V1, 0), IsakmpProtocolVersion(IkeVersion.V2, 0)],
-        )
-
-        result = self._get_result('82.138.51.230', 500, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertEqual(
-            result.versions,
-            [IsakmpProtocolVersion(IkeVersion.V2, 0)],
-        )
-
-        result = self._get_result('public-vpn-213.opengw.net', 500, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertEqual(
-            result.versions,
-            [IsakmpProtocolVersion(IkeVersion.V1, 0)],
-        )

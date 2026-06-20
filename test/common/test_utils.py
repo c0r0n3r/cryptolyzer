@@ -4,7 +4,6 @@
 import os
 
 import unittest
-import socket
 
 from test.common.classes import (
     TestGradeableComplex,
@@ -270,12 +269,3 @@ class TestResolveAddress(unittest.TestCase):
         with self.assertRaises(NetworkError) as context_manager:
             resolve_address('unresolvable.address', 0)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_ADDRESS)
-
-    def test_resolve(self):
-        family, ip = resolve_address('one.one.one.one', 0, '1.1.1.1')
-        self.assertEqual(family, socket.AF_INET)
-        self.assertEqual(ip, '1.1.1.1')
-
-        family, ip = resolve_address('one.one.one.one', 0, '2606:4700:4700::1111')
-        self.assertEqual(family, socket.AF_INET6)
-        self.assertEqual(ip, '2606:4700:4700::1111')

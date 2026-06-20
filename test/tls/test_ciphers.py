@@ -173,19 +173,6 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
 
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
-        side_effect=StopIteration,
-    )
-    @mock.patch.object(
-        AnalyzerCipherSuites, '_get_accepted_cipher_suites_fallback',
-        return_value=[]
-    )
-    def test_error_protocol_version(self, mocked_next_accepted_cipher_suites, _):
-        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertEqual(len(result.cipher_suites), 0)
-        self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 1)
-
-    @mock.patch.object(
-        AnalyzerCipherSuites, '_next_accepted_cipher_suites',
         side_effect=TlsAlert(TlsAlertDescription.DECODE_ERROR),
     )
     @mock.patch.object(

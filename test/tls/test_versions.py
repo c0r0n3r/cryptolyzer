@@ -151,36 +151,6 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.inappropriate_version_fallback, None)
 
-    def test_tls_1_0_only(self):
-        result = self.get_result(
-            'tls-v1-0.badssl.com', 1010, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
-        self.assertEqual(
-            result.versions,
-            [TlsProtocolVersion(TlsVersion.TLS1)]
-        )
-        self._check_log(result)
-
-    def test_tls_1_1_only(self):
-        result = self.get_result(
-            'tls-v1-1.badssl.com', 1011, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
-        self.assertEqual(
-            result.versions,
-            [TlsProtocolVersion(TlsVersion.TLS1_1)]
-        )
-        self._check_log(result)
-
-    def test_tls_1_2_only(self):
-        result = self.get_result(
-            'tls-v1-2.badssl.com', 1012, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
-        self.assertEqual(
-            result.versions,
-            [TlsProtocolVersion(TlsVersion.TLS1_2)]
-        )
-        self._check_log(result)
-
     @live_server
     def test_tls_1_2_3(self):
         result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))

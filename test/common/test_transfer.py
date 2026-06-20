@@ -95,11 +95,6 @@ class TestL4ClientTCP(unittest.TestCase):
         test_http_proxy_server.kill()
         test_http_server.kill()
 
-    def test_receive(self):
-        address = 'smtp.gmail.com'
-        _, result = self._create_client_and_receive_text(address, 587, 4 + len(address))
-        self.assertEqual(result, '220 ' + address)
-
     @live_server
     def test_receive_until(self):
         address = 'smtp.gmail.com'

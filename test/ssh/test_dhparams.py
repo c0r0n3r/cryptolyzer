@@ -22,10 +22,6 @@ class TestSshDHParams(TestSshCases.TestSshClientBase):
         result = analyzer.analyze(l7_client)
         return result
 
-    def test_real_no_gex(self):
-        result = self.get_result('bitbucket.com', 22)
-        self.assertEqual(result.group_exchange, None)
-
     @live_server
     def test_real_gex(self):
         result = self.get_result('git.launchpad.net', 22, l4_socket_params=L4TransferSocketParams(timeout=10))

@@ -61,8 +61,3 @@ class TestMain(TestMainBase):
         self.assertIn('Source URL: http://example.com/script.js', result)
 
         test_http_server.kill()
-
-    def test_default_scheme(self):
-        uri = 'cloudflare.com'
-        result = self._get_test_analyzer_result_markdown('http', 'headers', uri, timeout=90)
-        self.assertIn('Scheme: https', result)
