@@ -12,6 +12,7 @@ import asn1crypto.crl
 import asn1crypto.pem
 import asn1crypto.x509
 import certvalidator.crl_client
+import oscrypto.trust_list
 
 from cryptodatahub.common.algorithm import Authentication, Hash, Signature
 
@@ -247,6 +248,11 @@ class TestPublicKeyX509(TestLoggerBase):
 
 
 class TestX509CertificateChain(TestKeyBase):  # pylint: disable=too-many-instance-attributes
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        oscrypto.trust_list.get_list()
+
     def setUp(self):
         super().setUp()
 
