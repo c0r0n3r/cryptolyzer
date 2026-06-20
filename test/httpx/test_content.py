@@ -7,6 +7,7 @@ from unittest import mock
 import base64
 
 from test.common.classes import TestLoggerBase
+from test.common.markers import live_server
 
 import urllib3
 
@@ -72,6 +73,7 @@ class TestHttpTagIntegrityGetter(unittest.TestCase):
             set()
         )
 
+    @live_server
     @mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=b'javascript content'))
     def test_integrity(self):
         script_data = b'javascript content'
@@ -225,6 +227,7 @@ class TestHttpContent(TestLoggerBase):
             analyzer_result = self.get_result('http://example.org')
             self.assertEqual(len(analyzer_result.unencrypted_sources), 7)
 
+    @live_server
     def test_real(self):
         mime_type_html = FieldValueMimeType('html', MimeTypeRegistry.TEXT)
 

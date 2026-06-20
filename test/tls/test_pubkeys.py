@@ -8,6 +8,7 @@ from collections import OrderedDict
 import datetime
 
 from test.common.classes import TestMainBase
+from test.common.markers import live_server
 
 import asn1crypto
 
@@ -195,7 +196,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         ]
     )
     def test_error_response_error_no_response_last_time(self, _):
-        result = self.get_result('www.cloudflare.com', 443)
+        result = self.get_result('localhost', 0)
         self.assertEqual(len(result.pubkeys), 0)
 
     @mock.patch.object(
@@ -203,15 +204,16 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME)
     )
     def test_error_unrecognized_name(self, mocked_do_tls_handshake):
-        result = self.get_result('www.cloudflare.com', 443)
+        result = self.get_result('localhost', 0)
         self.assertEqual(len(result.pubkeys), 0)
         self.assertEqual(mocked_do_tls_handshake.call_count, 5)
 
     @mock.patch.object(AnalyzerPublicKeys, '_get_server_messages', return_value={TlsHandshakeType.SERVER_HELLO})
     def test_error_no_server_key_exchange(self, _):
-        result = self.get_result('www.cloudflare.com', 443)
+        result = self.get_result('localhost', 0)
         self.assertEqual(len(result.pubkeys), 0)
 
+    @live_server
     def test_eq(self):
         result_badssl_com = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         result_wrong_host_badssl_com = self.get_result(
@@ -247,6 +249,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
             result_revoked_badssl_com.pubkeys[0].certificate_chain
         )
 
+    @live_server
     def test_subject_match(self):
         result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result.pubkeys[0].subject_matches)
@@ -254,6 +257,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         result = self.get_result('wrong.host.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertFalse(result.pubkeys[0].subject_matches)
 
+    @live_server
     def test_fallback_certificate(self):
         result = self.get_result(
             'unexisting-hostname-to-get-wildcard-certificate-without-sni.badssl.com', 443,
@@ -265,6 +269,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
             self.log_stream.getvalue()
         )
 
+    @live_server
     def test_certificate_chain(self):
         result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.pubkeys), 1)
@@ -381,6 +386,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(certificate_status.update_interval, datetime.timedelta(days=4))
         self.assertEqual(certificate_status.revocation_reason, None)
 
+    @live_server
     @mock.patch.object(
         TlsExtensionsBase, 'get_item_by_type',
         return_value=TlsExtensionSignedCertificateTimestampServer([])
@@ -403,6 +409,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
             []
         )
 
+    @live_server
     def test_untrusted(self):
         result = self.get_result('untrusted.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         for pubkey in result.pubkeys:
@@ -420,6 +427,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                     }
                 )
 
+    @live_server
     def test_real(self):
         result = self.get_result('cloudflare.com', 443)
         self.assertEqual(len(result.pubkeys), 2)
@@ -487,6 +495,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                     }
                 )
 
+    @live_server
     def test_json(self):
         result = self.get_result('expired.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result.as_json())
@@ -500,6 +509,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         result = self.get_result('revoked.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result.as_json())
 
+    @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
             TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeys', 'www.cloudflare.com', 443, scheme='tls'
@@ -508,6 +518,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
         self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')
 
+    @live_server
     def test_tls13_real(self):
         result = self.get_result(
             'www.cloudflare.com', 443,
@@ -528,8 +539,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
     )
     def test_tls13_key_share_not_implemented(self, *_):
         result = self.get_result(
-            'www.cloudflare.com', 443,
+            'localhost', 0,
             protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
-            l4_socket_params=L4TransferSocketParams(timeout=10),
         )
         self.assertEqual(len(result.pubkeys), 0)

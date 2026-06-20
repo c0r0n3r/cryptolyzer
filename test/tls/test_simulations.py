@@ -4,6 +4,7 @@
 from unittest import mock
 
 from test.common.classes import TestLoggerBase, TestMainBase
+from test.common.markers import live_dns, live_server
 
 from cryptodatahub.common.algorithm import Authentication, KeyExchange
 from cryptodatahub.common.key import PublicKeySize
@@ -41,6 +42,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 
+    @live_dns
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
@@ -50,6 +52,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
         self.assertEqual(len(result.succeeded_clients), 0)
         self.assertEqual(len(result.failed_clients), len(set(tls_client.value.meta.client for tls_client in TlsClient)))
 
+    @live_dns
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=TlsAlert(TlsAlertDescription.HANDSHAKE_FAILURE)
@@ -59,6 +62,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
         self.assertEqual(len(result.succeeded_clients), 0)
         self.assertEqual(len(result.failed_clients), len(set(tls_client.value.meta.client for tls_client in TlsClient)))
 
+    @live_dns
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
@@ -68,12 +72,14 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
         self.assertEqual(len(result.succeeded_clients), 0)
         self.assertEqual(len(result.failed_clients), len(set(tls_client.value.meta.client for tls_client in TlsClient)))
 
+    @live_server
     def test_failed_clients(self):
         result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.succeeded_clients), 3)
         self.assertEqual(len(result.failed_clients), 4)
         self.assertTrue(result)
 
+    @live_server
     def test_non_pfs(self):
         result = self.get_result('static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(all(
@@ -86,6 +92,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
         ))
         self.assertTrue(result)
 
+    @live_server
     def test_pfs_dh_custom(self):
         result = self.get_result('dh2048.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(all(
@@ -103,6 +110,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
         self.assertEqual(len(result.failed_clients), 4)
         self.assertTrue(result)
 
+    @live_server
     def test_dh_well_known(self):
         original_post_init = DHParameter.__attrs_post_init__
 
@@ -123,6 +131,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
         ))
         self.assertTrue(result)
 
+    @live_server
     def test_pfs_named_group(self):
         result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(all(
@@ -140,6 +149,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
         self.assertEqual(len(result.failed_clients), 1)
         self.assertTrue(result)
 
+    @live_dns
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
             'tls', 'simulations', 'tls-v1-0.badssl.com', 1010, timeout=10, scheme='tls'
@@ -148,6 +158,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
         self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')
 
+    @live_server
     def test_version_1_3(self):
         result = self.get_result('cloudflare.com', 443)
         self.assertTrue(all(

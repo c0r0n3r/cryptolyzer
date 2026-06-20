@@ -5,6 +5,7 @@ import unittest
 from unittest import mock
 
 from test.common.classes import TestMainBase
+from test.common.markers import live_server
 
 from cryptodatahub.common.algorithm import Authentication, BlockCipher
 
@@ -192,7 +193,8 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         return_value=[]
     )
     def test_error_decode_error(self, mocked_next_accepted_cipher_suites, _):
-        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 1)
 
@@ -205,10 +207,12 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         return_value=[]
     )
     def test_error_unrecognized_name(self, mocked_fallback, _):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_fallback.call_count, 0)
 
+    @live_server
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
         wraps=_wrapped_next_accepted_cipher_suites_protocol_version_mid_scan
@@ -222,7 +226,8 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         side_effect=TlsAlert(TlsAlertDescription.INTERNAL_ERROR)
     )
     def test_error_internal_error(self, mocked_next_accepted_cipher_suites):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 6)
 
@@ -231,7 +236,8 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         side_effect=TlsAlert(TlsAlertDescription.INSUFFICIENT_SECURITY)
     )
     def test_error_insufficient_security(self, mocked_next_accepted_cipher_suites):
-        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 6)
 
@@ -240,10 +246,12 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         side_effect=TlsAlert(TlsAlertDescription.ILLEGAL_PARAMETER)
     )
     def test_error_illegal_parameter(self, mocked_next_accepted_cipher_suites):
-        result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.cipher_suites), 0)
         self.assertEqual(mocked_next_accepted_cipher_suites.call_count, 6)
 
+    @live_server
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
         wraps=_wrapped_next_accepted_cipher_suites_internal_error_once
@@ -256,6 +264,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA,
         ])
 
+    @live_server
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
         wraps=_wrapped_next_accepted_cipher_suites_internal_error_multiple
@@ -265,6 +274,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.cipher_suites, [])
 
+    @live_server
     @mock.patch.object(
         AnalyzerCipherSuites, '_next_accepted_cipher_suites',
         wraps=_wrapped_next_accepted_cipher_suites_response_error
@@ -273,6 +283,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.cipher_suites), 1)
 
+    @live_server
     def test_long_cipher_suite_list_intolerance(self):
         self.assertFalse(self.get_result('8.8.8.8', 443).long_cipher_suite_list_intolerance)
 
@@ -284,6 +295,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.long_cipher_suite_list_intolerance)
 
+    @live_server
     def test_cbc(self):
         result = self.get_result('cbc.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
@@ -310,6 +322,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             ]
         )
 
+    @live_server
     def test_rc4(self):
         result = self.get_result('rc4.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
@@ -323,12 +336,14 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             for cipher_suite in result.cipher_suites
         ))
 
+    @live_server
     def test_rc4_md5(self):
         result = self.get_result('rc4-md5.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
         self.assertEqual(result.cipher_suite_preference, None)
         self.assertEqual(result.cipher_suites, [TlsCipherSuite.TLS_RSA_WITH_RC4_128_MD5, ])
 
+    @live_server
     def test_triple_des(self):
         result = self.get_result('3des.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
@@ -342,6 +357,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             for cipher_suite in result.cipher_suites
         ))
 
+    @live_server
     def test_anon(self):
         result = self.get_result('null.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
@@ -350,6 +366,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             for cipher_suite in result.cipher_suites
         ))
 
+    @live_server
     def test_rsa(self):
         result = self.get_result('static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
 
@@ -358,6 +375,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             for cipher_suite in result.cipher_suites
         ))
 
+    @live_server
     def test_tls_1_3(self):
         self.assertEqual(
             self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).cipher_suites,
@@ -377,10 +395,12 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).cipher_suites, []
         )
 
+    @live_server
     def test_json(self):
         result = self.get_result('mozill.old.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result)
 
+    @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
             TlsProtocolVersion(TlsVersion.TLS1), 'ciphers', 'rc4-md5.badssl.com', 443, timeout=10, scheme='tls'

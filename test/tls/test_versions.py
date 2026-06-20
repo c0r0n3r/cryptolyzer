@@ -4,6 +4,7 @@
 from unittest import mock
 
 from test.common.classes import TestMainBase
+from test.common.markers import live_dns, live_server
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -31,6 +32,7 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
         result = analyzer.analyze(l7_client, None)
         return result
 
+    @live_dns
     @mock.patch.object(
         L7ClientTlsBase, 'do_ssl_handshake',
         side_effect=SslError(SslErrorType.NO_CERTIFICATE_ERROR)
@@ -40,6 +42,7 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
             self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CERTIFICATE_ERROR)
 
+    @live_server
     @mock.patch.object(
         L7ClientTlsBase, 'do_ssl_handshake',
         side_effect=SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
@@ -82,6 +85,7 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
             ]
         )
 
+    @live_server
     def test_tls_alert_response_to_ssl_handshake(self):
         result = self.get_result('www.google.com', 443)
         self.assertEqual(
@@ -98,6 +102,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
     def _get_main_func(cls):
         return main
 
+    @live_server
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME),
@@ -176,6 +181,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
         )
         self._check_log(result)
 
+    @live_server
     def test_tls_1_2_3(self):
         result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -184,6 +190,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
         )
         self._check_log(result)
 
+    @live_server
     def test_ecdsa_only(self):
         result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -192,6 +199,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
         )
         self._check_log(result)
 
+    @live_server
     def test_with_client_auth(self):
         result = self.get_result('client.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -207,6 +215,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
         threaded_server.start()
         self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions, [])
 
+    @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
             'tls', 'versions', 'tls-v1-0.badssl.com', 1010, timeout=10, scheme='tls'

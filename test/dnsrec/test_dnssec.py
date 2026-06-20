@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from test.common.classes import TestLoggerBase
+from test.common.markers import live_server
 
 import urllib3
 
@@ -20,6 +21,7 @@ class TestDnsRecordDnsSec(TestLoggerBase):
             client.timeout = timeout
         return analyzer.analyze(client)
 
+    @live_server
     def test_real(self):
         analyzer_result = self.get_result('dns://google.com#1.1.1.1')
         self.assertEqual(analyzer_result.dns_keys, [])

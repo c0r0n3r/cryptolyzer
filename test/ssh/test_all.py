@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from unittest import mock
+from test.common.markers import live_server
 
 from cryptodatahub.ssh.algorithm import SshKexAlgorithm
 from cryptoparser.ssh.version import SshVersion, SshProtocolVersion
@@ -59,6 +60,7 @@ class TestSshAll(TestSshCases.TestSshClientBase):
             ),
         ), SshProtocolVersion(SshVersion.SSH2))
 
+    @live_server
     def test_markdown(self):
         result = self.get_result('github.com', 22)
         markdown_result = result.as_markdown()
@@ -68,6 +70,7 @@ class TestSshAll(TestSshCases.TestSshClientBase):
         target_index = markdown_result.find('Target', target_index + 1)
         self.assertEqual(target_index, -1)
 
+    @live_server
     def test_missing_parts(self):
         with mock.patch.object(AnalyzerAll, 'is_dhe_supported', return_value=None):
             result = self.get_result('github.com', 22)

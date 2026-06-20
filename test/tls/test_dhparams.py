@@ -4,6 +4,7 @@
 from unittest import mock
 
 from test.common.classes import TestMainBase
+from test.common.markers import live_server
 
 from cryptoparser.tls.extension import TlsExtensionsBase, TlsNamedCurve
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
@@ -42,7 +43,10 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
 
     @mock.patch.object(TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError)
     def test_error_missing_key_share_extension(self, _):
-        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        threaded_server = self.create_server()
+        result = self.get_result(
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port, TlsProtocolVersion(TlsVersion.TLS1_3)
+        )
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
@@ -51,7 +55,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
     )
     def test_error_tls_alert_protocol_version(self, _):
-        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+        result = self.get_result('localhost', 0, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
@@ -61,7 +65,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
     )
     def test_error_tls_alert_unexpected(self, _):
         with self.assertRaises(UnexpectedAlertError):
-            self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
+            self.get_result('localhost', 0, TlsProtocolVersion(TlsVersion.TLS1_2))
 
     @mock.patch.object(AnalyzerDHParams, '_get_server_messages')
     def test_error_missing_key_share_extension_in_server_hello(self, get_server_messages):
@@ -69,15 +73,19 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         server_hello.extensions.get_item_by_type.side_effect = KeyError
         get_server_messages.return_value = {TlsHandshakeType.SERVER_HELLO: server_hello}
 
-        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        result = self.get_result('localhost', 0, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
     @mock.patch.object(AnalyzerDHParams, '_get_public_key', side_effect=StopIteration)
     def test_error_no_respoinse_during_key_reuse_check(self, _):
-        result = self.get_result('example.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        threaded_server = self.create_server()
+        result = self.get_result(
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port, TlsProtocolVersion(TlsVersion.TLS1_3)
+        )
         self.assertEqual(result.key_reuse, None)
 
+    @live_server
     @mock.patch.object(
         AnalyzerDHParams, '_get_public_key', side_effect=StopIteration
     )
@@ -98,6 +106,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.dhparam, None)
         self.assertEqual(result.key_reuse, None)
 
+    @live_server
     @mock.patch.object(
         TlsExtensionsBase, 'get_item_by_type', side_effect=KeyError
     )
@@ -110,6 +119,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
+    @live_server
     def test_size(self):
         result = self.get_result('dh480.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.groups, [])
@@ -124,6 +134,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
             ]
         )
 
+    @live_server
     def test_prime(self):
         result = self.get_result('dh-composite.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.groups, [])
@@ -133,6 +144,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.dhparam.well_known, None)
         self.assertFalse(result.key_reuse)
 
+    @live_server
     def test_safe_prime(self):
         result = self.get_result(
             'dh-small-subgroup.badssl.com', 443,
@@ -145,6 +157,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.dhparam.well_known, None)
         self.assertFalse(result.key_reuse)
 
+    @live_server
     def test_well_known_prime(self):
         result = self.get_result(
             'launchpad.net', 443,
@@ -168,12 +181,14 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.dhparam, None)
 
     def test_no_dhe_support(self):
-        result = self.get_result('static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
         self.assertEqual(result.key_reuse, None)
         self.assertFalse(self.log_stream.getvalue(), '')
 
+    @live_server
     def test_tls_early_version(self):
         result = self.get_result(
             'dh480.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1),
@@ -183,6 +198,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertNotEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
 
+    @live_server
     def test_tls_1_2_rfc_7919_support(self):
         result = self.get_result('lamar.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
@@ -195,6 +211,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
             ]
         )
 
+    @live_server
     @mock.patch.object(
         AnalyzerDHParams, '_get_public_key_tls_1_x',
         return_value=DHPublicKey(
@@ -220,6 +237,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
             ]
         )
 
+    @live_server
     def test_tls_1_3(self):
         result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
         self.assertEqual(result.groups, [])
@@ -246,11 +264,13 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         )
 
     def test_json(self):
-        result = self.get_result('dh480.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result)
-        result = self.get_result('www.owasp.org', 443)
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result)
 
+    @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
             TlsProtocolVersion(TlsVersion.TLS1_2), 'dhparams', 'dh2048.badssl.com', 443, timeout=10, scheme='tls'

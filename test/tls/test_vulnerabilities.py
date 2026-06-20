@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+from test.common.markers import live_server
 
 from cryptodatahub.tls.algorithm import TlsNamedCurve
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -79,6 +80,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
                 log_stream
             )
 
+    @live_server
     def test_real_versions(self):
         result = self.get_result('baidu.com', 443)
         self.assertTrue(result.ciphers.lucky13.value)
@@ -97,6 +99,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         self.assertFalse(result.dhparams.weak_dh.value)
         self.assertFalse(result.dhparams.dheat.value)
 
+    @live_server
     def test_real_ciphers(self):
         result = self.get_result('rc4.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertFalse(result.ciphers.lucky13.value)
@@ -147,6 +150,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         ], log_stream)
         self.assertIn('Server offers 1024-bit NGINX 0.7.2 builtin DH parameter', log_stream)
 
+    @live_server
     def test_real_dhparams(self):
         result = self.get_result('documentfreedom.org', 443)
         self.assertFalse(result.ciphers.lucky13.value)

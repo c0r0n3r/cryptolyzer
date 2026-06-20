@@ -1,3 +1,4 @@
+from test.common.markers import live_server
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
@@ -149,6 +150,7 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
         self.assertTrue(result.as_markdown())
         Serializable.post_text_encoder = SerializableTextEncoder()
 
+    @live_server
     def test_real(self):
         result = self.get_result('gitlab.com', 22)
         self.assertFalse(result.algorithms.sweet32.value)

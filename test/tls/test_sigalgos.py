@@ -4,6 +4,7 @@
 from unittest import mock
 
 from test.common.classes import TestMainBase
+from test.common.markers import live_dns, live_server
 
 from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.subprotocol import TlsAlertDescription
@@ -35,6 +36,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase, TestMainBase):
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 
+    @live_dns
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=TlsAlert(TlsAlertDescription.PROTOCOL_VERSION)
@@ -43,6 +45,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase, TestMainBase):
         result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.sig_algos, [])
 
+    @live_dns
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
         side_effect=[
@@ -63,6 +66,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase, TestMainBase):
             TlsSignatureAndHashAlgorithm.RSA_NONE,
         ])
 
+    @live_server
     def test_sigalgos(self):
         result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.sig_algos, [
@@ -87,10 +91,12 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase, TestMainBase):
             []
         )
 
+    @live_server
     def test_json(self):
         result = self.get_result('ecc256.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertTrue(result)
 
+    @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
             TlsProtocolVersion(TlsVersion.TLS1_2), 'sigalgos', 'ecc256.badssl.com', 443, timeout=10, scheme='tls'

@@ -1,3 +1,4 @@
+from test.common.markers import live_server
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
@@ -25,6 +26,7 @@ class TestSshDHParams(TestSshCases.TestSshClientBase):
         result = self.get_result('bitbucket.com', 22)
         self.assertEqual(result.group_exchange, None)
 
+    @live_server
     def test_real_gex(self):
         result = self.get_result('git.launchpad.net', 22, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.key_exchange.kex_algorithms, [SshKexAlgorithm.DIFFIE_HELLMAN_GROUP14_SHA1, ])

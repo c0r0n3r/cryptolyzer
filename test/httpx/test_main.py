@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from test.common.classes import TestMainBase, TestThreadedServerHttp
+from test.common.markers import live_server
 
 from cryptolyzer.__main__ import main
 
@@ -32,6 +33,7 @@ class TestMain(TestMainBase):
 
         test_http_server.kill()
 
+    @live_server
     def test_content(self):
         test_http_server = TestThreadedServerHttp('127.0.0.1', 0)
         test_http_server.init_connection()

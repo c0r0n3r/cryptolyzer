@@ -3,6 +3,7 @@
 
 import unittest
 from unittest import mock
+from test.common.markers import live_server
 
 from cryptodatahub.common.algorithm import NamedGroup
 
@@ -44,6 +45,7 @@ class TestL7ClientBase(unittest.TestCase):
 
 
 class TestSshClientHandshake(TestL7ClientBase):
+    @live_server
     @mock.patch('cryptolyzer.ssh.client.SSH_KEX_ALGORITHMS_TO_NAMED_GROUP', {})
     def test_error_kex_not_implemented(self):
         l7_client = L7ClientSsh('github.com', l4_socket_params=L4TransferSocketParams(timeout=0.5))
@@ -67,6 +69,7 @@ class TestSshClientHandshake(TestL7ClientBase):
             l7_client.do_handshake(key_exchange_init_message=key_exchange_init_message, last_message_type=None)
         self.assertEqual(context_manager.exception.reason, SshReasonCode.HOST_NOT_ALLOWED_TO_CONNECT)
 
+    @live_server
     def test_kex_ecdhe(self):
         l7_client = L7ClientSsh('github.com')
         key_exchange_init_message = SshKeyExchangeInitKeyExchangeECDHE()

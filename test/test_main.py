@@ -19,6 +19,7 @@ import test.fingerprint.test_generate
 
 import test.tls.test_versions
 import test.tls.test_vulnerabilities
+from test.common.markers import live_dns, live_server
 
 import colorama
 import urllib3
@@ -121,15 +122,18 @@ class TestMain(TestMainBase):
             ('0 parallel must be a positive integer value',)
         )
 
+    @live_dns
     def test_runtime_error(self):
         self._test_runtime_error(
             ['cryptolyzer', 'tls', 'versions', 'unresolvable.hostname'],
             'address of the target cannot be resolved'
         )
 
+    @live_server
     def test_analyzer_uris_non_ip(self):
         self._get_test_analyzer_result_json('tls', 'versions', 'dns.google#non-ip-address')
 
+    @live_server
     def test_analyzer_uris_ipv4(self):
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_json('tls', 'versions', 'dns.google#8.8.8.8'))
         self.assertIn('8.8.8.8', self._get_test_analyzer_result_markdown('tls', 'versions', 'dns.google#8.8.8.8'))
@@ -146,6 +150,7 @@ class TestMain(TestMainBase):
         Serializable.post_text_encoder = SerializableTextEncoder()
         colorama.deinit()
 
+    @live_server
     def test_analyzer_output_highlighted(self):
         func = test.tls.test_vulnerabilities.TestTlsVulnerabilities.get_result
         func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'dh1024.badssl.com', 443, timeout=10,

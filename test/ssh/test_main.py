@@ -14,6 +14,7 @@ import test.ssh.test_ciphers
 import test.ssh.test_dhparams
 import test.ssh.test_versions
 import test.ssh.test_vulnerabilities
+from test.common.markers import live_server
 
 import urllib3
 
@@ -50,6 +51,7 @@ class TestMain(TestMainBase):
             test.ssh.test_ciphers.TestSshCiphers.get_result(self.host, self.port).as_json() + '\n'
         )
 
+    @live_server
     def test_dhparams(self):
         result = test.ssh.test_dhparams.TestSshDHParams.get_result('gitlab.com', 22)
         self.assertEqual(
@@ -67,6 +69,7 @@ class TestMain(TestMainBase):
             test.ssh.test_versions.TestSshVersions.get_result(self.host, self.port).as_json() + '\n',
         )
 
+    @live_server
     def test_vulns(self):
         result = test.ssh.test_vulnerabilities.TestSshVulnerabilities.get_result('gitlab.com', 22)
         self.assertEqual(

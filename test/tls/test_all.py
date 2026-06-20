@@ -8,6 +8,7 @@ from collections import OrderedDict
 from test.common.classes import TestMainBase
 
 import test.tls.test_ciphers
+from test.common.markers import live_server
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsNamedCurve
@@ -132,6 +133,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
             ),
         ])), TlsProtocolVersion(TlsVersion.TLS1_1))
 
+    @live_server
     def test_real(self):
         result = self.get_result('dh1024.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.dhparams.groups, [])
@@ -199,6 +201,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 
+    @live_server
     def test_markdown(self):
         result = self.get_result('rc4-md5.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         markdown_result = result.as_markdown()
@@ -208,6 +211,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         target_index = markdown_result.find('Target', target_index + 1)
         self.assertEqual(target_index, -1)
 
+    @live_server
     def test_missing_parts(self):
 
         with mock.patch.object(AnalyzerAll, 'is_public_key_supported', return_value=None):
@@ -232,6 +236,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertNotEqual(result.pubkeyreq, None)
         self.assertNotEqual(result.versions, None)
 
+    @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
             'tls', 'all', 'rc4-md5.badssl.com', 443, timeout=10, scheme='https'

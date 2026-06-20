@@ -4,6 +4,7 @@
 from unittest import mock
 
 from test.common.classes import TestLoggerBase, TestMainBase
+from test.common.markers import live_server
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -45,6 +46,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 
+    @live_server
     def test_next_protocols(self):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(result.next_protocols, [])
@@ -68,12 +70,13 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         }
     )
     def test_error_application_layer_protocols(self, _):
-        result = self.get_result('www.cloudflare.com', 443)
+        result = self.get_result('localhost', 0)
         self.assertEqual(
             set(result.application_layer_protocols),
             set([TlsProtocolName.HTTP_1_1, ])
         )
 
+    @live_server
     def test_application_layer_protocols(self):
         result = self.get_result(
             'tls-v1-0.badssl.com', 1010, l4_socket_params=L4TransferSocketParams(timeout=10)
@@ -123,7 +126,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
     )
     def test_compression_method_all(self, _):
         analyzer = AnalyzerExtensions()
-        l7_client = L7ClientTlsBase.from_scheme('tls', 'www.cloudflare.com', 443)
+        l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', 0)
         compression_methods = analyzer._analyze_compression_methods(  # pylint: disable=protected-access
             l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
         )
@@ -133,6 +136,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
             set([TlsCompressionMethod.NULL, TlsCompressionMethod.DEFLATE, TlsCompressionMethod.LZS])
         )
 
+    @live_server
     def test_compression_method(self):
         result = self.get_result('www.cloudflare.com', 443)
 
@@ -143,6 +147,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers compression method(s) "NULL"', log_lines)
 
+    @live_server
     def test_ec_point_formats(self):
         result = self.get_result(
             'ecc256.badssl.com', 433, l4_socket_params=L4TransferSocketParams(timeout=10)
@@ -162,6 +167,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers point format(s) "UNCOMPRESSED"', log_lines)
 
+    @live_server
     def test_encrypt_then_mac(self):
         result = self.get_result(
             'tls-v1-0.badssl.com', 1010, TlsProtocolVersion(TlsVersion.TLS1),
@@ -188,6 +194,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         self.assertNotIn('Server does not offer encrypt then MAC', log_lines)
         self.assertNotIn('Server offers encrypt then MAC', log_lines)
 
+    @live_server
     def test_extended_master_secret(self):
         result = self.get_result(
             'tls-v1-2.badssl.com', 1012, l4_socket_params=L4TransferSocketParams(timeout=10)
@@ -201,6 +208,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers extended master secret', log_lines)
 
+    @live_server
     def test_clock_is_accurate(self):
         result = self.get_result('www.facebook.com', 443)
         self.assertFalse(result.clock_is_accurate)
@@ -216,7 +224,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
 
     def test_record_size_limit(self):
         analyzer = AnalyzerExtensions()
-        l7_client = L7ClientTlsBase.from_scheme('tls', 'www.cloudflare.com', 443)
+        l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', 0)
 
         with mock.patch.object(L7ClientTlsBase, 'do_tls_handshake',
                                side_effect=NetworkError(NetworkErrorType.NO_CONNECTION)):
@@ -270,6 +278,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
             self.assertTrue(handled)
             self.assertEqual(limit_server, 1024)
 
+    @live_server
     def test_renegotiation_info(self):
         result = self.get_result('www.userfriendly.org', 443)
         self.assertFalse(result.renegotiation_supported)
@@ -281,6 +290,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers renegotiation', log_lines)
 
+    @live_server
     def test_session_cache(self):
         result = self.get_result('www.github.com', 443)
         self.assertFalse(result.session_cache_supported)
@@ -292,6 +302,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers session cache', log_lines)
 
+    @live_server
     def test_session_ticket(self):
         result = self.get_result('www.github.com', 443)
         self.assertFalse(result.session_ticket_supported)
@@ -303,6 +314,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers session ticket', log_lines)
 
+    @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
             TlsProtocolVersion(TlsVersion.TLS1_2), 'extensions', 'dh2048.badssl.com', 443, timeout=10, scheme='tls'

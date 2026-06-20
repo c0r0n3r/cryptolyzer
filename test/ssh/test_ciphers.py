@@ -1,3 +1,4 @@
+from test.common.markers import live_server
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
@@ -89,6 +90,7 @@ class TestSshCiphers(TestSshCases.TestSshClientBase):
         self.assertIn(f'Server offers MAC algorithms client to server {mac_algorithms} (SSH 2.0)', log_lines[4])
         self.assertIn(f'Server offers MAC algorithms server to client {mac_algorithms} (SSH 2.0)', log_lines[5])
 
+    @live_server
     def test_real(self):
         self.get_result('github.com')
         self.get_result('gitlab.com')

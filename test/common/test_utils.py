@@ -13,6 +13,7 @@ from test.common.classes import (
     TestGradeableVulnerabilitiesName,
     TestGradeableVulnerabilitiesLongName,
 )
+from test.common.markers import live_dns
 
 import colorama
 
@@ -258,11 +259,13 @@ class TestSerializableTextEncoderHighlighted(unittest.TestCase):
 
 
 class TestResolveAddress(unittest.TestCase):
+    @live_dns
     def test_error_wrong_ip(self):
         with self.assertRaises(NetworkError) as context_manager:
             resolve_address('one.one.one.one', 0, 'not.an.ip')
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_ADDRESS)
 
+    @live_dns
     def test_error_unresolvable_address(self):
         with self.assertRaises(NetworkError) as context_manager:
             resolve_address('unresolvable.address', 0)

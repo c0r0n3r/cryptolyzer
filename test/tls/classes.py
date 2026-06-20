@@ -52,7 +52,7 @@ class TestTlsCases:
             side_effect=SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
         )
         def test_error_security_error_unparsable_message(self, _):
-            self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+            self.get_result('localhost', 0)
 
         @mock.patch.object(
             L7ClientTlsBase, 'do_tls_handshake',
@@ -60,7 +60,7 @@ class TestTlsCases:
         )
         def test_error_network_error_no_connection(self, _):
             with self.assertRaises(NetworkError) as context_manager:
-                self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+                self.get_result('localhost', 0)
             self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
         @mock.patch.object(
@@ -68,7 +68,7 @@ class TestTlsCases:
             side_effect=NetworkError(NetworkErrorType.NO_RESPONSE)
         )
         def test_error_network_error_no_response(self, _):
-            self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+            self.get_result('localhost', 0)
 
         @mock.patch.object(
             L7ClientTlsBase, 'do_tls_handshake',
@@ -76,7 +76,7 @@ class TestTlsCases:
         )
         def test_error_tls_alert(self, _):
             with self.assertRaises(UnexpectedAlertError) as context_manager:
-                self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+                self.get_result('localhost', 0)
             self.assertEqual(str(context_manager.exception), 'alert message received (unexpected_message)')
 
 

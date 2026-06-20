@@ -7,6 +7,7 @@ from collections import OrderedDict
 from unittest import mock
 
 from test.common.classes import TestKeyBase, TestLoggerBase
+from test.common.markers import live_server
 
 import asn1crypto.crl
 import asn1crypto.pem
@@ -32,6 +33,7 @@ class TestPublicKeyX509(TestLoggerBase):
         result = analyzer.analyze(l7_client, TlsProtocolVersion(TlsVersion.TLS1_2))
         return result
 
+    @live_server
     def test_common_name(self):
         result = self._get_result('no-common-name.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.pubkeys), 1)
@@ -52,6 +54,7 @@ class TestPublicKeyX509(TestLoggerBase):
         )
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].valid_domains, ['*.badssl.com', 'badssl.com'])
 
+    @live_server
     def test_subject_alternative_names(self):
         result = self._get_result('no-subject.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].subject, OrderedDict([]))
@@ -75,6 +78,7 @@ class TestPublicKeyX509(TestLoggerBase):
             ['*.badssl.com', 'badssl.com']
         )
 
+    @live_server
     def test_no_subject(self):
         result = self._get_result('no-subject.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(len(result.pubkeys), 1)
@@ -88,6 +92,7 @@ class TestPublicKeyX509(TestLoggerBase):
             ['no-subject.badssl.com', ]
         )
 
+    @live_server
     def test_issuer(self):
         result = self._get_result('expired.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -101,6 +106,7 @@ class TestPublicKeyX509(TestLoggerBase):
             ])
         )
 
+    @live_server
     def test_crl_distribution_points(self):
         result = self._get_result('expired.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -114,6 +120,7 @@ class TestPublicKeyX509(TestLoggerBase):
             []
         )
 
+    @live_server
     def test_crl_distribution_points_relative_name(self):
         result = self._get_result('expired.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -121,6 +128,7 @@ class TestPublicKeyX509(TestLoggerBase):
             ['http://crl.comodoca.com/COMODORSADomainValidationSecureServerCA.crl', ]
         )
 
+    @live_server
     def test_ocsp_responders(self):
         result = self._get_result('expired.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -128,6 +136,7 @@ class TestPublicKeyX509(TestLoggerBase):
             ['http://ocsp.comodoca.com']
         )
 
+    @live_server
     @mock.patch.object(
         asn1crypto.x509.Certificate, 'authority_information_access_value',
         return_value=None
@@ -139,11 +148,13 @@ class TestPublicKeyX509(TestLoggerBase):
             []
         )
 
+    @live_server
     def test_is_ca(self):
         result = self._get_result('badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertFalse(result.pubkeys[0].certificate_chain.items[0].is_ca)
         self.assertTrue(result.pubkeys[0].certificate_chain.items[1].is_ca)
 
+    @live_server
     def test_validity(self):
         result = self._get_result('expired.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertTrue(result.pubkeys[0].certificate_chain.items[0].expired)
@@ -167,6 +178,7 @@ class TestPublicKeyX509(TestLoggerBase):
         result = self._get_result('badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertFalse(result.pubkeys[0].certificate_chain.items[0].expired)
 
+    @live_server
     def test_fingerprints(self):
         result = self._get_result('expired.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -182,6 +194,7 @@ class TestPublicKeyX509(TestLoggerBase):
             }
         )
 
+    @live_server
     def test_public_key_pin(self):
         result = self._get_result('expired.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(
@@ -189,6 +202,7 @@ class TestPublicKeyX509(TestLoggerBase):
             '9SLklscvzMYj8f+52lp5ze/hY0CFHyLSPQzSpYYIBm8='
         )
 
+    @live_server
     def test_extended_validation(self):
         result = self._get_result('extended-validation.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertTrue(result.pubkeys[0].certificate_chain.items[0].extended_validation)
@@ -196,6 +210,7 @@ class TestPublicKeyX509(TestLoggerBase):
         result = self._get_result('badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertFalse(result.pubkeys[0].certificate_chain.items[0].extended_validation)
 
+    @live_server
     def test_key_type_and_size(self):
         result = self._get_result('ecc256.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, Authentication.ECDSA)
@@ -214,6 +229,7 @@ class TestPublicKeyX509(TestLoggerBase):
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_type, Authentication.RSA)
         self.assertEqual(result.pubkeys[0].certificate_chain.items[0].key_size, 8192)
 
+    @live_server
     def test_signature_algorithm_unknown(self):
         result = self._get_result('sha1-intermediate.badssl.com', 443, L4TransferSocketParams(timeout=10))
         with mock.patch('asn1crypto.algos.SignedDigestAlgorithmId.dotted', new_callable=mock.PropertyMock) as prop_mock:
@@ -223,6 +239,7 @@ class TestPublicKeyX509(TestLoggerBase):
                 Signature.RSA_WITH_MD2
             )
 
+    @live_server
     def test_signature_algorithm(self):
         result = self._get_result('sha1-intermediate.badssl.com', 443, L4TransferSocketParams(timeout=10))
         self.assertEqual(

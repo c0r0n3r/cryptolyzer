@@ -6,6 +6,7 @@ from unittest import mock
 from collections import OrderedDict
 
 from test.common.classes import TestMainBase
+from test.common.markers import live_server
 
 import asn1crypto.x509
 
@@ -32,7 +33,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
         side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME),
     )
     def test_error_tls_alert_unrecognized_name(self, _):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('localhost', 0)
 
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
@@ -43,12 +44,13 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
         side_effect=TlsAlert(TlsAlertDescription.HANDSHAKE_FAILURE)
     )
     def test_error_tls_alert_handshake_failure(self, _):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('localhost', 0)
 
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
+    @live_server
     @mock.patch.object(
         asn1crypto.x509.Name, 'load',
         side_effect=ValueError
@@ -68,6 +70,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
 
         return analyzer_result
 
+    @live_server
     def test_real_server(self):
         result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.certificate_types, None)
@@ -103,6 +106,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
+    @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
             TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeyreq', 'client.badssl.com', 443, timeout=10, scheme='tls'
