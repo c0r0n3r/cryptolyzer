@@ -6,10 +6,13 @@ import abc
 import attr
 
 
-from cryptodatahub.common.algorithm import BlockCipher
+from cryptodatahub.common.algorithm import BlockCipher, KeyExchange
 from cryptodatahub.common.exception import InvalidValue
+from cryptodatahub.common.parameter import DHParamWellKnown
+from cryptodatahub.tls.algorithm import TlsNamedCurve
 
 from cryptoparser.common.exception import InvalidType, NotEnoughData
+from cryptoparser.common.parse import ComposerBinary
 
 from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionSupportedVersionsServer
 from cryptoparser.tls.ldap import (
@@ -48,15 +51,27 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertDescription,
     TlsAlertLevel,
     TlsAlertMessage,
+    TlsCertificate,
+    TlsCertificates,
     TlsCipherSuite,
     TlsContentType,
+    TlsECCurveType,
+    TlsHandshakeServerCertificate,
+    TlsHandshakeServerHelloDone,
     TlsHandshakeServerHello,
+    TlsHandshakeServerKeyExchange,
     TlsHandshakeType,
     TlsSubprotocolMessageParser,
 )
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.__setup__ import __title__, __version__
+from cryptolyzer.common.dhparam import (
+    TlsDHParamVector,
+    get_dh_ephemeral_key_forged,
+    get_ecdh_ephemeral_key_forged,
+    int_to_bytes,
+)
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
 from cryptolyzer.common.application import L7ServerBase, L7ServerHandshakeBase, L7ServerConfigurationBase
 from cryptolyzer.common.transfer import L4ServerTCP, L4ServerUDP
@@ -78,6 +93,33 @@ class TlsServerConfiguration(L7ServerConfigurationBase):
     )
     fallback_to_ssl = attr.ib(default=False, validator=attr.validators.instance_of(bool))
     close_on_error = attr.ib(default=False, validator=attr.validators.instance_of(bool))
+    certificates = attr.ib(
+        default=[],
+        validator=attr.validators.deep_iterable(attr.validators.instance_of(bytes))
+    )
+    dh_param = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.in_(DHParamWellKnown))
+    )
+    curves = attr.ib(
+        default=[],
+        validator=attr.validators.deep_iterable(attr.validators.in_(TlsNamedCurve))
+    )
+
+    def __attrs_post_init__(self):
+        dh_cipher_suites = [
+            cs for cs in self.cipher_suites
+            if cs.value.key_exchange in (KeyExchange.DHE, KeyExchange.ADH)
+        ]
+        if self.dh_param is not None and not dh_cipher_suites:
+            raise ValueError('dh_param is set but no DHE cipher suite is configured')
+
+        ecdhe_cipher_suites = [
+            cs for cs in self.cipher_suites
+            if cs.value.key_exchange in (KeyExchange.ECDHE, KeyExchange.AECDH)
+        ]
+        if self.curves and not ecdhe_cipher_suites:
+            raise ValueError('curves are set but no ECDHE cipher suite is configured')
 
 
 @attr.s
@@ -227,6 +269,76 @@ class TlsServerHandshake(TlsServer):
             extensions=extensions,
         )
 
+    def _get_ecdhe_curve(self, client_hello):
+        try:
+            client_supported_curves = client_hello.extensions.get_item_by_type(
+                TlsExtensionType.SUPPORTED_GROUPS
+            ).elliptic_curves
+        except KeyError:
+            return None
+
+        for curve in self.configuration.curves:
+            if curve in client_supported_curves:
+                return curve
+
+        return None
+
+    @staticmethod
+    def _compose_dh_param_bytes(dh_param):
+        parameter_numbers = dh_param.value.parameter_numbers
+        p = parameter_numbers.p
+        g = parameter_numbers.g
+
+        p_byte_size = (p.bit_length() + 7) // 8
+        p_bytes = int_to_bytes(p, p_byte_size)
+        g_bytes = int_to_bytes(g, (g.bit_length() + 7) // 8)
+        y = get_dh_ephemeral_key_forged(p)
+        y_bytes = int_to_bytes(y, p_byte_size)
+
+        return bytes(
+            TlsDHParamVector(list(p_bytes)).compose() +
+            TlsDHParamVector(list(g_bytes)).compose() +
+            TlsDHParamVector(list(y_bytes)).compose()
+        )
+
+    @staticmethod
+    def _compose_ecdh_param_bytes(named_curve):
+        public_key = get_ecdh_ephemeral_key_forged(named_curve.value.named_group)
+
+        composer = ComposerBinary()
+        composer.compose_numeric(TlsECCurveType.NAMED_CURVE, 1)
+        composer.compose_numeric_enum_coded(named_curve)
+        composer.compose_numeric(len(public_key), 1)
+        composer.compose_raw(public_key)
+
+        return bytes(composer.composed_bytes)
+
+    def _send_server_hello_messages(self, cipher_suite, client_hello):
+        if self.configuration.certificates:
+            certificate_chain = TlsCertificates(
+                [TlsCertificate(cert_bytes) for cert_bytes in self.configuration.certificates]
+            )
+            self.l7_transfer.send(
+                TlsRecord(TlsHandshakeServerCertificate(certificate_chain).compose()).compose()
+            )
+
+        if cipher_suite.value.key_exchange in (KeyExchange.DHE, KeyExchange.ADH):
+            if self.configuration.dh_param is not None:
+                param_bytes = self._compose_dh_param_bytes(self.configuration.dh_param)
+                self.l7_transfer.send(
+                    TlsRecord(TlsHandshakeServerKeyExchange(param_bytes).compose()).compose()
+                )
+        elif cipher_suite.value.key_exchange in (KeyExchange.ECDHE, KeyExchange.AECDH):
+            if self.configuration.curves:
+                named_curve = self._get_ecdhe_curve(client_hello)
+                if named_curve is not None:
+                    param_bytes = self._compose_ecdh_param_bytes(named_curve)
+                    self.l7_transfer.send(
+                        TlsRecord(TlsHandshakeServerKeyExchange(param_bytes).compose()).compose()
+                    )
+
+        self.l7_transfer.send(TlsRecord(TlsHandshakeServerHelloDone().compose()).compose())
+
     def _process_handshake_message(self, message, last_handshake_message_type):
         self._last_processed_message_type = message.get_handshake_type()
         self.client_messages[self._last_processed_message_type] = message
@@ -241,8 +353,17 @@ class TlsServerHandshake(TlsServer):
             server_hello = self._prepare_server_hello(message, protocol_version)
             self.l7_transfer.send(TlsRecord(server_hello.compose()).compose())
 
+            if (protocol_version <= TlsProtocolVersion(TlsVersion.TLS1_2) and
+                    (self.configuration.certificates or
+                     self.configuration.dh_param is not None or
+                     self.configuration.curves)):
+                self._send_server_hello_messages(server_hello.cipher_suite, message)
+
         if self._last_processed_message_type == last_handshake_message_type:
-            self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY)
+            try:
+                self._handle_error(TlsAlertLevel.WARNING, TlsAlertDescription.CLOSE_NOTIFY)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
             raise StopIteration()
 
     def _process_non_handshake_message(self, message):
