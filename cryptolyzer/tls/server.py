@@ -8,7 +8,7 @@ import attr
 
 from cryptodatahub.common.algorithm import BlockCipher, KeyExchange
 from cryptodatahub.common.exception import InvalidValue
-from cryptodatahub.common.parameter import DHParamWellKnown
+from cryptodatahub.common.parameter import DHParameterNumbers, DHParamWellKnown
 from cryptodatahub.tls.algorithm import TlsNamedCurve
 
 from cryptoparser.common.exception import InvalidType, NotEnoughData
@@ -102,7 +102,12 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
     )
     dh_param = attr.ib(
         default=None,
-        validator=attr.validators.optional(attr.validators.in_(DHParamWellKnown))
+        validator=attr.validators.optional(
+            attr.validators.or_(
+                attr.validators.instance_of(DHParamWellKnown),
+                attr.validators.instance_of(DHParameterNumbers)
+            )
+        )
     )
     curves = attr.ib(
         default=[],
@@ -309,7 +314,10 @@ class TlsServerHandshake(TlsServer):
 
     @staticmethod
     def _compose_dh_param_bytes(dh_param):
-        parameter_numbers = dh_param.value.parameter_numbers
+        if isinstance(dh_param, DHParamWellKnown):
+            parameter_numbers = dh_param.value.parameter_numbers
+        else:
+            parameter_numbers = dh_param
         p = parameter_numbers.p
         g = parameter_numbers.g
 
