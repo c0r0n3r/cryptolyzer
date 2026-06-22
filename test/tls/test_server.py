@@ -262,6 +262,29 @@ class TestL7ServerTls(TestL7ServerBase):
 
 
 class TestL7ServerTlsConfiguration(unittest.TestCase):
+    def test_error_min_version_greater_than_max_version(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            )
+
+    def test_error_cipher_suite_max_version_below_min_version(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+            )
+
+    def test_error_cipher_suite_min_version_above_max_version(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+                cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            )
+
     def test_error_dh_param_without_dhe_cipher_suite(self):
         with self.assertRaises(ValueError):
             TlsServerConfiguration(

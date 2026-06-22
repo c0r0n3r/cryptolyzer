@@ -61,7 +61,7 @@ class SshAnalyzerThread(TestThreadedServer):
 class TestFingerprintGenerateTls(TestLoggerBase):
     @staticmethod
     def get_result(hello_message):
-        analyzer_thread = TlsAnalyzerThread(TlsServerConfiguration(protocol_versions=[]))
+        analyzer_thread = TlsAnalyzerThread(TlsServerConfiguration())
         analyzer_thread.wait_for_server_listen()
 
         l7_client = L7ClientTls(
@@ -72,7 +72,10 @@ class TestFingerprintGenerateTls(TestLoggerBase):
         try:
             l7_client.do_tls_handshake(hello_message=hello_message)
         except TlsAlert as e:
-            if e.description != TlsAlertDescription.PROTOCOL_VERSION:
+            if e.description not in (
+                TlsAlertDescription.PROTOCOL_VERSION,
+                TlsAlertDescription.HANDSHAKE_FAILURE,
+            ):
                 raise ValueError from e
         else:
             raise ValueError
@@ -82,7 +85,7 @@ class TestFingerprintGenerateTls(TestLoggerBase):
 
     def test_error_no_connection(self):
         with self.assertRaisesRegex(NetworkError, 'connection to target cannot be established'):
-            configuration = TlsServerConfiguration(protocol_versions=[])
+            configuration = TlsServerConfiguration()
             l7_server = L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.1), configuration=configuration)
             l7_server.init_connection()
             analyzer = AnalyzerGenerate()

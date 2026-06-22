@@ -108,7 +108,6 @@ from cryptolyzer.tls.server import (
     L7ServerTlsXMPPNoStartTLS,
     L7ServerTlsXMPPStartTLSBad,
     SslServerHandshake,
-    TlsServerConfiguration,
     TlsServerHandshake,
 )
 from cryptolyzer.common.transfer import L4TransferBase, L4ClientTCP, L4ClientUDP, L7TransferBase
@@ -119,6 +118,7 @@ from .classes import (
     L7ServerTlsCloseDuringHandshake,
     L7ServerTlsMockResponse,
     L7ServerTlsOneMessageInMultipleRecords,
+    L7ServerTlsProtocolVersionAlert,
     L7ServerTlsTest,
     TlsServerOneMessageInMultipleRecords,
     TlsServerMockResponse,
@@ -1658,10 +1658,7 @@ class TestTlsClientHandshake(TestL7ClientBase):
 
     def test_error_always_alert_wargning(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls(
-                'localhost', 0,
-                L4TransferSocketParams(timeout=0.2), configuration=TlsServerConfiguration(protocol_versions=[])
-            ),
+            L7ServerTlsProtocolVersionAlert('localhost', 0, L4TransferSocketParams(timeout=0.2)),
         )
         threaded_server.start()
 

@@ -178,6 +178,17 @@ class L7ServerTlsAlert(L7ServerTls):
         return TlsServerAlert
 
 
+class TlsServerProtocolVersionAlert(TlsServerHandshake):
+    def _process_handshake_message(self, message, last_handshake_message_type):
+        self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.PROTOCOL_VERSION)
+        raise StopIteration()
+
+
+class L7ServerTlsProtocolVersionAlert(L7ServerTls):
+    def _get_handshake_class(self):
+        return TlsServerProtocolVersionAlert
+
+
 class TlsServerLongCipherSuiteListIntolerance(TlsServerHandshake):
     def _process_handshake_message(self, message, last_handshake_message_type):
         if len(message.cipher_suites) >= 192:

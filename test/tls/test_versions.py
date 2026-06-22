@@ -46,11 +46,8 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
     )
     def test_error_security_error(self, _):
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[
-                TlsProtocolVersion(TlsVersion.TLS1),
-                TlsProtocolVersion(TlsVersion.TLS1_1),
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-            ]
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
         ))
         self.assertEqual(
             self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions,
@@ -63,8 +60,9 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
 
     def test_ssl_2(self):
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[TlsProtocolVersion(TlsVersion.SSL3), ],
-            fallback_to_ssl=True
+            min_protocol_version=TlsProtocolVersion(TlsVersion.SSL3),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.SSL3),
+            fallback_to_ssl=True,
         ))
         self.assertEqual(
             self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions,
@@ -73,7 +71,10 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
 
     def test_versions(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.5)),
+            L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.5), configuration=TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.SSL3),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            )),
         )
         threaded_server.start()
 
@@ -91,24 +92,23 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
 
     def test_tls_alert_response_to_ssl_handshake(self):
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[
-                TlsProtocolVersion(TlsVersion.TLS1),
-                TlsProtocolVersion(TlsVersion.TLS1_1),
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-                TlsProtocolVersion(TlsVersion.TLS1_3),
-            ],
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
             cipher_suites=[
                 TlsCipherSuite.TLS_RSA_WITH_RC2_CBC_MD5,
                 TlsCipherSuite.TLS_AES_128_GCM_SHA256,
             ],
         ))
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        minimum_version = TlsProtocolVersion(TlsVersion.TLS1)
+        maximum_version = TlsProtocolVersion(TlsVersion.TLS1_3)
         self.assertEqual(
             result.versions,
-            [
+            sorted(
                 TlsProtocolVersion(version)
-                for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2, TlsVersion.TLS1_3, ]
-            ]
+                for version in TlsVersion
+                if minimum_version <= TlsProtocolVersion(version) <= maximum_version
+            )
         )
 
 
@@ -144,14 +144,16 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_missing_fallback_scsv_support(self):
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1_1), TlsProtocolVersion(TlsVersion.TLS1_2)],
-            fallback_to_ssl=False
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            fallback_to_ssl=False,
         ))
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.inappropriate_version_fallback.value)
 
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1_1), TlsProtocolVersion(TlsVersion.TLS1_2)],
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
             fallback_to_ssl=False,
             close_on_error=True,
         ))
@@ -160,19 +162,17 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_undecidable_fallback_scsv_support(self):
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1_2)],
-            fallback_to_ssl=False
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            fallback_to_ssl=False,
         ))
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.inappropriate_version_fallback, None)
 
     def test_tls_1_2_3(self):
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[
-                TlsProtocolVersion(TlsVersion.TLS1),
-                TlsProtocolVersion(TlsVersion.TLS1_1),
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-            ]
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
         ))
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(
@@ -183,11 +183,8 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_ecdsa_only(self):
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[
-                TlsProtocolVersion(TlsVersion.TLS1),
-                TlsProtocolVersion(TlsVersion.TLS1_1),
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-            ]
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
         ))
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(
@@ -198,11 +195,8 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_with_client_auth(self):
         threaded_server = self.create_server(TlsServerConfiguration(
-            protocol_versions=[
-                TlsProtocolVersion(TlsVersion.TLS1),
-                TlsProtocolVersion(TlsVersion.TLS1_1),
-                TlsProtocolVersion(TlsVersion.TLS1_2),
-            ]
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
         ))
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(
@@ -223,7 +217,8 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
             '127.0.0.1', 0,
             L4TransferSocketParams(timeout=5.0),
             configuration=TlsServerConfiguration(
-                protocol_versions=[TlsProtocolVersion(TlsVersion.TLS1)]
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
             )
         ))
         threaded_server.wait_for_server_listen()

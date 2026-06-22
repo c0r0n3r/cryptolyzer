@@ -81,11 +81,14 @@ from cryptolyzer.tls.application import L7OpenVpnBase
 
 
 @attr.s
-class TlsServerConfiguration(L7ServerConfigurationBase):
-    protocol_versions = attr.ib(
-        converter=sorted,
-        default=[TlsProtocolVersion(version) for version in TlsVersion],
-        validator=attr.validators.deep_iterable(attr.validators.instance_of(TlsProtocolVersion))
+class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-many-instance-attributes
+    min_protocol_version = attr.ib(
+        default=TlsProtocolVersion(TlsVersion.TLS1),
+        validator=attr.validators.instance_of(TlsProtocolVersion)
+    )
+    max_protocol_version = attr.ib(
+        default=TlsProtocolVersion(TlsVersion.TLS1_3),
+        validator=attr.validators.instance_of(TlsProtocolVersion)
     )
     cipher_suites = attr.ib(
         default=list(filter(lambda cipher_suite: cipher_suite.value.bulk_cipher == BlockCipher.RC2, TlsCipherSuite)),
@@ -107,6 +110,22 @@ class TlsServerConfiguration(L7ServerConfigurationBase):
     )
 
     def __attrs_post_init__(self):
+        if self.min_protocol_version > self.max_protocol_version:
+            raise ValueError(
+                'min_protocol_version must not be greater than max_protocol_version'
+            )
+
+        if self.max_protocol_version >= TlsProtocolVersion(TlsVersion.TLS1):
+            for cipher_suite in self.cipher_suites:
+                if TlsProtocolVersion(cipher_suite.value.last_version) < self.min_protocol_version:
+                    raise ValueError(
+                        f'cipher suite {cipher_suite.value.iana_name} maximum version is below min_protocol_version'
+                    )
+                if TlsProtocolVersion(cipher_suite.value.initial_version) > self.max_protocol_version:
+                    raise ValueError(
+                        f'cipher suite {cipher_suite.value.iana_name} minimum version is above max_protocol_version'
+                    )
+
         dh_cipher_suites = [
             cs for cs in self.cipher_suites
             if cs.value.key_exchange in (KeyExchange.DHE, KeyExchange.ADH)
@@ -228,16 +247,21 @@ class TlsServer(L7ServerHandshakeBase):
 
 class TlsServerHandshake(TlsServer):
     def _check_protocol_version(self, message):
+        min_version = self.configuration.min_protocol_version
+        max_version = self.configuration.max_protocol_version
+
         try:
             supported_versions = message.extensions.get_item_by_type(
                 TlsExtensionType.SUPPORTED_VERSIONS
             ).supported_versions
+            for version in supported_versions:
+                if min_version <= version <= max_version:
+                    return version
         except KeyError:
-            supported_versions = [message.protocol_version, ]
-
-        for supported_version in supported_versions:
-            if supported_version in self.configuration.protocol_versions:
-                return supported_version
+            client_version = message.protocol_version
+            negotiated = min(client_version, max_version)
+            if negotiated >= min_version:
+                return negotiated
 
         self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.PROTOCOL_VERSION)
         raise StopIteration()
