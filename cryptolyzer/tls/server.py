@@ -14,7 +14,11 @@ from cryptodatahub.tls.algorithm import TlsNamedCurve
 from cryptoparser.common.exception import InvalidType, NotEnoughData
 from cryptoparser.common.parse import ComposerBinary
 
-from cryptoparser.tls.extension import TlsExtensionType, TlsExtensionSupportedVersionsServer
+from cryptoparser.tls.extension import (
+    TlsExtensionKeyShareClientHelloRetry,
+    TlsExtensionType,
+    TlsExtensionSupportedVersionsServer,
+)
 from cryptoparser.tls.ldap import (
     LDAPResultCode,
     LDAPExtendedRequestStartTLS,
@@ -285,6 +289,11 @@ class TlsServerHandshake(TlsServer):
         else:
             self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
             raise StopIteration()
+
+        if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2) and self.configuration.curves:
+            selected_curve = self._get_ecdhe_curve(message)
+            if selected_curve is not None:
+                extensions.append(TlsExtensionKeyShareClientHelloRetry(selected_curve))
 
         wire_protocol_version = (
             TlsProtocolVersion(TlsVersion.TLS1_2)
