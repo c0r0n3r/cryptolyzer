@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import math
+import secrets
 
 import codecs
 import collections
@@ -60,7 +61,7 @@ def get_dh_public_key_from_bytes(p_bytes, g_bytes, y_bytes):
 
 
 def get_dh_ephemeral_key_forged(prime):
-    return prime // 2 + 1
+    return secrets.randbelow(prime - 3) + 2
 
 
 def get_ecdh_ephemeral_key_forged(named_group, add_point_format_octet=True):

@@ -6,11 +6,15 @@ from unittest import mock
 from test.common.classes import TestMainBase
 from test.common.markers import live_server
 
+from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionsBase, TlsNamedCurve
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
+from cryptodatahub.common.parameter import DHParameterNumbers
+
 from cryptolyzer.common.dhparam import (
+    DHParameter,
     DHPublicKey,
     DHPublicNumbers,
     DHParamWellKnown,
@@ -20,6 +24,7 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 from cryptolyzer.__main__ import main
 
@@ -119,9 +124,18 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam, None)
 
-    @live_server
     def test_size(self):
-        result = self.get_result('dh480.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA],
+            dh_param=DHParameterNumbers((1 << 479) + 3, 2),
+        ))
+
+        def _mock_check_prime(self):
+            self.prime = True
+            self.safe_prime = True
+
+        with mock.patch.object(DHParameter, '_check_prime', _mock_check_prime):
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam.key_size.value, 480)
         self.assertEqual(result.dhparam.prime, True)
@@ -134,9 +148,18 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
             ]
         )
 
-    @live_server
     def test_prime(self):
-        result = self.get_result('dh-composite.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA],
+            dh_param=DHParameterNumbers((1 << 2047) + 3, 2),
+        ))
+
+        def _mock_check_prime(self):
+            self.prime = False
+            self.safe_prime = False
+
+        with mock.patch.object(DHParameter, '_check_prime', _mock_check_prime):
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, False)
@@ -144,12 +167,18 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.dhparam.well_known, None)
         self.assertFalse(result.key_reuse)
 
-    @live_server
     def test_safe_prime(self):
-        result = self.get_result(
-            'dh-small-subgroup.badssl.com', 443,
-            l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA],
+            dh_param=DHParameterNumbers((1 << 2047) + 3, 2),
+        ))
+
+        def _mock_check_prime(self):
+            self.prime = True
+            self.safe_prime = False
+
+        with mock.patch.object(DHParameter, '_check_prime', _mock_check_prime):
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, True)
@@ -157,12 +186,12 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.dhparam.well_known, None)
         self.assertFalse(result.key_reuse)
 
-    @live_server
     def test_well_known_prime(self):
-        result = self.get_result(
-            'launchpad.net', 443,
-            l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA],
+            dh_param=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.groups, [])
         self.assertEqual(result.dhparam.key_size.value, 2048)
         self.assertEqual(result.dhparam.prime, True)
@@ -188,11 +217,14 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.key_reuse, None)
         self.assertFalse(self.log_stream.getvalue(), '')
 
-    @live_server
     def test_tls_early_version(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA],
+            dh_param=DHParameterNumbers((1 << 479) + 3, 2),
+        ))
         result = self.get_result(
-            'dh480.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1),
-            l4_socket_params=L4TransferSocketParams(timeout=10)
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port,
+            TlsProtocolVersion(TlsVersion.TLS1),
         )
         self.assertEqual(result.groups, [])
         self.assertNotEqual(result.dhparam, None)
@@ -270,10 +302,19 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result)
 
-    @live_server
     def test_output(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            '127.0.0.1', 0,
+            L4TransferSocketParams(timeout=5.0),
+            configuration=TlsServerConfiguration(
+                cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA],
+                dh_param=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,
+            )
+        ))
+        threaded_server.wait_for_server_listen()
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1_2), 'dhparams', 'dh2048.badssl.com', 443, timeout=10, scheme='tls'
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'dhparams', '127.0.0.1',
+            threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
         )
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
