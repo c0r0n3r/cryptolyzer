@@ -145,6 +145,7 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
         ecdhe_cipher_suites = [
             cs for cs in self.cipher_suites
             if cs.value.key_exchange in (KeyExchange.ECDHE, KeyExchange.AECDH)
+            or TlsProtocolVersion(cs.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2)
         ]
         if self.curves and not ecdhe_cipher_suites:
             raise ValueError('curves are set but no ECDHE cipher suite is configured')
@@ -294,6 +295,9 @@ class TlsServerHandshake(TlsServer):
             selected_curve = self._get_ecdhe_curve(message)
             if selected_curve is not None:
                 extensions.append(TlsExtensionKeyShareClientHelloRetry(selected_curve))
+            else:
+                self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
+                raise StopIteration()
 
         wire_protocol_version = (
             TlsProtocolVersion(TlsVersion.TLS1_2)

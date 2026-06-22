@@ -6,11 +6,12 @@ from unittest import mock
 import socket
 
 from test.common.classes import TestMainBase
-from test.common.markers import live_server
-
+from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 from cryptoparser.tls.extension import TlsNamedCurve
+
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4ClientTCP, L4TransferSocketParams
@@ -52,28 +53,34 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
         )
         self.assertEqual(len(result.curves), 0)
 
-    @live_server
     @mock.patch(
         'cryptolyzer.tls.curves.parse_ecdh_params',
         side_effect=NotImplementedError(TlsNamedCurve.X25519)
     )
     def test_error_not_implemented_named_curve(self, _):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA],
+            curves=[TlsNamedCurve.SECP256R1],
+        ))
         result = self.get_result(
-            'ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2),
-            l4_socket_params=L4TransferSocketParams(timeout=10)
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port,
+            TlsProtocolVersion(TlsVersion.TLS1_2),
         )
         self.assertEqual(result.curves, [TlsNamedCurve.X25519])
 
-    @live_server
     @mock.patch(
         'cryptolyzer.tls.curves.parse_ecdh_params',
         side_effect=NotImplementedError('cryptolyzer.tls.curves.parse_ecdh_params')
     )
     def test_error_not_implemented_other(self, _):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA],
+            curves=[TlsNamedCurve.SECP256R1],
+        ))
         with self.assertRaisesRegex(NotImplementedError, 'cryptolyzer.tls.curves.parse_ecdh_params'):
             self.get_result(
-                'ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2),
-                l4_socket_params=L4TransferSocketParams(timeout=10)
+                'localhost', threaded_server.l7_server.l4_transfer.bind_port,
+                TlsProtocolVersion(TlsVersion.TLS1_2),
             )
 
     @mock.patch.object(
@@ -101,11 +108,14 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
             self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(str(context_manager.exception), 'alert message received (unexpected_message)')
 
-    @live_server
     def test_curves(self):
+        threaded_server_tls12 = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA],
+            curves=[TlsNamedCurve.SECP256R1],
+        ))
         result = self.get_result(
-            'ecc256.badssl.com', 443, TlsProtocolVersion(TlsVersion.TLS1_2),
-            l4_socket_params=L4TransferSocketParams(timeout=10)
+            'localhost', threaded_server_tls12.l7_server.l4_transfer.bind_port,
+            TlsProtocolVersion(TlsVersion.TLS1_2),
         )
         self.assertEqual(result.curves, [TlsNamedCurve.SECP256R1, ])
         self.assertTrue(result.extension_supported)
@@ -115,9 +125,15 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
             ]
         )
 
-        result = self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
+        threaded_server_tls13 = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            curves=[TlsNamedCurve.X25519_KYBER_768_R3, TlsNamedCurve.X25519, TlsNamedCurve.SECP256R1],
+        ))
+        result = self.get_result(
+            'localhost', threaded_server_tls13.l7_server.l4_transfer.bind_port,
+            TlsProtocolVersion(TlsVersion.TLS1_3),
+        )
         curves = result.curves
-        # different instances run with different configuration, the following is the common subset
         self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3, curves)
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
@@ -135,10 +151,15 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(len(result.curves), 0)
         self.assertFalse(self.log_stream.getvalue(), '')
 
-    @live_server
     def test_tls_1_3(self):
-        curves = self.get_result('www.cloudflare.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves
-        # different instances run with different configuration, the following is the common subset
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            curves=[TlsNamedCurve.X25519_KYBER_768_R3, TlsNamedCurve.X25519, TlsNamedCurve.SECP256R1],
+        ))
+        curves = self.get_result(
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port,
+            TlsProtocolVersion(TlsVersion.TLS1_3),
+        ).curves
         self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3, curves)
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
@@ -148,11 +169,15 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertIn('Server offers elliptic-curve CURVE25519', curve_log_lines)
         self.assertIn('Server offers elliptic-curve PRIME256V1', curve_log_lines)
 
-    @live_server
     def test_pqc(self):
-        curves = self.get_result('pq.cloudflareresearch.com', 443, TlsProtocolVersion(TlsVersion.TLS1_3)).curves
-
-        # different instances run with different configuration, the following is the common subset
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            curves=[TlsNamedCurve.X25519_KYBER_768_R3, TlsNamedCurve.X25519, TlsNamedCurve.SECP256R1],
+        ))
+        curves = self.get_result(
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port,
+            TlsProtocolVersion(TlsVersion.TLS1_3),
+        ).curves
         self.assertIn(TlsNamedCurve.X25519_KYBER_768_R3, curves)
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
@@ -176,10 +201,19 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result)
 
-    @live_server
     def test_output(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            '127.0.0.1', 0,
+            L4TransferSocketParams(timeout=5.0),
+            configuration=TlsServerConfiguration(
+                cipher_suites=[TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA],
+                curves=[TlsNamedCurve.SECP256R1],
+            )
+        ))
+        threaded_server.wait_for_server_listen()
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1_2), 'curves', 'ecc256.badssl.com', 443, timeout=10, scheme='tls'
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'curves', '127.0.0.1',
+            threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
         )
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
