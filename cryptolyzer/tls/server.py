@@ -9,15 +9,26 @@ import attr
 from cryptodatahub.common.algorithm import BlockCipher, KeyExchange
 from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.common.parameter import DHParameterNumbers, DHParamWellKnown
-from cryptodatahub.tls.algorithm import TlsNamedCurve
+from cryptodatahub.tls.algorithm import TlsNamedCurve, TlsNextProtocolName, TlsProtocolName
 
 from cryptoparser.common.exception import InvalidType, NotEnoughData
 from cryptoparser.common.parse import ComposerBinary
 
+from cryptoparser.common.x509 import SignedCertificateTimestampList
+
 from cryptoparser.tls.extension import (
+    TlsExtensionApplicationLayerProtocolNegotiation,
+    TlsExtensionEncryptThenMAC,
+    TlsExtensionExtendedMasterSecret,
     TlsExtensionKeyShareClientHelloRetry,
+    TlsExtensionNextProtocolNegotiationServer,
+    TlsExtensionRenegotiationInfo,
+    TlsExtensionSessionTicket,
+    TlsExtensionSignedCertificateTimestampServer,
     TlsExtensionType,
     TlsExtensionSupportedVersionsServer,
+    TlsNextProtocolNameList,
+    TlsProtocolNameList,
 )
 from cryptoparser.tls.ldap import (
     LDAPResultCode,
@@ -65,6 +76,7 @@ from cryptoparser.tls.subprotocol import (
     TlsHandshakeServerHello,
     TlsHandshakeServerKeyExchange,
     TlsHandshakeType,
+    TlsSessionIdVector,
     TlsSubprotocolMessageParser,
 )
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
@@ -117,6 +129,24 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
         default=[],
         validator=attr.validators.deep_iterable(attr.validators.in_(TlsNamedCurve))
     )
+    encrypt_then_mac_supported = attr.ib(default=False, validator=attr.validators.instance_of(bool))
+    extended_master_secret_supported = attr.ib(default=False, validator=attr.validators.instance_of(bool))
+    renegotiation_supported = attr.ib(default=False, validator=attr.validators.instance_of(bool))
+    session_cache_supported = attr.ib(default=False, validator=attr.validators.instance_of(bool))
+    session_ticket_supported = attr.ib(default=False, validator=attr.validators.instance_of(bool))
+    next_protocols = attr.ib(
+        default=None,
+        validator=attr.validators.optional(
+            attr.validators.deep_iterable(attr.validators.in_(TlsNextProtocolName))
+        )
+    )
+    application_layer_protocols = attr.ib(
+        default=None,
+        validator=attr.validators.optional(
+            attr.validators.deep_iterable(attr.validators.in_(TlsProtocolName))
+        )
+    )
+    signed_certificate_timestamps_supported = attr.ib(default=False, validator=attr.validators.instance_of(bool))
 
     def __attrs_post_init__(self):
         if self.min_protocol_version > self.max_protocol_version:
@@ -282,7 +312,9 @@ class TlsServerHandshake(TlsServer):
             extensions.append(TlsExtensionSupportedVersionsServer(protocol_version))
 
         preferred_cipher_suite_list = self.configuration.cipher_suites
-        selectable_cipher_suite_set = set(message.cipher_suites)
+        selectable_cipher_suite_set = set(
+            cs for cs in message.cipher_suites if isinstance(cs, TlsCipherSuite)
+        )
         for cipher_suite in preferred_cipher_suite_list:
             if cipher_suite in selectable_cipher_suite_set:
                 choosen_cipher_suite = cipher_suite
@@ -299,6 +331,14 @@ class TlsServerHandshake(TlsServer):
                 self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
                 raise StopIteration()
 
+        extensions.extend(self._get_configured_extensions())
+
+        session_id = (
+            TlsSessionIdVector(list(range(32)))
+            if self.configuration.session_cache_supported
+            else TlsSessionIdVector(())
+        )
+
         wire_protocol_version = (
             TlsProtocolVersion(TlsVersion.TLS1_2)
             if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2)
@@ -308,8 +348,32 @@ class TlsServerHandshake(TlsServer):
             protocol_version=wire_protocol_version,
             cipher_suite=choosen_cipher_suite,
             random=message.random,
+            session_id=session_id,
             extensions=extensions,
         )
+
+    def _get_configured_extensions(self):
+        extensions = []
+        if self.configuration.encrypt_then_mac_supported:
+            extensions.append(TlsExtensionEncryptThenMAC())
+        if self.configuration.extended_master_secret_supported:
+            extensions.append(TlsExtensionExtendedMasterSecret())
+        if self.configuration.renegotiation_supported:
+            extensions.append(TlsExtensionRenegotiationInfo())
+        if self.configuration.session_ticket_supported:
+            extensions.append(TlsExtensionSessionTicket())
+        if self.configuration.next_protocols is not None:
+            extensions.append(TlsExtensionNextProtocolNegotiationServer(
+                TlsNextProtocolNameList(self.configuration.next_protocols)
+            ))
+        if self.configuration.application_layer_protocols is not None:
+            extensions.append(TlsExtensionApplicationLayerProtocolNegotiation(
+                TlsProtocolNameList(self.configuration.application_layer_protocols)
+            ))
+        if self.configuration.signed_certificate_timestamps_supported:
+            extensions.append(TlsExtensionSignedCertificateTimestampServer(SignedCertificateTimestampList([])))
+
+        return extensions
 
     def _get_ecdhe_curve(self, client_hello):
         try:
