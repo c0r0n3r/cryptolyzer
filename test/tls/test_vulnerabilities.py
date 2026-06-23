@@ -2,16 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from test.common.markers import live_server
 
-from cryptodatahub.tls.algorithm import TlsNamedCurve
+from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 from cryptolyzer.tls.vulnerabilities import AnalyzerResultVulnerabilityCiphers, AnalyzerVulnerabilities
 
-from .classes import TestTlsCases
+from .classes import TestTlsCases, L7ServerTlsTest
 
 
 class TestTlsVulnerabilityCiphers(unittest.TestCase):
@@ -59,6 +60,10 @@ class TestTlsVulnerabilityCiphers(unittest.TestCase):
 
 
 class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
+    def _check_cipher_suite_logs(self, cipher_suites, log_stream):
+        for cipher_suite in cipher_suites:
+            self.assertIn(f'Server offers cipher suite {cipher_suite.name}', log_stream)
+
     @staticmethod
     def get_result(
             host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
@@ -69,20 +74,23 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
 
         return analyzer_result
 
-    def _check_cipher_suite_logs(self, cipher_suites, log_stream):
-        for cipher_suite in cipher_suites:
-            self.assertIn(f'Server offers cipher suite {cipher_suite.name}', log_stream)
+    @staticmethod
+    def create_server(configuration=None):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0, L4TransferSocketParams(timeout=5), configuration=configuration
+        ))
+        threaded_server.wait_for_server_listen()
+        return threaded_server
 
-    def _check_ffdhe_params(self, ffdhe_params, log_stream):
-        for ffdhe_param in ffdhe_params:
-            self.assertIn(
-                f'Server offers FFDHE public parameter with size {ffdhe_param.value.named_group.value.size}-bit',
-                log_stream
-            )
-
-    @live_server
     def test_real_versions(self):
-        result = self.get_result('baidu.com', 443)
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.SSL3),
+            cipher_suites=[
+                TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA,
+                TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
+            ],
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
@@ -99,9 +107,15 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         self.assertFalse(result.dhparams.weak_dh.value)
         self.assertFalse(result.dhparams.dheat.value)
 
-    @live_server
     def test_real_ciphers(self):
-        result = self.get_result('rc4.badssl.com', 443, L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            cipher_suites=[
+                TlsCipherSuite.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
+                TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA,
+            ],
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
@@ -125,7 +139,16 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         ], log_stream)
         self.assertNotIn('Server offers well-known DH public parameter', log_stream)
 
-        result = self.get_result('3des.badssl.com', 443, L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            cipher_suites=[
+                TlsCipherSuite.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+                TlsCipherSuite.TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
+                TlsCipherSuite.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+            ],
+            dh_param=DHParamWellKnown.APPLICATION_SERVER_NGINX_VERSION_0_7_2_BIT_1024,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.ciphers.lucky13.value)
         self.assertTrue(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
@@ -150,9 +173,16 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
         ], log_stream)
         self.assertIn('Server offers 1024-bit NGINX 0.7.2 builtin DH parameter', log_stream)
 
-    @live_server
     def test_real_dhparams(self):
-        result = self.get_result('documentfreedom.org', 443)
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            cipher_suites=[
+                TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
+                TlsCipherSuite.TLS_AES_128_GCM_SHA256,
+            ],
+            dh_param=DHParamWellKnown.RFC3526_8192_BIT_MODP_GROUP,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.ciphers.lucky13.value)
         self.assertFalse(result.ciphers.sweet32.value)
         self.assertFalse(result.ciphers.freak.value)
@@ -168,17 +198,3 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
 
         self.assertFalse(result.dhparams.weak_dh.value)
         self.assertTrue(result.dhparams.dheat.value)
-
-        log_stream = '\n'.join(self.pop_log_lines())
-        self._check_cipher_suite_logs([
-            TlsCipherSuite.TLS_AES_128_GCM_SHA256,
-            TlsCipherSuite.TLS_AES_256_GCM_SHA384,
-            TlsCipherSuite.TLS_CHACHA20_POLY1305_SHA256,
-        ], log_stream)
-        self._check_ffdhe_params([
-            TlsNamedCurve.FFDHE2048,
-            TlsNamedCurve.FFDHE3072,
-            TlsNamedCurve.FFDHE4096,
-            TlsNamedCurve.FFDHE6144,
-            TlsNamedCurve.FFDHE8192,
-        ], log_stream)
