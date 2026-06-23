@@ -236,6 +236,8 @@ class L7ServerTlsBase(L7ServerBase):
 
         try:
             handshake_object.do_handshake(last_handshake_message_type)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
         finally:
             self._deinit_l7()
             self.l4_transfer.close_client()
