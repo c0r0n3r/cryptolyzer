@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 
 import ftplib
 import poplib
@@ -11,7 +12,7 @@ from unittest import mock
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
-from cryptoparser.tls.extension import TlsNamedCurve
+from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve
 from cryptoparser.tls.ldap import LDAPExtendedRequestStartTLS
 from cryptoparser.tls.openvpn import OpenVpnPacketControlV1, OpenVpnPacketHardResetServerV2
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -36,7 +37,10 @@ from cryptoparser.tls.subprotocol import (
     TlsExtensionsClient,
     TlsHandshakeType,
     TlsHandshakeServerHello,
+    TlsSessionIdVector,
 )
+
+from cryptodatahub.tls.algorithm import TlsNextProtocolName, TlsProtocolName
 
 from cryptolyzer.common.dhparam import DHParamWellKnown, parse_tls_dh_params, parse_ecdh_params
 from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP, L4TransferSocketParams
@@ -447,6 +451,60 @@ class TestL7ServerTlsCloseOnError(TestL7ServerBase):
 
     def test_tls_handshake(self):
         self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_2))
+
+
+class TestL7ServerTlsExtensions(TestL7ServerBase):
+    def _get_server_hello(self, configuration):
+        threaded_server = self.create_server(configuration)
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1_2)], threaded_server.l7_server.address
+        )
+        l7_client = self.create_client(L7ClientTls, threaded_server.l7_server)
+        l7_client.init_connection()
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO,
+        )
+        threaded_server.join()
+        return server_messages[TlsHandshakeType.SERVER_HELLO]
+
+    def test_handshake_encrypt_then_mac(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(encrypt_then_mac_supported=True))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.ENCRYPT_THEN_MAC)
+        self.assertEqual(extension.extension_type, TlsExtensionType.ENCRYPT_THEN_MAC)
+
+    def test_handshake_extended_master_secret(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(extended_master_secret_supported=True))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.EXTENDED_MASTER_SECRET)
+        self.assertEqual(extension.extension_type, TlsExtensionType.EXTENDED_MASTER_SECRET)
+
+    def test_handshake_renegotiation_info(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(renegotiation_supported=True))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.RENEGOTIATION_INFO)
+        self.assertEqual(extension.extension_type, TlsExtensionType.RENEGOTIATION_INFO)
+
+    def test_handshake_session_cache(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(session_cache_supported=True))
+        self.assertNotEqual(server_hello.session_id, TlsSessionIdVector(()))
+
+    def test_handshake_session_ticket(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(session_ticket_supported=True))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.SESSION_TICKET)
+        self.assertEqual(extension.extension_type, TlsExtensionType.SESSION_TICKET)
+
+    def test_handshake_next_protocols(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(
+            next_protocols=[TlsNextProtocolName.HTTP_1_1],
+        ))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.NEXT_PROTOCOL_NEGOTIATION)
+        self.assertEqual(list(extension.protocol_names), [TlsNextProtocolName.HTTP_1_1])
+
+    def test_handshake_application_layer_protocols(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(
+            application_layer_protocols=[TlsProtocolName.HTTP_1_1],
+        ))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.APPLICATION_LAYER_PROTOCOL_NEGOTIATION)
+        self.assertEqual(list(extension.protocol_names), [TlsProtocolName.HTTP_1_1])
 
 
 class TestL7ServerTlsRDP(TestL7ServerBase):
