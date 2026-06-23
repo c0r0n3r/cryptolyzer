@@ -3,6 +3,8 @@
 
 from unittest import mock
 
+import datetime
+
 from test.common.classes import TestLoggerBase, TestMainBase
 from test.common.markers import live_server
 
@@ -15,6 +17,8 @@ from cryptoparser.tls.extension import (
 )
 from cryptoparser.tls.subprotocol import (
     TlsCompressionMethod,
+    TlsHandshakeHelloRandom,
+    TlsHandshakeHelloRandomBytes,
     TlsHandshakeServerHello,
     TlsHandshakeType,
 )
@@ -24,14 +28,14 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert, TlsAlertDescription
 from cryptolyzer.tls.extensions import AnalyzerExtensions
-from cryptolyzer.tls.server import L7ServerTls
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 from cryptolyzer.__main__ import main
 
 from .classes import L7ServerTlsTest
 
 
-class TestTlsExtensions(TestLoggerBase, TestMainBase):
+class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-many-public-methods
     @classmethod
     def _get_main_func(cls):
         return main
@@ -46,12 +50,23 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         result = analyzer.analyze(l7_client, protocol_version)
         return result
 
-    @live_server
     def test_next_protocols(self):
-        result = self.get_result('www.cloudflare.com', 443)
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.next_protocols, [])
 
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+    def test_next_protocols_offered(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                next_protocols=[TlsNextProtocolName.HTTP_1_1],
+                application_layer_protocols=[TlsProtocolName.HTTP_1_1],
+            ),
+        ))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(set(result.next_protocols), set([TlsNextProtocolName.HTTP_1_1, ]))
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers application layer protocol "http/1.1"', log_lines)
@@ -76,14 +91,23 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
             set([TlsProtocolName.HTTP_1_1, ])
         )
 
-    @live_server
     def test_application_layer_protocols(self):
-        result = self.get_result(
-            'tls-v1-0.badssl.com', 1010, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.application_layer_protocols, [])
 
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+    def test_application_layer_protocols_offered(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                next_protocols=[TlsNextProtocolName.HTTP_1_1],
+                application_layer_protocols=[TlsProtocolName.HTTP_1_1],
+            ),
+        ))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(set(result.application_layer_protocols), set([TlsProtocolName.HTTP_1_1]))
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers application layer protocol "http/1.1"', log_lines)
@@ -136,9 +160,10 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
             set([TlsCompressionMethod.NULL, TlsCompressionMethod.DEFLATE, TlsCompressionMethod.LZS])
         )
 
-    @live_server
     def test_compression_method(self):
-        result = self.get_result('www.cloudflare.com', 443)
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         self.assertEqual(
             set(result.compression_methods),
@@ -147,11 +172,29 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers compression method(s) "NULL"', log_lines)
 
-    @live_server
-    def test_ec_point_formats(self):
-        result = self.get_result(
-            'ecc256.badssl.com', 433, l4_socket_params=L4TransferSocketParams(timeout=10)
+        analyzer = AnalyzerExtensions()
+        threaded_server_tls13 = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            )
+        ))
+        threaded_server_tls13.wait_for_server_listen()
+        l7_client = L7ClientTlsBase.from_scheme(
+            'tls', 'localhost', threaded_server_tls13.l7_server.l4_transfer.bind_port
         )
+        compression_methods = analyzer._analyze_compression_methods(  # pylint: disable=protected-access
+            l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
+        )
+        self.assertEqual(set(compression_methods), set())
+
+    def test_ec_point_formats(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(
             result.ec_point_formats,
             [TlsECPointFormat.UNCOMPRESSED, ]
@@ -159,6 +202,8 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers point format(s) "UNCOMPRESSED"', log_lines)
 
+    @live_server
+    def test_ec_point_formats_offered(self):
         result = self.get_result('www.cloudflare.com', 443)
         self.assertEqual(
             result.ec_point_formats,
@@ -167,60 +212,116 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers point format(s) "UNCOMPRESSED"', log_lines)
 
-    @live_server
     def test_encrypt_then_mac(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server.wait_for_server_listen()
         result = self.get_result(
-            'tls-v1-0.badssl.com', 1010, TlsProtocolVersion(TlsVersion.TLS1),
-            l4_socket_params=L4TransferSocketParams(timeout=10)
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port,
+            TlsProtocolVersion(TlsVersion.TLS1),
         )
         self.assertFalse(result.encrypt_then_mac_supported)
         log_lines = self.pop_log_lines()
         self.assertNotIn('Server does not offer encrypt then MAC', log_lines)
         self.assertNotIn('Server offers encrypt then MAC', log_lines)
 
-        result = self.get_result('www.cloudflare.com', 443)
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.encrypt_then_mac_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server does not offer encrypt then MAC', log_lines)
 
-        result = self.get_result('www.facebook.com', 443)
+    def test_encrypt_then_mac_supported(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                encrypt_then_mac_supported=True,
+            ),
+        ))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.encrypt_then_mac_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers encrypt then MAC', log_lines)
 
-        result = self.get_result('www.protonmail.com', 443)
+        threaded_server_gcm = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_GCM_SHA256],
+            ),
+        ))
+        threaded_server_gcm.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server_gcm.l7_server.l4_transfer.bind_port)
         self.assertIsNone(result.encrypt_then_mac_supported)
         log_lines = self.pop_log_lines()
         self.assertNotIn('Server does not offer encrypt then MAC', log_lines)
         self.assertNotIn('Server offers encrypt then MAC', log_lines)
 
-    @live_server
     def test_extended_master_secret(self):
-        result = self.get_result(
-            'tls-v1-2.badssl.com', 1012, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.extended_master_secret_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server does not offer extended master secret', log_lines)
 
-        result = self.get_result('www.cloudflare.com', 443)
+    def test_extended_master_secret_supported(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                extended_master_secret_supported=True,
+            ),
+        ))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.extended_master_secret_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers extended master secret', log_lines)
 
-    @live_server
     def test_clock_is_accurate(self):
-        result = self.get_result('www.facebook.com', 443)
-        self.assertFalse(result.clock_is_accurate)
-        log_lines = self.pop_log_lines()
-        self.assertIn('Server does not offer accurate clock', log_lines)
+        with mock.patch.object(
+            L7ClientTlsBase, 'do_tls_handshake',
+            return_value={
+                TlsHandshakeType.SERVER_HELLO: TlsHandshakeServerHello(
+                    cipher_suite=TlsCipherSuite.TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256,
+                    random=TlsHandshakeHelloRandom(
+                        time=datetime.datetime(2000, 1, 1, tzinfo=datetime.timezone.utc),
+                        random=TlsHandshakeHelloRandomBytes(bytearray(28)),
+                    ),
+                )
+            }
+        ):
+            result = self.get_result('localhost', 0)
+            self.assertFalse(result.clock_is_accurate)
+            log_lines = self.pop_log_lines()
+            self.assertIn('Server does not offer accurate clock', log_lines)
 
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.5)),)
-        threaded_server.start()
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.5)))
+        threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.clock_is_accurate)
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers accurate clock', log_lines)
+
+        analyzer = AnalyzerExtensions()
+        threaded_server_tls13 = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            )
+        ))
+        threaded_server_tls13.wait_for_server_listen()
+        l7_client = L7ClientTlsBase.from_scheme(
+            'tls', 'localhost', threaded_server_tls13.l7_server.l4_transfer.bind_port
+        )
+        clock_is_accurate = analyzer._analyze_clock_skew(  # pylint: disable=protected-access
+            l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
+        )
+        self.assertIsNone(clock_is_accurate)
 
     def test_record_size_limit(self):
         analyzer = AnalyzerExtensions()
@@ -278,46 +379,102 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):
             self.assertTrue(handled)
             self.assertEqual(limit_server, 1024)
 
-    @live_server
     def test_renegotiation_info(self):
-        result = self.get_result('www.userfriendly.org', 443)
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.renegotiation_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server does not offer renegotiation', log_lines)
 
-        result = self.get_result('www.cloudflare.com', 443)
+    def test_renegotiation_info_supported(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                renegotiation_supported=True,
+            ),
+        ))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.renegotiation_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers renegotiation', log_lines)
 
-    @live_server
     def test_session_cache(self):
-        result = self.get_result('www.github.com', 443)
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.session_cache_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server does not offer session cache', log_lines)
 
-        result = self.get_result('www.cloudflare.com', 443)
+        analyzer = AnalyzerExtensions()
+        threaded_server_tls13 = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            )
+        ))
+        threaded_server_tls13.wait_for_server_listen()
+        l7_client = L7ClientTlsBase.from_scheme(
+            'tls', 'localhost', threaded_server_tls13.l7_server.l4_transfer.bind_port
+        )
+        session_cache_supported = analyzer._analyze_session_cache(  # pylint: disable=protected-access
+            l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
+        )
+        self.assertFalse(session_cache_supported)
+        log_lines = self.pop_log_lines()
+        self.assertIn('Server does not offer session cache', log_lines)
+
+    def test_session_cache_supported(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                session_cache_supported=True,
+            ),
+        ))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.session_cache_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers session cache', log_lines)
 
-    @live_server
     def test_session_ticket(self):
-        result = self.get_result('www.github.com', 443)
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.session_ticket_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server does not offer session ticket', log_lines)
 
-        result = self.get_result('www.cloudflare.com', 443)
+    def test_session_ticket_supported(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            L4TransferSocketParams(timeout=1.0),
+            configuration=TlsServerConfiguration(
+                session_ticket_supported=True,
+            ),
+        ))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.session_ticket_supported)
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers session ticket', log_lines)
 
-    @live_server
     def test_output(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            '127.0.0.1', 0,
+            L4TransferSocketParams(timeout=5.0),
+        ))
+        threaded_server.wait_for_server_listen()
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1_2), 'extensions', 'dh2048.badssl.com', 443, timeout=10, scheme='tls'
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'extensions', '127.0.0.1',
+            threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
         )
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
