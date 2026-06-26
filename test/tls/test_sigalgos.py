@@ -73,7 +73,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase, TestMainBase):
             TlsSignatureAndHashAlgorithm.RSA_SHA512,
         ]
 
-        def side_effect(client_hello):
+        def side_effect(client_hello, **_):
             extension = client_hello.extensions.get_item_by_type(
                 TlsExtensionSignatureAlgorithms.get_extension_type()
             )

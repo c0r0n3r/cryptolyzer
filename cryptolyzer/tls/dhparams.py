@@ -98,14 +98,14 @@ class AnalyzerDHParams(AnalyzerTlsBase):
         server_key_exchange_message = server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE]
         return parse_tls_dh_params(server_key_exchange_message.param_bytes)
 
-    @staticmethod
-    def _get_server_messages(analyzable, is_tls_1_3, client_hello):
+    def _get_server_messages(self, analyzable, is_tls_1_3, client_hello):
         try:
             if is_tls_1_3:
                 last_handshake_message_type = TlsHandshakeType.SERVER_HELLO
             else:
                 last_handshake_message_type = TlsHandshakeType.SERVER_KEY_EXCHANGE
 
+            self._before_probe(analyzable)
             return analyzable.do_tls_handshake(
                 client_hello,
                 last_handshake_message_type=last_handshake_message_type
@@ -126,9 +126,8 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
         raise StopIteration
 
-    @staticmethod
-    def _get_public_key(analyzable, is_tls_1_3, client_hello):
-        server_messages = AnalyzerDHParams._get_server_messages(analyzable, is_tls_1_3, client_hello)
+    def _get_public_key(self, analyzable, is_tls_1_3, client_hello):
+        server_messages = self._get_server_messages(analyzable, is_tls_1_3, client_hello)
 
         if is_tls_1_3:
             dh_public_key = AnalyzerDHParams._get_public_key_tls_1_3(server_messages)
@@ -157,14 +156,13 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
         return True
 
-    @staticmethod
-    def _analyze_tls_1_x(analyzable, client_hello):
+    def _analyze_tls_1_x(self, analyzable, client_hello):
         dhparam = None
         named_groups = []
         has_extenstion = True
         while True:
             try:
-                server_messages = AnalyzerDHParams._get_server_messages(analyzable, False, client_hello)
+                server_messages = self._get_server_messages(analyzable, False, client_hello)
                 dh_public_key = AnalyzerDHParams._get_public_key_tls_1_x(server_messages)
                 _dhparam = DHParameter(
                     dh_public_key.public_numbers.parameter_numbers,
@@ -211,13 +209,12 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
         return dhparam, named_groups
 
-    @staticmethod
-    def _analyze_tls_1_3(analyzable, client_hello, protocol_version):
+    def _analyze_tls_1_3(self, analyzable, client_hello, protocol_version):
         named_groups = []
         has_extenstion = True
         while has_extenstion:
             try:
-                server_messages = AnalyzerDHParams._get_server_messages(analyzable, True, client_hello)
+                server_messages = self._get_server_messages(analyzable, True, client_hello)
                 named_group = AnalyzerDHParams._get_selected_group_tls_1_3(server_messages)
             except StopIteration:
                 break

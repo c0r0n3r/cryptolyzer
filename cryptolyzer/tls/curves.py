@@ -50,14 +50,14 @@ class AnalyzerCurves(AnalyzerTlsBase):
     def get_help(cls):
         return 'Check which elliptic curves supported by the server(s)'
 
-    @staticmethod
-    def _get_response_message(l7_client, client_hello, protocol_version):
+    def _get_response_message(self, l7_client, client_hello, protocol_version):
         try:
             if protocol_version <= TlsProtocolVersion(TlsVersion.TLS1_2):
                 last_handshake_message_type = TlsHandshakeType.SERVER_KEY_EXCHANGE
             else:
                 last_handshake_message_type = TlsHandshakeType.SERVER_HELLO
 
+            self._before_probe(l7_client)
             server_messages = l7_client.do_tls_handshake(
                 hello_message=client_hello,
                 last_handshake_message_type=last_handshake_message_type
@@ -84,10 +84,9 @@ class AnalyzerCurves(AnalyzerTlsBase):
 
         return supported_curve
 
-    @staticmethod
-    def _get_server_key_exchange(analyzable, client_hello, protocol_version, checkable_curves, extension_supported):
+    def _get_server_key_exchange(self, analyzable, client_hello, protocol_version, checkable_curves):
         try:
-            return AnalyzerCurves._get_response_message(analyzable, client_hello, protocol_version)
+            return self._get_response_message(analyzable, client_hello, protocol_version)
         except TlsAlert as e:
             if checkable_curves is None:
                 acceptable_alerts = AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS + [
@@ -95,18 +94,14 @@ class AnalyzerCurves(AnalyzerTlsBase):
                     TlsAlertDescription.UNRECOGNIZED_NAME,
                 ]
                 if e.description in acceptable_alerts:
-                    extension_supported = None
-                    raise StopIteration(extension_supported) from e
+                    raise StopIteration(None) from e
 
             if e.description in AnalyzerTlsBase._ACCEPTABLE_HANDSHAKE_FAILURE_ALERTS:
-                raise StopIteration(extension_supported) from e
+                raise StopIteration(True) from e
 
             raise UnexpectedAlertError(e.description) from e
         except SecurityError as e:
-            if checkable_curves is None:
-                extension_supported = None
-
-            raise StopIteration(extension_supported) from e
+            raise StopIteration(None if checkable_curves is None else True) from e
         finally:
             del client_hello.extensions[-1]
 
@@ -125,7 +120,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
             )
             try:
                 server_key_exchange = self._get_server_key_exchange(
-                    analyzable, client_hello, protocol_version, checkable_curves, extension_supported
+                    analyzable, client_hello, protocol_version, checkable_curves
                 )
             except StopIteration as e:
                 extension_supported = e.args[0]

@@ -109,9 +109,8 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 accepted_cipher_suites.append(cipher_suite)
                 break
 
-    @classmethod
     def _get_accepted_cipher_suites(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-            cls, l7_client, protocol_version, checkable_cipher_suites,
+            self, l7_client, protocol_version, checkable_cipher_suites,
             named_curves=None, key_share_curves=None,
     ):
         retried_internal_error = False
@@ -123,7 +122,8 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 if retried_internal_error:
                     time.sleep(1)
 
-                cls._next_accepted_cipher_suites(
+                self._before_probe(l7_client)
+                self._next_accepted_cipher_suites(
                     l7_client, protocol_version, remaining_cipher_suites, accepted_cipher_suites,
                     named_curves=named_curves, key_share_curves=key_share_curves,
                 )
@@ -134,7 +134,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
                 break
             except TlsAlert as e:
                 try:
-                    return cls._handle_tls_alert(
+                    return self._handle_tls_alert(
                         e, retried_internal_error, checkable_cipher_suites, remaining_cipher_suites
                     )
                 except StopIteration:
@@ -155,14 +155,12 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
 
         return accepted_cipher_suites, remaining_cipher_suites
 
-    @classmethod
-    def _get_accepted_cipher_suites_all(cls, l7_client, protocol_version, checkable_cipher_suites):
-        return cls._get_accepted_cipher_suites(
+    def _get_accepted_cipher_suites_all(self, l7_client, protocol_version, checkable_cipher_suites):
+        return self._get_accepted_cipher_suites(
             l7_client, protocol_version, checkable_cipher_suites
         )
 
-    @classmethod
-    def _get_accepted_cipher_suites_fallback(cls, l7_client, protocol_version):
+    def _get_accepted_cipher_suites_fallback(self, l7_client, protocol_version):
         accepted_cipher_suites = []
         client_hello_messsages_in_order_of_probability = [
             TlsHandshakeClientHelloAuthenticationRSA(protocol_version, l7_client.address),
@@ -180,7 +178,7 @@ class AnalyzerCipherSuites(AnalyzerTlsBase):
         )
         for client_hello in client_hello_messsages_in_order_of_probability:
             accepted_cipher_suites.extend(
-                cls._get_accepted_cipher_suites(
+                self._get_accepted_cipher_suites(
                     l7_client, protocol_version, list(client_hello.cipher_suites),
                     named_curves=getattr(client_hello, 'NAMED_CURVES', None),
                     key_share_curves=getattr(client_hello, 'KEY_SHARE_CURVES', None),

@@ -46,8 +46,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
     def get_help(cls):
         return 'Check which signature and hash algorithm combinations supported by the server(s)'
 
-    @staticmethod
-    def _analyze_algorithms(l7_client, client_hello):
+    def _analyze_algorithms(self, l7_client, client_hello):
         supported_algorithms = []
         extension = client_hello.extensions.get_item_by_type(
             TlsExtensionSignatureAlgorithms.get_extension_type()
@@ -55,6 +54,7 @@ class AnalyzerSigAlgos(AnalyzerTlsBase):
         for algorithm in extension.hash_and_signature_algorithms:
             extension.hash_and_signature_algorithms = TlsSignatureAndHashAlgorithmVector([algorithm, ])
             try:
+                self._before_probe(l7_client)
                 l7_client.do_tls_handshake(
                     client_hello, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE
                 )

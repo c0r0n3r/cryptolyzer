@@ -135,6 +135,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
             for client_hello_class in self._TLS_CLIENT_HELLO_CLASSES_IN_ORDER_OF_PROBABILITY:
                 client_hello = client_hello_class(protocol_version, analyzable.address)
                 try:
+                    self._before_probe(analyzable)
                     server_messages = analyzable.do_tls_handshake(
                         hello_message=client_hello,
                     )
@@ -183,8 +184,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
         while checkable_protocols and checkable_protocols[0] >= selected_version:
             del checkable_protocols[0]
 
-    @staticmethod
-    def _analyze_supported_tls_1_3_versions(analyzable):
+    def _analyze_supported_tls_1_3_versions(self, analyzable):
         alerts_unsupported_tls_version = None
         supported_protocols = []
         checkable_protocols = [TlsProtocolVersion(TlsVersion.TLS1_3), ]
@@ -206,6 +206,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
             client_hello.extensions = TlsExtensionsClient(extensions + [TlsExtensionKeyShareClient([])])
 
             try:
+                self._before_probe(analyzable)
                 server_messages = analyzable.do_tls_handshake(
                     hello_message=client_hello,
                 )
@@ -251,6 +252,7 @@ class AnalyzerVersions(AnalyzerTlsBase):
             client_hello.fallback_scsv = True
 
             try:
+                self._before_probe(analyzable)
                 analyzable.do_tls_handshake(hello_message=client_hello)
             except TlsAlert as e:
                 alert_description = e.description

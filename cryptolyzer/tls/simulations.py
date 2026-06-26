@@ -354,6 +354,7 @@ class AnalyzerSimulations(AnalyzerTlsBase):
         client_hello = self._get_client_hello_from_client_params(tls_client, address)
 
         try:
+            self._before_probe(analyzable)
             server_messages = analyzable.do_tls_handshake(hello_message=client_hello, last_handshake_message_type=None)
         except TlsAlert as e:
             if e.description == TlsAlertDescription.PROTOCOL_VERSION:
