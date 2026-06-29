@@ -13,6 +13,7 @@ import sys
 import os
 
 from test.common.classes import TestMainBase
+from test.tls.classes import L7ServerTlsTest
 
 import test.fingerprint.test_decode
 import test.fingerprint.test_generate
@@ -24,13 +25,18 @@ from test.common.markers import live_dns, live_server
 import colorama
 import urllib3
 
+from cryptodatahub.common.parameter import DHParamWellKnown
+
 from cryptoparser.common.base import Serializable, SerializableTextEncoder
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
+from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerIKEBase
+from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton, SerializableTextEncoderHighlighted
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 from cryptolyzer.__main__ import (
     get_argument_parser,
     get_protocol_handler_analyzer_and_uris,
@@ -152,27 +158,66 @@ class TestMain(TestMainBase):
 
     @live_server
     def test_analyzer_output_highlighted(self):
+        def make_server(configuration):
+            threaded_server = L7ServerTlsTest(L7ServerTls(
+                '127.0.0.1', 0, L4TransferSocketParams(timeout=5.0), configuration=configuration
+            ))
+            threaded_server.wait_for_server_listen()
+            return threaded_server
+
         func = test.tls.test_vulnerabilities.TestTlsVulnerabilities.get_result
-        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'dh1024.badssl.com', 443, timeout=10,
-                                                            scheme='https')
+
+        threaded_server = make_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA],
+            dh_param=DHParamWellKnown.APPLICATION_SERVER_NGINX_VERSION_0_7_2_BIT_1024,
+        ))
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls', 'vulns', '127.0.0.1', threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
+        )
         self._check_highlighted_output(func, func_arguments, cli_arguments)
 
-        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'null.badssl.com', 443, timeout=10,
-                                                            scheme='https')
+        threaded_server = make_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_NULL_SHA256],
+        ))
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls', 'vulns', '127.0.0.1', threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
+        )
         self._check_highlighted_output(func, func_arguments, cli_arguments)
 
-        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'rc4.badssl.com', 443, timeout=10,
-                                                            scheme='https')
+        threaded_server = make_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA],
+        ))
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls', 'vulns', '127.0.0.1', threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
+        )
         self._check_highlighted_output(func, func_arguments, cli_arguments)
 
-        func_arguments, cli_arguments = self._get_arguments('tls', 'vulns', 'novell.com', 443, timeout=10,
-                                                            scheme='https')
+        threaded_server = make_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_3DES_EDE_CBC_SHA],
+        ))
+        func_arguments, cli_arguments = self._get_arguments(
+            'tls', 'vulns', '127.0.0.1', threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
+        )
         self._check_highlighted_output(func, func_arguments, cli_arguments)
 
+        threaded_server = make_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA],
+        ))
         with patch.object(AnalyzerVersions, '_analyze_inappropriate_version_fallback', return_value=True):
             func = test.tls.test_versions.TestTlsVersions.get_result
-            func_arguments, cli_arguments = self._get_arguments('tls', 'versions', 'badssl.com', 443, timeout=10,
-                                                                scheme='https')
+            func_arguments, cli_arguments = self._get_arguments(
+                'tls', 'versions', '127.0.0.1', threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
+            )
             self._check_highlighted_output(func, func_arguments, cli_arguments)
 
     def test_analyzer_output_fingerprint_decode(self):

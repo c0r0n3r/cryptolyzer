@@ -5,7 +5,7 @@ from unittest import mock
 
 from collections import OrderedDict
 
-from test.common.classes import TestMainBase
+from test.common.classes import BADSSL_COM_L4_SOCKET_PARAMS, TestMainBase
 from test.common.markers import live_server
 
 import asn1crypto.x509
@@ -56,7 +56,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
         side_effect=ValueError
     )
     def test_error_distinguished_name_cannot_be_loaded(self, _):
-        result = self.get_result('client.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('client.badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
         self.assertEqual(result.distinguished_names, [])
 
     @staticmethod
@@ -72,12 +72,12 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
 
     @live_server
     def test_real_server(self):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
-        result = self.get_result('client.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('client.badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
         self.assertEqual(
             result.distinguished_names,
             [
@@ -109,7 +109,8 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
     @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeyreq', 'client.badssl.com', 443, timeout=10, scheme='tls'
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeyreq', 'client.badssl.com', 443,
+            timeout=10, scheme='tls', throttle_delay=2
         )
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
