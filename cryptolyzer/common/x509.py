@@ -178,7 +178,7 @@ class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
         )
         try:
             build_path = cert_validator.validate_usage(set())
-        except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError):
+        except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError, OSError):
             self._validated.items = items
         else:
             self._validated.items = [PublicKeyX509(item) for item in reversed(build_path)]
@@ -209,7 +209,7 @@ class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
             )
             try:
                 cert_validator.validate_usage(set())
-            except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError):
+            except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError, OSError):
                 trust_roots.append((trust_store_owner, False))
             else:
                 trust_roots.append((trust_store_owner, True))
