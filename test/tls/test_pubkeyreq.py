@@ -5,7 +5,7 @@ from unittest import mock
 
 from collections import OrderedDict
 
-from test.common.classes import BADSSL_COM_L4_SOCKET_PARAMS, TestMainBase
+from test.common.classes import BADSSL_COM_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from test.common.markers import live_server
 
 import asn1crypto.x509
@@ -97,7 +97,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsPlainTextResponse('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
 

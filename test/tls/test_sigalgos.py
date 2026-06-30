@@ -3,7 +3,7 @@
 
 from unittest import mock
 
-from test.common.classes import TestMainBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms
 from cryptoparser.tls.subprotocol import TlsAlertDescription
@@ -90,7 +90,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsPlainTextResponse('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
         protocol_version = TlsProtocolVersion(TlsVersion.TLS1_2)
@@ -107,7 +107,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase, TestMainBase):
     def test_output(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             '127.0.0.1', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
         ))
         threaded_server.wait_for_server_listen()
         func_arguments, cli_arguments = self._get_arguments(

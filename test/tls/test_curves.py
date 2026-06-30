@@ -5,7 +5,7 @@ from unittest import mock
 
 import socket
 
-from test.common.classes import TestMainBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -100,7 +100,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
     )
     def test_error_repeated_message_in_server_reply(self, _):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsAlert('localhost', 0, L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsAlert('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.wait_for_server_listen()
 
@@ -184,7 +184,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.5)),
+            L7ServerTlsPlainTextResponse('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
         self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).curves, [])
@@ -204,7 +204,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
     def test_output(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             '127.0.0.1', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA],
                 curves=[TlsNamedCurve.SECP256R1],

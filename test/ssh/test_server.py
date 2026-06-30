@@ -4,6 +4,8 @@
 import unittest
 from unittest import mock
 
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+
 from cryptoparser.common.exception import NotEnoughData
 
 from cryptoparser.ssh.record import SshRecordInit
@@ -40,7 +42,7 @@ class TestSshServerDefaults(TestL7ServerBase):
 
 class TestSshServerHandshake(TestL7ServerBase):
     def setUp(self):
-        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.5)))
+        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         self.threaded_server.start()
         self.l7_client = L7ClientSsh('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)
 

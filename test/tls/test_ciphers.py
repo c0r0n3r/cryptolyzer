@@ -4,7 +4,7 @@
 import unittest
 from unittest import mock
 
-from test.common.classes import TestMainBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 
 from cryptodatahub.common.algorithm import Authentication, BlockCipher
 
@@ -38,7 +38,7 @@ class TestSslCiphers(unittest.TestCase):
     def create_server():
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(fallback_to_ssl=True)
         ))
         threaded_server.wait_for_server_listen()
@@ -271,7 +271,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
         self.assertFalse(result.long_cipher_suite_list_intolerance)
 
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsLongCipherSuiteListIntolerance('localhost', 0, L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsLongCipherSuiteListIntolerance('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
 
@@ -411,7 +411,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsPlainTextResponse('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
         self.assertEqual(
@@ -426,7 +426,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
     def test_output(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             '127.0.0.1', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_RC4_128_MD5])
         ))
         threaded_server.wait_for_server_listen()

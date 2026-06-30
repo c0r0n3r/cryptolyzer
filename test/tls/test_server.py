@@ -10,6 +10,8 @@ import sys
 import unittest
 from unittest import mock
 
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve
@@ -99,7 +101,7 @@ class TestL7ServerBase(unittest.TestCase):
     @staticmethod
     def create_server(configuration=None, l7_server_class=L7ServerTls):
         threaded_server = L7ServerTlsTest(l7_server_class(
-            'localhost', 0, L4TransferSocketParams(timeout=5), configuration=configuration
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=configuration
         ))
         threaded_server.wait_for_server_listen()
         return threaded_server

@@ -12,7 +12,7 @@ import logging
 import sys
 import os
 
-from test.common.classes import TestMainBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from test.tls.classes import L7ServerTlsTest
 
 import test.fingerprint.test_decode
@@ -34,7 +34,6 @@ from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.analyzer import AnalyzerIKEBase
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton, SerializableTextEncoderHighlighted
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 from cryptolyzer.__main__ import (
@@ -160,7 +159,7 @@ class TestMain(TestMainBase):
     def test_analyzer_output_highlighted(self):
         def make_server(configuration):
             threaded_server = L7ServerTlsTest(L7ServerTls(
-                '127.0.0.1', 0, L4TransferSocketParams(timeout=5.0), configuration=configuration
+                '127.0.0.1', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=configuration
             ))
             threaded_server.wait_for_server_listen()
             return threaded_server

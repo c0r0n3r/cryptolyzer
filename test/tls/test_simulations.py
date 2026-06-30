@@ -3,7 +3,7 @@
 
 from unittest import mock
 
-from test.common.classes import TestLoggerBase, TestMainBase, TestThreadedServerHttps
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestLoggerBase, TestMainBase, TestThreadedServerHttps
 
 from cryptodatahub.common.algorithm import Authentication, KeyExchange
 from cryptodatahub.common.key import PublicKeySize
@@ -80,7 +80,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
     def test_failed_clients(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA],
                 certificates=[self.SNAKEOIL_CERT_DER],
@@ -95,7 +95,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
     def test_non_pfs(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA],
                 certificates=[self.SNAKEOIL_CERT_DER],
@@ -116,7 +116,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
     def test_application_layer_protocol(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA],
                 application_layer_protocols=[TlsProtocolName.HTTP_1_1],
@@ -132,7 +132,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
 
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA],
                 next_protocols=[TlsNextProtocolName.HTTP_1_1],
@@ -149,7 +149,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
     def test_pfs_dh_custom(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA],
                 dh_param=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,
@@ -175,7 +175,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
     def test_pfs_dh_custom_prime(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA],
                 dh_param=DHParameterNumbers((1 << 2047) + 3, 2),
@@ -201,7 +201,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
     def test_dh_well_known(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA],
                 dh_param=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,
@@ -223,7 +223,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
     def test_pfs_named_group(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA],
                 curves=[TlsNamedCurve.SECP256R1],
@@ -249,7 +249,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
     def test_output(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             '127.0.0.1', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256],
                 curves=[TlsNamedCurve.X25519, TlsNamedCurve.SECP256R1],
@@ -267,7 +267,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
     def test_version_1_3(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
                 curves=[TlsNamedCurve.X25519, TlsNamedCurve.SECP256R1],

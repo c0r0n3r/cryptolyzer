@@ -5,6 +5,8 @@ import typing
 
 import unittest
 
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+
 from cryptodatahub.ike.algorithm import (
     Ikev1AttributeType,
     Ikev1AuthenticationMethod,
@@ -372,7 +374,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
             exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             diffie_hellman_groups=(),
         )
-        transfer = L4TransferIkev1InvalidValueResponse('localhost', 0, L4TransferSocketParams(timeout=0.5))
+        transfer = L4TransferIkev1InvalidValueResponse('localhost', 0, OFFLINE_L4_SOCKET_PARAMS)
         with self.assertRaises(SecurityError) as ctx:
             IKEv1ClientHandshake().do_handshake(
                 transfer,
@@ -481,7 +483,7 @@ class TestIkeClient(unittest.TestCase):
         self.assertEqual(l7_client.port, 500)
 
     def test_error_plain_text_response(self):
-        transfer = L4TransferDummy('localhost', 0, L4TransferSocketParams(timeout=0.5))
+        transfer = L4TransferDummy('localhost', 0, OFFLINE_L4_SOCKET_PARAMS)
         transfer._buffer = bytearray(b'HTTP/1.1 400 Bad Request\r\n')  # pylint: disable=protected-access
 
         with self.assertRaises(SecurityError) as ctx:
@@ -491,7 +493,7 @@ class TestIkeClient(unittest.TestCase):
         self.assertEqual(transfer.buffer, bytearray())
 
     def test_error_unparsable_response(self):
-        transfer = L4TransferDummy('localhost', 0, L4TransferSocketParams(timeout=0.5))
+        transfer = L4TransferDummy('localhost', 0, OFFLINE_L4_SOCKET_PARAMS)
         transfer._buffer = bytearray(b'\xff\x00')  # pylint: disable=protected-access
 
         with self.assertRaises(SecurityError) as ctx:
@@ -629,7 +631,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
             def get_default_timeout(cls):
                 return 1
 
-        transfer = _L4TransferCookieScript('localhost', 0, L4TransferSocketParams(timeout=0.5))
+        transfer = _L4TransferCookieScript('localhost', 0, OFFLINE_L4_SOCKET_PARAMS)
         with self.assertRaises(IsakmpNotify) as ctx:
             IKEv2ClientHandshake().do_handshake(
                 transfer,

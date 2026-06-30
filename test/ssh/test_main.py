@@ -8,7 +8,7 @@ except ImportError:
 
 import sys
 
-from test.common.classes import TestMainBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 
 import test.ssh.test_ciphers
 import test.ssh.test_dhparams
@@ -17,9 +17,6 @@ import test.ssh.test_vulnerabilities
 from test.common.markers import live_server
 
 import urllib3
-
-
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.ssh.analyzer import ProtocolHandlerSshVersionIndependent
 from cryptolyzer.ssh.server import L7ServerSsh
@@ -38,7 +35,7 @@ class TestMain(TestMainBase):
         return main
 
     def setUp(self):
-        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=2)))
+        self.threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         self.threaded_server.start()
 
         self.host = 'localhost'

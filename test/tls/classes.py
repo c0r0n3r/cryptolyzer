@@ -6,7 +6,7 @@ import datetime
 import abc
 from unittest import mock
 
-from test.common.classes import TestThreadedServer, TestLoggerBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestThreadedServer, TestLoggerBase
 
 import attr
 
@@ -26,7 +26,6 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 from cryptolyzer.tls.server import L7ServerTls, L7ServerStartTlsTextBase, TlsServerHandshake
@@ -42,7 +41,7 @@ class TestTlsCases:
         @staticmethod
         def create_server(configuration=None):
             threaded_server = L7ServerTlsTest(L7ServerTls(
-                'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=configuration
+                'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=configuration
             ))
             threaded_server.wait_for_server_listen()
             return threaded_server

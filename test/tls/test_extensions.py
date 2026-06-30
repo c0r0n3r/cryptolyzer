@@ -5,7 +5,7 @@ from unittest import mock
 
 import datetime
 
-from test.common.classes import TestLoggerBase, TestMainBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestLoggerBase, TestMainBase
 from test.common.markers import live_server
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
@@ -51,7 +51,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         return result
 
     def test_next_protocols(self):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.next_protocols, [])
@@ -59,7 +59,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
     def test_next_protocols_offered(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 next_protocols=[TlsNextProtocolName.HTTP_1_1],
                 application_layer_protocols=[TlsProtocolName.HTTP_1_1],
@@ -92,7 +92,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         )
 
     def test_application_layer_protocols(self):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.application_layer_protocols, [])
@@ -100,7 +100,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
     def test_application_layer_protocols_offered(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 next_protocols=[TlsNextProtocolName.HTTP_1_1],
                 application_layer_protocols=[TlsProtocolName.HTTP_1_1],
@@ -161,7 +161,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         )
 
     def test_compression_method(self):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
@@ -175,7 +175,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         analyzer = AnalyzerExtensions()
         threaded_server_tls13 = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
                 max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
@@ -192,7 +192,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         self.assertEqual(set(compression_methods), set())
 
     def test_ec_point_formats(self):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(
@@ -213,7 +213,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         self.assertIn('Server offers point format(s) "UNCOMPRESSED"', log_lines)
 
     def test_encrypt_then_mac(self):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result(
             'localhost', threaded_server.l7_server.l4_transfer.bind_port,
@@ -232,7 +232,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
     def test_encrypt_then_mac_supported(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 encrypt_then_mac_supported=True,
             ),
@@ -245,7 +245,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
 
         threaded_server_gcm = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_GCM_SHA256],
             ),
@@ -258,7 +258,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         self.assertNotIn('Server offers encrypt then MAC', log_lines)
 
     def test_extended_master_secret(self):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.extended_master_secret_supported)
@@ -268,7 +268,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
     def test_extended_master_secret_supported(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 extended_master_secret_supported=True,
             ),
@@ -297,7 +297,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
             log_lines = self.pop_log_lines()
             self.assertIn('Server does not offer accurate clock', log_lines)
 
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.5)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.clock_is_accurate)
@@ -307,7 +307,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         analyzer = AnalyzerExtensions()
         threaded_server_tls13 = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
                 max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
@@ -380,7 +380,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
             self.assertEqual(limit_server, 1024)
 
     def test_renegotiation_info(self):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.renegotiation_supported)
@@ -390,7 +390,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
     def test_renegotiation_info_supported(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 renegotiation_supported=True,
             ),
@@ -402,7 +402,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         self.assertIn('Server offers renegotiation', log_lines)
 
     def test_session_cache(self):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.session_cache_supported)
@@ -412,7 +412,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         analyzer = AnalyzerExtensions()
         threaded_server_tls13 = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
                 max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
@@ -433,7 +433,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
     def test_session_cache_supported(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 session_cache_supported=True,
             ),
@@ -445,7 +445,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         self.assertIn('Server offers session cache', log_lines)
 
     def test_session_ticket(self):
-        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=1.0)))
+        threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.wait_for_server_listen()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(result.session_ticket_supported)
@@ -455,7 +455,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
     def test_session_ticket_supported(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             'localhost', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 session_ticket_supported=True,
             ),
@@ -469,7 +469,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
     def test_output(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             '127.0.0.1', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
         ))
         threaded_server.wait_for_server_listen()
         func_arguments, cli_arguments = self._get_arguments(

@@ -5,7 +5,7 @@ from unittest import mock
 
 from collections import OrderedDict
 
-from test.common.classes import TestMainBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 
 import test.tls.test_ciphers
 from test.common.markers import live_server
@@ -37,7 +37,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
     @staticmethod
     def create_server(configuration=None):
         threaded_server = L7ServerTlsTest(L7ServerTls(
-            'localhost', 0, L4TransferSocketParams(timeout=10), configuration=configuration
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=configuration
         ))
         threaded_server.wait_for_server_listen()
         return threaded_server
@@ -268,7 +268,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_output(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
-            '127.0.0.1', 0, L4TransferSocketParams(timeout=10), configuration=TlsServerConfiguration(
+            '127.0.0.1', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=TlsServerConfiguration(
                 min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
                 cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA],
             )

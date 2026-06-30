@@ -5,6 +5,7 @@ from unittest import mock
 
 from collections import OrderedDict
 from test.common.markers import live_server
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
 
 from cryptodatahub.common.algorithm import Authentication, Hash
 from cryptodatahub.common.grade import Grade
@@ -168,7 +169,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
     def test_pubkeys_with_algorithm_limit(self):
         server_configuration = SshServerConfiguration(max_remote_algorithm_count=50)
         threaded_server = L7ServerSshTest(L7ServerSsh(
-            'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=server_configuration
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=server_configuration
         ))
         threaded_server.start()
 

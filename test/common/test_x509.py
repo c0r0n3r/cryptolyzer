@@ -7,7 +7,7 @@ import pathlib
 from collections import OrderedDict
 from unittest import mock
 
-from test.common.classes import TestKeyBase, TestLoggerBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestKeyBase, TestLoggerBase
 from test.tls.classes import L7ServerTlsTest
 
 import asn1crypto.crl
@@ -96,7 +96,7 @@ class TestPublicKeyX509(TestLoggerBase):
     @staticmethod
     def _create_server(cert_ders):
         threaded_server = L7ServerTlsTest(L7ServerTls(
-            'localhost', 0, L4TransferSocketParams(timeout=5.0),
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(certificates=cert_ders)
         ))
         threaded_server.wait_for_server_listen()

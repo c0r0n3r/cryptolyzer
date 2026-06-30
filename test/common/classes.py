@@ -29,6 +29,7 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
 
 BADSSL_COM_L4_SOCKET_PARAMS = L4TransferSocketParams(timeout=10, throttle_delay=5)
+OFFLINE_L4_SOCKET_PARAMS = L4TransferSocketParams(timeout=5.0)
 
 
 @attr.s(frozen=True, eq=False)

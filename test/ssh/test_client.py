@@ -4,6 +4,7 @@
 import unittest
 from unittest import mock
 from test.common.markers import live_server
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
 
 from cryptodatahub.common.algorithm import NamedGroup
 
@@ -54,7 +55,7 @@ class TestSshClientHandshake(TestL7ClientBase):
 
     def test_error_disconnect(self):
         threaded_server = L7ServerSshTest(L7ServerSsh(
-            'localhost', 0, l4_socket_params=L4TransferSocketParams(timeout=0.2)
+            'localhost', 0, l4_socket_params=OFFLINE_L4_SOCKET_PARAMS
         ))
         threaded_server.start()
 
@@ -102,7 +103,7 @@ class TestSshClientHandshake(TestL7ClientBase):
         self.assertIn(SshDHKeyExchangeReply, server_messages.keys())
 
     def test_ssh_client(self):
-        threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.2)))
+        threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.start()
 
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)

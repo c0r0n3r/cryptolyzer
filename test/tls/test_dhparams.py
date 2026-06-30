@@ -3,7 +3,7 @@
 
 from unittest import mock
 
-from test.common.classes import TestMainBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from test.common.markers import live_server
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -201,7 +201,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsPlainTextResponse('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
 
@@ -305,7 +305,7 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
     def test_output(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             '127.0.0.1', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA],
                 dh_param=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,

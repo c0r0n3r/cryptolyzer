@@ -3,6 +3,8 @@
 
 import unittest
 
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+
 from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -77,7 +79,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
     @staticmethod
     def create_server(configuration=None):
         threaded_server = L7ServerTlsTest(L7ServerTls(
-            'localhost', 0, L4TransferSocketParams(timeout=5), configuration=configuration
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=configuration
         ))
         threaded_server.wait_for_server_listen()
         return threaded_server

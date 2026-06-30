@@ -3,7 +3,7 @@
 
 from unittest import mock
 
-from test.common.classes import TestMainBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -71,7 +71,7 @@ class TestSslVersions(TestTlsCases.TestTlsBase):
 
     def test_versions(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTls('localhost', 0, L4TransferSocketParams(timeout=0.5), configuration=TlsServerConfiguration(
+            L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=TlsServerConfiguration(
                 min_protocol_version=TlsProtocolVersion(TlsVersion.SSL3),
                 max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
             )),
@@ -207,7 +207,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsPlainTextResponse('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
         self.assertEqual(self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port).versions, [])
@@ -215,7 +215,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
     def test_output(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             '127.0.0.1', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
                 max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),

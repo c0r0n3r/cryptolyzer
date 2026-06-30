@@ -7,7 +7,12 @@ from collections import OrderedDict
 
 import datetime
 
-from test.common.classes import BADSSL_COM_L4_SOCKET_PARAMS, TestMainBase, TestThreadedServerHttps
+from test.common.classes import (
+    BADSSL_COM_L4_SOCKET_PARAMS,
+    OFFLINE_L4_SOCKET_PARAMS,
+    TestMainBase,
+    TestThreadedServerHttps,
+)
 from test.common.markers import live_server
 
 import asn1crypto
@@ -183,7 +188,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
     @staticmethod
     def _create_server(cert_ders):
         threaded_server = L7ServerTlsTest(L7ServerTls(
-            'localhost', 0, L4TransferSocketParams(timeout=5.0),
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(certificates=cert_ders)
         ))
         threaded_server.wait_for_server_listen()
@@ -253,7 +258,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
     def test_subject_match(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             '127.0.0.1', 0,
-            L4TransferSocketParams(timeout=1.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(certificates=[self.SNAKEOIL_CERT_DER]),
         ))
         threaded_server.wait_for_server_listen()
@@ -417,7 +422,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, l4_socket_params=L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsPlainTextResponse('localhost', 0, l4_socket_params=OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
         self.assertEqual(
@@ -531,7 +536,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
     def test_output(self):
         threaded_server = L7ServerTlsTest(L7ServerTls(
             '127.0.0.1', 0,
-            L4TransferSocketParams(timeout=5.0),
+            OFFLINE_L4_SOCKET_PARAMS,
             configuration=TlsServerConfiguration(
                 certificates=[self.SNAKEOIL_CERT_DER],
             )
