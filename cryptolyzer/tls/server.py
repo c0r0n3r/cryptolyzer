@@ -21,6 +21,7 @@ from cryptoparser.tls.extension import (
     TlsExtensionEncryptThenMAC,
     TlsExtensionExtendedMasterSecret,
     TlsExtensionKeyShareClientHelloRetry,
+    TlsExtensionKeyShareServer,
     TlsExtensionNextProtocolNegotiationServer,
     TlsExtensionRenegotiationInfo,
     TlsExtensionSessionTicket,
@@ -94,6 +95,7 @@ from cryptolyzer.common.transfer import L4ServerTCP, L4ServerUDP
 from cryptolyzer.common.utils import buffer_flush, buffer_is_plain_text
 
 from cryptolyzer.tls.application import L7OpenVpnBase
+from cryptolyzer.tls.client import key_share_entry_from_named_curve
 
 
 @attr.s
@@ -327,11 +329,14 @@ class TlsServerHandshake(TlsServer):
 
         if protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2) and self.configuration.curves:
             selected_curve = self._get_ecdhe_curve(message)
-            if selected_curve is not None:
-                extensions.append(TlsExtensionKeyShareClientHelloRetry(selected_curve))
-            else:
+            if selected_curve is None:
                 self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.HANDSHAKE_FAILURE)
                 raise StopIteration()
+
+            if selected_curve in self._get_client_key_share_groups(message):
+                extensions.append(TlsExtensionKeyShareServer(key_share_entry_from_named_curve(selected_curve)))
+            else:
+                extensions.append(TlsExtensionKeyShareClientHelloRetry(selected_curve))
 
         extensions.extend(self._get_configured_extensions())
 
@@ -390,6 +395,17 @@ class TlsServerHandshake(TlsServer):
                 return curve
 
         return None
+
+    @staticmethod
+    def _get_client_key_share_groups(client_hello):
+        try:
+            key_share_entries = client_hello.extensions.get_item_by_type(
+                TlsExtensionType.KEY_SHARE
+            ).key_share_entries
+        except KeyError:
+            return []
+
+        return [key_share_entry.group for key_share_entry in key_share_entries]
 
     @staticmethod
     def _compose_dh_param_bytes(dh_param):

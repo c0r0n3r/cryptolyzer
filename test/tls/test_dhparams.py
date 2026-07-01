@@ -31,7 +31,7 @@ from cryptolyzer.__main__ import main
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
-class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
+class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable=too-many-public-methods
     @classmethod
     def _get_main_func(cls):
         return main
@@ -89,6 +89,20 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):
             'localhost', threaded_server.l7_server.l4_transfer.bind_port, TlsProtocolVersion(TlsVersion.TLS1_3)
         )
         self.assertEqual(result.key_reuse, None)
+
+    def test_tls_1_3_key_reuse(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            curves=[TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096],
+        ))
+        result = self.get_result(
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port, TlsProtocolVersion(TlsVersion.TLS1_3)
+        )
+        self.assertEqual(
+            result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096]
+        )
+        self.assertIsNone(result.dhparam)
+        self.assertFalse(result.key_reuse)
 
     @live_server
     @mock.patch.object(
