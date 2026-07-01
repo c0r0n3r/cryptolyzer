@@ -30,6 +30,7 @@ from cryptolyzer.common.utils import LogSingleton
 
 BADSSL_COM_L4_SOCKET_PARAMS = L4TransferSocketParams(timeout=10, throttle_delay=5)
 OFFLINE_L4_SOCKET_PARAMS = L4TransferSocketParams(timeout=5.0)
+OFFLINE_SERVER_MAX_IDLE_TIME = 20.0
 
 
 @attr.s(frozen=True, eq=False)
@@ -288,8 +289,30 @@ class TestThreadedServer(threading.Thread):
     def __init__(self, server):
         super().__init__()
 
+        self.daemon = True
         self._server = server
+        self._server.max_idle_time = OFFLINE_SERVER_MAX_IDLE_TIME
         self._server.init_connection()
+
+    def stop(self):
+        self._server.stopped = True
+
+        if not self.is_alive():
+            return
+
+        l4_transfer = getattr(self._server, 'l4_transfer', None)
+        try:
+            bind_port = l4_transfer.bind_port if l4_transfer is not None else None
+        except (AttributeError, AssertionError):
+            bind_port = None
+        if bind_port:
+            try:
+                with socket.create_connection(('localhost', bind_port), timeout=1):
+                    pass
+            except OSError:
+                pass
+
+        self.join(timeout=5)
 
     def wait_for_server_listen(self, expiry_in_sec=5):
         self.start()

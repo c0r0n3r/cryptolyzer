@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import abc
+import time
 import typing
 
 import attr
@@ -28,6 +29,11 @@ class L7ServerBase(L7TransferBase):
         default=None,
         validator=attr.validators.optional(attr.validators.instance_of(int))
     )
+    max_idle_time: float = attr.ib(
+        default=0.0,
+        validator=attr.validators.instance_of((int, float))
+    )
+    stopped: bool = attr.ib(default=False, validator=attr.validators.instance_of(bool))
 
     @classmethod
     @abc.abstractmethod
@@ -61,8 +67,12 @@ class L7ServerBase(L7TransferBase):
     def _do_handshakes(self, last_handshake_message_type):
         client_messages = []
         actual_handshake_count = 0
+        idle_deadline = None
         while True:
             self.l4_transfer.close_client()
+
+            if self.stopped:
+                break
 
             if self.max_handshake_count is not None and actual_handshake_count >= self.max_handshake_count:
                 break
@@ -70,8 +80,16 @@ class L7ServerBase(L7TransferBase):
             try:
                 self.l4_transfer.accept()
             except NetworkError:
+                if idle_deadline is None:
+                    idle_deadline = time.monotonic() + self.max_idle_time
+                if time.monotonic() >= idle_deadline:
+                    break
+                continue
+
+            if self.stopped:
                 break
 
+            idle_deadline = None
             actual_handshake_count += 1
             client_messages.append(self._do_handshake(last_handshake_message_type))
 
