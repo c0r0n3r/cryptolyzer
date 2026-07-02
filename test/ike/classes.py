@@ -10,7 +10,7 @@ Keep helpers small and deterministic.
 
 import random
 
-from test.common.classes import TestThreadedServer
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestThreadedServer
 
 from cryptodatahub.ike.algorithm import (
     Ikev1AuthenticationMethod,
@@ -724,7 +724,6 @@ def create_ike_server(
     server_class,
     *,
     max_handshake_count=2,
-    timeout=0.5,
     configuration=None,
     **kwargs
 ):
@@ -737,7 +736,7 @@ def create_ike_server(
     threaded_server = L7ServerIkeTest(server_class(  # type: ignore[call-arg]
         'localhost',
         0,
-        L4TransferSocketParams(timeout=timeout),
+        OFFLINE_L4_SOCKET_PARAMS,
         configuration=configuration,
         max_handshake_count=max_handshake_count,
         **kwargs

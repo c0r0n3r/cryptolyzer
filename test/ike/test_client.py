@@ -5,7 +5,11 @@ import typing
 
 import unittest
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+from test.common.classes import (
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
+    OFFLINE_L4_SOCKET_PARAMS,
+    OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
+)
 
 from cryptodatahub.ike.algorithm import (
     Ikev1AttributeType,
@@ -271,7 +275,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
         threaded_server = L7ServerIkeTest(L7ServerIkeNoProposalChosen(
             'localhost',
             0,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_L4_SOCKET_PARAMS,
             max_handshake_count=1,
         ))
         threaded_server.wait_for_server_listen()
@@ -282,7 +286,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
             'ipsec',
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
 
@@ -322,7 +326,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
         threaded_server = L7ServerIkeTest(L7ServerIkeIkev1HeaderOnlyPartialPayload(
             'localhost',
             0,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_L4_SOCKET_PARAMS,
             max_handshake_count=1,
         ))
         threaded_server.wait_for_server_listen()
@@ -333,7 +337,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
             'ipsec',
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
 
@@ -358,7 +362,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
         transfer = L4TransferIkev1NonceFirst(
             'localhost',
             0,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_L4_SOCKET_PARAMS,
             init_message=init_message,
         )
         with self.assertRaises(IsakmpNotify) as ctx:
@@ -391,7 +395,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
         transfer = L4TransferIkev1UnexpectedExchangeType(
             'localhost',
             0,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_L4_SOCKET_PARAMS,
             init_message=init_message,
         )
         with self.assertRaises(SecurityError) as ctx:
@@ -406,7 +410,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
         threaded_server = L7ServerIkeTest(L7ServerIkeNotify(
             'localhost',
             0,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_L4_SOCKET_PARAMS,
             max_handshake_count=1,
         ))
         threaded_server.wait_for_server_listen()
@@ -417,7 +421,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
             'ipsec',
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
 
@@ -438,12 +442,11 @@ class TestIkev1ClientHandshake(unittest.TestCase):
     def _start_threaded_server(
         l7_server_class: typing.Type[L7ServerIke] = L7ServerIke,
         max_handshake_count: int = 2,
-        socket_timeout: float = 0.5,
     ) -> L7ServerIkeTest:
         threaded_server = L7ServerIkeTest(l7_server_class(
             'localhost',
             0,
-            L4TransferSocketParams(timeout=socket_timeout),
+            OFFLINE_L4_SOCKET_PARAMS,
             max_handshake_count=max_handshake_count,
         ))
         threaded_server.wait_for_server_listen()
@@ -510,12 +513,11 @@ class TestIkev2ClientHandshake(unittest.TestCase):
     def _start_threaded_server(
         l7_server_class: typing.Type[L7ServerIke] = L7ServerIke,
         max_handshake_count: int = 2,
-        socket_timeout: float = 0.5,
     ) -> L7ServerIkeTest:
         threaded_server = L7ServerIkeTest(l7_server_class(
             'localhost',
             0,
-            L4TransferSocketParams(timeout=socket_timeout),
+            OFFLINE_L4_SOCKET_PARAMS,
             max_handshake_count=max_handshake_count,
         ))
         threaded_server.wait_for_server_listen()
@@ -656,7 +658,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
             'ipsec',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
         )
 
         with self.assertRaises(IsakmpNotify) as ctx:
@@ -677,7 +679,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
             'ipsec',
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
 
@@ -699,7 +701,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
             'ipsec',
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
 
@@ -722,7 +724,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
         transfer = L4TransferUnexpectedExchangeType(
             'localhost',
             0,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_L4_SOCKET_PARAMS,
             init_message=init_message,
         )
         with self.assertRaises(SecurityError) as ctx:

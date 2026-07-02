@@ -3,7 +3,11 @@
 
 from unittest import mock
 
-from test.common.classes import TestLoggerBase
+from test.common.classes import (
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
+    OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
+    TestLoggerBase,
+)
 from test.ike.classes import (
     L7ServerIkeIkev2HeaderOnlyPartialPayload,
     L7ServerIkeNoProposalChosen,
@@ -43,7 +47,7 @@ class TestIkeVersions(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                L4TransferSocketParams(timeout=0.5),
+                OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.error, NetworkErrorType.NO_CONNECTION)
@@ -76,7 +80,7 @@ class TestIkeVersions(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                L4TransferSocketParams(timeout=0.5),
+                OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.error, NetworkErrorType.NO_CONNECTION)
@@ -112,7 +116,7 @@ class TestIkeVersions(TestLoggerBase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
         self.assertEqual(
@@ -139,7 +143,7 @@ class TestIkeVersions(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                L4TransferSocketParams(timeout=0.5),
+                OFFLINE_CLIENT_L4_SOCKET_PARAMS,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.notify, Ikev2NotifyType.INVALID_SYNTAX)
@@ -160,7 +164,7 @@ class TestIkeVersions(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                L4TransferSocketParams(timeout=0.5),
+                OFFLINE_CLIENT_L4_SOCKET_PARAMS,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.notify, Ikev1NotifyType.INVALID_PAYLOAD_TYPE)
@@ -175,7 +179,7 @@ class TestIkeVersions(TestLoggerBase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=2),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
 
@@ -197,7 +201,7 @@ class TestIkeVersions(TestLoggerBase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
 
