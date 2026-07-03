@@ -5,7 +5,7 @@ from unittest import mock
 
 from collections import OrderedDict
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 
 import test.tls.test_ciphers
 from test.common.markers import live_server
@@ -17,7 +17,6 @@ from cryptoparser.tls.extension import TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.result import AnalyzerTargetTls
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.tls.all import AnalyzerAll
 from cryptolyzer.tls.ciphers import AnalyzerResultCipherSuites
@@ -47,7 +46,7 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
             host,
             port,
             protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
-            l4_socket_params=L4TransferSocketParams(),
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=None,
             scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments

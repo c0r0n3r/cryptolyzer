@@ -5,7 +5,7 @@ from unittest import mock
 
 from collections import OrderedDict
 from test.common.markers import live_server
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 
 from cryptodatahub.common.algorithm import Authentication, Hash
 from cryptodatahub.common.grade import Grade
@@ -16,7 +16,6 @@ from cryptoparser.dnsrec.record import DnsRecordSshfp
 from cryptoparser.ssh.subprotocol import SshReasonCode
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.dnsrec.client import L7ClientDns
 from cryptolyzer.ssh.client import L7ClientSsh, SshClientHandshake, SshDisconnect
@@ -28,7 +27,7 @@ from .classes import L7ServerSshTest, TestSshCases
 
 class TestSshPubkeys(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerPublicKeys()
         l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)

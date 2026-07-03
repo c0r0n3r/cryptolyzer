@@ -4,7 +4,7 @@
 import unittest
 from unittest import mock
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 
 from cryptodatahub.common.algorithm import Authentication, BlockCipher
 
@@ -14,7 +14,6 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite, SslCipherKind
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
@@ -49,7 +48,7 @@ class TestSslCiphers(unittest.TestCase):
             host,
             port,
             protocol_version=TlsProtocolVersion(TlsVersion.SSL2),
-            l4_socket_params=L4TransferSocketParams(),
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=None,
             scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -152,7 +151,7 @@ class TestTlsCiphers(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disable
             host,
             port,
             protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
-            l4_socket_params=L4TransferSocketParams(),
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=None,
             scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments

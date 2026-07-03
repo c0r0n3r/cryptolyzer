@@ -1,5 +1,5 @@
 from test.common.markers import live_server
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
@@ -9,7 +9,6 @@ from cryptoparser.common.base import Serializable, SerializableTextEncoder
 
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerTargetSsh
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
 
 from cryptolyzer.ssh.client import L7ClientSsh, SshDisconnect
@@ -27,7 +26,7 @@ from .classes import L7ServerSshTest, TestSshCases
 
 class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerVulnerabilities()
         l7_client = L7ClientSsh.from_scheme('ssh', host, port, l4_socket_params, ip)
         analyzer_result = analyzer.analyze(l7_client)

@@ -9,6 +9,7 @@ import datetime
 
 from test.common.classes import (
     BADSSL_COM_L4_SOCKET_PARAMS,
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
     OFFLINE_L4_SOCKET_PARAMS,
     TestMainBase,
     TestThreadedServerHttps,
@@ -201,7 +202,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
-            l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerPublicKeys()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)

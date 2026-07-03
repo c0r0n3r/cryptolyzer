@@ -3,13 +3,12 @@
 
 from unittest import mock
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.tls.client import L7ClientTlsBase, SslError
 from cryptolyzer.tls.exception import TlsAlert
@@ -24,7 +23,7 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 class TestSslVersions(TestTlsCases.TestTlsBase):
     @staticmethod
     def get_result(
-            host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
+            host, port, protocol_version=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
@@ -130,7 +129,7 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
 
     @staticmethod
     def get_result(
-            host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
+            host, port, protocol_version=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)

@@ -3,7 +3,13 @@
 
 from unittest import mock
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestLoggerBase, TestMainBase, TestThreadedServerHttps
+from test.common.classes import (
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
+    OFFLINE_L4_SOCKET_PARAMS,
+    TestLoggerBase,
+    TestMainBase,
+    TestThreadedServerHttps,
+)
 
 from cryptodatahub.common.algorithm import Authentication, KeyExchange
 from cryptodatahub.common.key import PublicKeySize
@@ -19,7 +25,6 @@ from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.__main__ import main
 from cryptolyzer.common.dhparam import DHParamWellKnown
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
@@ -43,7 +48,7 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
 
     @staticmethod
     def get_result(
-            host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='https'
+            host, port, protocol_version=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='https'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerSimulations()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)

@@ -4,7 +4,7 @@
 import unittest
 from unittest import mock
 from test.common.markers import live_server
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 
 from cryptodatahub.common.algorithm import NamedGroup
 
@@ -38,7 +38,7 @@ class TestSshDisconnect(unittest.TestCase):
 
 class TestL7ClientBase(unittest.TestCase):
     @staticmethod
-    def get_result(host, port=22, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port=22, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)

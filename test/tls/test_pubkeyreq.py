@@ -5,7 +5,12 @@ from unittest import mock
 
 from collections import OrderedDict
 
-from test.common.classes import BADSSL_COM_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestMainBase
+from test.common.classes import (
+    BADSSL_COM_L4_SOCKET_PARAMS,
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
+    OFFLINE_L4_SOCKET_PARAMS,
+    TestMainBase,
+)
 from test.common.markers import live_server
 
 import asn1crypto.x509
@@ -13,7 +18,6 @@ import asn1crypto.x509
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest
@@ -62,7 +66,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
-            l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerPublicKeyRequest()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)

@@ -3,14 +3,13 @@
 
 from unittest import mock
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm
 from cryptoparser.tls.extension import TlsExtensionSignatureAlgorithms
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.server import L7ServerTls
@@ -29,7 +28,7 @@ class TestTlsSigAlgos(TestTlsCases.TestTlsBase, TestMainBase):
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
-            l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerSigAlgos()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)

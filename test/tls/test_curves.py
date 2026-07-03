@@ -5,7 +5,7 @@ from unittest import mock
 
 import socket
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestMainBase
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -14,7 +14,7 @@ from cryptoparser.tls.extension import TlsNamedCurve
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
-from cryptolyzer.common.transfer import L4ClientTCP, L4TransferSocketParams
+from cryptolyzer.common.transfer import L4ClientTCP
 from cryptolyzer.tls.client import L7ClientTlsBase, TlsHandshakeClientHelloAnyAlgorithm
 from cryptolyzer.tls.curves import AnalyzerCurves
 from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
@@ -34,7 +34,7 @@ class TestTlsCurves(TestTlsCases.TestTlsBase, TestMainBase):
             host,
             port,
             protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
-            l4_socket_params=L4TransferSocketParams(),
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=None,
             scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments

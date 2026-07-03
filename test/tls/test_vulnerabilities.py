@@ -3,13 +3,12 @@
 
 import unittest
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 
 from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 from cryptolyzer.tls.vulnerabilities import AnalyzerResultVulnerabilityCiphers, AnalyzerVulnerabilities
@@ -68,7 +67,7 @@ class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):
 
     @staticmethod
     def get_result(
-            host, port, protocol_version=None, l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
+            host, port, protocol_version=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerVulnerabilities()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)

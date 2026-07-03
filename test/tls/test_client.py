@@ -8,7 +8,13 @@ import socket
 import unittest
 from unittest import mock
 
-from test.common.classes import BADSSL_COM_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestLoggerBase
+from test.common.classes import (
+    BADSSL_COM_L4_SOCKET_PARAMS,
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
+    OFFLINE_L4_SOCKET_PARAMS,
+    OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
+    TestLoggerBase,
+)
 from test.common.markers import live_server
 
 import urllib3
@@ -57,6 +63,7 @@ from cryptolyzer.tls.client import (
     ClientOpenVpnBase,
     ClientPOP3,
     ClientRDP,
+    ClientSMTP,
     ClientXMPPClient,
     ClientXMPPServer,
     L7ClientHTTPS,
@@ -598,7 +605,7 @@ class TestL7ClientBase(TestLoggerBase):
             proto,
             host,
             port,
-            l4_socket_params=L4TransferSocketParams(),
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=None,
             protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
             analyzer=None
@@ -694,7 +701,7 @@ class TestL7ClientTlsBase(TestL7ClientBase):
         threaded_server.wait_for_server_listen()
         analyzer = AnalyzerVersions()
         l7_client = L7ClientTlsMock(
-            'localhost', threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=5)
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port, OFFLINE_CLIENT_L4_SOCKET_PARAMS
         )
         self.assertEqual(
             analyzer.analyze(l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)).versions,
@@ -824,7 +831,7 @@ class TestClientIMAP(TestL7ClientBase):
             'imap',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertEqual(result.versions, [])
 
@@ -834,7 +841,7 @@ class TestClientIMAP(TestL7ClientBase):
             'imap',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
@@ -844,7 +851,7 @@ class TestClientIMAP(TestL7ClientBase):
             'imap',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertEqual(result.versions, [])
 
@@ -854,7 +861,7 @@ class TestClientIMAP(TestL7ClientBase):
             'imap',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertEqual(result.versions, [])
 
@@ -864,7 +871,7 @@ class TestClientIMAP(TestL7ClientBase):
             'imap',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertEqual(result.versions, [])
 
@@ -987,6 +994,9 @@ class TestClientSMTP(TestL7ClientBase):
         client = L7ClientTlsBase.from_scheme('smtps', 'localhost')
         self.assertEqual(client.port, 465)
 
+    def test_default_timeout(self):
+        self.assertEqual(ClientSMTP.get_default_timeout(), 35)
+
 
 class TestClientFTP(TestL7ClientBase):
     @staticmethod
@@ -1009,7 +1019,7 @@ class TestClientFTP(TestL7ClientBase):
             'ftp',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertEqual(result.versions, [])
 
@@ -1021,7 +1031,7 @@ class TestClientFTP(TestL7ClientBase):
             'ftp',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertEqual(result.versions, [])
 
@@ -1032,7 +1042,7 @@ class TestClientFTP(TestL7ClientBase):
             'ftp',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
@@ -1042,7 +1052,7 @@ class TestClientFTP(TestL7ClientBase):
             'ftp',
             'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 
@@ -1423,7 +1433,7 @@ class TestClientXMPP(TestL7ClientBase):
         threaded_server.start()
         _, result = self.get_result(
             'xmppclient', 'localhost',
-            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
+            threaded_server.l7_server.l4_transfer.bind_port, OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS
         )
         self.assertEqual(result.versions, [])
 
@@ -1437,7 +1447,7 @@ class TestClientXMPP(TestL7ClientBase):
         threaded_server.start()
         _, result = self.get_result(
             'xmppclient', 'localhost',
-            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
+            threaded_server.l7_server.l4_transfer.bind_port, OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS
         )
         self.assertEqual(result.versions, [])
 
@@ -1446,7 +1456,7 @@ class TestClientXMPP(TestL7ClientBase):
         _, result = self.get_result(
             'xmppclient', 'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertEqual(result.versions, [])
 
@@ -1455,7 +1465,7 @@ class TestClientXMPP(TestL7ClientBase):
         _, result = self.get_result(
             'xmppclient', 'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertEqual(result.versions, [])
 
@@ -1473,7 +1483,7 @@ class TestClientXMPP(TestL7ClientBase):
         threaded_server.start()
         _, result = self.get_result(
             'xmppclient', 'localhost',
-            threaded_server.l7_server.l4_transfer.bind_port, L4TransferSocketParams(timeout=0.2)
+            threaded_server.l7_server.l4_transfer.bind_port, OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS
         )
         self.assertEqual(result.versions, [])
 
@@ -1482,7 +1492,7 @@ class TestClientXMPP(TestL7ClientBase):
         _, result = self.get_result(
             'xmppclient', 'localhost',
             threaded_server.l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=10),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
         )
         self.assertIn(TlsProtocolVersion(TlsVersion.TLS1_2), result.versions)
 

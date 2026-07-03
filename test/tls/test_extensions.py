@@ -5,7 +5,7 @@ from unittest import mock
 
 import datetime
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestLoggerBase, TestMainBase
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestLoggerBase, TestMainBase
 from test.common.markers import live_server
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
@@ -25,7 +25,6 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase, TlsAlert, TlsAlertDescription
 from cryptolyzer.tls.extensions import AnalyzerExtensions
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
@@ -43,7 +42,7 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
-            l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerExtensions()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)

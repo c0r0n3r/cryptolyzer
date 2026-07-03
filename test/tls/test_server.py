@@ -10,7 +10,7 @@ import sys
 import unittest
 from unittest import mock
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+from test.common.classes import OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -45,7 +45,7 @@ from cryptoparser.tls.subprotocol import (
 from cryptodatahub.tls.algorithm import TlsNextProtocolName, TlsProtocolName
 
 from cryptolyzer.common.dhparam import DHParamWellKnown, parse_tls_dh_params, parse_ecdh_params
-from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP, L4TransferSocketParams
+from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP
 from cryptolyzer.tls.client import (
     ClientFTP,
     ClientIMAP,
@@ -111,7 +111,7 @@ class TestL7ServerBase(unittest.TestCase):
         return client_class(
             l7_server.address,
             l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=5),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
             ip=l7_server.l4_transfer.bind_address,
         )
 

@@ -1,5 +1,5 @@
 from test.common.markers import live_server
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
@@ -16,7 +16,6 @@ from cryptoparser.ssh.subprotocol import SshMessageCode
 
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerTargetSsh
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.ssh.client import L7ClientSsh, SshDisconnect
 from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration, SshServerHandshake
@@ -35,7 +34,7 @@ class _TestSshServerHandshake(SshServerHandshake):
 
 class TestSshCiphers(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerCiphers()
         l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)

@@ -4,7 +4,7 @@
 import unittest
 from unittest import mock
 
-from test.common.classes import OFFLINE_L4_SOCKET_PARAMS
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 
 from cryptoparser.common.exception import NotEnoughData
 
@@ -12,7 +12,7 @@ from cryptoparser.ssh.record import SshRecordInit
 from cryptoparser.ssh.subprotocol import SshDisconnectMessage, SshProtocolMessage, SshSoftwareVersionUnparsed
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
-from cryptolyzer.common.transfer import L4ClientTCP, L4TransferSocketParams
+from cryptolyzer.common.transfer import L4ClientTCP
 
 from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.ssh.exception import SshReasonCode
@@ -24,7 +24,7 @@ from .classes import L7ServerSshTest
 
 class TestL7ServerBase(unittest.TestCase):
     @staticmethod
-    def get_result(host, port, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)
