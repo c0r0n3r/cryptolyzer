@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from test.common.classes import TestMainBase, TestThreadedServerHttp
-from test.common.markers import live_server
 
 from cryptolyzer.__main__ import main
 
@@ -33,7 +32,6 @@ class TestMain(TestMainBase):
 
         test_http_server.kill()
 
-    @live_server
     def test_content(self):
         test_http_server = TestThreadedServerHttp('127.0.0.1', 0)
         test_http_server.init_connection()
@@ -42,14 +40,10 @@ class TestMain(TestMainBase):
         uri = f'http://127.0.0.1:{test_http_server.bind_port}'
 
         result = self._get_test_analyzer_result_markdown('http', 'content', uri + '/test/common/data/integrity.html')
-        self.assertIn(
-            'Source URL: '
-            'https://static.cloudflareinsights.com/beacon.min.js/v84a3a4012de94ce1a686ba8c167c359c1696973893317',
-            result
-        )
+        self.assertIn('Source URL: /test/common/data/subresource1.js', result)
         self.assertIn('Hash Algorithm: SHA-512', result)
         self.assertIn(
-            'Hash Value: euoFGowhlaLqXsPWQ48qSkBSCFs3DPRyiwVu3FjR96cMPx+Fr+gpWRhIafcHwqwCqWS42RZhIudOvEI+Ckf6MA==',
+            'Hash Value: 3a81oZNherrMQXNJriBBMRLm+k6JqX6iCp7u5ktV05ohkpkqJ0/BqDa6PCOj/uu9RU1EI2Q86A4qmslPpUyknw==',
             result
         )
         self.assertIn('Is Hash Correct: yes', result)

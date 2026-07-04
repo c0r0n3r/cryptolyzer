@@ -5,9 +5,9 @@ import unittest
 from unittest import mock
 
 import base64
+import os
 
-from test.common.classes import TestLoggerBase
-from test.common.markers import live_server
+from test.common.classes import TestLoggerBase, TestThreadedServerHttp, TestThreadedServerHttps
 
 import urllib3
 
@@ -73,10 +73,8 @@ class TestHttpTagIntegrityGetter(unittest.TestCase):
             set()
         )
 
-    @live_server
-    @mock.patch.object(HttpFetcher, 'response_data', mock.PropertyMock(return_value=b'javascript content'))
     def test_integrity(self):
-        script_data = b'javascript content'
+        script_data = b'abc'
         script_data_base64 = base64.b64encode(script_data).decode('ascii')
 
         sha2_256_hash_bytes = hash_bytes(Hash.SHA2_256, script_data)
@@ -86,49 +84,60 @@ class TestHttpTagIntegrityGetter(unittest.TestCase):
         sha2_512_hash_bytes = hash_bytes(Hash.SHA2_512, script_data)
         sha2_512_hash_base64_content = Base64Data(sha2_512_hash_bytes)
 
+        test_http_server = TestThreadedServerHttp('127.0.0.1', 0)
+        test_http_server.init_connection()
+        test_http_server.start()
+        html_url = f'http://127.0.0.1:{test_http_server.bind_port}'
+
         self.assertEqual(
-            HttpTagIntegrityGetter()('https://example.com', '\n'.join([
+            HttpTagIntegrityGetter()(html_url, '\n'.join([
                 '<!DOCTYPE html>',
                 '<html>',
                 '  <head>',
-                f'    <script integrity="sha256-{sha2_256_hash_base64_content}" src="/head.1.js"></script>',
-                f'    <script integrity="sha384-{sha2_384_hash_base64_content}" src="/head.2.js"></script>',
+                f'    <script integrity="sha256-{sha2_256_hash_base64_content}" '
+                'src="/test/common/data/subresource1.js"></script>',
+                f'    <script integrity="sha384-{sha2_384_hash_base64_content}" '
+                'src="/test/common/data/subresource2.js"></script>',
                 '  </head>',
                 '  <body>',
-                f'    <script integrity="sha512-{sha2_512_hash_base64_content}" src="/body.root.js"></script>',
+                f'    <script integrity="sha512-{sha2_512_hash_base64_content}" '
+                'src="/test/common/data/subresource3.js"></script>',
                 '    <div>',
-                f'      <script integrity="sha512-{script_data_base64}" src="/body.inner.js"></script>',
+                f'      <script integrity="sha512-{script_data_base64}" '
+                'src="/test/common/data/subresource4.js"></script>',
                 '    </div>',
                 '  </body>',
                 '</html>',
             ]).encode('ascii')),
             set([
                 HttpTagScriptIntegrity(
-                    source_url=urllib3.util.Url(path='/head.1.js'),
+                    source_url=urllib3.util.Url(path='/test/common/data/subresource1.js'),
                     hash_algorithm=Hash.SHA2_256,
                     hash_value=sha2_256_hash_base64_content,
                     is_hash_correct=True,
                 ),
                 HttpTagScriptIntegrity(
-                    source_url=urllib3.util.Url(path='/head.2.js'),
+                    source_url=urllib3.util.Url(path='/test/common/data/subresource2.js'),
                     hash_algorithm=Hash.SHA2_384,
                     hash_value=sha2_384_hash_base64_content,
                     is_hash_correct=True,
                 ),
                 HttpTagScriptIntegrity(
-                    source_url=urllib3.util.Url(path='/body.root.js'),
+                    source_url=urllib3.util.Url(path='/test/common/data/subresource3.js'),
                     hash_algorithm=Hash.SHA2_512,
                     hash_value=sha2_512_hash_base64_content,
                     is_hash_correct=True,
                 ),
                 HttpTagScriptIntegrity(
-                    source_url=urllib3.util.Url(path='/body.inner.js'),
+                    source_url=urllib3.util.Url(path='/test/common/data/subresource4.js'),
                     hash_algorithm=Hash.SHA2_512,
                     hash_value=script_data_base64,
                     is_hash_correct=False,
                 ),
             ])
         )
+
+        test_http_server.kill()
 
 
 class TestHttpTagSourceGetter(unittest.TestCase):
@@ -227,15 +236,22 @@ class TestHttpContent(TestLoggerBase):
             analyzer_result = self.get_result('http://example.org')
             self.assertEqual(len(analyzer_result.unencrypted_sources), 7)
 
-    @live_server
     def test_real(self):
         mime_type_html = FieldValueMimeType('html', MimeTypeRegistry.TEXT)
 
-        analyzer_result = self.get_result('https://google.com')
+        os.environ['SSL_CERT_FILE'] = str(TestThreadedServerHttps.CA_CERT_FILE_PATH)
+        self.addCleanup(os.environ.pop, 'SSL_CERT_FILE', None)
+
+        test_https_server = TestThreadedServerHttps('127.0.0.1', 0)
+        test_https_server.init_connection()
+        test_https_server.start()
+        base_url = f'https://127.0.0.1:{test_https_server.bind_port}/test/common/data'
+
+        analyzer_result = self.get_result(f'{base_url}/content-no-integrity.html')
         self.assertEqual(analyzer_result.mime_type, mime_type_html)
         self.assertEqual(len(analyzer_result.script_integrity), 0)
 
-        analyzer_result = self.get_result('https://letsencrypt.org')
+        analyzer_result = self.get_result(f'{base_url}/content-integrity.html')
         self.assertEqual(analyzer_result.mime_type, mime_type_html)
         self.assertEqual(len(analyzer_result.script_integrity), 4)
         self.assertTrue(all(map(
@@ -244,7 +260,7 @@ class TestHttpContent(TestLoggerBase):
         )))
         self.assertEqual(len(analyzer_result.unencrypted_sources), 0)
 
-        analyzer_result = self.get_result('https://mixed-script.badssl.com')
+        analyzer_result = self.get_result(f'{base_url}/content-mixed-single.html')
         self.assertEqual(analyzer_result.mime_type, mime_type_html)
         self.assertEqual(analyzer_result.script_integrity, [])
         self.assertEqual(len(analyzer_result.unencrypted_sources), 1)
@@ -254,7 +270,7 @@ class TestHttpContent(TestLoggerBase):
         self.assertEqual(unencrypted_source.data_type.grade, Grade.INSECURE)
         self.assertEqual(str(unencrypted_source.source_url), 'http://mixed-script.badssl.com/nonsecure.js')
 
-        analyzer_result = self.get_result('https://very.badssl.com')
+        analyzer_result = self.get_result(f'{base_url}/content-mixed-multiple.html')
         self.assertEqual(analyzer_result.mime_type, mime_type_html)
         self.assertEqual(analyzer_result.script_integrity, [])
         self.assertEqual(len(analyzer_result.unencrypted_sources), 2)
@@ -267,3 +283,5 @@ class TestHttpContent(TestLoggerBase):
         self.assertEqual(unencrypted_source.data_type.value, 'script')
         self.assertEqual(unencrypted_source.data_type.grade, Grade.INSECURE)
         self.assertEqual(str(unencrypted_source.source_url), 'http://http.badssl.com/test/imported.js')
+
+        test_https_server.kill()

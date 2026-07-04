@@ -75,7 +75,7 @@ class HttpTagScriptIntegrity(HttpTagScriptBase):
         source_url_params = source_url._asdict()
         if source_url.host is None:
             source_url_params['host'] = html_url.host
-        if source_url.host is None:
+            source_url_params['port'] = html_url.port
             source_url_params['scheme'] = html_url.scheme
 
         http_fetcher = HttpFetcher()
