@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 
 import ftplib
 import poplib
@@ -9,8 +10,11 @@ import sys
 import unittest
 from unittest import mock
 
+from test.common.classes import OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
+
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
+from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve
 from cryptoparser.tls.ldap import LDAPExtendedRequestStartTLS
 from cryptoparser.tls.openvpn import OpenVpnPacketControlV1, OpenVpnPacketHardResetServerV2
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -35,9 +39,13 @@ from cryptoparser.tls.subprotocol import (
     TlsExtensionsClient,
     TlsHandshakeType,
     TlsHandshakeServerHello,
+    TlsSessionIdVector,
 )
 
-from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP, L4TransferSocketParams
+from cryptodatahub.tls.algorithm import TlsNextProtocolName, TlsProtocolName
+
+from cryptolyzer.common.dhparam import DHParamWellKnown, parse_tls_dh_params, parse_ecdh_params
+from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP
 from cryptolyzer.tls.client import (
     ClientFTP,
     ClientIMAP,
@@ -56,7 +64,9 @@ from cryptolyzer.tls.client import (
     SslError,
     SslHandshakeClientHelloAnyAlgorithm,
     TlsAlert,
-    TlsHandshakeClientHelloAnyAlgorithm
+    TlsHandshakeClientHelloAnyAlgorithm,
+    TlsHandshakeClientHelloKeyExchangeDHE,
+    TlsHandshakeClientHelloKeyExchangeECDHx,
 )
 from cryptolyzer.tls.server import (
     L7ServerTls,
@@ -73,6 +83,7 @@ from cryptolyzer.tls.server import (
     L7ServerTlsRDP,
     L7ServerTlsSieve,
     L7ServerTlsSMTP,
+    L7ServerTlsXMPP,
     TlsServerConfiguration,
 )
 
@@ -82,18 +93,15 @@ from .classes import L7ServerTlsTest, L7ServerStartTlsTest
 class TestL7ServerBase(unittest.TestCase):
     def setUp(self):
         self.threaded_server = None
-        if sys.version_info.major == 3 and sys.version_info.minor == 4:
-            if sys.implementation == 'cpython':
-                self.ssl_exception_reason = 'WRONG_SSL_VERSION'
-            else:
-                self.ssl_exception_reason = 'SSLV3_ALERT_HANDSHAKE_FAILURE'
+        if sys.version_info.major == 3 and sys.version_info.minor == 4 and sys.implementation == 'cpython':
+            self.ssl_exception_reason = 'WRONG_SSL_VERSION'
         else:
-            self.ssl_exception_reason = 'UNEXPECTED_MESSAGE'
+            self.ssl_exception_reason = 'SSLV3_ALERT_HANDSHAKE_FAILURE'
 
     @staticmethod
     def create_server(configuration=None, l7_server_class=L7ServerTls):
         threaded_server = L7ServerTlsTest(l7_server_class(
-            'localhost', 0, L4TransferSocketParams(timeout=5), configuration=configuration
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=configuration
         ))
         threaded_server.wait_for_server_listen()
         return threaded_server
@@ -103,7 +111,7 @@ class TestL7ServerBase(unittest.TestCase):
         return client_class(
             l7_server.address,
             l7_server.l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=5),
+            OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
             ip=l7_server.l4_transfer.bind_address,
         )
 
@@ -136,7 +144,7 @@ class TestL7ServerBase(unittest.TestCase):
         self.assertEqual(len(server_messages), 1)
         self.assertEqual(server_messages[SslMessageType.SERVER_HELLO].cipher_kinds, list(SslCipherKind))
 
-        self.threaded_server.join()
+        self.threaded_server.stop()
 
     def _test_tls_handshake(
         self,
@@ -153,7 +161,7 @@ class TestL7ServerBase(unittest.TestCase):
         )
         self.assertEqual(list(server_messages.keys()), [last_handshake_message_type])
 
-        self.threaded_server.join()
+        self.threaded_server.stop()
 
 
 class TestL7ServerTlsBase(TestL7ServerBase):
@@ -249,19 +257,176 @@ class TestL7ServerTls(TestL7ServerBase):
             l7_client.do_tls_handshake(hello_message=hello_message)
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.CLOSE_NOTIFY)
 
+    def test_default_port(self):
+        self.assertEqual(L7ServerTls.get_default_port(), 4433)
+
+    def test_scheme(self):
+        self.assertEqual(L7ServerTls.get_scheme(), 'tls')
+
     def test_handshake(self):
         self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_2))
 
 
+class TestL7ServerTlsConfiguration(unittest.TestCase):
+    def test_error_min_version_greater_than_max_version(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            )
+
+    def test_error_cipher_suite_max_version_below_min_version(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+                cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+            )
+
+    def test_error_cipher_suite_min_version_above_max_version(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+                max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+                cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            )
+
+    def test_error_dh_param_without_dhe_cipher_suite(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+                dh_param=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,
+            )
+
+    def test_error_curves_without_ecdhe_cipher_suite(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+                curves=[TlsNamedCurve.SECP256R1],
+            )
+
+
+class TestL7ServerTlsCertificate(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+            certificates=[b'fake certificate'],
+        ))
+
+    def test_handshake_certificate_and_server_hello_done(self):
+        protocol_version = TlsProtocolVersion(TlsVersion.TLS1_2)
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [protocol_version], self.threaded_server.l7_server.address
+        )
+        l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
+        l7_client.init_connection()
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE,
+        )
+        self.assertIn(TlsHandshakeType.CERTIFICATE, server_messages)
+        self.assertIn(TlsHandshakeType.SERVER_HELLO_DONE, server_messages)
+        certificate_chain = list(server_messages[TlsHandshakeType.CERTIFICATE].certificate_chain)
+        self.assertEqual(len(certificate_chain), 1)
+        self.assertEqual(certificate_chain[0].certificate, b'fake certificate')
+        self.threaded_server.stop()
+
+
+class TestL7ServerTlsDHE(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA],
+            dh_param=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,
+        ))
+
+    def test_handshake_server_key_exchange(self):
+        protocol_version = TlsProtocolVersion(TlsVersion.TLS1_2)
+        client_hello = TlsHandshakeClientHelloKeyExchangeDHE(
+            protocol_version, self.threaded_server.l7_server.address
+        )
+        l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
+        l7_client.init_connection()
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE,
+        )
+        self.assertIn(TlsHandshakeType.SERVER_KEY_EXCHANGE, server_messages)
+        dh_public_key = parse_tls_dh_params(
+            server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE].param_bytes
+        )
+        self.assertEqual(
+            dh_public_key.public_numbers.parameter_numbers.p,
+            DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP.value.parameter_numbers.p,
+        )
+        self.threaded_server.stop()
+
+
+class TestL7ServerTlsECDHE(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA],
+            curves=[TlsNamedCurve.SECP256R1],
+        ))
+
+    def test_handshake_server_key_exchange(self):
+        protocol_version = TlsProtocolVersion(TlsVersion.TLS1_2)
+        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(
+            protocol_version, self.threaded_server.l7_server.address
+        )
+        l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
+        l7_client.init_connection()
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=TlsHandshakeType.SERVER_KEY_EXCHANGE,
+        )
+        self.assertIn(TlsHandshakeType.SERVER_KEY_EXCHANGE, server_messages)
+        named_curve, _ = parse_ecdh_params(
+            server_messages[TlsHandshakeType.SERVER_KEY_EXCHANGE].param_bytes
+        )
+        self.assertEqual(named_curve, TlsNamedCurve.SECP256R1)
+        self.threaded_server.stop()
+
+    def test_handshake_no_supported_groups_extension(self):
+        protocol_version = TlsProtocolVersion(TlsVersion.TLS1_2)
+        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(
+            protocol_version, self.threaded_server.l7_server.address,
+            named_curves=[],
+        )
+        l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
+        l7_client.init_connection()
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE,
+        )
+        self.assertNotIn(TlsHandshakeType.SERVER_KEY_EXCHANGE, server_messages)
+        self.assertIn(TlsHandshakeType.SERVER_HELLO_DONE, server_messages)
+        self.threaded_server.stop()
+
+    def test_handshake_no_matching_curve(self):
+        protocol_version = TlsProtocolVersion(TlsVersion.TLS1_2)
+        client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(
+            protocol_version, self.threaded_server.l7_server.address,
+            named_curves=[TlsNamedCurve.X25519],
+        )
+        l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
+        l7_client.init_connection()
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE,
+        )
+        self.assertNotIn(TlsHandshakeType.SERVER_KEY_EXCHANGE, server_messages)
+        self.assertIn(TlsHandshakeType.SERVER_HELLO_DONE, server_messages)
+        self.threaded_server.stop()
+
+
 class TestL7ServerTls13(TestL7ServerBase):
     def setUp(self):
-        self.threaded_server = self.create_server()
+        self.threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256]
+        ))
 
     def test_handshake(self):
-        self._test_tls_handshake(
-            TlsProtocolVersion(TlsVersion.TLS1_3),
-            TlsHandshakeType.HELLO_RETRY_REQUEST
-        )
+        self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_3))
 
 
 class TestL7ServerTlsFallbackToSsl(TestL7ServerBase):
@@ -290,6 +455,60 @@ class TestL7ServerTlsCloseOnError(TestL7ServerBase):
         self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_2))
 
 
+class TestL7ServerTlsExtensions(TestL7ServerBase):
+    def _get_server_hello(self, configuration):
+        threaded_server = self.create_server(configuration)
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1_2)], threaded_server.l7_server.address
+        )
+        l7_client = self.create_client(L7ClientTls, threaded_server.l7_server)
+        l7_client.init_connection()
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO,
+        )
+        threaded_server.stop()
+        return server_messages[TlsHandshakeType.SERVER_HELLO]
+
+    def test_handshake_encrypt_then_mac(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(encrypt_then_mac_supported=True))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.ENCRYPT_THEN_MAC)
+        self.assertEqual(extension.extension_type, TlsExtensionType.ENCRYPT_THEN_MAC)
+
+    def test_handshake_extended_master_secret(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(extended_master_secret_supported=True))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.EXTENDED_MASTER_SECRET)
+        self.assertEqual(extension.extension_type, TlsExtensionType.EXTENDED_MASTER_SECRET)
+
+    def test_handshake_renegotiation_info(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(renegotiation_supported=True))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.RENEGOTIATION_INFO)
+        self.assertEqual(extension.extension_type, TlsExtensionType.RENEGOTIATION_INFO)
+
+    def test_handshake_session_cache(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(session_cache_supported=True))
+        self.assertNotEqual(server_hello.session_id, TlsSessionIdVector(()))
+
+    def test_handshake_session_ticket(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(session_ticket_supported=True))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.SESSION_TICKET)
+        self.assertEqual(extension.extension_type, TlsExtensionType.SESSION_TICKET)
+
+    def test_handshake_next_protocols(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(
+            next_protocols=[TlsNextProtocolName.HTTP_1_1],
+        ))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.NEXT_PROTOCOL_NEGOTIATION)
+        self.assertEqual(list(extension.protocol_names), [TlsNextProtocolName.HTTP_1_1])
+
+    def test_handshake_application_layer_protocols(self):
+        server_hello = self._get_server_hello(TlsServerConfiguration(
+            application_layer_protocols=[TlsProtocolName.HTTP_1_1],
+        ))
+        extension = server_hello.extensions.get_item_by_type(TlsExtensionType.APPLICATION_LAYER_PROTOCOL_NEGOTIATION)
+        self.assertEqual(list(extension.protocol_names), [TlsProtocolName.HTTP_1_1])
+
+
 class TestL7ServerTlsRDP(TestL7ServerBase):
     def setUp(self):
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsRDP)
@@ -310,6 +529,9 @@ class TestL7ServerTlsRDP(TestL7ServerBase):
 
     def test_default_port(self):
         self.assertEqual(ClientRDP.get_default_port(), L7ServerTlsRDP.get_default_port())
+
+    def test_scheme(self):
+        self.assertEqual(ClientRDP.get_scheme(), L7ServerTlsRDP.get_scheme())
 
     def test_tls_handshake(self):
         self._test_tls_handshake(l7_client_class=ClientRDP)
@@ -665,7 +887,7 @@ class TestL7ServerTlsOpenVpn(TestL7ServerBase):
         self._assert_on_more_data(l4_client)
         l4_client.close()
 
-        threaded_server.join()
+        threaded_server.stop()
 
     def test_error_plain_text_data(self):
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsOpenVpn)
@@ -687,7 +909,7 @@ class TestL7ServerTlsOpenVpn(TestL7ServerBase):
         self.assertEqual(l7_client.buffer, expected_error_message_bytes)
 
         l7_client.l4_transfer.close()
-        self.threaded_server.join()
+        self.threaded_server.stop()
 
     def test_tls_handshake(self):
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsOpenVpn)
@@ -715,7 +937,7 @@ class TestL7ServerTlsOpenVpn(TestL7ServerBase):
         self.assertEqual(l7_client.buffer, expected_error_message_bytes)
 
         l7_client.l4_transfer.close()
-        self.threaded_server.join()
+        self.threaded_server.stop()
 
 
 class TestL7ServerTlsOpenVpnTcp(TestL7ServerBase):
@@ -745,7 +967,7 @@ class TestL7ServerTlsOpenVpnTcp(TestL7ServerBase):
         self.assertEqual(l7_client.buffer, expected_error_message_bytes)
 
         l7_client.l4_transfer.close()
-        self.threaded_server.join()
+        self.threaded_server.stop()
 
     def test_tls_handshake(self):
         self.threaded_server = self.create_server(l7_server_class=L7ServerTlsOpenVpnTcp)
@@ -773,7 +995,7 @@ class TestL7ServerTlsOpenVpnTcp(TestL7ServerBase):
         self.assertEqual(l7_client.buffer, expected_error_message_bytes)
 
         l7_client.l4_transfer.close()
-        self.threaded_server.join()
+        self.threaded_server.stop()
 
 
 class TestL7ServerTlsIMAP(TestL7ServerBase):
@@ -808,3 +1030,8 @@ class TestL7ServerTlsIMAP(TestL7ServerBase):
         l4_client.send(b'A002 LOGIN user pass\r\n')
         self._assert_on_more_data(l4_client)
         l4_client.close()
+
+
+class TestL7ServerTlsXMPP(unittest.TestCase):
+    def test_scheme(self):
+        self.assertEqual(L7ServerTlsXMPP.get_scheme(), 'xmpp')

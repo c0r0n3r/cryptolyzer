@@ -6,7 +6,7 @@ import attr
 
 from cryptodatahub.common.algorithm import NamedGroup
 from cryptodatahub.common.entity import Entity
-from cryptodatahub.common.parameter import DHParamWellKnown, Standard
+from cryptodatahub.common.parameter import DHParameterNumbers, DHParamWellKnown, Standard
 
 from cryptoparser.tls.extension import TlsNamedCurve
 
@@ -65,6 +65,17 @@ class TestParse(unittest.TestCase):
                 'standards': [Standard.RFC_3526]
             }
         )
+
+    def test_parse_dh_param_non_well_known_safe_prime(self):
+        # A well-known safe prime reused with a non-standard generator is no longer matched as a
+        # well-known group, so the prime/safe-prime check runs on a guaranteed safe prime.
+        well_known_safe_prime = DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP
+        dh_parameter = DHParameter(
+            DHParameterNumbers(well_known_safe_prime.value.parameter_numbers.p, 5), 2048
+        )
+        self.assertIsNone(dh_parameter.well_known)
+        self.assertTrue(dh_parameter.prime)
+        self.assertTrue(dh_parameter.safe_prime)
 
     def test_parse_ecdh_param_secp256r1(self):
         point_data = bytes(

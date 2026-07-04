@@ -33,7 +33,6 @@ class TestMain(TestMainBase):
         # performs two handshakes (IKEv2 probe + IKEv1 probe).
         self.threaded_server = create_ike_server(
             L7ServerIke,
-            timeout=5,
             max_handshake_count=4,
         )
 

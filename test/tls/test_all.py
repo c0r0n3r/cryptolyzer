@@ -5,24 +5,27 @@ from unittest import mock
 
 from collections import OrderedDict
 
-from test.common.classes import TestMainBase
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 
 import test.tls.test_ciphers
+from test.common.markers import live_server
+
+from cryptodatahub.common.parameter import DHParamWellKnown
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.result import AnalyzerTargetTls
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.tls.all import AnalyzerAll
 from cryptolyzer.tls.ciphers import AnalyzerResultCipherSuites
 from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 from cryptolyzer.__main__ import main
 
-from .classes import TestTlsCases
+from .classes import TestTlsCases, L7ServerTlsTest
 
 
 class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
@@ -31,11 +34,19 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         return main
 
     @staticmethod
+    def create_server(configuration=None):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=configuration
+        ))
+        threaded_server.wait_for_server_listen()
+        return threaded_server
+
+    @staticmethod
     def get_result(
             host,
             port,
             protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
-            l4_socket_params=L4TransferSocketParams(),
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=None,
             scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -133,7 +144,13 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         ])), TlsProtocolVersion(TlsVersion.TLS1_1))
 
     def test_real(self):
-        result = self.get_result('dh1024.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA],
+            dh_param=DHParamWellKnown.APPLICATION_SERVER_NGINX_VERSION_0_7_2_BIT_1024,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.dhparams.groups, [])
         self.assertNotEqual(result.dhparams.dhparam, None)
         self.assertFalse(result.vulns.ciphers.null_encryption.value)
@@ -141,13 +158,20 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertTrue(result.vulns.dhparams.weak_dh.value)
         self.assertTrue(result.vulns.versions.early_tls_version.value)
 
-        result = self.get_result('rc4-md5.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_1),
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_RC4_128_SHA],
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.vulns.ciphers.rc4.value)
         self.assertFalse(result.vulns.ciphers.null_encryption.value)
         self.assertFalse(result.vulns.ciphers.sweet32.value)
         self.assertFalse(result.vulns.dhparams.weak_dh.value)
         self.assertTrue(result.vulns.versions.early_tls_version.value)
 
+    @live_server
+    def test_real_live(self):
         result = self.get_result('documentfreedom.org', 443)
         self.assertEqual(result.dhparams.groups, [
             TlsNamedCurve.FFDHE2048,
@@ -200,7 +224,11 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 
     def test_markdown(self):
-        result = self.get_result('rc4-md5.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA],
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         markdown_result = result.as_markdown()
 
         target_index = markdown_result.find('Target')
@@ -209,11 +237,12 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(target_index, -1)
 
     def test_missing_parts(self):
-
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA],
+        ))
         with mock.patch.object(AnalyzerAll, 'is_public_key_supported', return_value=None):
-            result = self.get_result(
-                'static-rsa.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10)
-            )
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
 
         self.assertEqual(result.curves, None)
         self.assertEqual(result.dhparams, None)
@@ -222,9 +251,13 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertNotEqual(result.pubkeyreq, None)
         self.assertNotEqual(result.versions, None)
 
-        result = self.get_result(
-            'tls-v1-0.badssl.com', 1010, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA],
+            dh_param=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.sigalgos, None)
         self.assertNotEqual(result.ciphers, None)
         self.assertNotEqual(result.dhparams, None)
@@ -233,15 +266,23 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertNotEqual(result.versions, None)
 
     def test_output(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            '127.0.0.1', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=TlsServerConfiguration(
+                min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+                cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA],
+            )
+        ))
+        threaded_server.wait_for_server_listen()
+        port = threaded_server.l7_server.l4_transfer.bind_port
         func_arguments, cli_arguments = self._get_arguments(
-            'tls', 'all', 'rc4-md5.badssl.com', 443, timeout=10, scheme='https'
+            'tls', 'all', '127.0.0.1', port, timeout=30, scheme='tls'
         )
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
         self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')
 
         ciphers_func_arguments, _ = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1), 'ciphers', 'rc4-md5.badssl.com', 443, timeout=10, scheme='tls'
+            TlsProtocolVersion(TlsVersion.TLS1), 'ciphers', '127.0.0.1', port, timeout=30, scheme='tls'
         )
         ciphers_result = test.tls.test_ciphers.TestTlsCiphers.get_result(**ciphers_func_arguments)
         ciphers_markdown = ciphers_result._as_markdown_without_target(  # pylint: disable=protected-access

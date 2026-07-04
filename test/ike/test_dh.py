@@ -8,7 +8,11 @@ import typing
 import unittest
 import unittest.mock
 
-from test.common.classes import TestLoggerBase
+from test.common.classes import (
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
+    OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
+    TestLoggerBase,
+)
 
 from cryptodatahub.ike.algorithm import (
     Ikev1DiffieHellmanGroup,
@@ -59,18 +63,10 @@ class TestAnalyzerDHBase(TestLoggerBase):
     def get_max_handshakes(cls) -> int:
         return 90
 
-    @classmethod
-    def get_server_timeout(cls) -> float:
-        return 0.5
-
-    @classmethod
-    def get_client_timeout(cls) -> float:
-        return 0.5
-
     def _get_result(  # pylint: disable=too-many-arguments,too-many-positional-arguments
             self, host, port, protocol_version, l4_socket_params=None, ip=None):
         if l4_socket_params is None:
-            l4_socket_params = L4TransferSocketParams(timeout=self.get_client_timeout())
+            l4_socket_params = OFFLINE_CLIENT_L4_SOCKET_PARAMS
         analyzer = self.get_analyzer_class()()
         l7_client = L7ClientIPsecBase.from_scheme('ipsec', host, port, l4_socket_params, ip=ip)
         return analyzer.analyze(l7_client, protocol_version)
@@ -80,7 +76,6 @@ class TestAnalyzerDHBase(TestLoggerBase):
             L7ServerIke,
             configuration=self.get_server_config(),
             max_handshake_count=self.get_max_handshakes(),
-            timeout=self.get_server_timeout(),
         )
         l4_transfer = threaded_server.l7_server.l4_transfer
         assert l4_transfer is not None
@@ -171,7 +166,6 @@ class TestAnalyzerDHBase(TestLoggerBase):
             L7ServerIke,
             configuration=IkeServerConfiguration(response_mode=ServerResponseMode.PARTIAL),
             max_handshake_count=1,
-            timeout=2.0,
         )
         l4_transfer = threaded_server.l7_server.l4_transfer
         assert l4_transfer is not None
@@ -181,7 +175,7 @@ class TestAnalyzerDHBase(TestLoggerBase):
                 'localhost',
                 l4_transfer.bind_port,
                 protocol_version,
-                l4_socket_params=L4TransferSocketParams(timeout=2.0),
+                l4_socket_params=OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.error, NetworkErrorType.NO_CONNECTION)
@@ -199,7 +193,6 @@ class TestAnalyzerDHBase(TestLoggerBase):
             notify_type_ikev2=Ikev2NotifyType.NO_PROPOSAL_CHOSEN,
             notify_type_ikev1=Ikev1NotifyType.INVALID_PAYLOAD_TYPE,
             max_handshake_count=1,
-            timeout=self.get_server_timeout(),
         )
         l4_transfer = threaded_server.l7_server.l4_transfer
         assert l4_transfer is not None
@@ -221,7 +214,6 @@ class TestAnalyzerDHBase(TestLoggerBase):
             L7ServerIkeNotify,
             notify_type_ikev2=Ikev2NotifyType.INVALID_SYNTAX,
             max_handshake_count=1,
-            timeout=self.get_server_timeout(),
         )
         l4_transfer = threaded_server.l7_server.l4_transfer
         assert l4_transfer is not None

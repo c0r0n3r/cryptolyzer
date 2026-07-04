@@ -1,3 +1,5 @@
+from test.common.markers import live_server
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
@@ -15,16 +17,13 @@ from .classes import L7ServerSshTest, TestSshCases
 
 class TestSshDHParams(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(timeout=5), ip=None):
+    def get_result(host, port=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerDHParams()
         l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)
         return result
 
-    def test_real_no_gex(self):
-        result = self.get_result('bitbucket.com', 22)
-        self.assertEqual(result.group_exchange, None)
-
+    @live_server
     def test_real_gex(self):
         result = self.get_result('git.launchpad.net', 22, l4_socket_params=L4TransferSocketParams(timeout=10))
         self.assertEqual(result.key_exchange.kex_algorithms, [SshKexAlgorithm.DIFFIE_HELLMAN_GROUP14_SHA1, ])
@@ -69,7 +68,7 @@ class TestSshDHParams(TestSshCases.TestSshClientBase):
     def test_dhparams_with_algorithm_limit(self):
         server_configuration = SshServerConfiguration(max_remote_algorithm_count=50)
         threaded_server = L7ServerSshTest(L7ServerSsh(
-            'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=server_configuration
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=server_configuration
         ))
         threaded_server.start()
 

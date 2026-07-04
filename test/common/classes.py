@@ -28,6 +28,13 @@ from cryptoparser.common.x509 import PublicKeyX509
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
 
+BADSSL_COM_L4_SOCKET_PARAMS = L4TransferSocketParams(timeout=10, throttle_delay=5)
+
+OFFLINE_L4_SOCKET_PARAMS = L4TransferSocketParams(timeout=5.0)
+OFFLINE_SERVER_MAX_IDLE_TIME = 20.0
+OFFLINE_CLIENT_L4_SOCKET_PARAMS = L4TransferSocketParams(timeout=30.0)
+OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS = L4TransferSocketParams(timeout=5.0)
+
 
 @attr.s(frozen=True, eq=False)
 class TestGradeableSimple(GradeableSimple):
@@ -96,7 +103,7 @@ class TestMainBase(unittest.TestCase):
 
     @staticmethod
     def _get_arguments(
-            protocol_version, analyzer, hostname, port, timeout=None, scheme=None, proxy=None
+            protocol_version, analyzer, hostname, port, timeout=None, scheme=None, proxy=None, throttle_delay=None
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         ip_address = socket.gethostbyname(hostname)
 
@@ -105,7 +112,9 @@ class TestMainBase(unittest.TestCase):
             'host': hostname,
             'ip': ip_address,
             'port': port,
-            'l4_socket_params': L4TransferSocketParams(timeout=timeout, http_proxy=proxy),
+            'l4_socket_params': L4TransferSocketParams(
+                timeout=timeout, http_proxy=proxy, throttle_delay=throttle_delay or 0
+            ),
         }
         if scheme is not None:
             func_arguments['scheme'] = scheme
@@ -117,6 +126,7 @@ class TestMainBase(unittest.TestCase):
             'address': f'{scheme}{hostname}:{port}#{ip_address}',
             'timeout': timeout,
             'proxy': proxy,
+            'throttle_delay': throttle_delay,
         }
 
         return func_arguments, cli_arguments
@@ -130,30 +140,36 @@ class TestMainBase(unittest.TestCase):
             return stdout.getvalue(), stderr.getvalue()
 
     def _get_test_analyzer_result(
-            self, output_format, protocol, analyzer, address, timeout=None, proxy=None
+            self, output_format, protocol, analyzer, address, timeout=None, proxy=None, throttle_delay=None
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         command_line_arguments = ['cryptolyzer']
         if timeout:
             command_line_arguments.extend(['--socket-timeout', str(timeout)])
         if proxy:
             command_line_arguments.extend(['--http-proxy', str(proxy)])
+        if throttle_delay:
+            command_line_arguments.extend(['--throttle-delay', str(throttle_delay)])
         command_line_arguments.extend(['--output-format', output_format, protocol, analyzer, address])
         return self._get_command_result(command_line_arguments)
 
     def _get_test_analyzer_result_json(
-        self, protocol, analyzer, address, timeout=None, proxy=None
+        self, protocol, analyzer, address, timeout=None, proxy=None, throttle_delay=None
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
-        return self._get_test_analyzer_result('json', protocol, analyzer, address, timeout, proxy)[0]
+        return self._get_test_analyzer_result('json', protocol, analyzer, address, timeout, proxy, throttle_delay)[0]
 
     def _get_test_analyzer_result_markdown(
-        self, protocol, analyzer, address, timeout=None, proxy=None
+        self, protocol, analyzer, address, timeout=None, proxy=None, throttle_delay=None
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
-        return self._get_test_analyzer_result('markdown', protocol, analyzer, address, timeout, proxy)[0]
+        return self._get_test_analyzer_result(
+            'markdown', protocol, analyzer, address, timeout, proxy, throttle_delay
+        )[0]
 
     def _get_test_analyzer_result_highlighted(
-        self, protocol, analyzer, address, timeout=None, proxy=None
+        self, protocol, analyzer, address, timeout=None, proxy=None, throttle_delay=None
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
-        return self._get_test_analyzer_result('highlighted', protocol, analyzer, address, timeout, proxy)[0]
+        return self._get_test_analyzer_result(
+            'highlighted', protocol, analyzer, address, timeout, proxy, throttle_delay
+        )[0]
 
     def _test_argument_error(self, argv, stderr_regexp, stdin=b''):
         with patch.object(sys, 'stderr', new_callable=io.StringIO) as stderr, \
@@ -276,8 +292,30 @@ class TestThreadedServer(threading.Thread):
     def __init__(self, server):
         super().__init__()
 
+        self.daemon = True
         self._server = server
+        self._server.max_idle_time = OFFLINE_SERVER_MAX_IDLE_TIME
         self._server.init_connection()
+
+    def stop(self):
+        self._server.stopped = True
+
+        if not self.is_alive():
+            return
+
+        l4_transfer = getattr(self._server, 'l4_transfer', None)
+        try:
+            bind_port = l4_transfer.bind_port if l4_transfer is not None else None
+        except (AttributeError, AssertionError):
+            bind_port = None
+        if bind_port:
+            try:
+                with socket.create_connection(('localhost', bind_port), timeout=1):
+                    pass
+            except OSError:
+                pass
+
+        self.join(timeout=5)
 
     def wait_for_server_listen(self, expiry_in_sec=5):
         self.start()

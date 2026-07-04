@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from test.common.classes import TestMainBase
+from test.common.markers import live_server
 
 from cryptolyzer.__main__ import main
 
@@ -11,11 +12,13 @@ class TestMain(TestMainBase):
     def _get_main_func(cls):
         return main
 
+    @live_server
     def test_default_scheme(self):
         uri = 'cloudflare.com#1.1.1.1'
         result = self._get_test_analyzer_result_markdown('dns', 'dnssec', uri, timeout=10)
         self.assertIn('* Scheme: dns', result)
 
+    @live_server
     def test_dnssec(self):
         uri = 'cloudflare.com#1.1.1.1'
         result = self._get_test_analyzer_result_markdown('dns', 'dnssec', uri, timeout=10)
@@ -23,6 +26,7 @@ class TestMain(TestMainBase):
         self.assertIn('* Delegation Signers', result)
         self.assertIn('* Resource Record Signature', result)
 
+    @live_server
     def test_mail(self):
         uri = 'google.com#1.1.1.1'
         result = self._get_test_analyzer_result_markdown('dns', 'mail', uri, timeout=10)

@@ -6,7 +6,6 @@ from cryptodatahub.ike.algorithm import (
     Ikev1DiffieHellmanGroup,
     Ikev2DiffieHellmanGroup,
 )
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.ike.curves import AnalyzerCurves
 from cryptolyzer.ike.server import IkeServerConfiguration
 
@@ -52,13 +51,3 @@ class TestAnalyzerCurves(TestAnalyzerDHBase):
     @classmethod
     def get_max_handshakes(cls):
         return 5000  # ECDH groups × algorithm subsets; IKEv1 enumerates many EC2N variants
-
-    @classmethod
-    def get_server_timeout(cls) -> float:
-        return 10.0
-
-    def _get_result(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-            self, host, port, protocol_version, l4_socket_params=None, ip=None):
-        if l4_socket_params is None:
-            l4_socket_params = L4TransferSocketParams(timeout=10.0)
-        return super()._get_result(host, port, protocol_version, l4_socket_params, ip)

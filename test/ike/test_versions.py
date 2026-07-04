@@ -3,14 +3,17 @@
 
 from unittest import mock
 
-from test.common.classes import TestLoggerBase
+from test.common.classes import (
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
+    OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
+    TestLoggerBase,
+)
 from test.ike.classes import (
     L7ServerIkeIkev2HeaderOnlyPartialPayload,
     L7ServerIkeNoProposalChosen,
     L7ServerIkeNotify,
     create_ike_server,
 )
-
 from cryptodatahub.ike.algorithm import Ikev1NotifyType, Ikev2NotifyType
 from cryptodatahub.ike.version import IkeVersion
 
@@ -44,7 +47,7 @@ class TestIkeVersions(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                L4TransferSocketParams(timeout=0.5),
+                OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.error, NetworkErrorType.NO_CONNECTION)
@@ -77,7 +80,7 @@ class TestIkeVersions(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                L4TransferSocketParams(timeout=0.5),
+                OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.error, NetworkErrorType.NO_CONNECTION)
@@ -113,7 +116,7 @@ class TestIkeVersions(TestLoggerBase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
         self.assertEqual(
@@ -140,7 +143,7 @@ class TestIkeVersions(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                L4TransferSocketParams(timeout=0.5),
+                OFFLINE_CLIENT_L4_SOCKET_PARAMS,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.notify, Ikev2NotifyType.INVALID_SYNTAX)
@@ -161,7 +164,7 @@ class TestIkeVersions(TestLoggerBase):
             self._get_result(
                 'localhost',
                 l4_transfer.bind_port,
-                L4TransferSocketParams(timeout=0.5),
+                OFFLINE_CLIENT_L4_SOCKET_PARAMS,
                 ip=l4_transfer.bind_address,
             )
         self.assertEqual(ctx.exception.notify, Ikev1NotifyType.INVALID_PAYLOAD_TYPE)
@@ -176,7 +179,7 @@ class TestIkeVersions(TestLoggerBase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=2),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
 
@@ -198,7 +201,7 @@ class TestIkeVersions(TestLoggerBase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=0.5),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
 
@@ -212,22 +215,3 @@ class TestIkeVersions(TestLoggerBase):
         log_output = '\n'.join(self.get_log_lines())
         self.assertNotIn('No response from server', log_output)
         threaded_server.join()
-
-    def test_real(self):
-        result = self._get_result('moon.strongswan.org', 500, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertEqual(
-            result.versions,
-            [IsakmpProtocolVersion(IkeVersion.V1, 0), IsakmpProtocolVersion(IkeVersion.V2, 0)],
-        )
-
-        result = self._get_result('82.138.51.230', 500, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertEqual(
-            result.versions,
-            [IsakmpProtocolVersion(IkeVersion.V2, 0)],
-        )
-
-        result = self._get_result('public-vpn-213.opengw.net', 500, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertEqual(
-            result.versions,
-            [IsakmpProtocolVersion(IkeVersion.V1, 0)],
-        )

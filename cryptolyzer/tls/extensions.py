@@ -75,11 +75,10 @@ class AnalyzerExtensions(AnalyzerTlsBase):
     def get_help(cls):
         return 'Check which extensions supported by the server(s)'
 
-    @classmethod
-    def _analyze_npn(cls, analyzable, protocol_version):
-        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionNextProtocolNegotiationClient())
+    def _analyze_npn(self, analyzable, protocol_version):
+        client_hello = self._get_client_hello(analyzable, protocol_version, TlsExtensionNextProtocolNegotiationClient())
         try:
-            extension = AnalyzerExtensions._get_symmetric_extension(
+            extension = self._get_symmetric_extension(
                 analyzable, client_hello, TlsExtensionType.NEXT_PROTOCOL_NEGOTIATION
             )
         except KeyError:
@@ -92,17 +91,17 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return protocol_names
 
-    @classmethod
-    def _analyze_alpn(cls, analyzable, protocol_version):
+    def _analyze_alpn(self, analyzable, protocol_version):
         supported_protocol_names = []
         remaining_protocol_names = set(TlsProtocolName)
 
         while remaining_protocol_names:
-            client_hello = cls._get_client_hello(
+            client_hello = self._get_client_hello(
                 analyzable, protocol_version, TlsExtensionApplicationLayerProtocolNegotiation(remaining_protocol_names)
             )
 
             try:
+                self._before_probe(analyzable)
                 server_messages = analyzable.do_tls_handshake(client_hello)
                 alpn_extensions = list(filter(
                     lambda extension:
@@ -137,9 +136,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return client_hello
 
-    @classmethod
-    def _get_server_messsages(cls, analyzable, client_hello):
+    def _get_server_messsages(self, analyzable, client_hello):
         try:
+            self._before_probe(analyzable)
             server_messages = analyzable.do_tls_handshake(
                 client_hello, last_handshake_message_type=TlsHandshakeType.SERVER_HELLO
             )
@@ -148,28 +147,25 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return server_messages
 
-    @classmethod
-    def _get_symmetric_extension(cls, analyzable, client_hello, extension_type):
-        server_messages = cls._get_server_messsages(analyzable, client_hello)
+    def _get_symmetric_extension(self, analyzable, client_hello, extension_type):
+        server_messages = self._get_server_messsages(analyzable, client_hello)
 
         extensions = server_messages[TlsHandshakeType.SERVER_HELLO].extensions
         extension = extensions.get_item_by_type(extension_type)
 
         return extension
 
-    @classmethod
-    def _analyze_symmetric_extension(cls, analyzable, client_hello, extension_type):
+    def _analyze_symmetric_extension(self, analyzable, client_hello, extension_type):
         try:
-            result = cls._get_symmetric_extension(analyzable, client_hello, extension_type) is not None
+            result = self._get_symmetric_extension(analyzable, client_hello, extension_type) is not None
         except KeyError:
             return False
 
         return result
 
-    @classmethod
-    def _analyze_extended_master_secret(cls, analyzable, protocol_version):
-        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionExtendedMasterSecret())
-        extended_master_secret_supported = cls._analyze_symmetric_extension(
+    def _analyze_extended_master_secret(self, analyzable, protocol_version):
+        client_hello = self._get_client_hello(analyzable, protocol_version, TlsExtensionExtendedMasterSecret())
+        extended_master_secret_supported = self._analyze_symmetric_extension(
             analyzable, client_hello, TlsExtensionType.EXTENDED_MASTER_SECRET,
         )
         if extended_master_secret_supported:
@@ -178,10 +174,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             LogSingleton().log(level=60, msg='Server does not offer extended master secret')
         return extended_master_secret_supported
 
-    @classmethod
-    def _analyze_compression_methods(cls, analyzable, protocol_version):
+    def _analyze_compression_methods(self, analyzable, protocol_version):
         supported_compression_methods = set()
-        client_hello = cls._get_client_hello(analyzable, protocol_version)
+        client_hello = self._get_client_hello(analyzable, protocol_version)
 
         for compression_method in TlsCompressionMethod:
             if compression_method == TlsCompressionMethod.NULL:
@@ -191,6 +186,7 @@ class AnalyzerExtensions(AnalyzerTlsBase):
             client_hello.compression_methods = TlsCompressionMethodVector(offered_compression_methods)
 
             try:
+                self._before_probe(analyzable)
                 server_messages = analyzable.do_tls_handshake(client_hello)
             except (TlsAlert, NetworkError):
                 break
@@ -208,10 +204,10 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return supported_compression_methods
 
-    @classmethod
-    def _analyze_clock_skew(cls, analyzable, protocol_version):
-        client_hello = cls._get_client_hello(analyzable, protocol_version)
+    def _analyze_clock_skew(self, analyzable, protocol_version):
+        client_hello = self._get_client_hello(analyzable, protocol_version)
         try:
+            self._before_probe(analyzable)
             server_messages = analyzable.do_tls_handshake(client_hello)
         except (TlsAlert, NetworkError):
             return None
@@ -229,18 +225,17 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return clock_is_accurate
 
-    @classmethod
-    def _analyze_renegotiation(cls, analyzable, protocol_version):
+    def _analyze_renegotiation(self, analyzable, protocol_version):
         renegotiation_supported = None
-        client_hello = cls._get_client_hello(analyzable, protocol_version)
+        client_hello = self._get_client_hello(analyzable, protocol_version)
         client_hello.empty_renegotiation_info_scsv = True
-        if AnalyzerExtensions._analyze_symmetric_extension(
+        if self._analyze_symmetric_extension(
                 analyzable, client_hello, TlsExtensionType.RENEGOTIATION_INFO):
             renegotiation_supported = True
 
         if renegotiation_supported is None:
-            client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionRenegotiationInfo())
-            renegotiation_supported = AnalyzerExtensions._analyze_symmetric_extension(
+            client_hello = self._get_client_hello(analyzable, protocol_version, TlsExtensionRenegotiationInfo())
+            renegotiation_supported = self._analyze_symmetric_extension(
                 analyzable, client_hello, TlsExtensionType.RENEGOTIATION_INFO
             )
 
@@ -251,12 +246,12 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return renegotiation_supported
 
-    @classmethod
-    def _analyze_session_cache(cls, analyzable, protocol_version):
+    def _analyze_session_cache(self, analyzable, protocol_version):
         session_cache_supported = None
-        client_hello = cls._get_client_hello(analyzable, protocol_version)
+        client_hello = self._get_client_hello(analyzable, protocol_version)
         client_hello.session_id = TlsSessionIdVector(list(range(32)))
         try:
+            self._before_probe(analyzable)
             server_messages = analyzable.do_tls_handshake(client_hello)
         except (TlsAlert, NetworkError):
             session_cache_supported = False
@@ -272,10 +267,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return session_cache_supported
 
-    @classmethod
-    def _analyze_session_ticket(cls, analyzable, protocol_version):
-        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionSessionTicket())
-        session_ticket_supported = AnalyzerExtensions._analyze_symmetric_extension(
+    def _analyze_session_ticket(self, analyzable, protocol_version):
+        client_hello = self._get_client_hello(analyzable, protocol_version, TlsExtensionSessionTicket())
+        session_ticket_supported = self._analyze_symmetric_extension(
             analyzable, client_hello, TlsExtensionType.SESSION_TICKET,
         )
 
@@ -286,15 +280,14 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return session_ticket_supported
 
-    @classmethod
-    def _analyze_encrypt_than_mac(cls, analyzable, protocol_version):
+    def _analyze_encrypt_than_mac(self, analyzable, protocol_version):
         if protocol_version < TlsProtocolVersion(TlsVersion.TLS1_2):
             return None
 
         client_hello = TlsHandshakeClientHelloBlockCipherModeCBC(protocol_version, analyzable.address)
         client_hello.extensions.append(TlsExtensionEncryptThenMAC())
         try:
-            server_messages = cls._get_server_messsages(analyzable, client_hello)
+            server_messages = self._get_server_messsages(analyzable, client_hello)
         except KeyError:
             return None
 
@@ -308,11 +301,10 @@ class AnalyzerExtensions(AnalyzerTlsBase):
         LogSingleton().log(level=60, msg='Server offers encrypt then MAC')
         return True
 
-    @classmethod
-    def _analyze_ec_point_formats(cls, analyzable, protocol_version):
+    def _analyze_ec_point_formats(self, analyzable, protocol_version):
         client_hello = TlsHandshakeClientHelloKeyExchangeECDHx(protocol_version, analyzable.address)
         try:
-            extension = AnalyzerExtensions._get_symmetric_extension(
+            extension = self._get_symmetric_extension(
                 analyzable, client_hello, TlsExtensionType.EC_POINT_FORMATS
             )
             point_formats = extension.point_formats
@@ -324,12 +316,12 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         return point_formats
 
-    @classmethod
-    def _analyze_record_size_limit(cls, analyzable, protocol_version):
-        client_hello = cls._get_client_hello(analyzable, protocol_version, TlsExtensionRecordSizeLimit(1))
+    def _analyze_record_size_limit(self, analyzable, protocol_version):
+        client_hello = self._get_client_hello(analyzable, protocol_version, TlsExtensionRecordSizeLimit(1))
 
         handled = False
         try:
+            self._before_probe(analyzable)
             server_messages = analyzable.do_tls_handshake(client_hello)
         except TlsAlert as e:
             if e.description == TlsAlertDescription.RECORD_OVERFLOW:
@@ -343,8 +335,9 @@ class AnalyzerExtensions(AnalyzerTlsBase):
 
         LogSingleton().log(level=60, msg='Server handles record size limit')
 
-        client_hello = cls._get_client_hello(analyzable, protocol_version)
+        client_hello = self._get_client_hello(analyzable, protocol_version)
         try:
+            self._before_probe(analyzable)
             server_messages = analyzable.do_tls_handshake(client_hello)
         except (TlsAlert, NetworkError):
             return True, None

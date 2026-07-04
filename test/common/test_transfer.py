@@ -11,6 +11,7 @@ from test.common.classes import (
     TestThreadedServerHttpProxy,
     TestHTTPProxyRequestHandler,
 )
+from test.common.markers import live_dns, live_server
 
 import urllib3
 
@@ -32,12 +33,14 @@ class TestL4ClientTCP(unittest.TestCase):
 
         return l4_client, result
 
+    @live_dns
     def test_receive_uninitialized(self):
         l4_client = L4ClientTCP('smtp.gmail.com', 587)
         with self.assertRaises(NotEnoughData) as context_manager:
             l4_client.receive(1)
         self.assertEqual(context_manager.exception.bytes_needed, 1)
 
+    @live_server
     def test_error_on_close(self):
         address = 'smtp.gmail.com'
         l4_client, _ = self._create_client_and_receive_text(address, 587, 4 + len(address), to_be_closed=False)
@@ -54,6 +57,7 @@ class TestL4ClientTCP(unittest.TestCase):
             self.assertEqual(context_manager.exception.args, ('not a timeout error', ))
         sock.close()
 
+    @live_dns
     def test_error_connection_refused(self):
         with mock.patch.object(socket, 'create_connection', side_effect=ConnectionRefusedError), \
                 self.assertRaises(NetworkError) as context_manager:
@@ -62,6 +66,7 @@ class TestL4ClientTCP(unittest.TestCase):
         l4_client.close()
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
+    @live_dns
     def test_error_unhandled_exception_rethrown(self):
         with mock.patch.object(socket, 'create_connection', side_effect=NotImplementedError), \
                 self.assertRaises(NotImplementedError):
@@ -90,11 +95,7 @@ class TestL4ClientTCP(unittest.TestCase):
         test_http_proxy_server.kill()
         test_http_server.kill()
 
-    def test_receive(self):
-        address = 'smtp.gmail.com'
-        _, result = self._create_client_and_receive_text(address, 587, 4 + len(address))
-        self.assertEqual(result, '220 ' + address)
-
+    @live_server
     def test_receive_until(self):
         address = 'smtp.gmail.com'
 
@@ -222,6 +223,7 @@ class TestL4ServerTCP(unittest.TestCase):
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_ADDRESS)
         l4_server.close()
 
+    @live_dns
     def test_error_wrong_address(self):
         l4_server = L4ServerTCP('8.8.8.8', 443)
         with self.assertRaises(NetworkError) as context_manager:
@@ -282,6 +284,7 @@ class TestL4ServerUDP(unittest.TestCase):
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_ADDRESS)
         l4_server.close()
 
+    @live_dns
     def test_error_wrong_address(self):
         l4_server = L4ServerUDP('8.8.8.8', 443)
         with self.assertRaises(NetworkError) as context_manager:

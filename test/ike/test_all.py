@@ -4,6 +4,7 @@
 from unittest import mock
 import unittest
 
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS
 from test.ike.classes import create_ike_server
 
 from cryptolyzer.common.transfer import L4TransferSocketParams
@@ -34,7 +35,7 @@ class TestIkeAll(unittest.TestCase):
         result = self._get_result(
             'localhost',
             l4_transfer.bind_port,
-            L4TransferSocketParams(timeout=1),
+            OFFLINE_CLIENT_L4_SOCKET_PARAMS,
             ip=l4_transfer.bind_address,
         )
         markdown_result = result.as_markdown()
@@ -55,10 +56,10 @@ class TestIkeAll(unittest.TestCase):
         ip = l4_transfer.bind_address
 
         with mock.patch.object(AnalyzerVersions, 'analyze', side_effect=RuntimeError('boom')):
-            result = self._get_result(host, port, L4TransferSocketParams(timeout=0.5), ip=ip)
+            result = self._get_result(host, port, OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=ip)
         self.assertEqual(result.versions, None)
 
-        result = self._get_result(host, port, L4TransferSocketParams(timeout=0.5), ip=ip)
+        result = self._get_result(host, port, OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=ip)
         self.assertNotEqual(result.versions, None)
 
         threaded_server.join()

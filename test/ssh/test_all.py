@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 
 from unittest import mock
+from test.common.markers import live_server
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS
 
 from cryptodatahub.ssh.algorithm import SshKexAlgorithm
 from cryptoparser.ssh.version import SshVersion, SshProtocolVersion
 
 from cryptolyzer.common.result import AnalyzerTargetSsh
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.ssh.all import AnalyzerAll
 from cryptolyzer.ssh.ciphers import AnalyzerResultCiphers
@@ -18,7 +19,7 @@ from .classes import TestSshCases
 
 class TestSshAll(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerAll()
         l7_client = L7ClientSsh.from_scheme('ssh', host, port, l4_socket_params, ip)
         result = analyzer.analyze(l7_client)
@@ -59,6 +60,7 @@ class TestSshAll(TestSshCases.TestSshClientBase):
             ),
         ), SshProtocolVersion(SshVersion.SSH2))
 
+    @live_server
     def test_markdown(self):
         result = self.get_result('github.com', 22)
         markdown_result = result.as_markdown()
@@ -68,6 +70,7 @@ class TestSshAll(TestSshCases.TestSshClientBase):
         target_index = markdown_result.find('Target', target_index + 1)
         self.assertEqual(target_index, -1)
 
+    @live_server
     def test_missing_parts(self):
         with mock.patch.object(AnalyzerAll, 'is_dhe_supported', return_value=None):
             result = self.get_result('github.com', 22)

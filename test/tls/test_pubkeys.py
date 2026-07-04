@@ -7,14 +7,22 @@ from collections import OrderedDict
 
 import datetime
 
-from test.common.classes import TestMainBase
+from test.common.classes import (
+    BADSSL_COM_L4_SOCKET_PARAMS,
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
+    OFFLINE_L4_SOCKET_PARAMS,
+    TestMainBase,
+    TestThreadedServerHttps,
+)
+from test.common.markers import live_server
 
 import asn1crypto
 
 from cryptodatahub.common.algorithm import Authentication
 from cryptodatahub.common.entity import Entity
 
-from cryptoparser.tls.extension import TlsExtensionsBase, TlsExtensionSignedCertificateTimestampServer
+from cryptoparser.common.x509 import PublicKeyX509
+
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
@@ -24,10 +32,11 @@ from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.pubkeys import AnalyzerPublicKeys, CertificateStatus
 
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
+
 from cryptolyzer.__main__ import main
 
 from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
-
 
 OCSP_RESPONSE_GOOD = asn1crypto.ocsp.OCSPResponse.load(bytes(
     b'\x30\x82\x06\x37\x0a\x01\x00\xa0\x82\x06\x30\x30\x82\x06\x2c\x06' +
@@ -171,6 +180,21 @@ OCSP_RESPONSE_REVOKED = asn1crypto.ocsp.OCSPResponse.load(bytes(
 
 
 class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
+    SNAKEOIL_CERT_DER = PublicKeyX509.from_pem(TestThreadedServerHttps.CERT_FILE_PATH.read_text()).der
+    SNAKEOIL_CA_CERT_DER = PublicKeyX509.from_pem(TestThreadedServerHttps.CA_CERT_FILE_PATH.read_text()).der
+    SELF_SIGNED_CERT_DER = PublicKeyX509.from_pem(
+        (TestThreadedServerHttps.CERT_FILE_PATH.parent / 'self_signed_certificate.crt').read_text()
+    ).der
+
+    @staticmethod
+    def _create_server(cert_ders):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS,
+            configuration=TlsServerConfiguration(certificates=cert_ders)
+        ))
+        threaded_server.wait_for_server_listen()
+        return threaded_server
+
     @classmethod
     def _get_main_func(cls):
         return main
@@ -178,7 +202,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
-            l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerPublicKeys()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
@@ -195,7 +219,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         ]
     )
     def test_error_response_error_no_response_last_time(self, _):
-        result = self.get_result('www.cloudflare.com', 443)
+        result = self.get_result('localhost', 0)
         self.assertEqual(len(result.pubkeys), 0)
 
     @mock.patch.object(
@@ -203,61 +227,55 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME)
     )
     def test_error_unrecognized_name(self, mocked_do_tls_handshake):
-        result = self.get_result('www.cloudflare.com', 443)
+        result = self.get_result('localhost', 0)
         self.assertEqual(len(result.pubkeys), 0)
         self.assertEqual(mocked_do_tls_handshake.call_count, 5)
 
     @mock.patch.object(AnalyzerPublicKeys, '_get_server_messages', return_value={TlsHandshakeType.SERVER_HELLO})
     def test_error_no_server_key_exchange(self, _):
-        result = self.get_result('www.cloudflare.com', 443)
+        result = self.get_result('localhost', 0)
         self.assertEqual(len(result.pubkeys), 0)
 
     def test_eq(self):
-        result_badssl_com = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
-        result_wrong_host_badssl_com = self.get_result(
-            'wrong.host.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
+        threaded_server_cert = self.create_server(TlsServerConfiguration(
+            certificates=[self.SNAKEOIL_CERT_DER],
+        ))
+        result_cert_a = self.get_result('localhost', threaded_server_cert.l7_server.l4_transfer.bind_port)
+        result_cert_b = self.get_result('localhost', threaded_server_cert.l7_server.l4_transfer.bind_port)
         self.assertEqual(
-            result_badssl_com.pubkeys[0].certificate_chain,
-            result_wrong_host_badssl_com.pubkeys[0].certificate_chain
+            result_cert_a.pubkeys[0].certificate_chain,
+            result_cert_b.pubkeys[0].certificate_chain,
         )
 
-        result_expired_badssl_com = self.get_result(
-            'expired.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
-        result_self_signed_badssl_com = self.get_result(
-            'self-signed.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
-        result_untrusted_root_badssl_com = self.get_result(
-            'untrusted-root.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
-        result_revoked_badssl_com = self.get_result(
-            'revoked.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
+        threaded_server_ca_cert = self.create_server(TlsServerConfiguration(
+            certificates=[self.SNAKEOIL_CA_CERT_DER],
+        ))
+        result_ca_cert = self.get_result('localhost', threaded_server_ca_cert.l7_server.l4_transfer.bind_port)
         self.assertNotEqual(
-            result_expired_badssl_com.pubkeys[0].certificate_chain,
-            result_self_signed_badssl_com.pubkeys[0].certificate_chain
-        )
-        self.assertNotEqual(
-            result_expired_badssl_com.pubkeys[0].certificate_chain,
-            result_untrusted_root_badssl_com.pubkeys[0].certificate_chain
-        )
-        self.assertNotEqual(
-            result_expired_badssl_com.pubkeys[0].certificate_chain,
-            result_revoked_badssl_com.pubkeys[0].certificate_chain
+            result_cert_a.pubkeys[0].certificate_chain,
+            result_ca_cert.pubkeys[0].certificate_chain,
         )
 
     def test_subject_match(self):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            '127.0.0.1', 0,
+            OFFLINE_L4_SOCKET_PARAMS,
+            configuration=TlsServerConfiguration(certificates=[self.SNAKEOIL_CERT_DER]),
+        ))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('127.0.0.1', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertTrue(result.pubkeys[0].subject_matches)
 
-        result = self.get_result('wrong.host.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result(
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port, ip='127.0.0.1'
+        )
         self.assertFalse(result.pubkeys[0].subject_matches)
 
+    @live_server
     def test_fallback_certificate(self):
         result = self.get_result(
             'unexisting-hostname-to-get-wildcard-certificate-without-sni.badssl.com', 443,
-            l4_socket_params=L4TransferSocketParams(timeout=10)
+            l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS
         )
         self.assertEqual(len(result.pubkeys), 1)
         self.assertEqual(
@@ -265,8 +283,9 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
             self.log_stream.getvalue()
         )
 
-    def test_certificate_chain(self):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+    @live_server
+    def test_certificate_chain_trusted_root(self):
+        result = self.get_result('badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
         self.assertEqual(len(result.pubkeys), 1)
 
         trusted_root_chain = result.pubkeys[0].certificate_chain
@@ -286,69 +305,48 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         )
         self.assertTrue(trusted_root_chain.ordered)
 
-        result = self.get_result('self-signed.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+    def test_certificate_chain(self):
+        untrusted_trust_roots = {
+            Entity.ANDROID: False,
+            Entity.APPLE: False,
+            Entity.GOOGLE: False,
+            Entity.MICROSOFT: False,
+            Entity.MOZILLA: False,
+            Entity.OPENJDK: False,
+            Entity.ORACLE: False,
+        }
+
+        threaded_server = self._create_server([self.SELF_SIGNED_CERT_DER])
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.pubkeys), 1)
 
         self_signed_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(self_signed_chain.items), 1)
         self.assertTrue(self_signed_chain.contains_anchor)
         self.assertTrue(self_signed_chain.ordered)
-        self.assertEqual(
-            self_signed_chain.trust_roots,
-            {
-                Entity.ANDROID: False,
-                Entity.APPLE: False,
-                Entity.GOOGLE: False,
-                Entity.MICROSOFT: False,
-                Entity.MOZILLA: False,
-                Entity.OPENJDK: False,
-                Entity.ORACLE: False,
-            }
-        )
+        self.assertEqual(self_signed_chain.trust_roots, untrusted_trust_roots)
 
-        result = self.get_result('untrusted-root.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self._create_server([self.SNAKEOIL_CERT_DER, self.SNAKEOIL_CA_CERT_DER])
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.pubkeys), 1)
 
         untrusted_root_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(untrusted_root_chain.items), 2)
         self.assertTrue(untrusted_root_chain.contains_anchor)
         self.assertTrue(untrusted_root_chain.ordered)
-        self.assertEqual(
-            untrusted_root_chain.trust_roots,
-            {
-                Entity.ANDROID: False,
-                Entity.APPLE: False,
-                Entity.GOOGLE: False,
-                Entity.MICROSOFT: False,
-                Entity.MOZILLA: False,
-                Entity.OPENJDK: False,
-                Entity.ORACLE: False,
-            }
-        )
+        self.assertEqual(untrusted_root_chain.trust_roots, untrusted_trust_roots)
 
         self.assertNotEqual(self_signed_chain.items[0], untrusted_root_chain.items[1])
 
-        result = self.get_result(
-            'incomplete-chain.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10)
-        )
+        threaded_server = self._create_server([self.SNAKEOIL_CERT_DER])
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.pubkeys), 1)
 
         incomplete_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(incomplete_chain.items), 1)
         self.assertFalse(incomplete_chain.contains_anchor)
         self.assertEqual(incomplete_chain.ordered, None)
-        self.assertEqual(
-            incomplete_chain.trust_roots,
-            {
-                Entity.ANDROID: False,
-                Entity.APPLE: False,
-                Entity.GOOGLE: False,
-                Entity.MICROSOFT: False,
-                Entity.MOZILLA: False,
-                Entity.OPENJDK: False,
-                Entity.ORACLE: False,
-            }
-        )
+        self.assertEqual(incomplete_chain.trust_roots, untrusted_trust_roots)
         self.assertEqual(result.pubkeys[0].certificate_status, None)
 
     def test_certificate_status(self):
@@ -366,6 +364,14 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                 ('common_name', 'VeriSign Class 3 Secure Server CA - G2 OCSP Responder')
             ])
         )
+        self.assertEqual(
+            certificate_status.produced_at,
+            datetime.datetime(2011, 6, 8, 16, 19, 58, tzinfo=asn1crypto.util.timezone.utc)
+        )
+        self.assertIsNone(certificate_status.revocation_time)
+        self.assertIsNone(certificate_status.revocation_reason)
+        self.assertEqual(certificate_status.extensions, [])
+        self.assertIsNotNone(certificate_status._asdict())
 
         certificate_status = CertificateStatus(OCSP_RESPONSE_REVOKED)
 
@@ -381,17 +387,43 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(certificate_status.update_interval, datetime.timedelta(days=4))
         self.assertEqual(certificate_status.revocation_reason, None)
 
-    @mock.patch.object(
-        TlsExtensionsBase, 'get_item_by_type',
-        return_value=TlsExtensionSignedCertificateTimestampServer([])
-    )
-    def test_signed_certificate_timestamp_extension(self, _):
-        result = self.get_result('www.cloudflare.com', 443)
+    @live_server
+    def test_certificate_status_live(self):
+        result = self.get_result('www.linkedin.com', 443)
+        self.assertEqual(len(result.pubkeys), 1)
+
+        now = datetime.datetime.now(asn1crypto.util.timezone.utc)
+
+        certificate_status = result.pubkeys[0].certificate_status
+        with self.subTest():
+            self.assertEqual(certificate_status.status, 'good')
+            self.assertLess(certificate_status.produced_at, now)
+            self.assertLess(certificate_status.this_update, now)
+            self.assertGreater(certificate_status.next_update, now)
+            self.assertEqual(certificate_status.revocation_time, None)
+            self.assertEqual(certificate_status.revocation_reason, None)
+
+            markdnow_result = certificate_status.as_markdown()
+            self.assertIn('Status: good\n', markdnow_result)
+            self.assertIn('Revocation Time: n/a\n', markdnow_result)
+
+    def test_signed_certificate_timestamp_extension(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            certificates=[self.SNAKEOIL_CERT_DER],
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertFalse(any(pubkey.scts for pubkey in result.pubkeys))
+
+        threaded_server = self.create_server(TlsServerConfiguration(
+            certificates=[self.SNAKEOIL_CERT_DER],
+            signed_certificate_timestamps_supported=True,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertFalse(any(pubkey.scts for pubkey in result.pubkeys))
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, l4_socket_params=L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsPlainTextResponse('localhost', 0, l4_socket_params=OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
         self.assertEqual(
@@ -404,7 +436,10 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         )
 
     def test_untrusted(self):
-        result = self.get_result('untrusted.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        threaded_server = self.create_server(TlsServerConfiguration(
+            certificates=[self.SNAKEOIL_CERT_DER],
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         for pubkey in result.pubkeys:
             with self.subTest():
                 self.assertEqual(
@@ -420,6 +455,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                     }
                 )
 
+    @live_server
     def test_real(self):
         result = self.get_result('cloudflare.com', 443)
         self.assertEqual(len(result.pubkeys), 2)
@@ -488,26 +524,34 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
                 )
 
     def test_json(self):
-        result = self.get_result('expired.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertTrue(result.as_json())
-
-        result = self.get_result('self-signed.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertTrue(result.as_json())
-
-        result = self.get_result('untrusted-root.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertTrue(result.as_json())
-
-        result = self.get_result('revoked.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertTrue(result.as_json())
+        for certificates in (
+                [self.SNAKEOIL_CERT_DER],
+                [self.SELF_SIGNED_CERT_DER],
+                [self.SNAKEOIL_CERT_DER, self.SNAKEOIL_CA_CERT_DER],
+        ):
+            with self.subTest():
+                threaded_server = self._create_server(certificates)
+                result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+                self.assertTrue(result.as_json())
 
     def test_output(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            '127.0.0.1', 0,
+            OFFLINE_L4_SOCKET_PARAMS,
+            configuration=TlsServerConfiguration(
+                certificates=[self.SNAKEOIL_CERT_DER],
+            )
+        ))
+        threaded_server.wait_for_server_listen()
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeys', 'www.cloudflare.com', 443, scheme='tls'
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeys', '127.0.0.1',
+            threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
         )
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
         self.assertEqual(self._get_test_analyzer_result_markdown(**cli_arguments), result.as_markdown() + '\n')
 
+    @live_server
     def test_tls13_real(self):
         result = self.get_result(
             'www.cloudflare.com', 443,
@@ -528,8 +572,7 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
     )
     def test_tls13_key_share_not_implemented(self, *_):
         result = self.get_result(
-            'www.cloudflare.com', 443,
+            'localhost', 0,
             protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
-            l4_socket_params=L4TransferSocketParams(timeout=10),
         )
         self.assertEqual(len(result.pubkeys), 0)

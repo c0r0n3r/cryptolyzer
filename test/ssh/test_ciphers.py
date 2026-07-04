@@ -1,3 +1,5 @@
+from test.common.markers import live_server
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
@@ -14,7 +16,6 @@ from cryptoparser.ssh.subprotocol import SshMessageCode
 
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerTargetSsh
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.ssh.client import L7ClientSsh, SshDisconnect
 from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration, SshServerHandshake
@@ -33,7 +34,7 @@ class _TestSshServerHandshake(SshServerHandshake):
 
 class TestSshCiphers(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerCiphers()
         l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)
@@ -56,7 +57,7 @@ class TestSshCiphers(TestSshCases.TestSshClientBase):
         self.assertTrue(analyzer_result.as_markdown())
 
     def test_ciphers(self):
-        threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.2)))
+        threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.start()
 
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
@@ -89,6 +90,7 @@ class TestSshCiphers(TestSshCases.TestSshClientBase):
         self.assertIn(f'Server offers MAC algorithms client to server {mac_algorithms} (SSH 2.0)', log_lines[4])
         self.assertIn(f'Server offers MAC algorithms server to client {mac_algorithms} (SSH 2.0)', log_lines[5])
 
+    @live_server
     def test_real(self):
         self.get_result('github.com')
         self.get_result('gitlab.com')
@@ -96,7 +98,7 @@ class TestSshCiphers(TestSshCases.TestSshClientBase):
     def test_ciphers_with_algorithm_limit(self):
         server_configuration = SshServerConfiguration(max_remote_algorithm_count=50)
         threaded_server = L7ServerSshTest(L7ServerSsh(
-            'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=server_configuration
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=server_configuration
         ))
         threaded_server.start()
 

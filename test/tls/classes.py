@@ -6,7 +6,7 @@ import datetime
 import abc
 from unittest import mock
 
-from test.common.classes import TestThreadedServer, TestLoggerBase
+from test.common.classes import OFFLINE_L4_SOCKET_PARAMS, TestThreadedServer, TestLoggerBase
 
 import attr
 
@@ -26,7 +26,6 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType, SecurityError, SecurityErrorType
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 from cryptolyzer.tls.server import L7ServerTls, L7ServerStartTlsTextBase, TlsServerHandshake
@@ -42,7 +41,7 @@ class TestTlsCases:
         @staticmethod
         def create_server(configuration=None):
             threaded_server = L7ServerTlsTest(L7ServerTls(
-                'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=configuration
+                'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=configuration
             ))
             threaded_server.wait_for_server_listen()
             return threaded_server
@@ -52,7 +51,7 @@ class TestTlsCases:
             side_effect=SecurityError(SecurityErrorType.UNPARSABLE_MESSAGE)
         )
         def test_error_security_error_unparsable_message(self, _):
-            self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+            self.get_result('localhost', 0)
 
         @mock.patch.object(
             L7ClientTlsBase, 'do_tls_handshake',
@@ -60,7 +59,7 @@ class TestTlsCases:
         )
         def test_error_network_error_no_connection(self, _):
             with self.assertRaises(NetworkError) as context_manager:
-                self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+                self.get_result('localhost', 0)
             self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
         @mock.patch.object(
@@ -68,7 +67,7 @@ class TestTlsCases:
             side_effect=NetworkError(NetworkErrorType.NO_RESPONSE)
         )
         def test_error_network_error_no_response(self, _):
-            self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+            self.get_result('localhost', 0)
 
         @mock.patch.object(
             L7ClientTlsBase, 'do_tls_handshake',
@@ -76,7 +75,7 @@ class TestTlsCases:
         )
         def test_error_tls_alert(self, _):
             with self.assertRaises(UnexpectedAlertError) as context_manager:
-                self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+                self.get_result('localhost', 0)
             self.assertEqual(str(context_manager.exception), 'alert message received (unexpected_message)')
 
 
@@ -176,6 +175,17 @@ class TlsServerAlert(TlsServerHandshake):
 class L7ServerTlsAlert(L7ServerTls):
     def _get_handshake_class(self):
         return TlsServerAlert
+
+
+class TlsServerProtocolVersionAlert(TlsServerHandshake):
+    def _process_handshake_message(self, message, last_handshake_message_type):
+        self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.PROTOCOL_VERSION)
+        raise StopIteration()
+
+
+class L7ServerTlsProtocolVersionAlert(L7ServerTls):
+    def _get_handshake_class(self):
+        return TlsServerProtocolVersionAlert
 
 
 class TlsServerLongCipherSuiteListIntolerance(TlsServerHandshake):

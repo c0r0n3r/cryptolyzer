@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
-from cryptolyzer.common.transfer import L4TransferSocketParams
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
+
 
 from cryptolyzer.ssh.client import L7ClientSsh, SshProtocolMessageDefault
 from cryptolyzer.ssh.server import L7ServerSsh
@@ -12,7 +13,7 @@ from .classes import TestSshCases, L7ServerSshTest
 
 class TestL7ClientBase(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerVersions()
         l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)
@@ -22,7 +23,7 @@ class TestL7ClientBase(TestSshCases.TestSshClientBase):
 class TestSshVersions(TestL7ClientBase):
     def test_versions(self):
         protocol_message_default = SshProtocolMessageDefault()
-        threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, L4TransferSocketParams(timeout=0.2)))
+        threaded_server = L7ServerSshTest(L7ServerSsh('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
         threaded_server.start()
 
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)

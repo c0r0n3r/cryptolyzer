@@ -5,14 +5,19 @@ from unittest import mock
 
 from collections import OrderedDict
 
-from test.common.classes import TestMainBase
+from test.common.classes import (
+    BADSSL_COM_L4_SOCKET_PARAMS,
+    OFFLINE_CLIENT_L4_SOCKET_PARAMS,
+    OFFLINE_L4_SOCKET_PARAMS,
+    TestMainBase,
+)
+from test.common.markers import live_server
 
 import asn1crypto.x509
 
 from cryptoparser.tls.subprotocol import TlsAlertDescription
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest
@@ -32,7 +37,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
         side_effect=TlsAlert(TlsAlertDescription.UNRECOGNIZED_NAME),
     )
     def test_error_tls_alert_unrecognized_name(self, _):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('localhost', 0)
 
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
@@ -43,24 +48,25 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
         side_effect=TlsAlert(TlsAlertDescription.HANDSHAKE_FAILURE)
     )
     def test_error_tls_alert_handshake_failure(self, _):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('localhost', 0)
 
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
+    @live_server
     @mock.patch.object(
         asn1crypto.x509.Name, 'load',
         side_effect=ValueError
     )
     def test_error_distinguished_name_cannot_be_loaded(self, _):
-        result = self.get_result('client.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('client.badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
         self.assertEqual(result.distinguished_names, [])
 
     @staticmethod
     def get_result(
             host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
-            l4_socket_params=L4TransferSocketParams(), ip=None, scheme='tls'
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         analyzer = AnalyzerPublicKeyRequest()
         l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
@@ -68,13 +74,14 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
 
         return analyzer_result
 
+    @live_server
     def test_real_server(self):
-        result = self.get_result('badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
-        result = self.get_result('client.badssl.com', 443, l4_socket_params=L4TransferSocketParams(timeout=10))
+        result = self.get_result('client.badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
         self.assertEqual(
             result.distinguished_names,
             [
@@ -94,7 +101,7 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
 
     def test_plain_text_response(self):
         threaded_server = L7ServerTlsTest(
-            L7ServerTlsPlainTextResponse('localhost', 0, L4TransferSocketParams(timeout=0.2)),
+            L7ServerTlsPlainTextResponse('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
         )
         threaded_server.start()
 
@@ -103,9 +110,11 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
+    @live_server
     def test_output(self):
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeyreq', 'client.badssl.com', 443, timeout=10, scheme='tls'
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeyreq', 'client.badssl.com', 443,
+            timeout=10, scheme='tls', throttle_delay=2
         )
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')

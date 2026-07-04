@@ -25,10 +25,17 @@ class TestHttpHandshakeBase(unittest.TestCase):
         self.assertEqual(ctx.exception.error, SecurityErrorType.UNKNOWN_ERROR)
 
     def test_error_ssl_certificate_verify_failed(self):
+        threaded_server = TestThreadedServerHttps('127.0.0.1', 0)
+        threaded_server.init_connection()
+        threaded_server.start()
+
+        url = urllib3.util.parse_url(f'https://127.0.0.1:{threaded_server.bind_port}')
         with self.assertRaises(SecurityError) as ctx:
-            L7ClientHttp(urllib3.util.parse_url('https://expired.badssl.com')).do_handshake()
+            L7ClientHttp(url).do_handshake()
 
         self.assertEqual(ctx.exception.error, SecurityErrorType.CERTIFICATE_VERIFY_FAILED)
+
+        threaded_server.kill()
 
     def test_proxy(self):
         test_http_server = TestThreadedServerHttp('127.0.0.1', 0)

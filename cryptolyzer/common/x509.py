@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import collections
+import http.client
 
 import attr
 
@@ -178,7 +179,7 @@ class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
         )
         try:
             build_path = cert_validator.validate_usage(set())
-        except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError):
+        except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError, OSError):
             self._validated.items = items
         else:
             self._validated.items = [PublicKeyX509(item) for item in reversed(build_path)]
@@ -209,7 +210,7 @@ class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
             )
             try:
                 cert_validator.validate_usage(set())
-            except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError):
+            except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError, OSError):
                 trust_roots.append((trust_store_owner, False))
             else:
                 trust_roots.append((trust_store_owner, True))
@@ -217,12 +218,43 @@ class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
         self._validated.trust_roots = collections.OrderedDict(trust_roots)
 
     def check_revocation(self, certificate_status_list):
+        asn1crypto_certificates = list(map(self._get_asn1crypto_certificate, self._validated.items))
+
+        if certificate_status_list:
+            context = certvalidator.context.ValidationContext(
+                trust_roots=[],
+                extra_trust_roots=[self._get_asn1crypto_certificate(self._validated.items[-1])],
+                weak_hash_algos=set(),
+                whitelisted_certs=[item.fingerprints[Hash.SHA1] for item in self._validated.items],
+                ocsps=[certificate_status.ocsp_response for certificate_status in certificate_status_list],
+                allow_fetching=False,
+            )
+            # NOTE: necessary only because of asn1crypto issue 262
+            context._fetched_ocsps = {  # pylint: disable=protected-access
+                self._get_asn1crypto_certificate(item).issuer_serial: []
+                for item in self._validated.items
+            }
+            cert_validator = certvalidator.CertificateValidator(
+                end_entity_cert=asn1crypto_certificates[0],
+                intermediate_certs=asn1crypto_certificates[1:],
+                validation_context=context,
+            )
+            try:
+                cert_validator.validate_usage(set())
+            except certvalidator.errors.RevokedError:
+                self._validated.revoked = True
+                return
+            except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError, OSError):
+                pass
+            else:
+                self._validated.revoked = False
+                return
+
         context = certvalidator.context.ValidationContext(
             trust_roots=[],
             extra_trust_roots=[self._get_asn1crypto_certificate(self._validated.items[-1])],
             weak_hash_algos=set(),
             whitelisted_certs=[item.fingerprints[Hash.SHA1] for item in self._validated.items],
-            ocsps=[certificate_status.ocsp_response for certificate_status in certificate_status_list],
             allow_fetching=True,
         )
         # NOTE: necessary only because of asn1crypto issue 262
@@ -230,7 +262,6 @@ class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
             self._get_asn1crypto_certificate(item).issuer_serial: []
             for item in self._validated.items
         }
-        asn1crypto_certificates = list(map(self._get_asn1crypto_certificate, self._validated.items))
         cert_validator = certvalidator.CertificateValidator(
             end_entity_cert=asn1crypto_certificates[0],
             intermediate_certs=asn1crypto_certificates[1:],
@@ -240,7 +271,12 @@ class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
             cert_validator.validate_usage(set())
         except certvalidator.errors.RevokedError:
             self._validated.revoked = True
-        except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError):
+        except (
+            certvalidator.errors.PathBuildingError,
+            certvalidator.errors.PathValidationError,
+            OSError,
+            http.client.InvalidURL,
+        ):
             pass
         else:
             self._validated.revoked = False

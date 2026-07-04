@@ -4,6 +4,8 @@
 from unittest import mock
 
 from collections import OrderedDict
+from test.common.markers import live_server
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 
 from cryptodatahub.common.algorithm import Authentication, Hash
 from cryptodatahub.common.grade import Grade
@@ -14,7 +16,6 @@ from cryptoparser.dnsrec.record import DnsRecordSshfp
 from cryptoparser.ssh.subprotocol import SshReasonCode
 
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.dnsrec.client import L7ClientDns
 from cryptolyzer.ssh.client import L7ClientSsh, SshClientHandshake, SshDisconnect
@@ -26,12 +27,13 @@ from .classes import L7ServerSshTest, TestSshCases
 
 class TestSshPubkeys(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerPublicKeys()
         l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
         result = analyzer.analyze(l7_client)
         return result
 
+    @live_server
     @mock.patch.object(
         SshClientHandshake, '_process_kex_init',
         side_effect=NetworkError(NetworkErrorType.NO_CONNECTION)
@@ -41,6 +43,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
             self.get_result('github.com', 22)
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
+    @live_server
     @mock.patch.object(
         SshClientHandshake, '_process_kex_init',
         side_effect=NetworkError(NetworkErrorType.NO_RESPONSE)
@@ -49,6 +52,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
         result = self.get_result('github.com', 22)
         self.assertEqual(result.public_keys, [])
 
+    @live_server
     @mock.patch.object(
         SshClientHandshake, '_process_kex_init',
         side_effect=SshDisconnect(SshReasonCode.HOST_NOT_ALLOWED_TO_CONNECT, '')
@@ -57,6 +61,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
         result = self.get_result('github.com', 22)
         self.assertEqual(result.public_keys, [])
 
+    @live_server
     @mock.patch.object(AnalyzerPublicKeys, '_get_dh_key_exchange_reply_message_class', side_effect=StopIteration)
     def test_error_no_kex_reply(self, _):
         result = self.get_result('github.com', 22)
@@ -73,12 +78,14 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
         self.assertEqual(SshFpVerificationStatus.MATCH.value.grade, Grade.SECURE)
         self.assertEqual(SshFpVerificationStatus.MISMATCH.value.grade, Grade.INSECURE)
 
+    @live_server
     @mock.patch.object(L7ClientDns, 'get_sshfp_records', side_effect=NetworkError(NetworkErrorType.NO_ADDRESS))
     def test_sshfp_dns_error(self, _):
         result = self.get_result('github.com', 22)
         for entry in result.public_keys:
             self.assertEqual(entry.sshfp_status, SshFpVerificationStatus.MISSING)
 
+    @live_server
     @mock.patch.object(L7ClientDns, 'get_sshfp_records', return_value=[
         DnsRecordSshfp(
             algorithm=SshFpAlgorithm.RSA,
@@ -95,6 +102,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
         self.assertGreater(len(rsa_entries), 0)
         self.assertEqual(rsa_entries[0].sshfp_status, SshFpVerificationStatus.MISMATCH)
 
+    @live_server
     def test_real_no_gex(self):
         result = self.get_result('github.com', 22)
         self.assertEqual(
@@ -123,6 +131,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
                 f'Server offers {entry.public_key.host_key_algorithm.value.code} host key', log_lines[idx]
             )
 
+    @live_server
     def test_host_cert(self):
         result = self.get_result('syslog.ips.nl', 22)
         self.assertEqual(
@@ -141,6 +150,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
         )
         self.assertEqual(result.public_keys[3].public_key.key_id, 'avy.fabriquehq.nl')
 
+    @live_server
     def test_real_sshfp_verification(self):
         result = self.get_result('sourceware.org', 22)
         self.assertGreater(len(result.public_keys), 0)
@@ -158,7 +168,7 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
     def test_pubkeys_with_algorithm_limit(self):
         server_configuration = SshServerConfiguration(max_remote_algorithm_count=50)
         threaded_server = L7ServerSshTest(L7ServerSsh(
-            'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=server_configuration
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=server_configuration
         ))
         threaded_server.start()
 

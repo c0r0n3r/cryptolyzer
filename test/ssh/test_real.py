@@ -5,6 +5,7 @@ import unittest
 
 import test.ssh.test_ciphers
 import test.ssh.test_versions
+from test.common.markers import live_server
 
 
 from cryptodatahub.ssh.algorithm import SshHostKeyAlgorithm
@@ -15,6 +16,7 @@ from cryptoparser.ssh.version import (
 
 
 class TestReal(unittest.TestCase):
+    @live_server
     def test_ciphers(self):
         result = test.ssh.test_ciphers.TestSshCiphers.get_result('github.com')
         self.assertEqual(
@@ -41,6 +43,7 @@ class TestReal(unittest.TestCase):
             ]
         )
 
+    @live_server
     def test_versions(self):
         result = test.ssh.test_versions.TestSshVersions.get_result('github.com')
         self.assertEqual(result.protocol_versions, [SshProtocolVersion(SshVersion.SSH2)])

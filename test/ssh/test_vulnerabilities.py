@@ -1,3 +1,5 @@
+from test.common.markers import live_server
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 # SPDX-License-Identifier: MPL-2.0
 # -*- coding: utf-8 -*-
 
@@ -7,7 +9,6 @@ from cryptoparser.common.base import Serializable, SerializableTextEncoder
 
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerTargetSsh
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import SerializableTextEncoderHighlighted
 
 from cryptolyzer.ssh.client import L7ClientSsh, SshDisconnect
@@ -25,7 +26,7 @@ from .classes import L7ServerSshTest, TestSshCases
 
 class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
     @staticmethod
-    def get_result(host, port=None, l4_socket_params=L4TransferSocketParams(), ip=None):
+    def get_result(host, port=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
         analyzer = AnalyzerVulnerabilities()
         l7_client = L7ClientSsh.from_scheme('ssh', host, port, l4_socket_params, ip)
         analyzer_result = analyzer.analyze(l7_client)
@@ -149,6 +150,7 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
         self.assertTrue(result.as_markdown())
         Serializable.post_text_encoder = SerializableTextEncoder()
 
+    @live_server
     def test_real(self):
         result = self.get_result('gitlab.com', 22)
         self.assertFalse(result.algorithms.sweet32.value)
@@ -186,7 +188,7 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
     def test_vulns_with_algorithm_limit(self):
         server_configuration = SshServerConfiguration(max_remote_algorithm_count=50)
         threaded_server = L7ServerSshTest(L7ServerSsh(
-            'localhost', 0, L4TransferSocketParams(timeout=0.2), configuration=server_configuration
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=server_configuration
         ))
         threaded_server.start()
 

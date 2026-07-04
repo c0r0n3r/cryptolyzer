@@ -87,21 +87,12 @@ class TestAnalyzerDHParams(TestAnalyzerDHBase):
     def get_max_handshakes(cls):
         return 500  # FFDH groups × many algorithm subsets; server must respond to each
 
-    @classmethod
-    def get_server_timeout(cls) -> float:
-        return 10.0
-
-    @classmethod
-    def get_client_timeout(cls) -> float:
-        return 10.0
-
     def test_ikev2_invalid_ke_payload(self):
         configuration = get_ffdh_single_server_configuration()
         threaded_server = create_ike_server(
             L7ServerIke,
             configuration=configuration,
             max_handshake_count=self.get_max_handshakes(),
-            timeout=10,
         )
         l4_transfer = threaded_server.l7_server.l4_transfer
         assert l4_transfer is not None
@@ -126,7 +117,6 @@ class TestAnalyzerDHParams(TestAnalyzerDHBase):
             configuration=configuration,
             notify_type_ikev1=Ikev1NotifyType.INVALID_KEY_INFORMATION,
             max_handshake_count=self.get_max_handshakes(),
-            timeout=self.get_server_timeout(),
         )
         l4_transfer = threaded_server.l7_server.l4_transfer
         assert l4_transfer is not None
