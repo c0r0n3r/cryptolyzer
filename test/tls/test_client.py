@@ -1825,8 +1825,12 @@ class TestSslClientHandshake(unittest.TestCase):
         SslRecord, 'parse_exact_size', return_value=SslRecord(SslErrorMessage(SslErrorType.NO_CIPHER_ERROR))
     )
     def test_error_ssl_error_replied(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
+        )
+        threaded_server.wait_for_server_listen()
         with self.assertRaises(SslError) as context_manager:
-            L7ClientTls('badssl.com', 443, BADSSL_COM_L4_SOCKET_PARAMS).do_ssl_handshake(
+            L7ClientTls('localhost', threaded_server.l7_server.l4_transfer.bind_port).do_ssl_handshake(
                 SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, SslErrorType.NO_CIPHER_ERROR)
 
