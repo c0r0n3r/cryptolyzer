@@ -58,14 +58,18 @@ class Ikev1CipherSuite:
         cls,
         algorithms: Ikev1SecurityAssociationProposalAlgorithms
     ):
-        for bulk_cipher_entry in algorithms.encryption_algorithm.value.bulk_ciphers:
+        bulk_ciphers = list(algorithms.encryption_algorithm.value.bulk_ciphers)
+        for bulk_cipher_entry in bulk_ciphers:
             if bulk_cipher_entry.cipher.value.key_size == algorithms.key_length:
                 break
         else:
-            raise ValueError(
-                f'Key length {algorithms.key_length} not found for '
-                f'encryption algorithm {algorithms.encryption_algorithm}'
-            )
+            if len(bulk_ciphers) == 1 and algorithms.key_length is None:
+                bulk_cipher_entry = bulk_ciphers[0]
+            else:
+                raise ValueError(
+                    f'Key length {algorithms.key_length} not found for '
+                    f'encryption algorithm {algorithms.encryption_algorithm}'
+                )
 
         return cls(
             encryption_algorithm=bulk_cipher_entry.cipher,
@@ -107,14 +111,18 @@ class Ikev2CipherSuite:
         diffie_hellman_transform_id: Ikev2DiffieHellmanGroup,
         key_length: int,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
-        for bulk_cipher_entry in encryption_transform_id.value.bulk_ciphers:
+        bulk_ciphers = list(encryption_transform_id.value.bulk_ciphers)
+        for bulk_cipher_entry in bulk_ciphers:
             if bulk_cipher_entry.cipher.value.key_size == key_length:
                 break
         else:
-            raise ValueError(
-                f'Key length {key_length} not found for '
-                f'encryption algorithm {encryption_transform_id}'
-            )
+            if len(bulk_ciphers) == 1 and key_length is None:
+                bulk_cipher_entry = bulk_ciphers[0]
+            else:
+                raise ValueError(
+                    f'Key length {key_length} not found for '
+                    f'encryption algorithm {encryption_transform_id}'
+                )
 
         integrity_algorithm = None if integrity_transform_id.value.hmac is None else integrity_transform_id.value.hmac
         return cls(
@@ -209,8 +217,7 @@ class AnalyzerIKECommonBase(AnalyzerIKEBase):
                 group_name = self._get_dh_group_name()
                 LogSingleton().log(
                     level=40,
-                    msg=f'No proposal chosen; group_type={group_name}, '
-                    f'group={group_name}'
+                    msg=f'No proposal chosen; group_type={group_name}'
                 )
                 return None
 
