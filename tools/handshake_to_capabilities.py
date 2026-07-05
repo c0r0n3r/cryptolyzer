@@ -95,8 +95,8 @@ class HandshakeToCapabilitiesBase():
 @attr.s
 class HandshakeToCapabilitiesTls(HandshakeToCapabilitiesBase):
     client_hello = attr.ib(init=False, default=None)
-    grease = attr.ib(init=False, default=collections.OrderedDict())
-    extensions = attr.ib(init=False, default=collections.OrderedDict())
+    grease = attr.ib(init=False, default=attr.Factory(collections.OrderedDict))
+    extensions = attr.ib(init=False, default=attr.Factory(collections.OrderedDict))
 
     _GREASE_EXTENSIONS = [
         TlsExtensionType.APPLICATION_LAYER_PROTOCOL_NEGOTIATION,
