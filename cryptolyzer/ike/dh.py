@@ -127,7 +127,7 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
             key_exchange_payload = key_exchange_message.get_payload_by_type(Ikev2PayloadType.KE)
             key_exchange_data.append(bytes(key_exchange_payload.key_exchange_data))
 
-        return len(set(key_exchange_data)) < try_count and len(key_exchange_data) == try_count
+        return len(set(key_exchange_data)) < try_count
 
     def _analyze_ikev2(self, l7_client):
         key_reused = None

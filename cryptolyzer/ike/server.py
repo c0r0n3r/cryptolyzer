@@ -539,14 +539,14 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
                             cipher_suite.integrity_algorithm == resolved.integrity_algorithm and
                             cipher_suite.pseudorandom_function == resolved.pseudorandom_function and
                             cipher_suite.diffie_hellman_group == resolved.diffie_hellman_group):
-                        selected = {
+                        transforms = {
                             encryption_transform.get_transform_type(): encryption_transform,
                             prf_transform.get_transform_type(): prf_transform,
                             dh_group_transform.get_transform_type(): dh_group_transform,
                         }
                         if integrity_transform is not None:
-                            selected[integrity_transform.get_transform_type()] = integrity_transform
-                        return selected
+                            transforms[integrity_transform.get_transform_type()] = integrity_transform
+                        return transforms
         return None
 
     def _select_sa_from_client(
@@ -694,9 +694,11 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
         if selected_sa is not None:
             try:
                 selected_dh_transform = selected_sa.get_transform_by_type(Ikev2TransformType.DH)
-                ke_payload = message.get_payload_by_type(Ikev2PayloadType.KE)
             except KeyError:
                 selected_dh_transform = None
+            try:
+                ke_payload = message.get_payload_by_type(Ikev2PayloadType.KE)
+            except KeyError:
                 ke_payload = None
             if (selected_dh_transform is not None and ke_payload is not None and
                     ke_payload.dh_group != selected_dh_transform.transform_id):
