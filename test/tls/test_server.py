@@ -70,6 +70,7 @@ from cryptolyzer.tls.client import (
 )
 from cryptolyzer.tls.server import (
     L7ServerTls,
+    L7ServerTlsBase,
     L7ServerTlsFTP,
     L7ServerTlsIMAP,
     L7ServerTlsLDAP,
@@ -85,6 +86,7 @@ from cryptolyzer.tls.server import (
     L7ServerTlsSMTP,
     L7ServerTlsXMPP,
     TlsServerConfiguration,
+    TlsServerHandshake,
 )
 
 from .classes import L7ServerTlsTest, L7ServerStartTlsTest
@@ -256,6 +258,21 @@ class TestL7ServerTls(TestL7ServerBase):
         with self.assertRaises(TlsAlert) as context_manager:
             l7_client.do_tls_handshake(hello_message=hello_message)
         self.assertEqual(context_manager.exception.description, TlsAlertDescription.CLOSE_NOTIFY)
+
+    @mock.patch.object(L7ServerTlsBase, 'send', side_effect=ConnectionResetError)
+    def test_error_connection_closed_during_handshake(self, _):
+        l4_client = self.create_client(L4ClientTCP, self.threaded_server.l7_server)
+        l4_client.init_connection()
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1_2), ], self.threaded_server.l7_server.address
+        )
+        l4_client.send(TlsRecord(client_hello.compose()).compose())
+        self._assert_on_more_data(l4_client)
+        l4_client.close()
+
+    @mock.patch.object(TlsServerHandshake, '_handle_error', side_effect=BrokenPipeError)
+    def test_error_connection_closed_before_close_notify(self, _):
+        self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_2))
 
     def test_default_port(self):
         self.assertEqual(L7ServerTls.get_default_port(), 4433)
