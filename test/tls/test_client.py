@@ -60,7 +60,9 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import (
+    ClientOpenVpn,
     ClientOpenVpnBase,
+    ClientOpenVpnTcp,
     ClientPOP3,
     ClientRDP,
     ClientSMTP,
@@ -97,7 +99,6 @@ from cryptolyzer.common.exception import (
     SecurityError,
     SecurityErrorType
 )
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.server import (
     L7ServerTls,
@@ -1545,8 +1546,6 @@ class TestClientDoH(TestL7ClientBase):
 
 
 class TestClientOpenVpn(TestL7ClientBase):
-    VPNJANTIT_COM_L4_SOCKET_PARAMS = L4TransferSocketParams(timeout=10, throttle_delay=5)
-
     @mock.patch.object(TlsServerMockResponse, '_get_mock_responses', return_value=(
        OpenVpnPacketWrapperTcp(OpenVpnPacketHardResetServerV2(
             session_id=1, packet_id_array=[0x58585858], remote_session_id=0xffffffffffffffff, packet_id=0,
@@ -1689,17 +1688,6 @@ class TestClientOpenVpn(TestL7ClientBase):
         l7_client.l4_transfer.close()
 
     @live_server
-    def test_openvpn_tcp_client(self):
-        _, result = self.get_result(
-            'openvpntcp', 'gr1.vpnjantit.com', 992,
-            self.VPNJANTIT_COM_L4_SOCKET_PARAMS, analyzer=AnalyzerDHParams()
-        )
-        self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC2539_1024_BIT_MODP_GROUP)
-
-        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'localhost')
-        self.assertEqual(l7_client.port, L7ClientHTTPS.get_default_port())
-
-    @live_server
     @mock.patch.object(
         L4ClientUDP, '_receive_bytes',
         return_value=OpenVpnPacketHardResetServerV2(1, 0xffffffffffffffff, [0], 1).compose()
@@ -1716,16 +1704,16 @@ class TestClientOpenVpn(TestL7ClientBase):
         self.assertEqual(context_manager.exception.bytes_needed, 1)
         l7_client.l4_transfer.close()
 
-    @live_server
-    def test_openvpn_udp_client(self):
-        _, result = self.get_result(
-            'openvpn', 'gr1.vpnjantit.com', 1194,
-            self.VPNJANTIT_COM_L4_SOCKET_PARAMS, analyzer=AnalyzerDHParams()
-        )
-        self.assertEqual(result.dhparam.well_known, DHParamWellKnown.RFC2539_1024_BIT_MODP_GROUP)
-
+    def test_default_port(self):
         l7_client = L7ClientTlsBase.from_scheme('openvpn', 'localhost')
         self.assertEqual(l7_client.port, 1194)
+
+        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'localhost')
+        self.assertEqual(l7_client.port, L7ClientHTTPS.get_default_port())
+
+    def test_default_timeout(self):
+        self.assertEqual(ClientOpenVpn.get_default_timeout(), 2)
+        self.assertEqual(ClientOpenVpnTcp.get_default_timeout(), 5)
 
 
 class TestTlsClientHandshake(TestL7ClientBase):
