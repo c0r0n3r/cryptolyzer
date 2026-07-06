@@ -35,6 +35,7 @@ from cryptoparser.tls.subprotocol import (
     TlsAlertDescription,
     TlsAlertLevel,
     TlsAlertMessage,
+    TlsClientCertificateType,
     TlsContentType,
     TlsExtensionsClient,
     TlsHandshakeType,
@@ -42,7 +43,7 @@ from cryptoparser.tls.subprotocol import (
     TlsSessionIdVector,
 )
 
-from cryptodatahub.tls.algorithm import TlsNextProtocolName, TlsProtocolName
+from cryptodatahub.tls.algorithm import TlsNextProtocolName, TlsProtocolName, TlsSignatureAndHashAlgorithm
 
 from cryptolyzer.common.dhparam import DHParamWellKnown, parse_tls_dh_params, parse_ecdh_params
 from cryptolyzer.common.transfer import L4ClientTCP, L4ClientUDP
@@ -322,6 +323,13 @@ class TestL7ServerTlsConfiguration(unittest.TestCase):
                 curves=[TlsNamedCurve.SECP256R1],
             )
 
+    def test_error_certificate_authorities_without_certificate(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+                certificate_authorities=[b'fake distinguished name'],
+            )
+
 
 class TestL7ServerTlsCertificate(TestL7ServerBase):
     def setUp(self):
@@ -347,6 +355,57 @@ class TestL7ServerTlsCertificate(TestL7ServerBase):
         self.assertEqual(len(certificate_chain), 1)
         self.assertEqual(certificate_chain[0].certificate, b'fake certificate')
         self.threaded_server.stop()
+
+
+class TestL7ServerTlsCertificateRequest(TestL7ServerBase):
+    def setUp(self):
+        self.threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+            certificates=[b'fake certificate'],
+            certificate_authorities=[b'fake distinguished name'],
+        ))
+
+    def _test_handshake_certificate_request(self, protocol_version):
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [protocol_version], self.threaded_server.l7_server.address
+        )
+        l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
+        l7_client.init_connection()
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO_DONE,
+        )
+        self.assertIn(TlsHandshakeType.CERTIFICATE_REQUEST, server_messages)
+        self.assertIn(TlsHandshakeType.SERVER_HELLO_DONE, server_messages)
+        certificate_request = server_messages[TlsHandshakeType.CERTIFICATE_REQUEST]
+        self.assertEqual(
+            list(certificate_request.certificate_types),
+            [
+                TlsClientCertificateType.RSA_SIGN,
+                TlsClientCertificateType.DSS_SIGN,
+                TlsClientCertificateType.ECDSA_SIGN,
+            ]
+        )
+        self.assertEqual(
+            [
+                bytes(bytearray(certificate_authority))
+                for certificate_authority in certificate_request.certificate_authorities
+            ],
+            [b'fake distinguished name']
+        )
+        self.threaded_server.stop()
+        return certificate_request
+
+    def test_handshake_certificate_request(self):
+        certificate_request = self._test_handshake_certificate_request(TlsProtocolVersion(TlsVersion.TLS1_2))
+        self.assertEqual(
+            list(certificate_request.supported_signature_algorithms),
+            list(TlsSignatureAndHashAlgorithm)
+        )
+
+    def test_handshake_certificate_request_without_signature_algorithms(self):
+        certificate_request = self._test_handshake_certificate_request(TlsProtocolVersion(TlsVersion.TLS1_1))
+        self.assertEqual(certificate_request.supported_signature_algorithms, None)
 
 
 class TestL7ServerTlsDHE(TestL7ServerBase):

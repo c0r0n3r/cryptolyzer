@@ -9,7 +9,12 @@ import attr
 from cryptodatahub.common.algorithm import BlockCipher, KeyExchange
 from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.common.parameter import DHParameterNumbers, DHParamWellKnown
-from cryptodatahub.tls.algorithm import TlsNamedCurve, TlsNextProtocolName, TlsProtocolName
+from cryptodatahub.tls.algorithm import (
+    TlsNamedCurve,
+    TlsNextProtocolName,
+    TlsProtocolName,
+    TlsSignatureAndHashAlgorithm,
+)
 
 from cryptoparser.common.exception import InvalidType, NotEnoughData
 from cryptoparser.common.parse import ComposerBinary
@@ -70,8 +75,11 @@ from cryptoparser.tls.subprotocol import (
     TlsCertificate,
     TlsCertificates,
     TlsCipherSuite,
+    TlsClientCertificateType,
     TlsContentType,
+    TlsDistinguishedName,
     TlsECCurveType,
+    TlsHandshakeCertificateRequest,
     TlsHandshakeServerCertificate,
     TlsHandshakeServerHelloDone,
     TlsHandshakeServerHello,
@@ -117,6 +125,12 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
     certificates = attr.ib(
         default=[],
         validator=attr.validators.deep_iterable(attr.validators.instance_of(bytes))
+    )
+    certificate_authorities = attr.ib(
+        default=None,
+        validator=attr.validators.optional(
+            attr.validators.deep_iterable(attr.validators.instance_of(bytes))
+        )
     )
     dh_param = attr.ib(
         default=None,
@@ -181,6 +195,9 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
         ]
         if self.curves and not ecdhe_cipher_suites:
             raise ValueError('curves are set but no ECDHE cipher suite is configured')
+
+        if self.certificate_authorities is not None and not self.certificates:
+            raise ValueError('certificate_authorities is set but no certificate is configured')
 
 
 @attr.s
@@ -440,7 +457,7 @@ class TlsServerHandshake(TlsServer):
 
         return bytes(composer.composed_bytes)
 
-    def _send_server_hello_messages(self, cipher_suite, client_hello):
+    def _send_server_hello_messages(self, protocol_version, cipher_suite, client_hello):
         if self.configuration.certificates:
             certificate_chain = TlsCertificates(
                 [TlsCertificate(cert_bytes) for cert_bytes in self.configuration.certificates]
@@ -464,6 +481,24 @@ class TlsServerHandshake(TlsServer):
                         TlsRecord(TlsHandshakeServerKeyExchange(param_bytes).compose()).compose()
                     )
 
+        if self.configuration.certificate_authorities is not None:
+            if protocol_version < TlsProtocolVersion(TlsVersion.TLS1_2):
+                supported_signature_algorithms = None
+            else:
+                supported_signature_algorithms = list(TlsSignatureAndHashAlgorithm)
+            self.l7_transfer.send(TlsRecord(TlsHandshakeCertificateRequest(
+                certificate_types=[
+                    TlsClientCertificateType.RSA_SIGN,
+                    TlsClientCertificateType.DSS_SIGN,
+                    TlsClientCertificateType.ECDSA_SIGN,
+                ],
+                certificate_authorities=[
+                    TlsDistinguishedName(certificate_authority)
+                    for certificate_authority in self.configuration.certificate_authorities
+                ],
+                supported_signature_algorithms=supported_signature_algorithms,
+            ).compose()).compose())
+
         self.l7_transfer.send(TlsRecord(TlsHandshakeServerHelloDone().compose()).compose())
 
     def _process_handshake_message(self, message, last_handshake_message_type):
@@ -484,7 +519,7 @@ class TlsServerHandshake(TlsServer):
                     (self.configuration.certificates or
                      self.configuration.dh_param is not None or
                      self.configuration.curves)):
-                self._send_server_hello_messages(server_hello.cipher_suite, message)
+                self._send_server_hello_messages(protocol_version, server_hello.cipher_suite, message)
 
         if self._last_processed_message_type == last_handshake_message_type:
             try:
