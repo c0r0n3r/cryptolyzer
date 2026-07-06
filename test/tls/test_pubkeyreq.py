@@ -6,21 +6,22 @@ from unittest import mock
 from collections import OrderedDict
 
 from test.common.classes import (
-    BADSSL_COM_L4_SOCKET_PARAMS,
     OFFLINE_CLIENT_L4_SOCKET_PARAMS,
     OFFLINE_L4_SOCKET_PARAMS,
     TestMainBase,
 )
-from test.common.markers import live_server
 
 import asn1crypto.x509
 
-from cryptoparser.tls.subprotocol import TlsAlertDescription
+from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm
+
+from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsCipherSuite, TlsClientCertificateType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.exception import TlsAlert
 from cryptolyzer.tls.pubkeyreq import AnalyzerPublicKeyRequest
+from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 
 from cryptolyzer.__main__ import main
 
@@ -28,9 +29,25 @@ from .classes import TestTlsCases, L7ServerTlsTest, L7ServerTlsPlainTextResponse
 
 
 class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
+    DISTINGUISHED_NAME = OrderedDict([
+        ('country_name', 'US'),
+        ('state_or_province_name', 'California'),
+        ('locality_name', 'San Francisco'),
+        ('organization_name', 'BadSSL'),
+        ('common_name', 'BadSSL Client Root Certificate Authority'),
+    ])
+
     @classmethod
     def _get_main_func(cls):
         return main
+
+    @classmethod
+    def _get_certificate_request_configuration(cls):
+        return TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+            certificates=[b'fake certificate'],
+            certificate_authorities=[asn1crypto.x509.Name.build(cls.DISTINGUISHED_NAME).dump()],
+        )
 
     @mock.patch.object(
         L7ClientTlsBase, 'do_tls_handshake',
@@ -54,13 +71,13 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
-    @live_server
     @mock.patch.object(
         asn1crypto.x509.Name, 'load',
         side_effect=ValueError
     )
     def test_error_distinguished_name_cannot_be_loaded(self, _):
-        result = self.get_result('client.badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
+        threaded_server = self.create_server(self._get_certificate_request_configuration())
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.distinguished_names, [])
 
     @staticmethod
@@ -74,26 +91,29 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
 
         return analyzer_result
 
-    @live_server
-    def test_real_server(self):
-        result = self.get_result('badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
+    def test_no_certificate_request(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+            certificates=[b'fake certificate'],
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.certificate_types, None)
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
-        result = self.get_result('client.badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
+    def test_certificate_request(self):
+        threaded_server = self.create_server(self._get_certificate_request_configuration())
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(
-            result.distinguished_names,
+            result.certificate_types,
             [
-                OrderedDict([
-                    ('country_name', 'US'),
-                    ('state_or_province_name', 'California'),
-                    ('locality_name', 'San Francisco'),
-                    ('organization_name', 'BadSSL'),
-                    ('common_name', 'BadSSL Client Root Certificate Authority')
-                ])
+                TlsClientCertificateType.RSA_SIGN,
+                TlsClientCertificateType.DSS_SIGN,
+                TlsClientCertificateType.ECDSA_SIGN,
             ]
         )
+        self.assertEqual(result.supported_signature_algorithms, list(TlsSignatureAndHashAlgorithm))
+        self.assertEqual(result.distinguished_names, [self.DISTINGUISHED_NAME])
         self.assertEqual(
             self.log_stream.getvalue(),
             'Server requests X.509 for client authentication\n'
@@ -110,11 +130,16 @@ class TestTlsPublicKeyRequest(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertEqual(result.supported_signature_algorithms, None)
         self.assertEqual(result.distinguished_names, None)
 
-    @live_server
     def test_output(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            '127.0.0.1', 0,
+            OFFLINE_L4_SOCKET_PARAMS,
+            configuration=self._get_certificate_request_configuration(),
+        ))
+        threaded_server.wait_for_server_listen()
         func_arguments, cli_arguments = self._get_arguments(
-            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeyreq', 'client.badssl.com', 443,
-            timeout=10, scheme='tls', throttle_delay=2
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'pubkeyreq', '127.0.0.1',
+            threaded_server.l7_server.l4_transfer.bind_port, scheme='tls'
         )
         result = self.get_result(**func_arguments)
         self.assertEqual(self._get_test_analyzer_result_json(**cli_arguments), result.as_json() + '\n')
