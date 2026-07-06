@@ -8,7 +8,6 @@ from collections import OrderedDict
 import datetime
 
 from test.common.classes import (
-    BADSSL_COM_L4_SOCKET_PARAMS,
     OFFLINE_CLIENT_L4_SOCKET_PARAMS,
     OFFLINE_L4_SOCKET_PARAMS,
     TestMainBase,
@@ -185,6 +184,15 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
     SELF_SIGNED_CERT_DER = PublicKeyX509.from_pem(
         (TestThreadedServerHttps.CERT_FILE_PATH.parent / 'self_signed_certificate.crt').read_text()
     ).der
+    TRUSTED_CERT_DER = PublicKeyX509.from_pem(
+        (TestThreadedServerHttps.CERT_FILE_PATH.parent / 'rsa8192.badssl.com_certificate.crt').read_text()
+    ).der
+    TRUSTED_INTERMEDIATE_CA_CERT_DER = PublicKeyX509.from_pem(
+        (TestThreadedServerHttps.CERT_FILE_PATH.parent / 'rsa8192.badssl.com_intermediate_ca.crt').read_text()
+    ).der
+    TRUSTED_ROOT_CA_CERT_DER = PublicKeyX509.from_pem(
+        (TestThreadedServerHttps.CERT_FILE_PATH.parent / 'rsa8192.badssl.com_root_ca.crt').read_text()
+    ).der
 
     @staticmethod
     def _create_server(cert_ders):
@@ -271,26 +279,34 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
         )
         self.assertFalse(result.pubkeys[0].subject_matches)
 
-    @live_server
     def test_fallback_certificate(self):
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            '127.0.0.1', 0,
+            OFFLINE_L4_SOCKET_PARAMS,
+            configuration=TlsServerConfiguration(certificates=[self.SNAKEOIL_CERT_DER]),
+        ))
+        threaded_server.wait_for_server_listen()
         result = self.get_result(
-            'unexisting-hostname-to-get-wildcard-certificate-without-sni.badssl.com', 443,
-            l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port, ip='127.0.0.1'
         )
         self.assertEqual(len(result.pubkeys), 1)
+        self.assertTrue(result.pubkeys[0].sni_sent)
+        self.assertFalse(result.pubkeys[0].subject_matches)
         self.assertEqual(
             'Server offers RSA X.509 public key (with SNI)\n',
             self.log_stream.getvalue()
         )
 
-    @live_server
     def test_certificate_chain_trusted_root(self):
-        result = self.get_result('badssl.com', 443, l4_socket_params=BADSSL_COM_L4_SOCKET_PARAMS)
+        threaded_server = self._create_server(
+            [self.TRUSTED_CERT_DER, self.TRUSTED_INTERMEDIATE_CA_CERT_DER, self.TRUSTED_ROOT_CA_CERT_DER]
+        )
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(len(result.pubkeys), 1)
 
         trusted_root_chain = result.pubkeys[0].certificate_chain
         self.assertEqual(len(trusted_root_chain.items), 3)
-        self.assertFalse(trusted_root_chain.contains_anchor)
+        self.assertTrue(trusted_root_chain.contains_anchor)
         self.assertEqual(
             trusted_root_chain.trust_roots,
             {
