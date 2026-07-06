@@ -11,8 +11,9 @@ from cryptodatahub.ike.algorithm import (
 
 from cryptodatahub.ike.version import IkeVersion
 
+from cryptolyzer.common.result import AnalyzerResultIKE, AnalyzerTargetIke
+
 from cryptolyzer.ike.dh import AnalyzerDHBase
-from cryptolyzer.common.result import AnalyzerResultIKE
 
 
 @attr.s
@@ -63,7 +64,7 @@ class AnalyzerDHParams(AnalyzerDHBase):
         dh_groups, key_reused = self._analyze(analyzable, protocol_version)
 
         return AnalyzerResultDHParams(
-            target=analyzable,
+            target=AnalyzerTargetIke.from_l7_client(analyzable),
             groups=dh_groups,
             key_reused=key_reused,
         )

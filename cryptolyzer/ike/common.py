@@ -124,7 +124,7 @@ class Ikev2CipherSuite:
                     f'encryption algorithm {encryption_transform_id}'
                 )
 
-        integrity_algorithm = None if integrity_transform_id.value.hmac is None else integrity_transform_id.value.hmac
+        integrity_algorithm = integrity_transform_id.value.hmac
         return cls(
             encryption_algorithm=bulk_cipher_entry.cipher,
             block_cipher_mode=encryption_transform_id.value.block_cipher_mode,

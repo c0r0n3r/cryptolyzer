@@ -2,6 +2,7 @@
 
 
 import unittest
+import unittest.mock
 
 from test.common.classes import (
     OFFLINE_CLIENT_L4_SOCKET_PARAMS,
@@ -732,3 +733,95 @@ class TestIkev2ClientHandshake(unittest.TestCase):
                 last_exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
             )
         self.assertEqual(ctx.exception.error, SecurityErrorType.UNPARSABLE_MESSAGE)
+
+
+class TestIkev2ProcessNonHandshakeMessage(unittest.TestCase):
+    @staticmethod
+    def _make_message(notify_types):
+        payloads = []
+        for notify_type in notify_types:
+            payload = unittest.mock.MagicMock()
+            payload.type = notify_type
+            payloads.append(payload)
+        message = unittest.mock.MagicMock()
+        message.get_payloads_by_type.return_value = payloads
+        return message
+
+    def test_raises_invalid_syntax_when_no_notifies(self):
+        message = unittest.mock.MagicMock()
+        message.get_payloads_by_type.return_value = []
+        with self.assertRaises(IsakmpNotify) as ctx:
+            IKEv2ClientHandshake._process_non_handshake_message(message)  # pylint: disable=protected-access
+        self.assertEqual(ctx.exception.notify, Ikev2NotifyType.INVALID_SYNTAX)
+
+    def test_raises_cookie_when_second_payload_is_cookie(self):
+        message = self._make_message([
+            Ikev2NotifyType.NAT_DETECTION_SOURCE_IP,
+            Ikev2NotifyType.COOKIE,
+        ])
+        with self.assertRaises(IsakmpNotify) as ctx:
+            IKEv2ClientHandshake._process_non_handshake_message(message)  # pylint: disable=protected-access
+        self.assertEqual(ctx.exception.notify, Ikev2NotifyType.COOKIE)
+
+    def test_raises_error_when_second_payload_is_error_level(self):
+        message = self._make_message([
+            Ikev2NotifyType.NAT_DETECTION_SOURCE_IP,
+            Ikev2NotifyType.INVALID_SYNTAX,
+        ])
+        with self.assertRaises(IsakmpNotify) as ctx:
+            IKEv2ClientHandshake._process_non_handshake_message(message)  # pylint: disable=protected-access
+        self.assertEqual(ctx.exception.notify, Ikev2NotifyType.INVALID_SYNTAX)
+
+    def test_no_raise_for_status_only_notifies(self):
+        message = self._make_message([
+            Ikev2NotifyType.NAT_DETECTION_SOURCE_IP,
+            Ikev2NotifyType.NAT_DETECTION_DESTINATION_IP,
+        ])
+        IKEv2ClientHandshake._process_non_handshake_message(message)  # pylint: disable=protected-access
+
+
+class TestIkev1ProcessNonHandshakeMessage(unittest.TestCase):
+    @staticmethod
+    def _make_message(notify_types):
+        payloads = []
+        for notify_type in notify_types:
+            payload = unittest.mock.MagicMock()
+            payload.notify_type = notify_type
+            payloads.append(payload)
+        message = unittest.mock.MagicMock()
+        message.get_payloads_by_type.return_value = payloads
+        return message
+
+    def test_raises_situation_not_supported_when_no_notifies(self):
+        message = unittest.mock.MagicMock()
+        message.get_payloads_by_type.return_value = []
+        with self.assertRaises(IsakmpNotify) as ctx:
+            IKEv1ClientHandshake._process_non_handshake_message(message)  # pylint: disable=protected-access
+        self.assertEqual(ctx.exception.notify, Ikev1NotifyType.SITUATION_NOT_SUPPORTED)
+
+    def test_raises_no_proposal_chosen_when_second_payload_is_no_proposal_chosen(self):
+        status_payload = unittest.mock.MagicMock()
+        no_proposal_payload = unittest.mock.MagicMock()
+        no_proposal_payload.notify_type = Ikev1NotifyType.NO_PROPOSAL_CHOSEN
+        message = unittest.mock.MagicMock()
+        message.get_payloads_by_type.return_value = [status_payload, no_proposal_payload]
+        with self.assertRaises(IsakmpNotify) as ctx:
+            IKEv1ClientHandshake._process_non_handshake_message(message)  # pylint: disable=protected-access
+        self.assertEqual(ctx.exception.notify, Ikev1NotifyType.NO_PROPOSAL_CHOSEN)
+
+    def test_raises_error_when_second_payload_is_error_level(self):
+        status_payload = unittest.mock.MagicMock()
+        error_payload = unittest.mock.MagicMock()
+        error_payload.notify_type = Ikev1NotifyType.INVALID_PAYLOAD_TYPE
+        message = unittest.mock.MagicMock()
+        message.get_payloads_by_type.return_value = [status_payload, error_payload]
+        with self.assertRaises(IsakmpNotify) as ctx:
+            IKEv1ClientHandshake._process_non_handshake_message(message)  # pylint: disable=protected-access
+        self.assertEqual(ctx.exception.notify, Ikev1NotifyType.INVALID_PAYLOAD_TYPE)
+
+    @staticmethod
+    def test_no_raise_for_status_only_notifies():
+        status_payload = unittest.mock.MagicMock()
+        message = unittest.mock.MagicMock()
+        message.get_payloads_by_type.return_value = [status_payload]
+        IKEv1ClientHandshake._process_non_handshake_message(message)  # pylint: disable=protected-access

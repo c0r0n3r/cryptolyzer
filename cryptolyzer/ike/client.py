@@ -654,15 +654,14 @@ class IKEv2ClientHandshake(IKEClient):
 
     @classmethod
     def _process_non_handshake_message(cls, message):
-        try:
-            payload = message.get_payload_by_type(Ikev2PayloadType.NOTIFY)
-            notify_type = payload.type
-            if notify_type == Ikev2NotifyType.COOKIE:
-                raise IsakmpNotify(notify_type, payload)
-            if notify_type.value.level == Ikev2NotifyLevel.ERROR:
-                raise IsakmpNotify(notify_type, payload)
-        except (KeyError, IndexError) as e:
-            raise IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX) from e
+        notifies = message.get_payloads_by_type(Ikev2PayloadType.NOTIFY)
+        if not notifies:
+            raise IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX)
+        for payload in notifies:
+            if payload.type == Ikev2NotifyType.COOKIE:
+                raise IsakmpNotify(payload.type, payload)
+            if payload.type.value.level == Ikev2NotifyLevel.ERROR:
+                raise IsakmpNotify(payload.type, payload)
 
     @classmethod
     def _process_invalid_message(cls, transfer):
@@ -780,15 +779,14 @@ class IKEv1ClientHandshake(IKEClient):
 
     @classmethod
     def _process_non_handshake_message(cls, message):
-        try:
-            payload = message.get_payload_by_type(Ikev1PayloadType.NOTIFICATION)
-            notify_type = payload.notify_type
-            if notify_type == Ikev1NotifyType.NO_PROPOSAL_CHOSEN:
-                raise IsakmpNotify(notify_type)
-            if notify_type.value.level == Ikev1NotifyLevel.ERROR:
-                raise IsakmpNotify(notify_type)
-        except (KeyError, IndexError) as e:
-            raise IsakmpNotify(Ikev1NotifyType.SITUATION_NOT_SUPPORTED) from e
+        notifies = message.get_payloads_by_type(Ikev1PayloadType.NOTIFICATION)
+        if not notifies:
+            raise IsakmpNotify(Ikev1NotifyType.SITUATION_NOT_SUPPORTED)
+        for payload in notifies:
+            if payload.notify_type == Ikev1NotifyType.NO_PROPOSAL_CHOSEN:
+                raise IsakmpNotify(payload.notify_type)
+            if payload.notify_type.value.level == Ikev1NotifyLevel.ERROR:
+                raise IsakmpNotify(payload.notify_type)
 
     @classmethod
     def _process_invalid_message(cls, transfer):
