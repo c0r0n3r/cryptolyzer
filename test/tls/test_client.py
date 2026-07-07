@@ -9,13 +9,11 @@ import unittest
 from unittest import mock
 
 from test.common.classes import (
-    BADSSL_COM_L4_SOCKET_PARAMS,
     OFFLINE_CLIENT_L4_SOCKET_PARAMS,
     OFFLINE_L4_SOCKET_PARAMS,
     OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS,
     TestLoggerBase,
 )
-from test.common.markers import live_server
 
 import urllib3
 
@@ -1594,26 +1592,25 @@ class TestClientOpenVpn(TestL7ClientBase):
         self.assertTrue(l7_client.buffer_is_plain_text)
         self.assertEqual(result.versions, [])
 
-    @live_server
     @mock.patch.object(L7TransferBase, 'receive', side_effect=NotEnoughData)
     @mock.patch.object(L4TransferBase, 'buffer', mock.PropertyMock(return_value=b'\x00'))
-    def test_error_no_response(self, _):
-        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443, BADSSL_COM_L4_SOCKET_PARAMS)
+    @mock.patch.object(L4ClientUDP, 'send', return_value=None)
+    def test_error_no_response(self, _, __):
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'localhost')
         l7_client.session_id = 0xfffffffffffffffe
         with self.assertRaises(NetworkError) as context_manager:
             l7_client.init_connection()
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
-    @live_server
     @mock.patch.object(
         L4ClientUDP, '_receive_bytes',
         return_value=OpenVpnPacketHardResetServerV2(1, 0xffffffffffffffff, [0], 1).compose()
     )
     @mock.patch.object(
-        L4ClientTCP, 'send', return_value=None
+        L4ClientUDP, 'send', return_value=None
     )
     def test_error_not_enough_packet_byte_udp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443, BADSSL_COM_L4_SOCKET_PARAMS)
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'localhost')
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(NotEnoughData) as context_manager:
@@ -1621,7 +1618,6 @@ class TestClientOpenVpn(TestL7ClientBase):
         self.assertEqual(context_manager.exception.bytes_needed, 1)
         l7_client.l4_transfer.close()
 
-    @live_server
     @mock.patch.object(
         L4ClientTCP, '_receive_bytes',
         return_value=OpenVpnPacketWrapperTcp(
@@ -1632,7 +1628,13 @@ class TestClientOpenVpn(TestL7ClientBase):
         L4ClientTCP, 'send', return_value=None
     )
     def test_error_not_enough_packet_byte_tcp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443, BADSSL_COM_L4_SOCKET_PARAMS)
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
+        )
+        threaded_server.wait_for_server_listen()
+        l7_client = L7ClientTlsBase.from_scheme(
+            'openvpntcp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+        )
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(NotEnoughData) as context_manager:
@@ -1640,35 +1642,38 @@ class TestClientOpenVpn(TestL7ClientBase):
         self.assertEqual(context_manager.exception.bytes_needed, 1)
         l7_client.l4_transfer.close()
 
-    @live_server
     @mock.patch.object(ClientOpenVpnBase, '_reset_session', return_value=None)
     @mock.patch.object(
         ClientOpenVpnBase, '_receive_packets',
         return_value=[OpenVpnPacketHardResetClientV2(0xffffffffffffffff, 1), ]
     )
     def test_error_invalid_op_code_udp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 443, BADSSL_COM_L4_SOCKET_PARAMS)
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'localhost')
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(InvalidType):
             l7_client.receive(1)
         l7_client.l4_transfer.close()
 
-    @live_server
     @mock.patch.object(ClientOpenVpnBase, '_reset_session', return_value=None)
     @mock.patch.object(
         ClientOpenVpnBase, '_receive_packets',
         return_value=[OpenVpnPacketHardResetClientV2(0xffffffffffffffff, 1), ]
     )
     def test_error_invalid_op_code_tcp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443, BADSSL_COM_L4_SOCKET_PARAMS)
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
+        )
+        threaded_server.wait_for_server_listen()
+        l7_client = L7ClientTlsBase.from_scheme(
+            'openvpntcp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+        )
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(InvalidType):
             l7_client.receive(1)
         l7_client.l4_transfer.close()
 
-    @live_server
     @mock.patch.object(
         L4ClientTCP, '_receive_bytes',
         return_value=OpenVpnPacketWrapperTcp(
@@ -1679,7 +1684,13 @@ class TestClientOpenVpn(TestL7ClientBase):
         L4ClientTCP, 'send', return_value=None
     )
     def test_error_receive_unexpected_server_reset_tcp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpntcp', 'badssl.com', 443, BADSSL_COM_L4_SOCKET_PARAMS)
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
+        )
+        threaded_server.wait_for_server_listen()
+        l7_client = L7ClientTlsBase.from_scheme(
+            'openvpntcp', 'localhost', threaded_server.l7_server.l4_transfer.bind_port
+        )
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(NotEnoughData) as context_manager:
@@ -1687,7 +1698,6 @@ class TestClientOpenVpn(TestL7ClientBase):
         self.assertEqual(context_manager.exception.bytes_needed, 1)
         l7_client.l4_transfer.close()
 
-    @live_server
     @mock.patch.object(
         L4ClientUDP, '_receive_bytes',
         return_value=OpenVpnPacketHardResetServerV2(1, 0xffffffffffffffff, [0], 1).compose()
@@ -1696,7 +1706,7 @@ class TestClientOpenVpn(TestL7ClientBase):
         L4ClientUDP, 'send', return_value=None
     )
     def test_error_receive_unexpected_server_reset_udp(self, _, __):
-        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'badssl.com', 1194, BADSSL_COM_L4_SOCKET_PARAMS)
+        l7_client = L7ClientTlsBase.from_scheme('openvpn', 'localhost')
         l7_client.session_id = 0xfffffffffffffffe
         l7_client.init_connection()
         with self.assertRaises(NotEnoughData) as context_manager:
@@ -1902,8 +1912,12 @@ class TestSslClientHandshake(unittest.TestCase):
         ])
     )
     def test_error_unacceptable_tls_error_replied(self, _):
+        threaded_server = L7ServerTlsTest(
+            L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS),
+        )
+        threaded_server.wait_for_server_listen()
         with self.assertRaises(NetworkError) as context_manager:
-            L7ClientTls('badssl.com', 443, BADSSL_COM_L4_SOCKET_PARAMS).do_ssl_handshake(
+            L7ClientTls('localhost', threaded_server.l7_server.l4_transfer.bind_port).do_ssl_handshake(
                 SslHandshakeClientHello(list(SslCipherKind)))
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
