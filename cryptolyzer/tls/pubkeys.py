@@ -105,8 +105,8 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                         asn1crypto.ocsp.OCSPResponse.load(bytes(status_message.status))
                     )
 
-        # Server may send the same certificate chain independently that client hello conatins SNI exetension, however
-        # OCSP staple not necessarily sent in both cases. New status values stored only if no one had # already stored.
+        # Server may send the same certificate chain regardless of SNI, but OCSP staple is not always present in both
+        # cases. Only non-None status values overwrite existing ones; None never replaces an already-stored status.
         raise KeyError()
 
     @classmethod
@@ -166,7 +166,8 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 )
                 results.append(tls_public_key)
 
-            tls_public_key.certificate_status = certificate_status
+            if tls_public_key.certificate_status is None:
+                tls_public_key.certificate_status = certificate_status
 
             try:
                 tls_public_key.scts = cls._get_signed_certificate_timestamps(server_messages)
