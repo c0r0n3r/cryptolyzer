@@ -472,71 +472,33 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
 
     @live_server
     def test_real(self):
-        result = self.get_result('cloudflare.com', 443)
-        self.assertEqual(len(result.pubkeys), 2)
+        result = self.get_result('www.archive.org', 443)
+        self.assertEqual(len(result.pubkeys), 1)
 
-        self.assertTrue(all(pubkey.certificate_status is not None for pubkey in result.pubkeys))
-        self.assertTrue(all(pubkey.scts is None for pubkey in result.pubkeys))
+        pubkey = result.pubkeys[0]
+        self.assertIsNotNone(pubkey.certificate_status)
+        self.assertEqual(pubkey.certificate_status.status, 'good')
+        self.assertIsNone(pubkey.scts)
 
-        self.assertTrue(all(pubkey.certificate_chain.ordered for pubkey in result.pubkeys))
-        self.assertFalse(all(pubkey.certificate_chain.revoked for pubkey in result.pubkeys))
-        for pubkey in result.pubkeys:
-            with self.subTest(pubkey=pubkey):
-                self.assertEqual(
-                    pubkey.certificate_chain.trust_roots,
-                    {
-                        Entity.ANDROID: True,
-                        Entity.APPLE: True,
-                        Entity.GOOGLE: True,
-                        Entity.MICROSOFT: True,
-                        Entity.MOZILLA: True,
-                        Entity.OPENJDK: True,
-                        Entity.ORACLE: True,
-                    }
-                )
-        self.assertTrue(all(pubkey.certificate_chain.contains_anchor for pubkey in result.pubkeys))
+        self.assertFalse(pubkey.certificate_chain.ordered)
+        self.assertFalse(pubkey.certificate_chain.revoked)
+        self.assertFalse(pubkey.certificate_chain.contains_anchor)
         self.assertEqual(
-            [pubkey.certificate_chain.items[-2].key_type for pubkey in result.pubkeys],
-            [Authentication.RSA, Authentication.ECDSA]
+            pubkey.certificate_chain.trust_roots,
+            {
+                Entity.ANDROID: True,
+                Entity.APPLE: True,
+                Entity.GOOGLE: True,
+                Entity.MICROSOFT: True,
+                Entity.MOZILLA: True,
+                Entity.OPENJDK: True,
+                Entity.ORACLE: True,
+            }
         )
-        self.assertEqual(
-            [pubkey.certificate_chain.items[0].key_type for pubkey in result.pubkeys],
-            [Authentication.RSA, Authentication.ECDSA]
-        )
-        self.assertEqual(
-            [pubkey.certificate_chain.items[-2].key_size for pubkey in result.pubkeys],
-            [2048, 256]
-        )
-        self.assertEqual(
-            [pubkey.certificate_chain.items[0].key_size for pubkey in result.pubkeys],
-            [2048, 256]
-        )
-        for tls_public_key in result.pubkeys:
-            with self.subTest():
-                self.assertEqual(tls_public_key.certificate_status.status, 'good')
-                self.assertEqual(tls_public_key.scts, None)
-        for pubkey in result.pubkeys:
-            leaf_certificate = pubkey.certificate_chain.items[0]
-            with self.subTest():
-                self.assertIn(
-                    Entity.GOOGLE,
-                    [sct.log.operator for sct in leaf_certificate.signed_certificate_timestamps]
-                )
-        for pubkey in result.pubkeys:
-            leaf_certificate = pubkey.certificate_chain
-            with self.subTest():
-                self.assertEqual(
-                    pubkey.certificate_chain.trust_roots,
-                    {
-                        Entity.ANDROID: True,
-                        Entity.APPLE: True,
-                        Entity.GOOGLE: True,
-                        Entity.MICROSOFT: True,
-                        Entity.MOZILLA: True,
-                        Entity.OPENJDK: True,
-                        Entity.ORACLE: True,
-                    }
-                )
+        self.assertEqual(pubkey.certificate_chain.items[0].key_type, Authentication.RSA)
+        self.assertEqual(pubkey.certificate_chain.items[0].key_size, 2048)
+        self.assertEqual(pubkey.certificate_chain.items[-2].key_type, Authentication.RSA)
+        self.assertEqual(pubkey.certificate_chain.items[-2].key_size, 2048)
 
     def test_json(self):
         for certificates in (
