@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import abc
 import enum
@@ -100,14 +99,14 @@ class Ikev2TransformResolved(IkeTransformResolvedBase):
 
 @attr.s
 class IkeServerConfiguration(L7ServerConfigurationBase):
-    ikev1_cipher_suites: typing.List[Ikev1CipherSuite] = attr.ib(
+    ikev1_cipher_suites: list[Ikev1CipherSuite] = attr.ib(
         converter=list,
         default=attr.Factory(list),
         validator=attr.validators.deep_iterable(
             member_validator=attr.validators.instance_of(Ikev1CipherSuite),
         ),
     )
-    ikev2_cipher_suites: typing.List[Ikev2CipherSuite] = attr.ib(
+    ikev2_cipher_suites: list[Ikev2CipherSuite] = attr.ib(
         converter=list,
         default=attr.Factory(list),
         validator=attr.validators.deep_iterable(
@@ -174,7 +173,7 @@ class IkeServerHandshakeBase(L7ServerHandshakeBase):
     def _init_connection(self, last_handshake_message_type: typing.Any) -> None:  # pylint: disable=unused-argument
         return
 
-    def _parse_record(self) -> typing.Tuple[IsakmpMessage, int, bool]:
+    def _parse_record(self) -> tuple[IsakmpMessage, int, bool]:
         message, parsed_length = IsakmpMessage.parse_immutable(self.l7_transfer.buffer)
         return message, parsed_length, True
 
@@ -439,7 +438,7 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
     @staticmethod
     def _make_selected_sa(
         sa_payload: Ikev2PayloadSecurityAssociation,
-        transforms: typing.Dict[typing.Any, typing.Any],
+        transforms: dict[typing.Any, typing.Any],
     ) -> Ikev2PayloadSecurityAssociation:
         selected_proposal = Ikev2ProposalPayload(
             protocol_id=sa_payload.proposals[0].protocol_id,
@@ -476,7 +475,7 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
     def _match_ikev2_proposal(
         self,
         proposal: Ikev2ProposalPayload,
-    ) -> typing.Optional[typing.Dict[typing.Any, typing.Any]]:
+    ) -> typing.Optional[dict[typing.Any, typing.Any]]:
         """Try to match a single IKEv2 proposal against configured cipher suites.
 
         Returns a dict of selected transforms keyed by transform type, or None.
@@ -573,7 +572,7 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
             flags=set(),
             protocol_id=Ikev2ProtocolId.IKE,
             type=Ikev2NotifyType.COOKIE,
-            spi=bytes(),
+            spi=b'',
             cookie=self._expected_cookie,
         )
         response = IsakmpMessage(
@@ -701,10 +700,10 @@ class L7ServerIkeBase(L7ServerBase):
         raise NotImplementedError()
 
     @classmethod
-    def _get_transfer_class(cls) -> typing.Type[L4ServerUDP]:
+    def _get_transfer_class(cls) -> type[L4ServerUDP]:
         return L4ServerUDP
 
-    def _get_handshake_class(self) -> typing.Type[IkeServerHandshakeBase]:
+    def _get_handshake_class(self) -> type[IkeServerHandshakeBase]:
         receivable_byte_num = 1
         while True:
             try:
@@ -723,13 +722,13 @@ class L7ServerIkeBase(L7ServerBase):
 
             raise NotImplementedError(message.version)
 
-    def _do_handshake(self, last_handshake_message_type: typing.Any) -> typing.Dict[str, typing.Any]:
+    def _do_handshake(self, last_handshake_message_type: typing.Any) -> dict[str, typing.Any]:
         handshake_class = self._get_handshake_class()
         handshake_object = handshake_class(self, self.configuration)
         handshake_object.do_handshake(last_handshake_message_type)
         return handshake_object.client_messages
 
-    def do_ike_handshake(self) -> typing.Dict[str, typing.Any]:
+    def do_ike_handshake(self) -> dict[str, typing.Any]:
         return self._do_handshakes(last_handshake_message_type=None)
 
 

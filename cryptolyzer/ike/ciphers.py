@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import collections
 import typing
@@ -178,15 +177,15 @@ class IkeEncryptionAlgorithmEntry:
 class AnalyzerResultIkev1Ciphers(AnalyzerResultIKE):
     """Per-axis IKEv1 transform support reported by the responder."""
 
-    encryption_algorithms: typing.List[IkeEncryptionAlgorithmEntry] = attr.ib(
+    encryption_algorithms: list[IkeEncryptionAlgorithmEntry] = attr.ib(
         validator=attr.validators.deep_iterable(
             attr.validators.instance_of(IkeEncryptionAlgorithmEntry)
         )
     )
-    hash_algorithms: typing.List[Hash] = attr.ib(
+    hash_algorithms: list[Hash] = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of(Hash))
     )
-    diffie_hellman_groups: typing.List[typing.Union[NamedGroup, DHParamWellKnown]] = attr.ib(
+    diffie_hellman_groups: list[typing.Union[NamedGroup, DHParamWellKnown]] = attr.ib(
         validator=attr.validators.deep_iterable(
             attr.validators.instance_of((NamedGroup, DHParamWellKnown))
         )
@@ -197,18 +196,18 @@ class AnalyzerResultIkev1Ciphers(AnalyzerResultIKE):
 class AnalyzerResultIkev2Ciphers(AnalyzerResultIKE):
     """Per-axis IKEv2 transform support reported by the responder."""
 
-    encryption_algorithms: typing.List[IkeEncryptionAlgorithmEntry] = attr.ib(
+    encryption_algorithms: list[IkeEncryptionAlgorithmEntry] = attr.ib(
         validator=attr.validators.deep_iterable(
             attr.validators.instance_of(IkeEncryptionAlgorithmEntry)
         )
     )
-    pseudorandom_functions: typing.List[MAC] = attr.ib(
+    pseudorandom_functions: list[MAC] = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of(MAC))
     )
-    integrity_algorithms: typing.List[MAC] = attr.ib(
+    integrity_algorithms: list[MAC] = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of(MAC))
     )
-    diffie_hellman_groups: typing.List[typing.Union[NamedGroup, DHParamWellKnown]] = attr.ib(
+    diffie_hellman_groups: list[typing.Union[NamedGroup, DHParamWellKnown]] = attr.ib(
         validator=attr.validators.deep_iterable(
             attr.validators.instance_of((NamedGroup, DHParamWellKnown))
         )
@@ -241,7 +240,7 @@ class AnalyzerCiphers(AnalyzerIKEBase):
 
     @staticmethod
     def _get_algorithm_from_server_messages_ikev1(
-        server_messages: typing.Dict,
+        server_messages: dict,
     ) -> Ikev1SecurityAssociationProposalAlgorithms:
         response_message = server_messages[Ikev1ExchangeType.IDENTITY_PROTECTION][0]
         sa_payload: Ikev1PayloadSecurityAssociation = response_message.get_payload_by_type(
@@ -305,7 +304,7 @@ class AnalyzerCiphers(AnalyzerIKEBase):
         cls,
         dh_group: Ikev1DiffieHellmanGroup,
         authentication_method: Ikev1AuthenticationMethod,
-    ) -> typing.List[Ikev1SecurityAssociationProposalAlgorithms]:
+    ) -> list[Ikev1SecurityAssociationProposalAlgorithms]:
         algorithms = []
         for encryption_algorithm in Ikev1EncryptionAlgorithm:
             bulk_ciphers = list(encryption_algorithm.value.bulk_ciphers)
@@ -333,9 +332,9 @@ class AnalyzerCiphers(AnalyzerIKEBase):
         dh_group: Ikev1DiffieHellmanGroup,
         authentication_method: Ikev1AuthenticationMethod,
         working_auth_method: typing.Optional[Ikev1AuthenticationMethod],
-    ) -> typing.Tuple[
+    ) -> tuple[
         bool,
-        typing.List[Ikev1SecurityAssociationProposalAlgorithms],
+        list[Ikev1SecurityAssociationProposalAlgorithms],
         typing.Optional[Ikev1AuthenticationMethod],
     ]:
         """Probe all (ENCR, HASH) combinations for one (DH group, auth method) pair.
@@ -387,7 +386,7 @@ class AnalyzerCiphers(AnalyzerIKEBase):
                                 break
         return True, found_algorithms, working_auth_method
 
-    def _analyze_ikev1(self, l7_client) -> typing.List[Ikev1CipherSuite]:
+    def _analyze_ikev1(self, l7_client) -> list[Ikev1CipherSuite]:
         """Enumerate IKEv1 transform support by sweeping DH groups and auth methods.
 
         IKEv1 Phase 1 (Main Mode, RFC 2409 §5.1) bundles encryption algorithm,
@@ -441,7 +440,7 @@ class AnalyzerCiphers(AnalyzerIKEBase):
     def _send_ikev2_init_message(
         l7_client,
         init_message,
-    ) -> typing.Optional[typing.Dict[Ikev2ExchangeType, IsakmpMessage]]:
+    ) -> typing.Optional[dict[Ikev2ExchangeType, IsakmpMessage]]:
         try:
             server_messages = l7_client.do_ikev2_handshake(
                 init_message=init_message,
@@ -487,8 +486,8 @@ class AnalyzerCiphers(AnalyzerIKEBase):
     @staticmethod
     def _handle_invalid_ke_payload_ikev2(
         notify_payload: Ikev2NotifyPayloadInvalidKe,
-        diffie_hellman_groups: typing.List[Ikev2DiffieHellmanGroup],
-        accepted_dh_groups: typing.Set[Ikev2DiffieHellmanGroup],
+        diffie_hellman_groups: list[Ikev2DiffieHellmanGroup],
+        accepted_dh_groups: set[Ikev2DiffieHellmanGroup],
     ) -> typing.Optional[Ikev2DiffieHellmanGroup]:
         """Apply RFC 7296 §1.2 INVALID_KE_PAYLOAD retry rule.
 
@@ -598,8 +597,8 @@ class AnalyzerCiphers(AnalyzerIKEBase):
             integ for integ in Ikev2IntegrityAlgorithm if integ != Ikev2IntegrityAlgorithm.NONE
         ]
 
-        cipher_suites: typing.List[Ikev2CipherSuite] = []
-        accepted_dh_groups: typing.Set[Ikev2DiffieHellmanGroup] = set()
+        cipher_suites: list[Ikev2CipherSuite] = []
+        accepted_dh_groups: set[Ikev2DiffieHellmanGroup] = set()
 
         # RFC 9370 hybrid post-quantum KEMs (ML-KEM) negotiate via
         # IKE_INTERMEDIATE after IKE_SA_INIT, not as classical DH transforms
@@ -689,7 +688,7 @@ class AnalyzerCiphers(AnalyzerIKEBase):
         list (nothing new remains to discover) the phase is skipped entirely
         and the anchor is set directly from the pre-seed value.
         """
-        cipher_suites: typing.List[Ikev2CipherSuite] = []
+        cipher_suites: list[Ikev2CipherSuite] = []
         key_exchange_dh: typing.Optional[Ikev2DiffieHellmanGroup] = None
         last_sa_payload = None
         for transform_type in (

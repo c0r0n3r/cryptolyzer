@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import abc
 import http.server
@@ -220,7 +219,7 @@ class TestHTTPProxyRequestHandler(TestHTTPRequestHandlerBase):
 
                 bytes_received = _server_socket.recv(1024)
                 self.connection.send(bytes_received)
-            except socket.error:
+            except OSError:
                 break
 
         _server_socket.close()
@@ -380,7 +379,7 @@ class TestKeyBase(pyfakefs.fake_filesystem_unittest.TestCase):
 
     def _get_pem_str(self, public_key_file_name):
         public_key_path = self.__certs_dir / public_key_file_name
-        with open(str(public_key_path), 'r', encoding='ascii') as pem_file:
+        with open(str(public_key_path), encoding='ascii') as pem_file:
             return pem_file.read()
 
     def _get_public_key_x509(self, public_key_file_name):

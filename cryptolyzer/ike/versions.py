@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import typing
 
@@ -34,7 +33,7 @@ class AnalyzerResultVersions(AnalyzerResultIKE):  # pylint: disable=too-few-publ
     :param alerts_unsupported_version: whether unsupported protocol version is alerted.
     """
 
-    versions: typing.List[IsakmpProtocolVersion] = attr.ib(
+    versions: list[IsakmpProtocolVersion] = attr.ib(
         validator=attr.validators.deep_iterable(
             attr.validators.instance_of(IsakmpProtocolVersion)
         ),

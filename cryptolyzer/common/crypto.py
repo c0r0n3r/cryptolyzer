@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Shared crypto abstractions (key agreement, AEAD descriptors) and protocol-specific implementations."""
 
 from __future__ import annotations

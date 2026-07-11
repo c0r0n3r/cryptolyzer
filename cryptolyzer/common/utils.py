@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import ipaddress
 import logging
@@ -25,7 +24,7 @@ class Singleton(type):
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+            cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
 
 
@@ -43,7 +42,7 @@ class LogSingleton(logging.Logger, metaclass=Singleton):
 
 
 @attr.s()
-class SerializableTextEncoderHighlighted():
+class SerializableTextEncoderHighlighted:
     _COLOR_SCHEMES = {
         None: colorama.Style.RESET_ALL,
         Grade.INSECURE: colorama.Fore.RED,

@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import hashlib
 import attr
@@ -17,7 +16,7 @@ from cryptolyzer.fingerprint.tag import parse_ja3_tag, parse_ja4_raw_tag
 
 
 @attr.s
-class JA3ClientTag():
+class JA3ClientTag:
     tag = attr.ib(validator=attr.validators.instance_of(str))
 
     @classmethod
@@ -36,7 +35,7 @@ class JA3ClientTag():
 
 
 @attr.s
-class JA4ClientTag():
+class JA4ClientTag:
     tag = attr.ib(validator=attr.validators.instance_of(str))
 
     @classmethod

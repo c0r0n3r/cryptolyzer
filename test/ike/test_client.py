@@ -1,7 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
-import typing
 
 import unittest
 
@@ -440,7 +438,7 @@ class TestIkev1ClientHandshake(unittest.TestCase):
 
     @staticmethod
     def _start_threaded_server(
-        l7_server_class: typing.Type[L7ServerIke] = L7ServerIke,
+        l7_server_class: type[L7ServerIke] = L7ServerIke,
         max_handshake_count: int = 2,
     ) -> L7ServerIkeTest:
         threaded_server = L7ServerIkeTest(l7_server_class(
@@ -511,7 +509,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
 
     @staticmethod
     def _start_threaded_server(
-        l7_server_class: typing.Type[L7ServerIke] = L7ServerIke,
+        l7_server_class: type[L7ServerIke] = L7ServerIke,
         max_handshake_count: int = 2,
     ) -> L7ServerIkeTest:
         threaded_server = L7ServerIkeTest(l7_server_class(
@@ -595,7 +593,7 @@ class TestIkev2ClientHandshake(unittest.TestCase):
                         flags=set(),
                         protocol_id=Ikev2ProtocolId.IKE,
                         type=Ikev2NotifyType.COOKIE,
-                        spi=bytes(),
+                        spi=b'',
                         cookie=cookie_value,
                     )
                 else:

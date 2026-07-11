@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import attr
 
@@ -29,7 +28,7 @@ from cryptolyzer.ssh.client import L7ServerSshGexParams, SshKeyExchangeInitAnyAl
 
 
 @attr.s
-class AnalyzerResultGroupExchange():
+class AnalyzerResultGroupExchange:
     """
     :class: Analyzer result relates to DH group exchange
 

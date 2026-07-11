@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import abc
 
@@ -34,7 +33,7 @@ from cryptolyzer.dnsrec.transfer import DnsHandshakeBase
 
 
 @attr.s
-class L7ClientDnsBase():
+class L7ClientDnsBase:
     domain = attr.ib(
         converter=convert_url(),
         validator=attr.validators.instance_of(urllib3.util.url.Url)

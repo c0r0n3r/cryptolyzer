@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import collections
 import unittest
@@ -121,7 +120,7 @@ def _make_ikev2_sa_response(transforms):
     proposal = Ikev2ProposalPayload(
         protocol_id=Ikev2ProtocolId.IKE,
         transforms=transforms,
-        spi=bytes(),
+        spi=b'',
     )
     sa_payload = Ikev2PayloadSecurityAssociation(
         flags=set([Ikev2PayloadFlags.CRITICAL]),

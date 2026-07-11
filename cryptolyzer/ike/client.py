@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import abc
 import itertools
@@ -118,13 +117,13 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
     @classmethod
     def _get_proposals(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         cls,
-        encryption_algorithm_tuples: typing.List[typing.Tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
-        diffie_hellman_groups: typing.List[Ikev2DiffieHellmanGroup],
-        pseudorandom_functions: typing.List[Ikev2PseudorandomFunction],
-        integrity_algorithms: typing.List[Ikev2IntegrityAlgorithm],
-        ecdh_groups: typing.List[Ikev2DiffieHellmanGroup],
-        ffdh_groups: typing.List[Ikev2DiffieHellmanGroup],
-    ) -> typing.List[Ikev2Proposal]:
+        encryption_algorithm_tuples: list[tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
+        diffie_hellman_groups: list[Ikev2DiffieHellmanGroup],
+        pseudorandom_functions: list[Ikev2PseudorandomFunction],
+        integrity_algorithms: list[Ikev2IntegrityAlgorithm],
+        ecdh_groups: list[Ikev2DiffieHellmanGroup],
+        ffdh_groups: list[Ikev2DiffieHellmanGroup],
+    ) -> list[Ikev2Proposal]:
         # RFC 7296 §2.7 / §3.3 and RFC 5282 §8: an IKE SA proposal that
         # contains AEAD (combined-mode) encryption MUST NOT carry a
         # non-NONE integrity transform; conversely, a non-AEAD proposal
@@ -146,7 +145,7 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
             if integrity_algorithm != Ikev2IntegrityAlgorithm.NONE
         ]
 
-        proposals: typing.List[Ikev2Proposal] = []
+        proposals: list[Ikev2Proposal] = []
         if non_aead_encryption_algorithm_tuples and non_none_integrity_algorithms:
             proposals.extend(cls._build_proposals_for_family(
                 non_aead_encryption_algorithm_tuples,
@@ -173,14 +172,14 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
     @classmethod
     def _build_proposals_for_family(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         cls,
-        encryption_algorithm_tuples: typing.List[typing.Tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
-        diffie_hellman_groups: typing.List[Ikev2DiffieHellmanGroup],
-        pseudorandom_functions: typing.List[Ikev2PseudorandomFunction],
-        integrity_algorithms: typing.List[Ikev2IntegrityAlgorithm],
-        ecdh_groups: typing.List[Ikev2DiffieHellmanGroup],
-        ffdh_groups: typing.List[Ikev2DiffieHellmanGroup],
-    ) -> typing.List[Ikev2Proposal]:
-        transforms: typing.List[Transform] = []
+        encryption_algorithm_tuples: list[tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
+        diffie_hellman_groups: list[Ikev2DiffieHellmanGroup],
+        pseudorandom_functions: list[Ikev2PseudorandomFunction],
+        integrity_algorithms: list[Ikev2IntegrityAlgorithm],
+        ecdh_groups: list[Ikev2DiffieHellmanGroup],
+        ffdh_groups: list[Ikev2DiffieHellmanGroup],
+    ) -> list[Ikev2Proposal]:
+        transforms: list[Transform] = []
         for transform_ids in [pseudorandom_functions, integrity_algorithms, diffie_hellman_groups]:
             for transform_id in transform_ids:
                 transform_class = cls._TRANSFORM_CLASS_BY_TRANSFORM_ID[type(transform_id)]
@@ -196,7 +195,7 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
                 key_length=key_length,
             ))
 
-        proposals: typing.List[Ikev2Proposal] = []
+        proposals: list[Ikev2Proposal] = []
         if ecdh_groups:
             proposals.append(Ikev2Proposal(
                 protocol_id=Ikev2ProtocolId.IKE,
@@ -212,10 +211,10 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
     @classmethod
     def _get_payloads(
         cls,
-        encryption_algorithm_tuples: typing.List[typing.Tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
-        diffie_hellman_groups: typing.List[Ikev2DiffieHellmanGroup],
-        pseudorandom_functions: typing.List[Ikev2PseudorandomFunction],
-        integrity_algorithms: typing.List[Ikev2IntegrityAlgorithm],
+        encryption_algorithm_tuples: list[tuple[Ikev2EncryptionAlgorithm, typing.Optional[int]]],
+        diffie_hellman_groups: list[Ikev2DiffieHellmanGroup],
+        pseudorandom_functions: list[Ikev2PseudorandomFunction],
+        integrity_algorithms: list[Ikev2IntegrityAlgorithm],
         cookie: typing.Optional[typing.Union[bytes, bytearray]] = None,
         nonce: typing.Optional[typing.Union[bytes, bytearray]] = None,
         key_exchange_dh_group: typing.Optional[Ikev2DiffieHellmanGroup] = None,
@@ -228,7 +227,7 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
                 flags=set(),
                 protocol_id=Ikev2ProtocolId.IKE,
                 type=Ikev2NotifyType.COOKIE,
-                spi=bytes(),
+                spi=b'',
                 cookie=cookie,
             ))
 
@@ -388,8 +387,8 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
         hash_algorithm: Ikev1HashAlgorithm,
         authentication_method: Ikev1AuthenticationMethod,
         key_length: typing.Optional[int] = None,
-    ) -> typing.List[Ikev1PayloadProposal]:
-        key_lengths: typing.List[int] = []
+    ) -> list[Ikev1PayloadProposal]:
+        key_lengths: list[int] = []
         if key_length is None:
             key_lengths.extend(cls.get_key_lengths(encryption_algorithm))
         else:
@@ -425,12 +424,12 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     def _get_proposals(
         cls,
-        encryption_algorithms: typing.List[Ikev1EncryptionAlgorithm],
-        diffie_hellman_groups: typing.List[Ikev1DiffieHellmanGroup],
-        hash_algorithms: typing.List[Ikev1HashAlgorithm],
-        authentication_methods: typing.List[Ikev1AuthenticationMethod],
+        encryption_algorithms: list[Ikev1EncryptionAlgorithm],
+        diffie_hellman_groups: list[Ikev1DiffieHellmanGroup],
+        hash_algorithms: list[Ikev1HashAlgorithm],
+        authentication_methods: list[Ikev1AuthenticationMethod],
         key_length: typing.Optional[int] = None,
-    ) -> typing.List[Ikev1PayloadProposal]:
+    ) -> list[Ikev1PayloadProposal]:
         proposals = []
         for encryption_algorithm in encryption_algorithms:
             for hash_algorithm in hash_algorithms:
@@ -449,8 +448,8 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
     @classmethod
     def _get_dh_groups(
         cls,
-        proposals: typing.List[Ikev1PayloadProposal]
-    ) -> typing.Tuple[typing.Optional[Ikev1DiffieHellmanGroup], typing.Optional[Ikev1DiffieHellmanGroup]]:
+        proposals: list[Ikev1PayloadProposal]
+    ) -> tuple[typing.Optional[Ikev1DiffieHellmanGroup], typing.Optional[Ikev1DiffieHellmanGroup]]:
         ffdh_group = None
         ecdh_group = None
 
@@ -470,7 +469,7 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
         return ffdh_group, ecdh_group
 
     @classmethod
-    def get_key_exchange_payloads(cls, proposals: typing.List[Ikev1PayloadProposal]):
+    def get_key_exchange_payloads(cls, proposals: list[Ikev1PayloadProposal]):
         payloads = []
         ffdh_group, ecdh_group = cls._get_dh_groups(proposals)
 
@@ -497,7 +496,7 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
     @classmethod
     def _get_payloads(
         cls,
-        proposals: typing.List[Ikev1PayloadProposal],
+        proposals: list[Ikev1PayloadProposal],
     ):
         payloads = []
 
@@ -546,7 +545,7 @@ class Ikev1SecurityAssociationSpecialization(Ikev1SecurityAssociationBase):
 
 
 @attr.s
-class Ikev1SecurityAssociationProposalAlgorithms():
+class Ikev1SecurityAssociationProposalAlgorithms:
     encryption_algorithm: Ikev1EncryptionAlgorithm = attr.ib(
         validator=attr.validators.instance_of(Ikev1EncryptionAlgorithm)
     )
@@ -569,7 +568,7 @@ class Ikev1SecurityAssociationAlgorithms(Ikev1SecurityAssociationBase):
     def __init__(
         self,
         exchange_type: Ikev1ExchangeType,
-        algorithms: typing.List[Ikev1SecurityAssociationProposalAlgorithms]
+        algorithms: list[Ikev1SecurityAssociationProposalAlgorithms]
     ):
         proposals = list(itertools.chain.from_iterable([
             self.get_proposals(
@@ -621,9 +620,9 @@ class Ikev1SecurityAssociationMandatoryMostPopular(Ikev1SecurityAssociationSpeci
 
 
 @attr.s
-class IKEClient():
+class IKEClient:
     _last_processed_message_type: typing.Optional[Ikev2ExchangeType] = attr.ib(init=False, default=None)
-    server_messages: typing.Dict[Ikev2ExchangeType, typing.List[IsakmpMessage]] = attr.ib(init=False, default={})
+    server_messages: dict[Ikev2ExchangeType, list[IsakmpMessage]] = attr.ib(init=False, default={})
 
     @classmethod
     def raise_response_error(cls, transfer):
@@ -677,7 +676,7 @@ class IKEv2ClientHandshake(IKEClient):
             flags=set(),
             protocol_id=Ikev2ProtocolId.IKE,
             type=Ikev2NotifyType.COOKIE,
-            spi=bytes(),
+            spi=b'',
             cookie=cookie_value,
         )
 

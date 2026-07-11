@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import collections
 import http.client
@@ -101,7 +100,7 @@ class CertificateStatus(Serializable):
 
 
 @attr.s
-class CertificateChainX509():
+class CertificateChainX509:
     items = attr.ib(
         init=False,
         default=[],
@@ -133,7 +132,7 @@ class CertificateChainX509():
 
 
 @attr.s
-class CertificateChainX509Validator():  # pylint: disable=too-few-public-methods
+class CertificateChainX509Validator:  # pylint: disable=too-few-public-methods
     _validated = attr.ib(
         init=False,
         default=None,

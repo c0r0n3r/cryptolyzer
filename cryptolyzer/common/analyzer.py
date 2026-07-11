@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import abc
 import glob
@@ -128,7 +127,7 @@ class ProtocolHandlerBase(metaclass=abc.ABCMeta):
         return analyzer_list[0]()
 
 
-class AnalyzerBase():
+class AnalyzerBase:
     def __init__(self):
         self._probe_attempt = 0
 

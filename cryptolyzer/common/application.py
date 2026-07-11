@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import abc
 import time
@@ -15,7 +14,7 @@ from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.transfer import L7TransferBase, L4ServerTCP
 
 
-class L7ServerConfigurationBase():
+class L7ServerConfigurationBase:
     pass
 
 
@@ -99,11 +98,11 @@ class L7ServerBase(L7TransferBase):
 
 
 @attr.s
-class L7ServerHandshakeBase():
+class L7ServerHandshakeBase:
     l7_transfer: L7TransferBase = attr.ib(validator=attr.validators.instance_of(L7TransferBase))
     configuration: L7ServerConfigurationBase = attr.ib(validator=attr.validators.instance_of(L7ServerConfigurationBase))
     _last_processed_message_type: typing.Optional[typing.Any] = attr.ib(init=False, default=None)
-    client_messages: typing.Dict[typing.Any, typing.Any] = attr.ib(init=False, default={})
+    client_messages: dict[typing.Any, typing.Any] = attr.ib(init=False, default={})
 
     def _init_connection(self, last_handshake_message_type):
         pass

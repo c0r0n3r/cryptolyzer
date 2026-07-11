@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import attr
 
@@ -265,7 +264,7 @@ class SshKeyExchangeInitX509CertificateChainRSA(SshKeyExchangeInitX509Certificat
 
 
 @attr.s(frozen=True)
-class L7ServerSshGexParams():
+class L7ServerSshGexParams:
     gex_min = attr.ib(default=768, validator=attr.validators.instance_of(int))
     gex_max = attr.ib(default=8192, validator=attr.validators.instance_of(int))
     gex_number = attr.ib(default=2048, validator=attr.validators.instance_of(int))

@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
 
 import ftplib
@@ -747,7 +746,7 @@ class TestL7ClientStartTlsTextBase(TestL7ClientBase):
         b''.join([
             b'+OK Server ready.\r\n',
             b'+OK\r\n',
-            'αβγ'.encode('utf-8'),
+            'αβγ'.encode(),
             b'\r\n',
             b'.\r\n',
         ]),
@@ -1363,7 +1362,7 @@ class TestClientSieve(TestL7ClientBase):
     @mock.patch.object(
         TlsServerMockResponse,
         '_get_mock_responses',
-        return_value=('αβγ'.encode('utf-8') + b'\r\n', )
+        return_value=('αβγ'.encode() + b'\r\n', )
     )
     def test_response_not_ascii(self, _):
         threaded_server = L7ServerTlsTest(

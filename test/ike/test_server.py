@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import unittest
 
@@ -231,7 +230,7 @@ class TestIkeServerHandshakeIkev2(unittest.TestCase, _TestIkeServerHandshakeHelp
             flags=set(),
             protocol_id=Ikev2ProtocolId.IKE,
             type=Ikev2NotifyType.COOKIE,
-            spi=bytes(),
+            spi=b'',
             cookie=b'wrong-cookie',
         )
         message = self._create_message(payloads=[cookie_payload])

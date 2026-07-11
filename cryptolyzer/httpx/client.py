@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import abc
 import urllib3
@@ -16,7 +15,7 @@ from cryptolyzer.httpx.transfer import HttpHandshakeBase
 
 
 @attr.s
-class L7ClientHttpBase():
+class L7ClientHttpBase:
     uri = attr.ib(
         converter=convert_url(),
         validator=attr.validators.instance_of(urllib3.util.url.Url)

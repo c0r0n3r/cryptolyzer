@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for TLS 1.3 handshake key schedule and AEAD record decryption."""
 
 import unittest
@@ -109,7 +108,7 @@ class TestTls13HandshakeDecryptorCryptodome(unittest.TestCase):
 
         ciphertext_with_tag = b'\x00' * 32
         aad = b''
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             decryptor.decrypt(ciphertext_with_tag, aad)
 
     def test_block_cipher_factory_called_on_decrypt(self):
@@ -126,7 +125,7 @@ class TestTls13HandshakeDecryptorCryptodome(unittest.TestCase):
 
         ciphertext_with_tag = b'\x00' * 32
         aad = b''
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             decryptor.decrypt(ciphertext_with_tag, aad)
 
     def test_tls10_cipher_suite_version_check(self):

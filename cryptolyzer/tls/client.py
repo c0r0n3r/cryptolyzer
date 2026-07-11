@@ -1476,7 +1476,7 @@ class ClientSieve(L7ClientStartTlsBase):
         pass
 
 
-class TlsClient():
+class TlsClient:
     _last_processed_message_type = attr.ib(init=False, default=None)
     server_messages = attr.ib(init=False, default={})
 

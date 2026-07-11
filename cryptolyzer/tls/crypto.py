@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """TLS 1.3 key schedule and record-layer AEAD (RFC 8446)."""
 
 from __future__ import annotations

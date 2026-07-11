@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import attr
 
@@ -10,7 +9,7 @@ from cryptoparser.ssh.record import SshRecordInit
 from cryptoparser.ssh.subprotocol import SshProtocolMessage
 
 
-class SshHandshakeBase():
+class SshHandshakeBase:
     _last_processed_message_type = attr.ib(init=False, default=None)
     server_messages = attr.ib(init=False, default={})
 

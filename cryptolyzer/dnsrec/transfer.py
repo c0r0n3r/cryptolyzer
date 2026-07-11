@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import io
 
@@ -16,7 +15,7 @@ from cryptolyzer.common.transfer import L4TransferSocketParams
 
 
 @attr.s
-class DnsHandshakeBase():
+class DnsHandshakeBase:
     l4_socket_params = attr.ib(
         default=L4TransferSocketParams(),
         validator=attr.validators.instance_of(L4TransferSocketParams),

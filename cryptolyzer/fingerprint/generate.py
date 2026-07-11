@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import abc
 
@@ -18,7 +17,7 @@ from cryptolyzer.ssh.server import L7ServerSshBase
 from cryptolyzer.tls.server import L7ServerTlsBase
 
 
-class _FingerprintGeneratorBase():
+class _FingerprintGeneratorBase:
     @classmethod
     @abc.abstractmethod
     def get_server_base_class(cls):

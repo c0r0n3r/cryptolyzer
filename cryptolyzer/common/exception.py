@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import enum
 
@@ -8,7 +7,7 @@ import attr
 
 
 @attr.s
-class ErrorParams():
+class ErrorParams:
     short_description: str = attr.ib(validator=attr.validators.instance_of(str))
     long_description: str = attr.ib(validator=attr.validators.instance_of(str))
 

@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """
 Common test base for DH group analyzers.
 """
 
-import typing
 import unittest
 import unittest.mock
 
@@ -40,15 +38,15 @@ class TestAnalyzerDHBase(TestLoggerBase):
             raise unittest.SkipTest('Base class for DH analyzers, only derived classes should be run')
 
     @classmethod
-    def get_analyzer_class(cls) -> typing.Type[AnalyzerDHBase]:
+    def get_analyzer_class(cls) -> type[AnalyzerDHBase]:
         raise NotImplementedError('Subclass must implement get_analyzer_class')
 
     @classmethod
-    def get_expected_groups_ikev1(cls) -> typing.Tuple[Ikev1DiffieHellmanGroup, ...]:
+    def get_expected_groups_ikev1(cls) -> tuple[Ikev1DiffieHellmanGroup, ...]:
         raise NotImplementedError('Subclass must implement get_expected_groups_ikev1')
 
     @classmethod
-    def get_expected_groups_ikev2(cls) -> typing.Tuple[Ikev2DiffieHellmanGroup, ...]:
+    def get_expected_groups_ikev2(cls) -> tuple[Ikev2DiffieHellmanGroup, ...]:
         raise NotImplementedError('Subclass must implement get_expected_groups_ikev2')
 
     @classmethod
@@ -95,9 +93,8 @@ class TestAnalyzerDHBase(TestLoggerBase):
     @staticmethod
     def _make_mock_client():
         l7_client = L7ClientIPsecBase.from_scheme(
-            'ipsec', 'localhost', 65535, L4TransferSocketParams(timeout=0.1)
+            'ipsec', 'localhost', 65535, L4TransferSocketParams(timeout=0.1, throttle_delay=0)
         )
-        l7_client.l4_socket_params.throttle_delay = 0
         l7_client.do_ikev1_handshake = unittest.mock.MagicMock()
         l7_client.do_ikev2_handshake = unittest.mock.MagicMock()
         return l7_client

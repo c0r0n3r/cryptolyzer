@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import abc
 import http.client
@@ -17,8 +16,8 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType, Securit
 from cryptolyzer.common.utils import buffer_flush, buffer_is_plain_text, resolve_address
 
 
-@attr.s
-class L4TransferSocketParams():
+@attr.s(frozen=True)
+class L4TransferSocketParams:
     timeout: typing.Optional[float] = attr.ib(
         default=None,
         converter=attr.converters.optional(float),
@@ -36,7 +35,7 @@ class L4TransferSocketParams():
 
 
 @attr.s
-class L4TransferBase():
+class L4TransferBase:
     address: str = attr.ib(validator=attr.validators.instance_of(str))
     port: int = attr.ib(validator=attr.validators.instance_of(int))
     socket_params: L4TransferSocketParams = attr.ib(
@@ -124,7 +123,7 @@ class L4TransferBase():
                 )
                 self._buffer += actual_received_bytes
                 total_received_byte_num += len(actual_received_bytes)
-            except socket.error:
+            except OSError:
                 actual_received_bytes = None
 
             if not actual_received_bytes:
@@ -293,7 +292,7 @@ class L4ServerBase(L4TransferBase):
             raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
         except OverflowError as e:
             raise NetworkError(NetworkErrorType.NO_ADDRESS) from e
-        except (OSError, socket.error) as e:
+        except OSError as e:
             raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
     @property
@@ -394,7 +393,7 @@ class L4ServerUDP(L4ServerBase):
 
 
 @attr.s
-class L7TransferBase():
+class L7TransferBase:
     address: str = attr.ib(validator=attr.validators.instance_of(str))
     port: typing.Optional[int] = attr.ib(
         default=None,

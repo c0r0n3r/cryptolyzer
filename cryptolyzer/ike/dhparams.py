@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import typing
 
@@ -25,7 +24,7 @@ class AnalyzerResultDHParams(AnalyzerResultIKE):  # pylint: disable=too-few-publ
     :param transform_preference: whether server has transform preference.
     """
 
-    groups: typing.List[typing.Union[Ikev1DiffieHellmanGroup, Ikev2DiffieHellmanGroup]] = attr.ib(
+    groups: list[typing.Union[Ikev1DiffieHellmanGroup, Ikev2DiffieHellmanGroup]] = attr.ib(
         validator=attr.validators.deep_iterable(
             attr.validators.instance_of((Ikev1DiffieHellmanGroup, Ikev2DiffieHellmanGroup))
         )

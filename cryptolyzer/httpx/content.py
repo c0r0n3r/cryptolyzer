@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 
 import attr
@@ -37,7 +36,7 @@ class HttpTagSourceDataType(Serializable, GradeableSimple):
 
 
 @attr.s(frozen=True)
-class HttpTagSourced():
+class HttpTagSourced:
     data_type = attr.ib(
         converter=convert_value_to_object(HttpTagSourceDataType),
         validator=attr.validators.instance_of(HttpTagSourceDataType)
@@ -50,7 +49,7 @@ class HttpTagSourced():
 
 
 @attr.s(frozen=True)
-class HttpTagScriptBase():
+class HttpTagScriptBase:
     source_url = attr.ib(
         validator=attr.validators.instance_of(urllib3.util.url.Url),
         metadata={'human_readable_name': 'Source URL'}
@@ -101,7 +100,7 @@ class AnalyzerResultConetnt(AnalyzerResultHttp):  # pylint: disable=too-few-publ
     )
 
 
-class HttpTagGetterBase():
+class HttpTagGetterBase:
     _SOURCE_ATTR_NAME_BY_TAG_NAME = {
         'img': 'src',
         'audio': 'src',

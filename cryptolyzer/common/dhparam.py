@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import math
 import secrets
@@ -22,7 +21,7 @@ from .prime import is_prime, prime_precheck
 
 
 @attr.s
-class DHPublicNumbers():
+class DHPublicNumbers:
     y = attr.ib(  # pylint: disable=invalid-name
         validator=attr.validators.instance_of(int),
         metadata={'human_readable_name': 'y'},
@@ -31,7 +30,7 @@ class DHPublicNumbers():
 
 
 @attr.s
-class DHPublicKey():
+class DHPublicKey:
     public_numbers = attr.ib(validator=attr.validators.instance_of(DHPublicNumbers))
     key_size = attr.ib(validator=attr.validators.instance_of(int))
 

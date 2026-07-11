@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# -*- coding: utf-8 -*-
 
 import collections
 
@@ -60,7 +59,7 @@ from cryptolyzer.tls.curves import AnalyzerCurves
 
 
 @attr.s
-class AnalyzerResultSimulationsSsl():
+class AnalyzerResultSimulationsSsl:
     """
     :class: Analyzer result relates to the parameters of the SSL connection initiated between the server and the
         simulated client application.
@@ -72,7 +71,7 @@ class AnalyzerResultSimulationsSsl():
 
 
 @attr.s
-class AnalyzerResultSimulationsTlsBase():
+class AnalyzerResultSimulationsTlsBase:
     """
     :class: Analyzer result relates to the parameters of the TLS connection initiated between the server and the
         simulated client application.
