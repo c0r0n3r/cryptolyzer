@@ -23,10 +23,10 @@ pylint:
   stage: earlytest
   script: tox -e pylint
 
-pep8:
+ruff:
   image: python:3.14-slim
   stage: earlytest
-  script: tox -e pep8
+  script: tox -e ruff
 
 python314:
   extends: .long_running

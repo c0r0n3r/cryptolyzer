@@ -123,9 +123,26 @@ technical_name = 'cryptolyzer'
 [tool.setuptools.packages.find]
 include = ['cryptolyzer*']
 
+[tool.ruff]
+line-length = 120
+target-version = 'py39'
+
+[tool.ruff.lint]
+select = ['E', 'F', 'W', 'UP', 'B']
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    'cryptoparser.tls.version.TlsProtocolVersion',
+    'cryptolyzer.common.transfer.L4TransferSocketParams',
+    'cryptolyzer.ssh.client.L7ServerSshGexParams',
+    'cryptolyzer.ssh.client.SshKeyExchangeInitAnyAlgorithm',
+    'cryptolyzer.ssh.client.SshProtocolMessageDefault',
+    'cryptoparser.ssh.subprotocol.SshKeyExchangeInit.get_message_code',
+]
+
 [tool.tox]
 envlist = [
-    'pep8',
+    'ruff',
     'pylint',
     'pypy3',
     'py39',
@@ -146,10 +163,10 @@ commands = [
     ['coverage', 'report']
 ]
 
-[tool.tox.env.pep8]
-deps = ['flake8']
+[tool.tox.env.ruff]
+deps = ['ruff']
 setenv = {PYTHONPATH = 'submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub'}
-commands = [['flake8', 'cryptolyzer', 'docs', 'test']]
+commands = [['ruff', 'check', 'cryptolyzer', 'docs', 'test']]
 
 [tool.tox.env.pylint]
 deps = ['pylint', '.[tests]']
