@@ -9,7 +9,6 @@
 **/.git
 **/.idea
 **/.mypy_cache
-**/.tox
 **/Pipfile
 **/Pipfile.lock
 **/__pycache__

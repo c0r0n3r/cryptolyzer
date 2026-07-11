@@ -15,7 +15,6 @@ maintainers = [
 classifiers=[
     'Development Status :: 5 - Production/Stable',
     'Environment :: Console',
-    'Framework :: tox',
     'Intended Audience :: Developers',
     'Intended Audience :: Information Technology',
     'Intended Audience :: Science/Research',
@@ -139,36 +138,3 @@ extend-immutable-calls = [
     'cryptolyzer.ssh.client.SshProtocolMessageDefault',
     'cryptoparser.ssh.subprotocol.SshKeyExchangeInit.get_message_code',
 ]
-
-[tool.tox]
-envlist = [
-    'ruff',
-    'pylint',
-    'pypy3',
-    'py39',
-    'py310',
-    'py311',
-    'py312',
-    'py313',
-    'py314',
-    'pythonrc',
-]
-
-[tool.tox.env_run_base]
-deps = ['coverage', '.[tests]']
-setenv = {PYTHONPATH = 'submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub'}
-commands = [
-    ['coverage', 'erase'],
-    ['coverage', 'run', '-m', 'unittest', 'discover', '-v'],
-    ['coverage', 'report']
-]
-
-[tool.tox.env.ruff]
-deps = ['ruff']
-setenv = {PYTHONPATH = 'submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub'}
-commands = [['ruff', 'check', 'cryptolyzer', 'docs', 'test']]
-
-[tool.tox.env.pylint]
-deps = ['pylint', '.[tests]']
-setenv = {PYTHONPATH = 'submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub'}
-commands = [['pylint', '--rcfile', '.pylintrc', 'cryptolyzer', 'docs', 'test']]

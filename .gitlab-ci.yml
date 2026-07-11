@@ -7,7 +7,8 @@ stages:
 
 before_script:
 - apt-get update && apt-get install --no-install-recommends -y git-core
-- pip install tox .[tests]
+- pip install uv
+- uv pip install --system .[tests]
 
 variables:
   GIT_SUBMODULE_DEPTH: 1
@@ -18,57 +19,57 @@ variables:
 .long_running:
   timeout: 2h
 
+.test:
+  script:
+  - coverage run -m unittest discover -v
+  - coverage report
+
 pylint:
   image: python:3.14-slim
   stage: earlytest
-  script: tox -e pylint
+  script:
+  - uv pip install --system pylint
+  - pylint --rcfile .pylintrc cryptolyzer docs test
 
 ruff:
   image: python:3.14-slim
   stage: earlytest
-  script: tox -e ruff
+  script: uvx ruff check cryptolyzer docs test
 
 python314:
-  extends: .long_running
+  extends: [.long_running, .test]
   image: python:3.14-slim
   stage: earlytest
-  script: tox -e py314
 
 python39:
-  extends: .long_running
+  extends: [.long_running, .test]
   image: python:3.9-slim
   stage: fulltest
-  script: tox -e py39
 
 python310:
-  extends: .long_running
+  extends: [.long_running, .test]
   image: python:3.10-slim
   stage: fulltest
-  script: tox -e py310
 
 python311:
-  extends: .long_running
+  extends: [.long_running, .test]
   image: python:3.11-slim
   stage: fulltest
-  script: tox -e py311
 
 python312:
-  extends: .long_running
+  extends: [.long_running, .test]
   image: python:3.12-slim
   stage: fulltest
-  script: tox -e py312
 
 python313:
-  extends: .long_running
+  extends: [.long_running, .test]
   image: python:3.13-slim
   stage: fulltest
-  script: tox -e py313
 
 pythonrc:
-  extends: .long_running
+  extends: [.long_running, .test]
   image: python:3.15-rc-slim
   stage: fulltest
-  script: tox -e py315
 
 coveralls:
   extends: .long_running
@@ -83,9 +84,7 @@ coveralls:
     PYTHONPATH: "submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub"
   stage: deploy
   script:
-    - pip install coveralls
-    - pip install .
-    - pip install .[tests]
+    - uv pip install --system coveralls
     - coverage run -m unittest -v -f
     - coveralls
   only:
