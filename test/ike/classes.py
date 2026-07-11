@@ -75,6 +75,15 @@ def get_ffdh_only_server_configuration():
                 key_length=128,
             )
         ),
+        Ikev1CipherSuite.from_ikev1_security_association_proposal_algorithms(
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_1024_BIT_160_BIT_SUBGROUP,
+                hash_algorithm=Ikev1HashAlgorithm.SHA,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=128,
+            )
+        ),
     ]
     ikev2_suites = [
         Ikev2CipherSuite.from_transform_ids(
@@ -724,6 +733,7 @@ def create_ike_server(
     *,
     max_handshake_count=2,
     configuration=None,
+    timeout=None,
     **kwargs
 ):
     """Create and start a threaded IKE server. Returns L7ServerIkeTest ready for use.
@@ -732,10 +742,11 @@ def create_ike_server(
     """
     if configuration is None:
         configuration = IkeServerConfiguration()
+    l4_socket_params = OFFLINE_L4_SOCKET_PARAMS if timeout is None else L4TransferSocketParams(timeout=timeout)
     threaded_server = L7ServerIkeTest(server_class(  # type: ignore[call-arg]
         'localhost',
         0,
-        OFFLINE_L4_SOCKET_PARAMS,
+        l4_socket_params,
         configuration=configuration,
         max_handshake_count=max_handshake_count,
         **kwargs

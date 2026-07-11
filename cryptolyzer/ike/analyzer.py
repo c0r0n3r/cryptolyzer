@@ -7,6 +7,7 @@ from cryptolyzer.common.analyzer import ProtocolHandlerIKEBase, ProtocolHandlerI
 from cryptolyzer.ike.ciphers import AnalyzerCiphers
 from cryptolyzer.ike.dhparams import AnalyzerDHParams
 from cryptolyzer.ike.curves import AnalyzerCurves
+from cryptolyzer.ike.extensions import AnalyzerExtensions
 from cryptolyzer.ike.versions import AnalyzerVersions
 
 
@@ -17,6 +18,7 @@ class ProtocolHandlerIKEv1(ProtocolHandlerIKEExactVersion):
             AnalyzerCiphers,
             AnalyzerDHParams,
             AnalyzerCurves,
+            AnalyzerExtensions,
         )
 
     @classmethod

@@ -2,13 +2,19 @@
 import unittest
 import unittest.mock
 
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS
+
 from cryptodatahub.ike.algorithm import (
     Ikev1DiffieHellmanGroup,
     Ikev1NotifyType,
     Ikev2DiffieHellmanGroup,
+    Ikev2ExchangeType,
     Ikev2NotifyType,
 )
 from cryptodatahub.ike.version import IkeVersion
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.result import AnalyzerTargetIke
+from cryptolyzer.ike.client import L7ClientIPsecBase
 from cryptolyzer.ike.dhparams import AnalyzerDHParams
 from cryptolyzer.ike.exception import IsakmpNotify
 from cryptolyzer.ike.server import IkeServerConfiguration, L7ServerIke
@@ -54,6 +60,84 @@ class TestAnalyzerDHParamsUnit(unittest.TestCase):
             )
         self.assertEqual(ctx.exception.notify, Ikev1NotifyType.PAYLOAD_MALFORMED)
 
+    def test_check_ikev2_key_reuse_returns_true_for_repeated_key_exchange_data(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        ke_payload = unittest.mock.MagicMock()
+        ke_payload.key_exchange_data = b'same_key_exchange_data_x'
+        ike_sa_init_message = unittest.mock.MagicMock()
+        ike_sa_init_message.get_payload_by_type.return_value = ke_payload
+        l7_client.do_ikev2_handshake.return_value = {
+            Ikev2ExchangeType.IKE_SA_INIT: ike_sa_init_message
+        }
+        init_message = unittest.mock.MagicMock()
+        init_message.initiator_spi = 0
+        result = analyzer._check_ikev2_key_reuse(  # pylint: disable=protected-access
+            l7_client, init_message
+        )
+        self.assertTrue(result)
+
+    def test_check_ikev2_key_reuse_returns_none_on_isakmp_notify(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        l7_client.do_ikev2_handshake.side_effect = IsakmpNotify(Ikev2NotifyType.NO_PROPOSAL_CHOSEN)
+        result = analyzer._check_ikev2_key_reuse(  # pylint: disable=protected-access
+            l7_client, unittest.mock.MagicMock()
+        )
+        self.assertIsNone(result)
+
+    def test_check_ikev2_key_reuse_returns_none_on_no_response(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        l7_client.do_ikev2_handshake.side_effect = NetworkError(NetworkErrorType.NO_RESPONSE)
+        result = analyzer._check_ikev2_key_reuse(  # pylint: disable=protected-access
+            l7_client, unittest.mock.MagicMock()
+        )
+        self.assertIsNone(result)
+
+    def test_check_ikev2_key_reuse_reraises_non_no_response_network_error(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        l7_client.do_ikev2_handshake.side_effect = NetworkError(NetworkErrorType.NO_CONNECTION)
+        with self.assertRaises(NetworkError):
+            analyzer._check_ikev2_key_reuse(  # pylint: disable=protected-access
+                l7_client, unittest.mock.MagicMock()
+            )
+
+    def test_check_ikev2_key_reuse_returns_none_when_ke_payload_missing(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        l7_client.do_ikev2_handshake.return_value = {}
+        result = analyzer._check_ikev2_key_reuse(  # pylint: disable=protected-access
+            l7_client, unittest.mock.MagicMock()
+        )
+        self.assertIsNone(result)
+
+    def test_analyze_ikev2_breaks_on_invalid_ke_payload_with_unknown_group(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        payload = unittest.mock.MagicMock()
+        payload.dh_group = Ikev2DiffieHellmanGroup.ECP_GROUP_256_BIT
+        l7_client.do_ikev2_handshake.side_effect = IsakmpNotify(
+            Ikev2NotifyType.INVALID_KE_PAYLOAD, payload
+        )
+        dh_groups, key_reused = analyzer._analyze_ikev2(l7_client)  # pylint: disable=protected-access
+        self.assertIn(Ikev2DiffieHellmanGroup.ECP_GROUP_256_BIT, dh_groups)
+        self.assertIsNone(key_reused)
+
+    def test_analyze_result_target_is_analyzer_target_ike(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = L7ClientIPsecBase.from_scheme('ipsec', 'localhost', 500, OFFLINE_CLIENT_L4_SOCKET_PARAMS)
+        with unittest.mock.patch.object(analyzer, '_analyze', return_value=([], None)):
+            result = analyzer.analyze(l7_client, IkeVersion.V2)
+        self.assertIsInstance(result.target, AnalyzerTargetIke)
+
 
 class TestAnalyzerDHParams(TestAnalyzerDHBase):
     @classmethod
@@ -65,6 +149,7 @@ class TestAnalyzerDHParams(TestAnalyzerDHBase):
         return (
             Ikev1DiffieHellmanGroup.MODP_768_BIT,
             Ikev1DiffieHellmanGroup.MODP_1024_BIT,
+            Ikev1DiffieHellmanGroup.MODP_1024_BIT_160_BIT_SUBGROUP,
         )
 
     @classmethod

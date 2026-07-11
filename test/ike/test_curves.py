@@ -1,10 +1,16 @@
 
 import unittest
+import unittest.mock
+
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS
 
 from cryptodatahub.ike.algorithm import (
     Ikev1DiffieHellmanGroup,
     Ikev2DiffieHellmanGroup,
 )
+from cryptodatahub.ike.version import IkeVersion
+from cryptolyzer.common.result import AnalyzerTargetIke
+from cryptolyzer.ike.client import L7ClientIPsecBase
 from cryptolyzer.ike.curves import AnalyzerCurves
 from cryptolyzer.ike.server import IkeServerConfiguration
 
@@ -18,6 +24,13 @@ class TestAnalyzerCurvesUnit(unittest.TestCase):
 
     def test_get_help(self):
         self.assertIsInstance(AnalyzerCurves.get_help(), str)
+
+    def test_analyze_result_target_is_analyzer_target_ike(self):
+        analyzer = AnalyzerCurves()
+        l7_client = L7ClientIPsecBase.from_scheme('ipsec', 'localhost', 500, OFFLINE_CLIENT_L4_SOCKET_PARAMS)
+        with unittest.mock.patch.object(analyzer, '_analyze', return_value=([], None)):
+            result = analyzer.analyze(l7_client, IkeVersion.V2)
+        self.assertIsInstance(result.target, AnalyzerTargetIke)
 
 
 class TestAnalyzerCurves(TestAnalyzerDHBase):

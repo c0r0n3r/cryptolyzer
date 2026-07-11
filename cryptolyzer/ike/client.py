@@ -59,6 +59,7 @@ from cryptoparser.ike.ikev2 import (
     Ikev2PayloadKeyExchange,
     Ikev2NotifyPayloadCookie,
     Ikev2PayloadNonce,
+    Ikev2PayloadNotifyBase,
     Ikev2PayloadFlags,
     Ikev2PayloadSecurityAssociation,
     Ikev2PayloadDelete,
@@ -218,6 +219,7 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
         cookie: typing.Optional[typing.Union[bytes, bytearray]] = None,
         nonce: typing.Optional[typing.Union[bytes, bytearray]] = None,
         key_exchange_dh_group: typing.Optional[Ikev2DiffieHellmanGroup] = None,
+        extra_notify_payloads: typing.Optional[typing.Iterable[Ikev2PayloadNotifyBase]] = None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         payloads = []
 
@@ -247,11 +249,10 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
             ecdh_groups=ecdh_groups,
             ffdh_groups=ffdh_groups,
         )
-        payload_security_association = Ikev2PayloadSecurityAssociation(
+        payloads.append(Ikev2PayloadSecurityAssociation(
             flags=set([Ikev2PayloadFlags.CRITICAL, ]),
             proposals=proposals
-        )
-        payloads.append(payload_security_association)
+        ))
 
         # Caller decides which DH group to key the KE payload for. Falls back
         # to the legacy heuristic when no explicit choice is given: prefer the
@@ -297,6 +298,9 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
             nonce_data=nonce,
         ))
 
+        if extra_notify_payloads is not None:
+            payloads.extend(extra_notify_payloads)
+
         return payloads
 
 
@@ -335,7 +339,7 @@ class Ikev2SecurityAssociationSpecialization(Ikev2SecurityAssociationBase):
 
 
 class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
-    def __init__(self, cookie=None):
+    def __init__(self, cookie=None, extra_notify_payloads=None, key_exchange_dh_group=None):
         payloads = self._get_payloads(
             encryption_algorithm_tuples=self.expand_encryption_algorithms_to_tuples(
                 Ikev2EncryptionAlgorithm
@@ -344,6 +348,8 @@ class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
             pseudorandom_functions=list(Ikev2PseudorandomFunction),
             integrity_algorithms=list(Ikev2IntegrityAlgorithm),
             cookie=cookie,
+            key_exchange_dh_group=key_exchange_dh_group,
+            extra_notify_payloads=extra_notify_payloads,
         )
 
         initiator_spi = random.randint(0, 2**64 - 1)
@@ -648,15 +654,14 @@ class IKEv2ClientHandshake(IKEClient):
 
     @classmethod
     def _process_non_handshake_message(cls, message):
-        try:
-            payload = message.get_payload_by_type(Ikev2PayloadType.NOTIFY)
-            notify_type = payload.type
-            if notify_type == Ikev2NotifyType.COOKIE:
-                raise IsakmpNotify(notify_type, payload)
-            if notify_type.value.level == Ikev2NotifyLevel.ERROR:
-                raise IsakmpNotify(notify_type, payload)
-        except KeyError as e:
-            raise IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX) from e
+        notifies = message.get_payloads_by_type(Ikev2PayloadType.NOTIFY)
+        if not notifies:
+            raise IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX)
+        for payload in notifies:
+            if payload.type == Ikev2NotifyType.COOKIE:
+                raise IsakmpNotify(payload.type, payload)
+            if payload.type.value.level == Ikev2NotifyLevel.ERROR:
+                raise IsakmpNotify(payload.type, payload)
 
     @classmethod
     def _process_invalid_message(cls, transfer):
@@ -774,15 +779,14 @@ class IKEv1ClientHandshake(IKEClient):
 
     @classmethod
     def _process_non_handshake_message(cls, message):
-        try:
-            payload = message.get_payload_by_type(Ikev1PayloadType.NOTIFICATION)
-            notify_type = payload.notify_type
-            if notify_type == Ikev1NotifyType.NO_PROPOSAL_CHOSEN:
-                raise IsakmpNotify(notify_type)
-            if notify_type.value.level == Ikev1NotifyLevel.ERROR:
-                raise IsakmpNotify(notify_type)
-        except KeyError as e:
-            raise IsakmpNotify(Ikev1NotifyType.SITUATION_NOT_SUPPORTED) from e
+        notifies = message.get_payloads_by_type(Ikev1PayloadType.NOTIFICATION)
+        if not notifies:
+            raise IsakmpNotify(Ikev1NotifyType.SITUATION_NOT_SUPPORTED)
+        for payload in notifies:
+            if payload.notify_type == Ikev1NotifyType.NO_PROPOSAL_CHOSEN:
+                raise IsakmpNotify(payload.notify_type)
+            if payload.notify_type.value.level == Ikev1NotifyLevel.ERROR:
+                raise IsakmpNotify(payload.notify_type)
 
     @classmethod
     def _process_invalid_message(cls, transfer):

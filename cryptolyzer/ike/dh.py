@@ -17,12 +17,13 @@ from cryptodatahub.ike.algorithm import (
 
 from cryptodatahub.ike.version import IkeVersion
 
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
+from cryptolyzer.common.utils import LogSingleton
+
 from cryptolyzer.ike.client import (
     Ikev1SecurityAssociationAlgorithms,
     Ikev2SecurityAssociationSpecialization,
 )
-from cryptolyzer.common.utils import LogSingleton
-
 from cryptolyzer.ike.common import AnalyzerIKECommonBase
 from cryptolyzer.ike.exception import IsakmpNotify
 
@@ -119,23 +120,31 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
         for _ in range(try_count):
             self._before_probe(l7_client)
             init_message.initiator_spi = init_message.initiator_spi + 1
-            server_messages = l7_client.do_ikev2_handshake(
-                init_message=init_message,
-                last_exchange_type=Ikev2ExchangeType.IKE_SA_INIT
-            )
-            key_exchange_message = server_messages[Ikev2ExchangeType.IKE_SA_INIT]
-            key_exchange_payload = key_exchange_message.get_payload_by_type(Ikev2PayloadType.KE)
+            try:
+                server_messages = l7_client.do_ikev2_handshake(
+                    init_message=init_message,
+                    last_exchange_type=Ikev2ExchangeType.IKE_SA_INIT
+                )
+            except IsakmpNotify:
+                return None
+            except NetworkError as e:
+                if e.error != NetworkErrorType.NO_RESPONSE:
+                    raise
+                return None
+            try:
+                key_exchange_message = server_messages[Ikev2ExchangeType.IKE_SA_INIT]
+                key_exchange_payload = key_exchange_message.get_payload_by_type(Ikev2PayloadType.KE)
+            except KeyError:
+                return None
             key_exchange_data.append(bytes(key_exchange_payload.key_exchange_data))
 
-        return len(set(key_exchange_data)) < try_count and len(key_exchange_data) == try_count
+        return len(set(key_exchange_data)) < try_count
 
     def _analyze_ikev2(self, l7_client):
         key_reused = None
         accepted_dh_groups = []
         checkable_dh_groups = self._get_dh_groups(Ikev2DiffieHellmanGroup)
         while checkable_dh_groups:
-            self._before_probe(l7_client)
-
             try:
                 init_message = Ikev2SecurityAssociationSpecialization(
                     diffie_hellman_groups=checkable_dh_groups,
@@ -148,7 +157,10 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
                 if e.notify == Ikev2NotifyType.INVALID_KE_PAYLOAD:
                     dh_group = e.payload.dh_group
                     accepted_dh_groups.append(dh_group)
-                    checkable_dh_groups.remove(dh_group)
+                    try:
+                        checkable_dh_groups.remove(dh_group)
+                    except ValueError:
+                        break
                     continue
 
                 LogSingleton().log(level=60, msg=f'Notify response from server; notify={e.notify}')
@@ -157,12 +169,10 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
             if server_messages is None:
                 break
 
-            dh_group = None
             ike_sa_init_message = server_messages[Ikev2ExchangeType.IKE_SA_INIT]
             dh_group = ike_sa_init_message.get_payload_by_type(
                 Ikev2PayloadType.SA
             ).get_transform_by_type(Ikev2TransformType.DH).transform_id
-            assert dh_group is not None
 
             if not accepted_dh_groups and key_reused is None:
                 key_reused = self._check_ikev2_key_reuse(l7_client, init_message)
@@ -171,7 +181,8 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
                 level=60, msg=f'Server offered; group_type={self._get_dh_group_name()}, group={dh_group}'
             )
 
-            checkable_dh_groups.remove(dh_group)
+            if dh_group in checkable_dh_groups:
+                checkable_dh_groups.remove(dh_group)
             accepted_dh_groups.append(dh_group)
 
         return accepted_dh_groups, key_reused

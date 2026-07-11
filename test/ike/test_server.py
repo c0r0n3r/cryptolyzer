@@ -628,6 +628,34 @@ class TestIkev2CipherSuiteMatching(unittest.TestCase, _TestIkeServerHandshakeHel
         self.assertIsInstance(parsed.payloads[1], Ikev2PayloadKeyExchange)
         self.assertIsInstance(parsed.payloads[2], Ikev2PayloadNonce)
 
+    def test_proposal_without_dh_accepted_returns_sa_and_nonce_only(self):
+        handshake, l4_transfer = self._make_handshake([])
+        transforms = [
+            Ikev2TransformEncryptionAlgorithm(Ikev2EncryptionAlgorithm.ENCR_AES_CBC, key_length=128),
+            Ikev2TransformIntegrity(Ikev2IntegrityAlgorithm.AUTH_HMAC_SHA1_96),
+            Ikev2TransformPrf(Ikev2PseudorandomFunction.PRF_HMAC_SHA1),
+        ]
+        proposal = Ikev2ProposalPayload(
+            protocol_id=Ikev2ProtocolId.IKE,
+            transforms=transforms,
+        )
+        sa_payload = Ikev2PayloadSecurityAssociation(flags=set(), proposals=[proposal])
+        message = IsakmpMessage(
+            version=IsakmpProtocolVersion(IkeVersion.V2, 0),
+            initiator_spi=1, responder_spi=0,
+            exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
+            flags=[IsakmpFlags.INITIATOR], message_id=0,
+            payloads=[sa_payload],
+        )
+
+        with self.assertRaises(StopIteration):
+            handshake._process_handshake_message(message, None)  # pylint: disable=protected-access
+
+        parsed, _ = IsakmpMessage.parse_immutable(l4_transfer.last_sent)
+        self.assertIsInstance(parsed.payloads[0], Ikev2PayloadSecurityAssociation)
+        self.assertIsInstance(parsed.payloads[1], Ikev2PayloadNonce)
+        self.assertEqual(len(parsed.payloads), 2)
+
     def test_encryption_invalid_key_length_skipped(self):
         handshake, l4_transfer = self._make_handshake([self._MATCHING_CS])
         sa_payload = _Ikev2ProposalFactory.make_sa(
