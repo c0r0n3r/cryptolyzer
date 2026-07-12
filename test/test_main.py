@@ -8,6 +8,7 @@ except ImportError:
 import argparse
 import io
 import logging
+import socket
 import sys
 import os
 
@@ -19,7 +20,7 @@ import test.fingerprint.test_generate
 
 import test.tls.test_versions
 import test.tls.test_vulnerabilities
-from test.common.markers import live_dns, live_server
+from test.common.markers import live_server
 
 import colorama
 import urllib3
@@ -126,12 +127,12 @@ class TestMain(TestMainBase):
             ('0 parallel must be a positive integer value',)
         )
 
-    @live_dns
     def test_runtime_error(self):
-        self._test_runtime_error(
-            ['cryptolyzer', 'tls', 'versions', 'unresolvable.hostname'],
-            'address of the target cannot be resolved'
-        )
+        with patch.object(socket, 'create_connection', side_effect=ConnectionRefusedError):
+            self._test_runtime_error(
+                ['cryptolyzer', 'tls', 'versions', 'localhost'],
+                'connection to target cannot be established'
+            )
 
     @live_server
     def test_analyzer_uris_non_ip(self):
@@ -228,6 +229,15 @@ class TestMain(TestMainBase):
             self._get_test_analyzer_result_markdown('fingerprint', 'decode', '771,7-6,5-4,3-2,1-0'),
             result.as_markdown() + '\n',
         )
+
+        colorama.init()
+        Serializable.post_text_encoder = SerializableTextEncoderHighlighted()
+        self.assertEqual(
+            self._get_test_analyzer_result_highlighted('fingerprint', 'decode', '771,7-6,5-4,3-2,1-0'),
+            result.as_markdown() + '\n',
+        )
+        Serializable.post_text_encoder = SerializableTextEncoder()
+        colorama.deinit()
 
     def test_analyzer_output_fingerprint_decode_ja4(self):
         tag = 't13d0101h2_1301_002b_0403'
