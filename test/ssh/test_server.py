@@ -8,14 +8,24 @@ from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCK
 from cryptoparser.common.exception import NotEnoughData
 
 from cryptoparser.ssh.record import SshRecordInit
-from cryptoparser.ssh.subprotocol import SshDisconnectMessage, SshProtocolMessage, SshSoftwareVersionUnparsed
+from cryptoparser.ssh.subprotocol import (
+    SshDisconnectMessage,
+    SshMessageCode,
+    SshProtocolMessage,
+    SshSoftwareVersionUnparsed,
+)
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
 from cryptolyzer.common.transfer import L4ClientTCP
 
 from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.ssh.exception import SshReasonCode
-from cryptolyzer.ssh.server import L7ServerSsh, SshServerHandshake
+from cryptolyzer.ssh.server import (
+    L7ServerSsh,
+    SshServerConfiguration,
+    SshServerHandshake,
+    SshServerHandshakeKeyExchange,
+)
 from cryptolyzer.ssh.versions import AnalyzerVersions
 
 from .classes import L7ServerSshTest
@@ -70,6 +80,20 @@ class TestSshServerHandshake(TestL7ServerBase):
         l4_client.send(SshRecordInit(SshDisconnectMessage(SshReasonCode.BY_APPLICATION, 'by application')).compose())
         SshRecordInit(SshDisconnectMessage(SshReasonCode.PROTOCOL_ERROR, 'protocol error', 'en')).compose()
         self._receive_as_many_as_possibe_and_close(l4_client)
+
+    def test_group_exchange_init_without_request_disconnects(self):
+        server = L7ServerSsh(
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS,
+            configuration=SshServerConfiguration(key_exchange_reply=True),
+        )
+        handshake = SshServerHandshakeKeyExchange(server, server.configuration)
+        handshake.client_messages = {}
+        message = mock.Mock()
+        message.get_message_code.return_value = SshMessageCode.DH_GEX_INIT
+        with self.assertRaises(StopIteration):
+            handshake._process_handshake_message(  # pylint: disable=protected-access
+                message, SshMessageCode.NEWKEYS
+            )
 
     def test_error_invalid_message(self):
         l4_client = L4ClientTCP('localhost', self.threaded_server.l7_server.l4_transfer.bind_port)

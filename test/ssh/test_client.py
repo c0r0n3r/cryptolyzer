@@ -15,7 +15,6 @@ from cryptoparser.ssh.subprotocol import (
 )
 from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
-from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.ssh.client import (
     L7ClientSsh,
     SshKeyExchangeInitKeyExchangeDHE,
@@ -23,7 +22,7 @@ from cryptolyzer.ssh.client import (
     SSH_KEX_ALGORITHMS_TO_NAMED_GROUP,
 )
 from cryptolyzer.ssh.exception import SshDisconnect
-from cryptolyzer.ssh.server import L7ServerSsh
+from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
 from cryptolyzer.ssh.versions import AnalyzerVersions
 
 from .classes import L7ServerSshTest
@@ -45,10 +44,16 @@ class TestL7ClientBase(unittest.TestCase):
 
 
 class TestSshClientHandshake(TestL7ClientBase):
-    @live_server
     @mock.patch('cryptolyzer.ssh.client.SSH_KEX_ALGORITHMS_TO_NAMED_GROUP', {})
     def test_error_kex_not_implemented(self):
-        l7_client = L7ClientSsh('github.com', l4_socket_params=L4TransferSocketParams(timeout=0.5))
+        threaded_server = L7ServerSshTest(L7ServerSsh(
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS,
+            configuration=SshServerConfiguration(key_exchange_reply=True),
+        ))
+        threaded_server.start()
+
+        l7_client = L7ClientSsh('localhost', l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS)
+        l7_client.port = threaded_server.l7_server.l4_transfer.bind_port
         with self.assertRaises(NotImplementedError):
             l7_client.do_handshake(key_exchange_init_message=SshKeyExchangeInitKeyExchangeECDHE(), last_message_type=-1)
 

@@ -8,6 +8,7 @@ from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCK
 
 from cryptodatahub.common.algorithm import Authentication, Hash
 from cryptodatahub.common.grade import Grade
+from cryptodatahub.common.utils import hash_bytes
 from cryptodatahub.dnsrec.algorithm import SshFpAlgorithm, SshFpFingerprintType
 
 from cryptodatahub.ssh.algorithm import SshHostKeyAlgorithm
@@ -19,7 +20,11 @@ from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.dnsrec.client import L7ClientDns
 from cryptolyzer.ssh.client import L7ClientSsh, SshClientHandshake, SshDisconnect
 from cryptolyzer.ssh.pubkeys import AnalyzerPublicKeys, SshFpVerificationStatus, SshPublicKeyWithSshfpState
-from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
+from cryptolyzer.ssh.server import (
+    DEFAULT_SSH_SERVER_HOST_PUBLIC_KEY,
+    L7ServerSsh,
+    SshServerConfiguration,
+)
 
 from .classes import L7ServerSshTest, TestSshCases
 
@@ -176,3 +181,118 @@ class TestSshPubkeys(TestSshCases.TestSshClientBase):
             self.assertIsNotNone(result)
         except (NetworkError, SshDisconnect, StopIteration):
             pass
+
+
+class TestSshPubkeysOffline(TestSshCases.TestSshClientBase):
+    @staticmethod
+    def get_result(host, port=None, l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None):
+        analyzer = AnalyzerPublicKeys()
+        l7_client = L7ClientSsh(host, port, l4_socket_params, ip=ip)
+        result = analyzer.analyze(l7_client)
+        return result
+
+    @staticmethod
+    def _start_offline_server():
+        server_configuration = SshServerConfiguration(
+            key_exchange_reply=True,
+            server_host_key_algorithms=[SshHostKeyAlgorithm.SSH_RSA],
+        )
+        threaded_server = L7ServerSshTest(L7ServerSsh(
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=server_configuration
+        ))
+        threaded_server.start()
+
+        return threaded_server
+
+    def test_host_key(self):
+        threaded_server = self._start_offline_server()
+
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertEqual(len(result.public_keys), 1)
+        self.assertIsInstance(result.public_keys[0], SshPublicKeyWithSshfpState)
+        self.assertEqual(result.public_keys[0].public_key.host_key_algorithm, SshHostKeyAlgorithm.SSH_RSA)
+        self.assertEqual(result.public_keys[0].sshfp_status, SshFpVerificationStatus.MISSING)
+        self.assertIn(
+            'Server offers ssh-rsa host key', '\n'.join(self.get_log_lines())
+        )
+
+    @mock.patch.object(L7ClientDns, 'get_sshfp_records', side_effect=NetworkError(NetworkErrorType.NO_ADDRESS))
+    def test_sshfp_dns_error(self, _):
+        threaded_server = self._start_offline_server()
+
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertEqual(result.public_keys[0].sshfp_status, SshFpVerificationStatus.MISSING)
+
+    def test_sshfp_match(self):
+        expected_fingerprint = hash_bytes(
+            SshFpFingerprintType.SHA2_256.value.hash, DEFAULT_SSH_SERVER_HOST_PUBLIC_KEY.key_bytes
+        )
+        threaded_server = self._start_offline_server()
+
+        with mock.patch.object(L7ClientDns, 'get_sshfp_records', return_value=[
+            DnsRecordSshfp(
+                algorithm=SshFpAlgorithm.RSA,
+                fingerprint_type=SshFpFingerprintType.SHA2_256,
+                fingerprint=expected_fingerprint,
+            )
+        ]):
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertEqual(result.public_keys[0].sshfp_status, SshFpVerificationStatus.MATCH)
+
+    def test_sshfp_mismatch(self):
+        threaded_server = self._start_offline_server()
+
+        with mock.patch.object(L7ClientDns, 'get_sshfp_records', return_value=[
+            DnsRecordSshfp(
+                algorithm=SshFpAlgorithm.RSA,
+                fingerprint_type=SshFpFingerprintType.SHA2_256,
+                fingerprint=b'\x00' * 32,
+            )
+        ]):
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertEqual(result.public_keys[0].sshfp_status, SshFpVerificationStatus.MISMATCH)
+
+    @mock.patch.object(
+        SshClientHandshake, '_process_kex_init',
+        side_effect=NetworkError(NetworkErrorType.NO_RESPONSE)
+    )
+    def test_error_no_response(self, _):
+        threaded_server = self._start_offline_server()
+
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertEqual(result.public_keys, [])
+
+    @mock.patch.object(
+        SshClientHandshake, '_process_kex_init',
+        side_effect=NetworkError(NetworkErrorType.NO_CONNECTION)
+    )
+    def test_error_no_connection(self, _):
+        threaded_server = self._start_offline_server()
+
+        with self.assertRaises(NetworkError) as context_manager:
+            self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    @mock.patch.object(
+        SshClientHandshake, '_process_kex_init',
+        side_effect=SshDisconnect(SshReasonCode.HOST_NOT_ALLOWED_TO_CONNECT, '')
+    )
+    def test_error_disconnect(self, _):
+        threaded_server = self._start_offline_server()
+
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertEqual(result.public_keys, [])
+
+    @mock.patch.object(AnalyzerPublicKeys, '_get_dh_key_exchange_reply_message_class', side_effect=StopIteration)
+    def test_error_no_kex_reply(self, _):
+        threaded_server = self._start_offline_server()
+
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertEqual(result.public_keys, [])

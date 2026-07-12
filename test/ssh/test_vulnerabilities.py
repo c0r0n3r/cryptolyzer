@@ -6,6 +6,7 @@ from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCK
 from cryptodatahub.ssh.algorithm import SshKexAlgorithm, SshEncryptionAlgorithm, SshMacAlgorithm
 
 from cryptoparser.common.base import Serializable, SerializableTextEncoder
+from cryptoparser.ssh.version import SshProtocolVersion, SshVersion
 
 from cryptolyzer.common.exception import NetworkError
 from cryptolyzer.common.result import AnalyzerTargetSsh
@@ -100,6 +101,17 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
         )
         self.assertFalse(algorithms_result.terrapin.value)
 
+    def test_versions(self):
+        versions_result = AnalyzerResultVulnerabilityVersions.from_protocol_versions([
+            SshProtocolVersion(SshVersion.SSH1),
+        ])
+        self.assertTrue(versions_result.early_ssh_version.value)
+
+        versions_result = AnalyzerResultVulnerabilityVersions.from_protocol_versions([
+            SshProtocolVersion(SshVersion.SSH2),
+        ])
+        self.assertFalse(versions_result.early_ssh_version.value)
+
     def test_output(self):
         target = AnalyzerTargetSsh('ssh', 'example.com', '127.0.0.1', 22)
         result = AnalyzerResultVulnerabilities(
@@ -181,6 +193,22 @@ class TestSshVulnerabilities(TestSshCases.TestSshClientBase):
 
         self.assertFalse(result.dhparams.weak_dh.value)
         self.assertTrue(result.dhparams.dheat.value)
+
+        log_stream = '\n'.join(self.pop_log_lines())
+        self._check_gex_params([2048, 3072, 4096, 6144, 8192], log_stream)
+
+    def test_offline_real(self):
+        server_configuration = SshServerConfiguration(key_exchange_reply=True)
+        threaded_server = L7ServerSshTest(L7ServerSsh(
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=server_configuration
+        ))
+        threaded_server.start()
+
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertTrue(result.dhparams.weak_dh.value)
+        self.assertTrue(result.dhparams.dheat.value)
+        self.assertFalse(result.versions.early_ssh_version.value)
 
         log_stream = '\n'.join(self.pop_log_lines())
         self._check_gex_params([2048, 3072, 4096, 6144, 8192], log_stream)

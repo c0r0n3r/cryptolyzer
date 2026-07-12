@@ -2,9 +2,9 @@
 
 from unittest import mock
 from test.common.markers import live_server
-from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS
+from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 
-from cryptodatahub.ssh.algorithm import SshKexAlgorithm
+from cryptodatahub.ssh.algorithm import SshHostKeyAlgorithm, SshKexAlgorithm
 from cryptoparser.ssh.version import SshVersion, SshProtocolVersion
 
 from cryptolyzer.common.result import AnalyzerTargetSsh
@@ -12,8 +12,9 @@ from cryptolyzer.common.result import AnalyzerTargetSsh
 from cryptolyzer.ssh.all import AnalyzerAll
 from cryptolyzer.ssh.ciphers import AnalyzerResultCiphers
 from cryptolyzer.ssh.client import L7ClientSsh
+from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
 
-from .classes import TestSshCases
+from .classes import L7ServerSshTest, TestSshCases
 
 
 class TestSshAll(TestSshCases.TestSshClientBase):
@@ -58,6 +59,44 @@ class TestSshAll(TestSshCases.TestSshClientBase):
                 hassh_fingerprint=''
             ),
         ), SshProtocolVersion(SshVersion.SSH2))
+
+    @staticmethod
+    def _start_offline_server():
+        server_configuration = SshServerConfiguration(
+            key_exchange_reply=True,
+            server_host_key_algorithms=[SshHostKeyAlgorithm.SSH_RSA],
+        )
+        threaded_server = L7ServerSshTest(L7ServerSsh(
+            'localhost', 0, OFFLINE_L4_SOCKET_PARAMS, configuration=server_configuration
+        ))
+        threaded_server.start()
+
+        return threaded_server
+
+    def test_offline_full(self):
+        threaded_server = self._start_offline_server()
+
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertIsNotNone(result.versions)
+        self.assertIsNotNone(result.ciphers)
+        self.assertIsNotNone(result.dhparams)
+        self.assertEqual(len(result.pubkeys.public_keys), 1)
+
+        markdown_result = result.as_markdown()
+        target_index = markdown_result.find('Target')
+        self.assertNotEqual(target_index, -1)
+        self.assertEqual(markdown_result.find('Target', target_index + 1), -1)
+
+    def test_offline_missing_dhparams(self):
+        threaded_server = self._start_offline_server()
+
+        with mock.patch.object(AnalyzerAll, 'is_dhe_supported', return_value=None):
+            result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+
+        self.assertIsNone(result.dhparams)
+        self.assertIsNotNone(result.versions)
+        self.assertIsNotNone(result.ciphers)
 
     @live_server
     def test_markdown(self):
