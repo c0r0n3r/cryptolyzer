@@ -5,7 +5,6 @@ from unittest import mock
 import datetime
 
 from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestLoggerBase, TestMainBase
-from test.common.markers import live_server
 
 from cryptodatahub.tls.algorithm import TlsECPointFormat, TlsNextProtocolName, TlsProtocolName
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
@@ -88,6 +87,18 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
             set(result.application_layer_protocols),
             set([TlsProtocolName.HTTP_1_1, ])
         )
+
+    @mock.patch.object(
+        L7ClientTlsBase, 'do_tls_handshake',
+        side_effect=TlsAlert(TlsAlertDescription.NO_APPLICATION_PROTOCOL)
+    )
+    def test_error_application_layer_protocols_alert(self, _):
+        analyzer = AnalyzerExtensions()
+        l7_client = L7ClientTlsBase.from_scheme('tls', 'localhost', 0)
+        application_layer_protocols = analyzer._analyze_alpn(  # pylint: disable=protected-access
+            l7_client, TlsProtocolVersion(TlsVersion.TLS1_2)
+        )
+        self.assertEqual(application_layer_protocols, [])
 
     def test_application_layer_protocols(self):
         threaded_server = L7ServerTlsTest(L7ServerTls('localhost', 0, OFFLINE_L4_SOCKET_PARAMS))
@@ -200,9 +211,17 @@ class TestTlsExtensions(TestLoggerBase, TestMainBase):  # pylint: disable=too-ma
         log_lines = self.pop_log_lines()
         self.assertIn('Server offers point format(s) "UNCOMPRESSED"', log_lines)
 
-    @live_server
     def test_ec_point_formats_offered(self):
-        result = self.get_result('www.cloudflare.com', 443)
+        threaded_server = L7ServerTlsTest(L7ServerTls(
+            'localhost', 0,
+            OFFLINE_L4_SOCKET_PARAMS,
+            configuration=TlsServerConfiguration(
+                cipher_suites=[TlsCipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256],
+                ec_point_formats=[TlsECPointFormat.UNCOMPRESSED],
+            ),
+        ))
+        threaded_server.wait_for_server_listen()
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(
             result.ec_point_formats,
             TlsECPointFormatVector([TlsECPointFormat.UNCOMPRESSED, ])

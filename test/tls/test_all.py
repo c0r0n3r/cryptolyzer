@@ -222,6 +222,34 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
         self.assertIn(TlsNamedCurve.X25519, curves)
         self.assertIn(TlsNamedCurve.SECP256R1, curves)
 
+    def test_tls_1_3_dhparams(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+            cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            curves=[TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072],
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(result.dhparams.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072])
+        self.assertIsNone(result.dhparams.dhparam)
+
+    def test_tls_1_2_dhparam_with_tls_1_3_groups(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+            cipher_suites=[
+                TlsCipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
+                TlsCipherSuite.TLS_AES_128_GCM_SHA256,
+            ],
+            dh_param=DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP,
+            curves=[TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072],
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(result.dhparams.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072])
+        self.assertEqual(
+            result.dhparams.dhparam.well_known, DHParamWellKnown.RFC3526_2048_BIT_MODP_GROUP
+        )
+
     def test_markdown(self):
         threaded_server = self.create_server(TlsServerConfiguration(
             min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),

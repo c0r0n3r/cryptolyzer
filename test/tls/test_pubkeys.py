@@ -18,9 +18,11 @@ import asn1crypto
 
 from cryptodatahub.common.algorithm import Authentication
 from cryptodatahub.common.entity import Entity
+from cryptodatahub.tls.algorithm import TlsNamedCurve
 
 from cryptoparser.common.x509 import PublicKeyX509
 
+from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
@@ -553,3 +555,51 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
             protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
         )
         self.assertEqual(len(result.pubkeys), 0)
+
+
+class TestTlsPubKeysOffline(TestTlsCases.TestTlsBase, TestMainBase):
+    @classmethod
+    def _get_main_func(cls):
+        return main
+
+    @staticmethod
+    def get_result(
+            host, port, protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS, ip=None, scheme='tls'
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        analyzer = AnalyzerPublicKeys()
+        l7_client = L7ClientTlsBase.from_scheme(scheme, host, port, l4_socket_params, ip)
+        return analyzer.analyze(l7_client, protocol_version)
+
+    def test_certificate_status_offline(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            certificates=[TestTlsPubKeys.SNAKEOIL_CERT_DER],
+            certificate_status=OCSP_RESPONSE_GOOD.dump(),
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(result.pubkeys[0].certificate_status.status, 'good')
+
+    def test_tls1_3_certificate_entries(self):
+        certificate_entry = mock.Mock()
+        certificate_entry.certificate.certificate = TestTlsPubKeys.SNAKEOIL_CERT_DER
+        certificate_message = mock.Mock(spec=['certificate_entries'])
+        certificate_message.certificate_entries = [certificate_entry]
+        server_messages = {TlsHandshakeType.CERTIFICATE: certificate_message}
+        with mock.patch.object(AnalyzerPublicKeys, '_get_server_messages', return_value=server_messages):
+            result = self.get_result('localhost', 0)
+        self.assertEqual(len(result.pubkeys), 1)
+        self.assertEqual(
+            result.pubkeys[0].certificate_chain.items[0].der, TestTlsPubKeys.SNAKEOIL_CERT_DER
+        )
+
+    def test_offline_tls1_3(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            certificates=[TestTlsPubKeys.SNAKEOIL_CERT_DER],
+            cipher_suites=[TlsCipherSuite.TLS_AES_128_GCM_SHA256],
+            curves=[TlsNamedCurve.FFDHE2048],
+        ))
+        result = self.get_result(
+            'localhost', threaded_server.l7_server.l4_transfer.bind_port,
+            TlsProtocolVersion(TlsVersion.TLS1_3),
+        )
+        self.assertEqual(result.pubkeys, [])

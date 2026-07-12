@@ -329,6 +329,13 @@ class TestL7ServerTlsConfiguration(unittest.TestCase):
                 certificate_authorities=[b'fake distinguished name'],
             )
 
+    def test_error_certificate_status_without_certificate(self):
+        with self.assertRaises(ValueError):
+            TlsServerConfiguration(
+                cipher_suites=[TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA],
+                certificate_status=b'fake ocsp response',
+            )
+
 
 class TestL7ServerTlsCertificate(TestL7ServerBase):
     def setUp(self):

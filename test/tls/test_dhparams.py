@@ -6,7 +6,13 @@ from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCK
 from test.common.markers import live_server
 
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
-from cryptoparser.tls.extension import TlsExtensionsBase, TlsNamedCurve
+from cryptoparser.tls.extension import (
+    TlsExtensionEllipticCurves,
+    TlsExtensionsBase,
+    TlsExtensionsClient,
+    TlsExtensionType,
+    TlsNamedCurve,
+)
 from cryptoparser.tls.subprotocol import TlsAlertDescription, TlsHandshakeType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
@@ -19,7 +25,7 @@ from cryptolyzer.common.dhparam import (
     DHParamWellKnown,
 )
 
-from cryptolyzer.tls.client import L7ClientTlsBase
+from cryptolyzer.tls.client import L7ClientTlsBase, TlsHandshakeClientHelloKeyExchangeDHE
 from cryptolyzer.tls.dhparams import AnalyzerDHParams
 from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
@@ -102,25 +108,19 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disabl
         self.assertIsNone(result.dhparam)
         self.assertFalse(result.key_reuse)
 
-    @live_server
     @mock.patch.object(
         AnalyzerDHParams, '_get_public_key', side_effect=StopIteration
     )
     def test_error_key_reuse_undeterminable(self, _):
-        result = self.get_result('lamar.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
-        self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
-        self.assertIsNone(result.dhparam)
-        self.assertEqual(result.key_reuse, None)
-
-        result = self.get_result('documentfreedom.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
-        self.assertEqual(result.groups, [
-            TlsNamedCurve.FFDHE2048,
-            TlsNamedCurve.FFDHE3072,
-            TlsNamedCurve.FFDHE4096,
-            TlsNamedCurve.FFDHE6144,
-            TlsNamedCurve.FFDHE8192,
-        ])
-        self.assertEqual(result.dhparam, None)
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA],
+            dh_param=DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(result.groups, [])
+        self.assertEqual(
+            result.dhparam.well_known, DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP
+        )
         self.assertEqual(result.key_reuse, None)
 
     @live_server
@@ -242,15 +242,42 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disabl
         self.assertNotEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
 
-    @live_server
+    def test_remove_selected_group_missing_supported_groups(self):
+        client_hello = TlsHandshakeClientHelloKeyExchangeDHE(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'localhost'
+        )
+        client_hello.extensions = TlsExtensionsClient([])
+        self.assertFalse(
+            # pylint: disable-next=protected-access
+            AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, TlsNamedCurve.FFDHE2048)
+        )
+
+    def test_remove_selected_group_last_supported_group(self):
+        client_hello = TlsHandshakeClientHelloKeyExchangeDHE(
+            TlsProtocolVersion(TlsVersion.TLS1_2), 'localhost'
+        )
+        client_hello.extensions = TlsExtensionsClient([TlsExtensionEllipticCurves([TlsNamedCurve.FFDHE2048])])
+        self.assertFalse(
+            # pylint: disable-next=protected-access
+            AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, TlsNamedCurve.FFDHE2048)
+        )
+        with self.assertRaises(KeyError):
+            client_hello.extensions.get_item_by_type(TlsExtensionType.SUPPORTED_GROUPS)
+
     def test_tls_1_2_rfc_7919_support(self):
-        result = self.get_result('lamar.edu', 443, TlsProtocolVersion(TlsVersion.TLS1_2))
-        self.assertEqual(result.groups, [TlsNamedCurve.FFDHE2048, TlsNamedCurve.FFDHE3072, TlsNamedCurve.FFDHE4096])
-        self.assertEqual(result.dhparam, None)
+        threaded_server = self.create_server(TlsServerConfiguration(
+            cipher_suites=[TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_CBC_SHA],
+            dh_param=DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(result.groups, [])
+        self.assertEqual(
+            result.dhparam.well_known, DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP
+        )
+        self.assertFalse(result.key_reuse)
         self.assertEqual(
             self.get_log_lines(), [
-                'Server offers 2048-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
-                'Server offers 3072-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
+                'Server offers 4096-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
                 'Server offers 4096-bit Finite Field Diffie-Hellman group (RFC 7919) (TLS 1.2)',
             ]
         )

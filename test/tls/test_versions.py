@@ -167,6 +167,16 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
         self.assertEqual(result.inappropriate_version_fallback, None)
 
+    def test_inappropriate_fallback_scsv_support(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            fallback_to_ssl=False,
+            fallback_scsv_supported=True,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertFalse(result.inappropriate_version_fallback.value)
+
     def test_tls_1_2_3(self):
         threaded_server = self.create_server(TlsServerConfiguration(
             min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),

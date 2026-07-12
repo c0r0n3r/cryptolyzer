@@ -2,8 +2,14 @@
 
 import unittest
 
+from Crypto.Cipher import AES
+
 from cryptodatahub.common.algorithm import Hash, MAC, NamedGroup
 from cryptodatahub.tls.algorithm import TlsCipherSuite
+
+from cryptoparser.tls.record import TlsRecord
+from cryptoparser.tls.subprotocol import TlsContentType
+from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.tls.crypto import (
     Tls13HandshakeDecryptor,
@@ -111,6 +117,22 @@ class TestTls13HandshakeDecryptorCryptodome(unittest.TestCase):
         with self.assertRaises(ValueError):
             decryptor.decrypt(ciphertext_with_tag, aad)
 
+    def test_decrypt_roundtrip_increments_sequence_number(self):
+        """decrypt() returns the plaintext and advances the record sequence number."""
+        decryptor = Tls13HandshakeDecryptorCryptodome(
+            cipher_suite=TlsCipherSuite.TLS_AES_128_GCM_SHA256,
+            key_exchange_shared_secret=b'\x00' * 32,
+            handshake_transcript_hash=b'\x00' * 32,
+        )
+        nonce = decryptor._make_nonce()
+        cipher = AES.new(decryptor._write_key, AES.MODE_GCM, nonce=nonce)
+        ciphertext_without_tag, authentication_tag = cipher.encrypt_and_digest(b'plaintext')
+
+        plaintext = decryptor.decrypt(ciphertext_without_tag + authentication_tag, b'')
+
+        self.assertEqual(plaintext, b'plaintext')
+        self.assertEqual(decryptor._record_sequence_number, 1)
+
     def test_block_cipher_factory_called_on_decrypt(self):
         """Block cipher factory is called during decrypt() for AES-GCM."""
         cipher_suite = TlsCipherSuite.TLS_AES_128_GCM_SHA256
@@ -127,6 +149,16 @@ class TestTls13HandshakeDecryptorCryptodome(unittest.TestCase):
         aad = b''
         with self.assertRaises(ValueError):
             decryptor.decrypt(ciphertext_with_tag, aad)
+
+    def test_compute_additional_data(self):
+        """AEAD additional data equals content_type || version || fragment length."""
+        record = TlsRecord(
+            fragment=b'\x00' * 8,
+            protocol_version=TlsProtocolVersion(TlsVersion.TLS1_2),
+            content_type=TlsContentType.APPLICATION_DATA,
+        )
+        additional_data = Tls13HandshakeDecryptorCryptodome.compute_additional_data(record)
+        self.assertEqual(additional_data, b'\x17\x03\x03\x00\x08')
 
     def test_tls10_cipher_suite_version_check(self):
         """TLS 1.0 cipher suite triggers version check error."""
