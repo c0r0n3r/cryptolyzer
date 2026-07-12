@@ -17,6 +17,9 @@ class TestDnsClient(unittest.TestCase):
             L7ClientDns.from_uri(urllib3.util.parse_url('unknown://mock.site'))
         self.assertEqual(context_manager.exception.args, ('unknown', ))
 
+    def test_supported_schemes(self):
+        self.assertEqual(L7ClientDns.get_supported_schemes(), {'dns': L7ClientDns})
+
     def test_client_dns(self):
         dns_handshake = DnsHandshakeBase(L4TransferSocketParams(timeout=5))
         l7_client = L7ClientDns.from_uri(urllib3.util.parse_url('dns://one.one.one.one'))
