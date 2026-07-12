@@ -4,9 +4,12 @@
 import unittest
 from unittest import mock
 
+import urllib3
+
 from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.transfer import L4TransferSocketParams
 
+from cryptolyzer.dnsrec.dnssec import AnalyzerDnsSec
 from cryptolyzer.ike.analyzer import ProtocolHandlerIKEVersionIndependent
 from cryptolyzer.ike.versions import AnalyzerVersions
 
@@ -18,6 +21,15 @@ class TestAnalyzer(unittest.TestCase):
 
     def test_protocol(self):
         self.assertEqual(ProtocolHandlerIKEVersionIndependent.get_protocol(), 'ike')
+
+    def test_l7_client_from_params_non_ip_fragment(self):
+        handler_class = ProtocolHandlerBase.from_protocol('tls')
+        uri = urllib3.util.parse_url('tls://localhost:443#not-an-ip')
+        l7_client = handler_class._l7_client_from_params(uri, L4TransferSocketParams())
+        self.assertEqual(l7_client.address, 'localhost')
+
+    def test_dns_record_default_scheme(self):
+        self.assertEqual(AnalyzerDnsSec.get_default_scheme(), 'dns')
 
 
 class TestAnalyzerThrottle(unittest.TestCase):
