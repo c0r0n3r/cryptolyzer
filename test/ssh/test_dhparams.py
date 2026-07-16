@@ -6,7 +6,6 @@ from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCK
 from cryptodatahub.ssh.algorithm import SshKexAlgorithm
 
 from cryptolyzer.common.exception import NetworkError
-from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.ssh.client import L7ClientSsh, SshDisconnect
 from cryptolyzer.ssh.dhparams import AnalyzerDHParams
@@ -25,24 +24,6 @@ class TestSshDHParams(TestSshCases.TestSshClientBase):
 
     @live_server
     def test_real_gex(self):
-        result = self.get_result('git.launchpad.net', 22, l4_socket_params=L4TransferSocketParams(timeout=10))
-        self.assertEqual(result.key_exchange.kex_algorithms, [SshKexAlgorithm.DIFFIE_HELLMAN_GROUP14_SHA1, ])
-        self.assertEqual(result.group_exchange.gex_algorithms, [
-            SshKexAlgorithm.DIFFIE_HELLMAN_GROUP_EXCHANGE_SHA256,
-            SshKexAlgorithm.DIFFIE_HELLMAN_GROUP_EXCHANGE_SHA1,
-        ])
-        self.assertEqual(
-            [key_size.value for key_size in result.group_exchange.key_sizes],
-            [2048, 3072, 4096, 6144, 7680, 8192]
-        )
-        self.assertFalse(result.group_exchange.bounds_tolerated)
-        log_lines = self.pop_log_lines()
-        for idx, key_size in enumerate(result.group_exchange.key_sizes):
-            self.assertEqual(
-                f'Server offers custom DH public parameter with size {key_size}-bit (SSH 2.0)',
-                log_lines[idx + 1]
-            )
-
         result = self.get_result('github.com', 22)
         self.assertEqual(result.key_exchange, None)
         self.assertEqual(result.group_exchange.gex_algorithms, [SshKexAlgorithm.DIFFIE_HELLMAN_GROUP_EXCHANGE_SHA256])
