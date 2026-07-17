@@ -21,6 +21,7 @@ from cryptoparser.common.parse import ComposerBinary
 from cryptoparser.common.x509 import SignedCertificateTimestampList
 
 from cryptoparser.tls.extension import (
+    TlsCertificateStatusType,
     TlsExtensionApplicationLayerProtocolNegotiation,
     TlsExtensionEncryptThenMAC,
     TlsExtensionExtendedMasterSecret,
@@ -79,6 +80,7 @@ from cryptoparser.tls.subprotocol import (
     TlsDistinguishedName,
     TlsECCurveType,
     TlsHandshakeCertificateRequest,
+    TlsHandshakeCertificateStatus,
     TlsHandshakeServerCertificate,
     TlsHandshakeServerHelloDone,
     TlsHandshakeServerHello,
@@ -130,6 +132,10 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
         validator=attr.validators.optional(
             attr.validators.deep_iterable(attr.validators.instance_of(bytes))
         )
+    )
+    certificate_status = attr.ib(
+        default=None,
+        validator=attr.validators.optional(attr.validators.instance_of(bytes))
     )
     dh_param = attr.ib(
         default=None,
@@ -197,6 +203,9 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
 
         if self.certificate_authorities is not None and not self.certificates:
             raise ValueError('certificate_authorities is set but no certificate is configured')
+
+        if self.certificate_status is not None and not self.certificates:
+            raise ValueError('certificate_status is set but no certificate is configured')
 
 
 @attr.s
@@ -464,6 +473,11 @@ class TlsServerHandshake(TlsServer):
             self.l7_transfer.send(
                 TlsRecord(TlsHandshakeServerCertificate(certificate_chain).compose()).compose()
             )
+
+            if self.configuration.certificate_status is not None:
+                self.l7_transfer.send(TlsRecord(TlsHandshakeCertificateStatus(
+                    TlsCertificateStatusType.OCSP, self.configuration.certificate_status
+                ).compose()).compose())
 
         if cipher_suite.value.key_exchange in (KeyExchange.DHE, KeyExchange.ADH):
             if self.configuration.dh_param is not None:
