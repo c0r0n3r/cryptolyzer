@@ -9,6 +9,7 @@ from cryptodatahub.common.algorithm import BlockCipher, KeyExchange
 from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.common.parameter import DHParameterNumbers, DHParamWellKnown
 from cryptodatahub.tls.algorithm import (
+    TlsECPointFormat,
     TlsNamedCurve,
     TlsNextProtocolName,
     TlsProtocolName,
@@ -23,6 +24,7 @@ from cryptoparser.common.x509 import SignedCertificateTimestampList
 from cryptoparser.tls.extension import (
     TlsCertificateStatusType,
     TlsExtensionApplicationLayerProtocolNegotiation,
+    TlsExtensionECPointFormats,
     TlsExtensionEncryptThenMAC,
     TlsExtensionExtendedMasterSecret,
     TlsExtensionKeyShareClientHelloRetry,
@@ -168,6 +170,12 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
         )
     )
     signed_certificate_timestamps_supported = attr.ib(default=False, validator=attr.validators.instance_of(bool))
+    ec_point_formats = attr.ib(
+        default=None,
+        validator=attr.validators.optional(
+            attr.validators.deep_iterable(attr.validators.in_(TlsECPointFormat))
+        )
+    )
 
     def __attrs_post_init__(self):
         if self.min_protocol_version > self.max_protocol_version:
@@ -404,6 +412,8 @@ class TlsServerHandshake(TlsServer):
             ))
         if self.configuration.signed_certificate_timestamps_supported:
             extensions.append(TlsExtensionSignedCertificateTimestampServer(SignedCertificateTimestampList([])))
+        if self.configuration.ec_point_formats is not None:
+            extensions.append(TlsExtensionECPointFormats(self.configuration.ec_point_formats))
 
         return extensions
 
