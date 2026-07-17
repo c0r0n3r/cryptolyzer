@@ -1,5 +1,5 @@
 Name:           cryptolyzer
-Version:        1.3.0
+Version:        1.4.0
 Release:        1%{?dist}
 Summary:        Multi-protocol cryptographic configuration analyzer
 
@@ -17,7 +17,7 @@ BuildRequires:  python3-attrs
 BuildRequires:  python3-beautifulsoup4
 BuildRequires:  python3-certvalidator
 BuildRequires:  python3-colorama
-BuildRequires:  python3-cryptoparser >= 1.3.0
+BuildRequires:  python3-cryptoparser >= 1.4.0
 BuildRequires:  python3-dateutil
 %if 0%{?suse_version}
 BuildRequires:  python3-dnspython
@@ -45,7 +45,7 @@ Requires:       python3-attrs
 Requires:       python3-beautifulsoup4
 Requires:       python3-certvalidator
 Requires:       python3-colorama
-Requires:       python3-cryptoparser >= 1.3.0
+Requires:       python3-cryptoparser >= 1.4.0
 Requires:       python3-dateutil
 %if 0%{?suse_version}
 Requires:       python3-dnspython
@@ -90,6 +90,13 @@ export SETUPTOOLS_SCM_PRETEND_VERSION=%{version}
 %{_bindir}/cryptolyze
 
 %changelog
+* Fri Jul 17 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.4.0-1
+- add key exchange completion to the SSH server (#184)
+- add certificate request support to the TLS server
+- add OCSP staple, EC point formats, and fallback SCSV support to the TLS server (#184)
+- add IKE extensions checker (#177)
+- do not let a handshake without OCSP staple overwrite the certificate status
+
 * Mon Jun 15 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.3.0-1
 - add Debian and RPM packaging (#181)
 - add JA4 tag generation and decoding (#178)

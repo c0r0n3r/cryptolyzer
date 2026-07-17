@@ -75,6 +75,9 @@ cryptolyze ssh all example.com
 # IKE version analysis
 cryptolyze ike versions example.com
 
+# IKE protocol extension detection
+cryptolyze ike extensions example.com
+
 # HTTP security headers
 cryptolyze http headers example.com
 

@@ -413,6 +413,32 @@ of the analysis in the case of the Python API, so before running the analysis th
     >>> [str(version) for version in result.versions]
     ['IKEv1 (0)', 'IKEv2 (0)']
 
+Extensions
+----------
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptodatahub.ike.version import IkeVersion
+    >>>
+    >>> from cryptolyzer.ike.client import L7ClientIPsecBase
+    >>> from cryptolyzer.ike.extensions import AnalyzerExtensions
+    >>>
+    >>> analyzer = AnalyzerExtensions()
+    >>> client = L7ClientIPsecBase('moon.strongswan.org', 500)
+    >>> result = analyzer.analyze(client, IkeVersion.V2)
+    >>>
+    >>> result.ikev2_fragmentation_supported
+    True
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.ike.extensions
+    :members:
+
 HTTP(S)
 =======
 

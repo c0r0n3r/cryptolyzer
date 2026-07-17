@@ -2,18 +2,34 @@
 Changelog
 =========
 
-----------
-Unreleased
-----------
+------------------
+1.4.0 - 2026-07-17
+------------------
 
 Features
 ========
+
+-  SSH (``ssh``)
+
+   -  add key exchange completion to the SSH server (#184)
+
+-  TLS (``tls``)
+
+   -  add certificate request support to the TLS server
+   -  add OCSP staple, EC point formats, and fallback SCSV support to the TLS server (#184)
 
 -  IKE (``ike``)
 
    -  Extensions (``extensions``)
 
-      -  add checker extensions checker (#177)
+      -  add checker for IKEv1/IKEv2 support (#177)
+
+Notable fixes
+=============
+
+-  TLS (``tls``)
+
+   -  do not let a handshake without OCSP staple overwrite the certificate status
 
 ------------------
 1.3.0 - 2026-06-15
