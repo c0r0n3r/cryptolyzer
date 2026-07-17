@@ -176,6 +176,7 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
             attr.validators.deep_iterable(attr.validators.in_(TlsECPointFormat))
         )
     )
+    fallback_scsv_supported = attr.ib(default=False, validator=attr.validators.instance_of(bool))
 
     def __attrs_post_init__(self):
         if self.min_protocol_version > self.max_protocol_version:
@@ -535,6 +536,10 @@ class TlsServerHandshake(TlsServer):
 
         if message.get_handshake_type() == TlsHandshakeType.CLIENT_HELLO:
             protocol_version = self._check_protocol_version(message)
+            if (self.configuration.fallback_scsv_supported and message.fallback_scsv and
+                    protocol_version < self.configuration.max_protocol_version):
+                self._handle_error(TlsAlertLevel.FATAL, TlsAlertDescription.INAPPROPRIATE_FALLBACK)
+                raise StopIteration()
             server_hello = self._prepare_server_hello(message, protocol_version)
             self.l7_transfer.send(TlsRecord(server_hello.compose()).compose())
 
