@@ -10,6 +10,7 @@ from cryptolyzer.ike.curves import AnalyzerCurves
 from cryptolyzer.ike.extensions import AnalyzerExtensions
 from cryptolyzer.ike.versions import AnalyzerVersions
 from cryptolyzer.ike.pubkeys import AnalyzerPublicKeys
+from cryptolyzer.ike.pubkeyreq import AnalyzerPublicKeyRequest
 
 
 class ProtocolHandlerIKEv1(ProtocolHandlerIKEExactVersion):
@@ -21,6 +22,7 @@ class ProtocolHandlerIKEv1(ProtocolHandlerIKEExactVersion):
             AnalyzerCurves,
             AnalyzerExtensions,
             AnalyzerPublicKeys,
+            AnalyzerPublicKeyRequest,
         )
 
     @classmethod
