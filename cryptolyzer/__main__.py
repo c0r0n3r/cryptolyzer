@@ -13,11 +13,12 @@ from cryptodatahub.common.exception import InvalidValue
 from cryptoparser.common.base import Serializable
 from cryptoparser.common.exception import InvalidDataLength, InvalidType
 
-from cryptolyzer.common.analyzer import AnalyzerIKEBase, ProtocolHandlerBase
+from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.exception import NetworkError, SecurityError, UnexpectedError
 from cryptolyzer.common.result import AnalyzerResultError
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton, SerializableTextEncoderHighlighted
+from cryptolyzer.ike.common import AnalyzerIKEBase
 
 from cryptolyzer import __setup__
 

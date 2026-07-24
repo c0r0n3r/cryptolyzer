@@ -40,7 +40,7 @@ from cryptoparser.ike.isakmp import IsakmpMessage
 from cryptoparser.ike.ikev1 import Ikev1PayloadSecurityAssociation, Ikev1PayloadTransform
 from cryptoparser.ike.ikev2 import Ikev2PayloadSecurityAssociation, Ikev2NotifyPayloadInvalidKe
 
-from cryptolyzer.common.analyzer import AnalyzerIKEBase
+from cryptolyzer.ike.common import AnalyzerIKEBase
 from cryptolyzer.common.result import AnalyzerResultIKE
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType

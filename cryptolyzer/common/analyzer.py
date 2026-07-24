@@ -18,7 +18,6 @@ from cryptoparser.common.utils import get_leaf_classes
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.dnsrec.client import L7ClientDnsBase
-from cryptolyzer.ike.client import L7ClientIPsecBase
 from cryptolyzer.httpx.client import L7ClientHttpBase
 from cryptolyzer.ssh.client import L7ClientSsh
 from cryptolyzer.tls.client import L7ClientTlsBase
@@ -363,30 +362,4 @@ class AnalyzerDnsRecordBase(AnalyzerBase):
         return 'dns'
 
     def analyze(self, analyzable):
-        self._reset_probe_throttle()
-
-
-class AnalyzerIKEBase(AnalyzerBase):
-    _MAX_PROPOSALS_PER_INIT_MESSAGE = 128
-
-    @classmethod
-    def set_strict_rfc_2409_compliance(cls, enabled):
-        cls._MAX_PROPOSALS_PER_INIT_MESSAGE = 1 if enabled else 128
-
-    @classmethod
-    @abc.abstractmethod
-    def get_name(cls):
-        raise NotImplementedError()
-
-    @classmethod
-    def get_clients(cls):
-        return [
-            L7ClientIPsecBase
-        ]
-
-    @classmethod
-    def get_default_scheme(cls):
-        return 'ipsec'
-
-    def analyze(self, analyzable, protocol_version):  # pylint: disable=arguments-differ,unused-argument
         self._reset_probe_throttle()

@@ -33,8 +33,8 @@ from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.subprotocol import TlsHandshakeClientHello
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
-from cryptolyzer.common.analyzer import AnalyzerIKEBase
 from cryptolyzer.common.utils import LogSingleton, SerializableTextEncoderHighlighted
+from cryptolyzer.ike.common import AnalyzerIKEBase
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 from cryptolyzer.__main__ import (
     get_argument_parser,

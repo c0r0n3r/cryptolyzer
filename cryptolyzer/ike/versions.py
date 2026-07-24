@@ -14,14 +14,11 @@ from cryptodatahub.ike.algorithm import (
 from cryptodatahub.ike.version import IkeVersion
 
 from cryptoparser.ike.version import IsakmpProtocolVersion
-from cryptolyzer.common.analyzer import AnalyzerIKEBase
+from cryptolyzer.ike.common import AnalyzerIKEBase
 
-from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultIKE, AnalyzerTargetIke
-from cryptolyzer.common.utils import LogSingleton
 
 from cryptolyzer.ike.client import Ikev2SecurityAssociationAnyAlgorithm, Ikev1SecurityAssociationMandatoryMostPopular
-from cryptolyzer.ike.exception import IsakmpNotify
 
 
 @attr.s
@@ -61,24 +58,11 @@ class AnalyzerVersions(AnalyzerIKEBase):
         acceptable_notify_types: typing.Container,
     ) -> bool:
         """
-        Run handshake; on NO_RESPONSE log and return False; on NO_CONNECTION or other re-raise.
-        Return True if version is supported.
+        Return True if the version is supported: the responder either answered the
+        IKE_SA_INIT or rejected it with an acceptable notify; False on NO_RESPONSE.
         """
-        self._before_probe(analyzable)
-        try:
-            handshake_callable()
-        except IsakmpNotify as e:
-            if e.notify not in acceptable_notify_types:
-                raise
-            LogSingleton().log(level=60, msg=f'Notify response from server; notify={e.notify}')
-            return True
-        except NetworkError as e:
-            if e.error == NetworkErrorType.NO_RESPONSE:
-                addr = f'{analyzable.address}:{analyzable.port}'
-                LogSingleton().log(level=60, msg=f'No response from server; address={addr}')
-                return False
-            raise
-        return True
+        outcome = self._probe_ike_sa_init(analyzable, handshake_callable, acceptable_notify_types)
+        return outcome.server_messages is not None or outcome.notify is not None
 
     def analyze(self, analyzable, protocol_version):
         """

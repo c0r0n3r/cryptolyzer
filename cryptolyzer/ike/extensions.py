@@ -27,7 +27,7 @@ from cryptoparser.ike.ikev2 import (
 )
 from cryptoparser.ike.isakmp import IsakmpMessage
 
-from cryptolyzer.common.analyzer import AnalyzerIKEBase
+from cryptolyzer.ike.common import AnalyzerIKEBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultIKE, AnalyzerTargetIke
 

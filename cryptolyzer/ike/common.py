@@ -23,13 +23,14 @@ from cryptodatahub.ike.algorithm import (
     MAC,
 )
 
-from cryptolyzer.common.analyzer import AnalyzerIKEBase
+from cryptolyzer.common.analyzer import AnalyzerBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.utils import LogSingleton
 
 from cryptolyzer.ike.client import (
     Ikev1SecurityAssociationBase,
     Ikev1SecurityAssociationProposalAlgorithms,
+    L7ClientIPsecBase,
 )
 from cryptolyzer.ike.exception import IsakmpNotify
 
@@ -132,6 +133,88 @@ class Ikev2CipherSuite:
             diffie_hellman_group=diffie_hellman_transform_id.value.key_parameter,
             integrity_algorithm=integrity_algorithm,
         )
+
+
+@attr.s(frozen=True)
+class IkeProbeResult:
+    """
+    :class: Data class for IKE_SA_INIT probe result. Which fields are set classifies the responder's reaction:
+
+        * ``server_messages`` only — the responder answered the offer cleanly.
+        * ``notify`` only — the responder rejected the offer with an acceptable notify.
+        * both — the responder selected a transform and then sent a notify.
+        * neither — the responder did not respond.
+
+    :param server_messages: Per-exchange-type mapping the handshake returned, left unvalidated so that a test can pass
+        a mock. ``None`` when the responder sent no message.
+    :param notify: Notify the responder replied with. ``None`` when it answered with a selected transform only.
+    """
+
+    server_messages: typing.Optional[
+        dict[typing.Union[Ikev1ExchangeType, Ikev2ExchangeType], typing.Any]
+    ] = attr.ib()
+    notify: typing.Optional[typing.Union[Ikev1NotifyType, Ikev2NotifyType]] = attr.ib(default=None)
+
+
+class AnalyzerIKEBase(AnalyzerBase):
+    _MAX_PROPOSALS_PER_INIT_MESSAGE = 128
+
+    @classmethod
+    def set_strict_rfc_2409_compliance(cls, enabled):
+        cls._MAX_PROPOSALS_PER_INIT_MESSAGE = 1 if enabled else 128
+
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def get_clients(cls):
+        return [
+            L7ClientIPsecBase
+        ]
+
+    @classmethod
+    def get_default_scheme(cls):
+        return 'ipsec'
+
+    def analyze(self, analyzable, protocol_version):  # pylint: disable=arguments-differ,unused-argument
+        self._reset_probe_throttle()
+
+    def _probe_ike_sa_init(
+        self,
+        analyzable,
+        handshake_callable: typing.Callable,
+        acceptable_notify_types: typing.Container[typing.Union[Ikev1NotifyType, Ikev2NotifyType]] = (),
+    ) -> IkeProbeResult:
+        """
+        Send one IKE_SA_INIT through handshake_callable and classify the responder's reaction.
+
+        Returns an IkeProbeResult: server_messages set when the responder answered the offer,
+        notify set when it rejected the offer with an acceptable notify, both None on NO_RESPONSE.
+        Both are set when the responder selected a transform and then sent an acceptable notify
+        (e.g. IKEv1 INVALID_KEY_INFORMATION after the forged key exchange): the selected transform
+        rides in server_messages, the reason in notify. An unacceptable notify or any other network
+        error is re-raised.
+        """
+        self._before_probe(analyzable)
+        try:
+            server_messages = handshake_callable()
+        except IsakmpNotify as e:
+            if e.notify not in acceptable_notify_types:
+                raise
+            LogSingleton().log(level=60, msg=f'Notify response from server; notify={e.notify}')
+            # normalise a falsy (empty-dict) server_messages to None so callers can treat
+            # "no selected transform" uniformly and never index into an empty dict
+            server_messages = getattr(e, 'server_messages', None) or None
+            return IkeProbeResult(server_messages=server_messages, notify=e.notify)
+        except NetworkError as e:
+            if e.error == NetworkErrorType.NO_RESPONSE:
+                addr = f'{analyzable.address}:{analyzable.port}'
+                LogSingleton().log(level=60, msg=f'No response from server; address={addr}')
+                return IkeProbeResult(server_messages=None, notify=None)
+            raise
+        return IkeProbeResult(server_messages=server_messages, notify=None)
 
 
 class AnalyzerIKECommonBase(AnalyzerIKEBase):
