@@ -2,7 +2,7 @@
 
 import abc
 import itertools
-import random
+import secrets
 import typing
 
 import attr
@@ -292,7 +292,7 @@ class Ikev2SecurityAssociationBase(IsakmpMessage):
             payloads.append(payload_key_exchange)
 
         if nonce is None:
-            nonce = random.randbytes(32)
+            nonce = secrets.token_bytes(32)
         payloads.append(Ikev2PayloadNonce(
             flags=set(),
             nonce_data=nonce,
@@ -329,7 +329,7 @@ class Ikev2SecurityAssociationSpecialization(Ikev2SecurityAssociationBase):
 
         super().__init__(
             version=IsakmpProtocolVersion(IkeVersion.V2, 0),
-            initiator_spi=random.randint(0, 2**64 - 1),
+            initiator_spi=secrets.randbits(64),
             responder_spi=0,
             exchange_type=Ikev2ExchangeType.IKE_SA_INIT,
             flags=[IsakmpFlags.INITIATOR],
@@ -352,7 +352,7 @@ class Ikev2SecurityAssociationAnyAlgorithm(Ikev2SecurityAssociationBase):
             extra_notify_payloads=extra_notify_payloads,
         )
 
-        initiator_spi = random.randint(0, 2**64 - 1)
+        initiator_spi = secrets.randbits(64)
         super().__init__(
             version=IsakmpProtocolVersion(IkeVersion.V2, 0),
             initiator_spi=initiator_spi,
@@ -494,7 +494,7 @@ class Ikev1SecurityAssociationBase(IsakmpMessage):
             ))
 
         payloads.append(Ikev1PayloadNonce(
-            nonce_data=random.randbytes(32)
+            nonce_data=secrets.token_bytes(32)
         ))
 
         return payloads
@@ -538,7 +538,7 @@ class Ikev1SecurityAssociationSpecialization(Ikev1SecurityAssociationBase):
         if exchange_type == Ikev1ExchangeType.AGGRESSIVE:
             payloads = self.get_key_exchange_payloads(proposals) + payloads
 
-        initiator_spi = random.randint(0, 2**64 - 1)
+        initiator_spi = secrets.randbits(64)
         super().__init__(
             version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=initiator_spi,
@@ -591,7 +591,7 @@ class Ikev1SecurityAssociationAlgorithms(Ikev1SecurityAssociationBase):
         if exchange_type == Ikev1ExchangeType.AGGRESSIVE:
             payloads = self.get_key_exchange_payloads(proposals) + payloads
 
-        initiator_spi = random.randint(0, 2**64 - 1)
+        initiator_spi = secrets.randbits(64)
         super().__init__(
             version=IsakmpProtocolVersion(IkeVersion.V1, 0),
             initiator_spi=initiator_spi,

@@ -3,7 +3,7 @@
 import abc
 import enum
 import itertools
-import random
+import secrets
 import typing
 
 import attr
@@ -140,7 +140,7 @@ class IkeServerHandshakeBase(L7ServerHandshakeBase):
 
     @staticmethod
     def _get_responder_spi() -> int:
-        return random.randint(1, 2**64 - 1)
+        return secrets.randbits(64) or 1
 
     def _handle_response_mode(self, message: IsakmpMessage) -> bool:
         """Handle response_mode: NONE (don't send), PARTIAL (send truncated), NOTIFY (continue)."""
@@ -226,7 +226,7 @@ class Ikev1ServerHandshake(IkeServerHandshakeBase):
                     ffdh_group.value.key_parameter.value.key_size // 8
                 )
             ))
-        payloads.append(Ikev1PayloadNonce(nonce_data=random.randbytes(32)))
+        payloads.append(Ikev1PayloadNonce(nonce_data=secrets.token_bytes(32)))
         return payloads
 
     @staticmethod
@@ -431,7 +431,7 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
             ))
         payloads.append(Ikev2PayloadNonce(
             flags=set(),
-            nonce_data=random.randbytes(32),
+            nonce_data=secrets.token_bytes(32),
         ))
         return payloads
 
@@ -584,7 +584,7 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
         cookie_value = bytes(cookie_payload.cookie) if cookie_payload is not None else None
 
         if self._expected_cookie is None and cookie_value is None:
-            self._expected_cookie = random.randbytes(16)
+            self._expected_cookie = secrets.token_bytes(16)
         elif self._expected_cookie is not None and cookie_value != self._expected_cookie:
             pass
         else:
