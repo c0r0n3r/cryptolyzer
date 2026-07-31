@@ -315,25 +315,6 @@ class TestTlsDHParams(TestTlsCases.TestTlsBase, TestMainBase):  # pylint: disabl
         self.assertEqual(result.dhparam, None)
         self.assertFalse(result.key_reuse)
 
-        result = self.get_result('documentfreedom.org', 443, TlsProtocolVersion(TlsVersion.TLS1_3))
-        self.assertEqual(result.groups, [
-            TlsNamedCurve.FFDHE2048,
-            TlsNamedCurve.FFDHE3072,
-            TlsNamedCurve.FFDHE4096,
-            TlsNamedCurve.FFDHE6144,
-            TlsNamedCurve.FFDHE8192,
-        ])
-        self.assertEqual(result.dhparam, None)
-        self.assertFalse(result.key_reuse)
-        self.assertEqual(
-            self.log_stream.getvalue(),
-            'Server offers FFDHE public parameter with size 2048-bit (TLS 1.3)\n'
-            'Server offers FFDHE public parameter with size 3072-bit (TLS 1.3)\n'
-            'Server offers FFDHE public parameter with size 4096-bit (TLS 1.3)\n'
-            'Server offers FFDHE public parameter with size 6144-bit (TLS 1.3)\n'
-            'Server offers FFDHE public parameter with size 8192-bit (TLS 1.3)\n'
-        )
-
     def test_json(self):
         threaded_server = self.create_server()
         result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)

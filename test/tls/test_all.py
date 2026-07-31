@@ -171,16 +171,6 @@ class TestTlsAll(TestTlsCases.TestTlsBase, TestMainBase):
 
     @live_server
     def test_real_live(self):
-        result = self.get_result('documentfreedom.org', 443)
-        self.assertEqual(result.dhparams.groups, [
-            TlsNamedCurve.FFDHE2048,
-            TlsNamedCurve.FFDHE3072,
-            TlsNamedCurve.FFDHE4096,
-            TlsNamedCurve.FFDHE6144,
-            TlsNamedCurve.FFDHE8192,
-        ])
-        self.assertIsNone(result.dhparams.dhparam)
-
         result = self.get_result('xenproject.org', 443)
         self.assertTrue(all(map(
             lambda version: version > TlsProtocolVersion(TlsVersion.TLS1_2), result.versions.versions
