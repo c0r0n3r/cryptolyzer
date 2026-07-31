@@ -3,6 +3,30 @@ Changelog
 =========
 
 ------------------
+1.5.0 - 2026-07-31
+------------------
+
+Features
+========
+
+-  IKE (``ike``)
+
+   -  Public Keys (``pubkeys``)
+
+      -  add checker for IKEv1 aggressive-mode and IKEv2 EAP-mode server public keys (#183)
+
+   -  Public Key Requests (``pubkeyreq``)
+
+      -  add checker for the certification authority hashes accepted by the IKE server (#183)
+
+Notable fixes
+=============
+
+-  IKE (``ike``)
+
+   -  use a cryptographically secure random generator for probe secrets (#183)
+
+------------------
 1.4.0 - 2026-07-17
 ------------------
 

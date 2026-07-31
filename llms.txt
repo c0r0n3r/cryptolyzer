@@ -6,8 +6,8 @@
 
 ## Who it's for
 
--   **Penetration testers and security auditors** who need to assess the full cryptographic posture of a target --- TLS,
-    SSH, HTTP headers, and DNS --- without switching tools
+-   **Penetration testers and security auditors** who need to assess the full cryptographic posture of a target --- IKE,
+    TLS, SSH, HTTP headers, and DNS --- without switching tools
 -   **DevSecOps engineers** integrating cryptographic checks into CI/CD pipelines via the Python API or JSON output for
     downstream processing and alerting
 -   **Compliance and hardening teams** verifying cipher suite hygiene, certificate chains, and protocol versions across
@@ -62,8 +62,12 @@
 ### IKE
 
 -   Protocol version detection (IKEv1 and IKEv2)
+-   Cipher suites (IKEv1 and IKEv2)
 -   Diffie-Hellman parameters (IKEv1 and IKEv2)
 -   Elliptic curves (IKEv1 and IKEv2)
+-   Protocol extensions and vendor identifiers (IKEv1 and IKEv2)
+-   Server public keys and X.509 certificate chains (IKEv1 aggressive-mode, IKEv2 EAP-mode)
+-   Accepted certification authority hashes from Certificate Request payloads (IKEv1 and IKEv2)
 
 ### Vulnerability detection (TLS and SSH)
 
@@ -94,6 +98,10 @@
 -   User needs to audit SSH server configuration (key exchange, host keys, DH group exchange, OpenSSH or X.509
     certificates)
 -   User wants to detect IKE (VPN) protocol version support (IKEv1 or IKEv2)
+-   User wants to extract the IKE server's public key or full X.509 certificate chain (IKEv1 aggressive mode or IKEv2
+    EAP mode)
+-   User wants to enumerate the certification authority hashes an IKE server accepts in its Certificate Request
+    payloads
 -   User wants to check DNS security: DNSSEC signing keys (DNSKEY, DS, RRSIG)
 -   User wants to check email authentication records: DMARC, SPF, MTA-STS, TLSRPT
 -   User wants to verify HTTP security headers (HSTS, CSP, HPKP, X-Frame-Options, etc.) or check for mixed content and
@@ -217,6 +225,15 @@ cryptolyze ssh2 pubkeys example.com
 
 # IKE version detection
 cryptolyze ike versions example.com
+
+# IKE protocol extension detection
+cryptolyze ike extensions example.com
+
+# IKE server public key extraction
+cryptolyze ike pubkeys example.com
+
+# IKE accepted certification authority hashes
+cryptolyze ike pubkeyreq example.com
 
 # Client simulation (which browsers/clients can connect and with what parameters)
 cryptolyze tls simulations example.com

@@ -439,6 +439,52 @@ Result Classes
 .. automodule:: cryptolyzer.ike.extensions
     :members:
 
+Public Keys
+-----------
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptodatahub.ike.version import IkeVersion
+    >>>
+    >>> from cryptolyzer.ike.client import L7ClientIPsecBase
+    >>> from cryptolyzer.ike.pubkeys import AnalyzerPublicKeys
+    >>>
+    >>> analyzer = AnalyzerPublicKeys()
+    >>> client = L7ClientIPsecBase('moon.strongswan.org', 500)
+    >>> result = analyzer.analyze(client, IkeVersion.V1)
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.ike.pubkeys
+    :members:
+
+Public Key Requests
+-------------------
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptodatahub.ike.version import IkeVersion
+    >>>
+    >>> from cryptolyzer.ike.client import L7ClientIPsecBase
+    >>> from cryptolyzer.ike.pubkeyreq import AnalyzerPublicKeyRequest
+    >>>
+    >>> analyzer = AnalyzerPublicKeyRequest()
+    >>> client = L7ClientIPsecBase('moon.strongswan.org', 500)
+    >>> result = analyzer.analyze(client, IkeVersion.V2)
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.ike.pubkeyreq
+    :members:
+
 HTTP(S)
 =======
 

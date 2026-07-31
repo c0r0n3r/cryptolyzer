@@ -1,3 +1,11 @@
+cryptolyzer (1.5.0) unstable; urgency=low
+
+  * add IKE public keys checker for IKEv1 aggressive-mode and IKEv2 EAP-mode servers (#183)
+  * add IKE public key request checker for enumerating accepted certification authority hashes (#183)
+  * use a cryptographically secure random generator for IKE probe secrets (#183)
+
+ -- Szilárd Pfeiffer <coroner@pfeifferszilard.hu>  Fri, 31 Jul 2026 00:00:00 +0200
+
 cryptolyzer (1.4.0) unstable; urgency=low
 
   * add key exchange completion to the SSH server (#184)

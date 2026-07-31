@@ -78,6 +78,12 @@ cryptolyze ike versions example.com
 # IKE protocol extension detection
 cryptolyze ike extensions example.com
 
+# IKE server public key extraction
+cryptolyze ike pubkeys example.com
+
+# IKE accepted certification authority hashes
+cryptolyze ike pubkeyreq example.com
+
 # HTTP security headers
 cryptolyze http headers example.com
 

@@ -1,5 +1,5 @@
 Name:           cryptolyzer
-Version:        1.4.0
+Version:        1.5.0
 Release:        1%{?dist}
 Summary:        Multi-protocol cryptographic configuration analyzer
 
@@ -17,7 +17,7 @@ BuildRequires:  python3-attrs
 BuildRequires:  python3-beautifulsoup4
 BuildRequires:  python3-certvalidator
 BuildRequires:  python3-colorama
-BuildRequires:  python3-cryptoparser >= 1.4.0
+BuildRequires:  python3-cryptoparser >= 1.5.0
 BuildRequires:  python3-dateutil
 %if 0%{?suse_version}
 BuildRequires:  python3-dnspython
@@ -45,7 +45,7 @@ Requires:       python3-attrs
 Requires:       python3-beautifulsoup4
 Requires:       python3-certvalidator
 Requires:       python3-colorama
-Requires:       python3-cryptoparser >= 1.4.0
+Requires:       python3-cryptoparser >= 1.5.0
 Requires:       python3-dateutil
 %if 0%{?suse_version}
 Requires:       python3-dnspython
@@ -90,6 +90,11 @@ export SETUPTOOLS_SCM_PRETEND_VERSION=%{version}
 %{_bindir}/cryptolyze
 
 %changelog
+* Fri Jul 31 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.5.0-1
+- add IKE public keys checker for IKEv1 aggressive-mode and IKEv2 EAP-mode servers (#183)
+- add IKE public key request checker for enumerating accepted certification authority hashes (#183)
+- use a cryptographically secure random generator for IKE probe secrets (#183)
+
 * Fri Jul 17 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.4.0-1
 - add key exchange completion to the SSH server (#184)
 - add certificate request support to the TLS server
