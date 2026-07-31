@@ -171,13 +171,19 @@ class AnalyzerVersions(AnalyzerTlsBase):
 
     @staticmethod
     def _handle_tls_1_3_alerts(alert_description, checkable_protocols):
-        AnalyzerVersions._handle_tls_early_versions_alerts(alert_description, checkable_protocols[0])
+        AnalyzerVersions._handle_tls_early_versions_alerts(alert_description, checkable_protocols[0].version)
 
     @staticmethod
     def _update_tls_1_3_protocol_lists(server_messages, checkable_protocols, supported_protocols):
-        selected_version = server_messages[TlsHandshakeType.SERVER_HELLO].extensions.get_item_by_type(
-            TlsExtensionType.SUPPORTED_VERSIONS
-        ).selected_version
+        try:
+            selected_version = server_messages[TlsHandshakeType.SERVER_HELLO].extensions.get_item_by_type(
+                TlsExtensionType.SUPPORTED_VERSIONS
+            ).selected_version
+        except KeyError:
+            #  server ignored the supported versions extension, so it selected a pre-TLS 1.3 protocol version
+            del checkable_protocols[:]
+            return
+
         supported_protocols.append(selected_version)
         LogSingleton().log(level=60, msg=f'Server offers protocol version {selected_version}')
         while checkable_protocols and checkable_protocols[0] >= selected_version:
@@ -215,6 +221,8 @@ class AnalyzerVersions(AnalyzerTlsBase):
                 except StopIteration as exc:
                     alerts_unsupported_tls_version = exc.args[0]
                     break
+
+                raise UnexpectedAlertError(e.description) from e
             except NetworkError as e:
                 if e.error != NetworkErrorType.NO_RESPONSE:
                     #  handled in case of early TLS versions

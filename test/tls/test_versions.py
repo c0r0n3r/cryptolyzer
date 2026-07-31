@@ -4,13 +4,14 @@ from unittest import mock
 
 from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS, TestMainBase
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
+from cryptoparser.tls.extension import TlsExtensionType
 from cryptoparser.tls.subprotocol import TlsAlertDescription, SslErrorType
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.common.exception import SecurityError, SecurityErrorType
 
 from cryptolyzer.tls.client import L7ClientTlsBase, SslError
-from cryptolyzer.tls.exception import TlsAlert
+from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
 from cryptolyzer.tls.versions import AnalyzerVersions
 
@@ -188,6 +189,40 @@ class TestTlsVersions(TestTlsCases.TestTlsBase, TestMainBase):
             [TlsProtocolVersion(version) for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
         )
         self._check_log(result)
+
+    def test_supported_versions_ignored(self):
+        threaded_server = self.create_server(TlsServerConfiguration(
+            min_protocol_version=TlsProtocolVersion(TlsVersion.TLS1),
+            max_protocol_version=TlsProtocolVersion(TlsVersion.TLS1_3),
+            cipher_suites=[
+                TlsCipherSuite.TLS_RSA_WITH_RC2_CBC_MD5,
+                TlsCipherSuite.TLS_AES_128_GCM_SHA256,
+            ],
+            supported_versions_ignored=True,
+        ))
+        result = self.get_result('localhost', threaded_server.l7_server.l4_transfer.bind_port)
+        self.assertEqual(
+            result.versions,
+            [TlsProtocolVersion(version) for version in [TlsVersion.TLS1, TlsVersion.TLS1_1, TlsVersion.TLS1_2]]
+        )
+        self._check_log(result)
+
+    @staticmethod
+    def _raise_tls_alert_unexpected_message_on_tls_1_3(hello_message=None):
+        try:
+            hello_message.extensions.get_item_by_type(TlsExtensionType.SUPPORTED_VERSIONS)
+        except KeyError as e:
+            raise TlsAlert(TlsAlertDescription.PROTOCOL_VERSION) from e
+
+        raise TlsAlert(TlsAlertDescription.UNEXPECTED_MESSAGE)
+
+    def test_error_tls_alert_on_tls_1_3_probe(self):
+        with mock.patch.object(
+                L7ClientTlsBase, 'do_tls_handshake',
+                side_effect=self._raise_tls_alert_unexpected_message_on_tls_1_3,
+        ), self.assertRaises(UnexpectedAlertError) as context_manager:
+            self.get_result('localhost', 0)
+        self.assertEqual(str(context_manager.exception), 'alert message received (unexpected_message)')
 
     def test_ecdsa_only(self):
         threaded_server = self.create_server(TlsServerConfiguration(
