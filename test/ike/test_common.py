@@ -8,6 +8,7 @@ from cryptodatahub.ike.algorithm import (
     Ikev1DiffieHellmanGroup,
     Ikev1EncryptionAlgorithm,
     Ikev1HashAlgorithm,
+    Ikev1NotifyType,
     Ikev2DiffieHellmanGroup,
     Ikev2EncryptionAlgorithm,
     Ikev2IntegrityAlgorithm,
@@ -15,6 +16,7 @@ from cryptodatahub.ike.algorithm import (
     Ikev2PseudorandomFunction,
 )
 
+from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.ike.client import Ikev1SecurityAssociationProposalAlgorithms
 from cryptolyzer.ike.common import Ikev1CipherSuite, Ikev2CipherSuite
 from cryptolyzer.ike.dhparams import AnalyzerDHParams
@@ -111,12 +113,110 @@ class TestIkev2CipherSuite(unittest.TestCase):
             )
 
 
-class TestSendIkev2InitMessageNoProposalChosen(unittest.TestCase):
-    def test_returns_none_on_no_proposal_chosen(self):
+class TestSendIkev2InitMessage(unittest.TestCase):
+    @staticmethod
+    def _make_analyzer_and_client():
         analyzer = AnalyzerDHParams()
         l7_client = unittest.mock.MagicMock()
         l7_client.l4_socket_params.throttle_delay = 0
+        return analyzer, l7_client
+
+    def test_returns_none_on_no_proposal_chosen(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
         l7_client.do_ikev2_handshake.side_effect = IsakmpNotify(Ikev2NotifyType.NO_PROPOSAL_CHOSEN)
         # pylint: disable=protected-access
         result = analyzer._send_ikev2_init_message(l7_client, unittest.mock.MagicMock())
         self.assertIsNone(result)
+
+    def test_raises_and_logs_unexpected_notify(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev2_handshake.side_effect = IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX)
+        with self.assertRaises(IsakmpNotify) as ctx:
+            analyzer._send_ikev2_init_message(  # pylint: disable=protected-access
+                l7_client, unittest.mock.MagicMock(),
+            )
+        self.assertEqual(ctx.exception.notify, Ikev2NotifyType.INVALID_SYNTAX)
+
+    def test_returns_none_on_no_response(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev2_handshake.side_effect = NetworkError(NetworkErrorType.NO_RESPONSE)
+        result = analyzer._send_ikev2_init_message(  # pylint: disable=protected-access
+            l7_client, unittest.mock.MagicMock(),
+        )
+        self.assertIsNone(result)
+
+    def test_reraises_non_no_response_network_error(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev2_handshake.side_effect = NetworkError(NetworkErrorType.NO_CONNECTION)
+        with self.assertRaises(NetworkError) as ctx:
+            analyzer._send_ikev2_init_message(  # pylint: disable=protected-access
+                l7_client, unittest.mock.MagicMock(),
+            )
+        self.assertEqual(ctx.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    def test_returns_server_messages_on_success(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev2_handshake.return_value = {'server': 'messages'}
+        result = analyzer._send_ikev2_init_message(  # pylint: disable=protected-access
+            l7_client, unittest.mock.MagicMock(),
+        )
+        self.assertEqual(result, {'server': 'messages'})
+
+
+class TestSendIkev1InitMessage(unittest.TestCase):
+    @staticmethod
+    def _make_analyzer_and_client():
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        return analyzer, l7_client
+
+    def test_returns_false_on_no_proposal_chosen(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev1_handshake.side_effect = IsakmpNotify(Ikev1NotifyType.NO_PROPOSAL_CHOSEN)
+        result = analyzer._send_ikev1_init_message(  # pylint: disable=protected-access
+            l7_client, Ikev1DiffieHellmanGroup.MODP_2048_BIT, unittest.mock.MagicMock(),
+        )
+        self.assertFalse(result)
+
+    def test_returns_true_on_invalid_key_information(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev1_handshake.side_effect = IsakmpNotify(Ikev1NotifyType.INVALID_KEY_INFORMATION)
+        result = analyzer._send_ikev1_init_message(  # pylint: disable=protected-access
+            l7_client, Ikev1DiffieHellmanGroup.MODP_2048_BIT, unittest.mock.MagicMock(),
+        )
+        self.assertTrue(result)
+
+    def test_raises_and_logs_unexpected_notify(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev1_handshake.side_effect = IsakmpNotify(Ikev1NotifyType.INVALID_PAYLOAD_TYPE)
+        with self.assertRaises(IsakmpNotify) as ctx:
+            analyzer._send_ikev1_init_message(  # pylint: disable=protected-access
+                l7_client, Ikev1DiffieHellmanGroup.MODP_2048_BIT, unittest.mock.MagicMock(),
+            )
+        self.assertEqual(ctx.exception.notify, Ikev1NotifyType.INVALID_PAYLOAD_TYPE)
+
+    def test_returns_false_on_no_response(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev1_handshake.side_effect = NetworkError(NetworkErrorType.NO_RESPONSE)
+        result = analyzer._send_ikev1_init_message(  # pylint: disable=protected-access
+            l7_client, Ikev1DiffieHellmanGroup.MODP_2048_BIT, unittest.mock.MagicMock(),
+        )
+        self.assertFalse(result)
+
+    def test_reraises_non_no_response_network_error(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev1_handshake.side_effect = NetworkError(NetworkErrorType.NO_CONNECTION)
+        with self.assertRaises(NetworkError) as ctx:
+            analyzer._send_ikev1_init_message(  # pylint: disable=protected-access
+                l7_client, Ikev1DiffieHellmanGroup.MODP_2048_BIT, unittest.mock.MagicMock(),
+            )
+        self.assertEqual(ctx.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    def test_returns_true_on_success(self):
+        analyzer, l7_client = self._make_analyzer_and_client()
+        l7_client.do_ikev1_handshake.return_value = {}
+        result = analyzer._send_ikev1_init_message(  # pylint: disable=protected-access
+            l7_client, Ikev1DiffieHellmanGroup.MODP_2048_BIT, unittest.mock.MagicMock(),
+        )
+        self.assertTrue(result)

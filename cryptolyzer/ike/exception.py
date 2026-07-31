@@ -18,3 +18,19 @@ class IsakmpNotify(ValueError):
 
     def __str__(self):
         return self.__repr__()
+
+
+class Ikev2SkAuthenticationError(ValueError):
+    """SK envelope authentication failure (AEAD tag mismatch, HMAC ICV
+    mismatch, or ciphertext shorter than the required IV + tag).
+    Distinct from generic parse errors so callers can log the failure
+    as a cryptographic authentication issue rather than a malformed
+    payload chain."""
+
+
+class Ikev2TransformDerivationError(ValueError):
+    """Responder-negotiated transform cannot be mapped to a supported
+    cryptographic descriptor (unknown ENCR / PRF / INTEG / DH id, or
+    key length that no descriptor covers). Raised from the transform
+    resolution helpers so the outer probe can log it as an unsupported
+    proposal rather than a protocol parse error."""

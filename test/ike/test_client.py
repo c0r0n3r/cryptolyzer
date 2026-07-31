@@ -116,6 +116,14 @@ class TestIkev2SecurityAssociationSpecialization(unittest.TestCase):
         self.assertEqual(message.payloads[0], cookie_payload)
         self.assertEqual(cookie_payload.cookie, cookie)
 
+    def test_cert_request(self):
+        cert_request = b'\xaa' * 20
+        message = Ikev2SecurityAssociationSpecialization(
+            cert_request=cert_request,
+        )
+        certreq_payload = message.get_payload_by_type(Ikev2PayloadType.CERTREQ)
+        self.assertEqual(bytes(certreq_payload.certification_authority), cert_request)
+
 
 class TestIkev1SecurityAssociationSpecialization(unittest.TestCase):
     def test_ffdh_key_exchange_payload(self):
@@ -267,6 +275,47 @@ class TestIkev1SecurityAssociationBaseDhGroups(unittest.TestCase):
         self.assertIsNotNone(ecdh)
         self.assertEqual(ffdh, Ikev1DiffieHellmanGroup.MODP_2048_BIT)
         self.assertEqual(ecdh, Ikev1DiffieHellmanGroup.ECP_256_BIT)
+
+    def test_get_key_exchange_payloads_raises_when_no_supported_dh_group(self):
+        # EC2N_163_BIT_1 (SECT163R1) has no PyCryptodome curve mapping
+        # (see EphemeralKeyExchangeEllipticCurveCryptodome), so with no
+        # MODP fallback proposed either, both ffdh_group/ecdh_group
+        # stay None — get_key_exchange_payloads must refuse rather
+        # than emit an Aggressive/Main Mode message with no KE payload.
+        proposals = Ikev1SecurityAssociationBase.get_proposals(
+            encryption_algorithm=Ikev1EncryptionAlgorithm.DES3_CBC,
+            diffie_hellman_group=Ikev1DiffieHellmanGroup.EC2N_163_BIT_1,
+            hash_algorithm=Ikev1HashAlgorithm.MD5,
+            authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+        )
+        with self.assertRaises(ValueError) as ctx:
+            Ikev1SecurityAssociationBase.get_key_exchange_payloads(proposals)
+        self.assertIn('no supported Diffie-Hellman group', str(ctx.exception))
+
+
+class TestIkev1SecurityAssociationBaseGetPayloads(unittest.TestCase):
+    def test_includes_certificate_request_when_provided(self):
+        # ``cert_request`` has no production call site for IKEv1
+        # (``Ikev1SecurityAssociationSpecialization.__init__`` never
+        # forwards one) — exercised directly here so the branch is
+        # not permanently dead code, mirroring the IKEv2 sibling in
+        # ``TestIkev2SecurityAssociationSpecialization.test_cert_request``.
+        proposals = Ikev1SecurityAssociationBase.get_proposals(
+            encryption_algorithm=Ikev1EncryptionAlgorithm.DES3_CBC,
+            diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_2048_BIT,
+            hash_algorithm=Ikev1HashAlgorithm.MD5,
+            authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+        )
+        cert_request = b'\xaa' * 20
+        payloads = Ikev1SecurityAssociationBase._get_payloads(  # pylint: disable=protected-access
+            proposals=proposals, cert_request=cert_request,
+        )
+        certreq_payloads = [
+            payload for payload in payloads
+            if payload.get_payload_type() == Ikev1PayloadType.CERTIFICATE_REQUEST
+        ]
+        self.assertEqual(len(certreq_payloads), 1)
+        self.assertEqual(bytes(certreq_payloads[0].certification_authority), cert_request)
 
 
 class TestIkev1ClientHandshake(unittest.TestCase):

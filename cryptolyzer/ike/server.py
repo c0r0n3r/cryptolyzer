@@ -3,7 +3,7 @@
 import abc
 import enum
 import itertools
-import random
+import secrets
 import typing
 
 import attr
@@ -53,10 +53,11 @@ from cryptoparser.ike.ikev2 import (
 )
 
 from cryptolyzer.common.application import L7ServerBase, L7ServerHandshakeBase, L7ServerConfigurationBase
-from cryptolyzer.common.dhparam import get_dh_ephemeral_key_forged, get_ecdh_ephemeral_key_forged, int_to_bytes
 from cryptolyzer.common.transfer import L4ServerUDP
 from cryptolyzer.common.utils import LogSingleton
+from cryptolyzer.ike.client import IkeSecurityAssociationBase, Ikev1SecurityAssociationBase
 from cryptolyzer.ike.common import Ikev1CipherSuite, Ikev2CipherSuite
+from cryptolyzer.ike.isakmp import parse_ike_message
 
 
 class ServerResponseMode(enum.Enum):
@@ -140,7 +141,7 @@ class IkeServerHandshakeBase(L7ServerHandshakeBase):
 
     @staticmethod
     def _get_responder_spi() -> int:
-        return random.randint(1, 2**64 - 1)
+        return secrets.randbits(64) or 1
 
     def _handle_response_mode(self, message: IsakmpMessage) -> bool:
         """Handle response_mode: NONE (don't send), PARTIAL (send truncated), NOTIFY (continue)."""
@@ -174,7 +175,7 @@ class IkeServerHandshakeBase(L7ServerHandshakeBase):
         return
 
     def _parse_record(self) -> tuple[IsakmpMessage, int, bool]:
-        message, parsed_length = IsakmpMessage.parse_immutable(self.l7_transfer.buffer)
+        message, parsed_length = parse_ike_message(self.l7_transfer.buffer)
         return message, parsed_length, True
 
     def _parse_message(self, record: typing.Any) -> typing.Any:
@@ -198,35 +199,26 @@ class Ikev1ServerHandshake(IkeServerHandshakeBase):
 
     @staticmethod
     def _generate_ke_payloads(proposals):
-        ffdh_group = None
-        ecdh_group = None
-        for proposal in proposals:
-            for transform in proposal.transforms:
-                for attribute in transform.attributes:
-                    if isinstance(attribute, Ikev1AttributeDiffieHellmanGroup):
-                        dh_group = attribute.value
-                        if isinstance(dh_group.value.key_parameter, DHParamWellKnown):
-                            ffdh_group = dh_group
-                        elif isinstance(dh_group.value.key_parameter, NamedGroup):
-                            ecdh_group = dh_group
-                        if ffdh_group or ecdh_group:
-                            break
+        dh_groups = [
+            attribute.value
+            for proposal in proposals
+            for transform in proposal.transforms
+            for attribute in transform.attributes
+            if isinstance(attribute, Ikev1AttributeDiffieHellmanGroup)
+        ]
+        # pylint: disable-next=protected-access
+        ffdh_groups, ecdh_groups = Ikev1SecurityAssociationBase._split_dh_groups(dh_groups)
+        ffdh_group = ffdh_groups[0] if ffdh_groups else None
+        ecdh_group = ecdh_groups[0] if ecdh_groups else None
 
+        dh_group = ecdh_group or ffdh_group
         payloads = []
-        if ecdh_group:
+        if dh_group is not None:
             payloads.append(Ikev1PayloadKeyExchange(
-                key_exchange_data=get_ecdh_ephemeral_key_forged(
-                    ecdh_group.value.key_parameter, add_point_format_octet=False
-                ),
+                # pylint: disable-next=protected-access
+                key_exchange_data=Ikev1SecurityAssociationBase._build_key_exchange_data(dh_group),
             ))
-        elif ffdh_group:
-            payloads.append(Ikev1PayloadKeyExchange(
-                key_exchange_data=int_to_bytes(
-                    get_dh_ephemeral_key_forged(ffdh_group.value.key_parameter.value.parameter_numbers.p),
-                    ffdh_group.value.key_parameter.value.key_size // 8
-                )
-            ))
-        payloads.append(Ikev1PayloadNonce(nonce_data=random.randbytes(32)))
+        payloads.append(Ikev1PayloadNonce(nonce_data=secrets.token_bytes(32)))
         return payloads
 
     @staticmethod
@@ -415,23 +407,15 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
         payloads = []
         if dh_transform is not None:
             dh_group = dh_transform.transform_id
-            if isinstance(dh_group.value.key_parameter, NamedGroup):
-                key_exchange_data = get_ecdh_ephemeral_key_forged(
-                    dh_group.value.key_parameter, add_point_format_octet=False
-                )
-            else:
-                key_exchange_data = int_to_bytes(
-                    get_dh_ephemeral_key_forged(dh_group.value.key_parameter.value.parameter_numbers.p),
-                    dh_group.value.key_parameter.value.key_size // 8
-                )
             payloads.append(Ikev2PayloadKeyExchange(
                 flags=set(),
                 dh_group=dh_group,
-                key_exchange_data=key_exchange_data,
+                # pylint: disable-next=protected-access
+                key_exchange_data=IkeSecurityAssociationBase._build_key_exchange_data(dh_group),
             ))
         payloads.append(Ikev2PayloadNonce(
             flags=set(),
-            nonce_data=random.randbytes(32),
+            nonce_data=secrets.token_bytes(32),
         ))
         return payloads
 
@@ -584,7 +568,7 @@ class Ikev2ServerHandshake(IkeServerHandshakeBase):
         cookie_value = bytes(cookie_payload.cookie) if cookie_payload is not None else None
 
         if self._expected_cookie is None and cookie_value is None:
-            self._expected_cookie = random.randbytes(16)
+            self._expected_cookie = secrets.token_bytes(16)
         elif self._expected_cookie is not None and cookie_value != self._expected_cookie:
             pass
         else:
@@ -733,7 +717,7 @@ class L7ServerIkeBase(L7ServerBase):
         while True:
             try:
                 self.receive(receivable_byte_num)
-                message, _ = IsakmpMessage.parse_immutable(self.buffer)
+                message, _ = parse_ike_message(self.buffer)
             except (InvalidType, InvalidValue):
                 self.flush_buffer()
                 if self.l4_transfer is not None:

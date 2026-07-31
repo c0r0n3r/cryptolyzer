@@ -40,7 +40,10 @@ class TestAnalyzerDHParamsUnit(unittest.TestCase):
         analyzer = AnalyzerDHParams()
         l7_client = unittest.mock.MagicMock()
         l7_client.l4_socket_params.throttle_delay = 0
-        with unittest.mock.patch.object(
+        with unittest.mock.patch(
+            'cryptolyzer.ike.dh.AnalyzerDHBase.discover_supported_ikev2_dh_groups',
+            return_value=([Ikev2DiffieHellmanGroup.MODP_GROUP_2048_BIT], None),
+        ), unittest.mock.patch.object(
             analyzer,
             '_check_ikev2_key_reuse',
             side_effect=IsakmpNotify(Ikev2NotifyType.INVALID_SYNTAX),
@@ -59,6 +62,19 @@ class TestAnalyzerDHParamsUnit(unittest.TestCase):
                 l7_client, unittest.mock.MagicMock()
             )
         self.assertEqual(ctx.exception.notify, Ikev1NotifyType.PAYLOAD_MALFORMED)
+
+    def test_check_ikev1_key_reuse_returns_none_on_invalid_key_information(self):
+        # A server that accepts the group only via INVALID_KEY_INFORMATION
+        # never returns a Key Exchange payload, so key reuse cannot be
+        # determined.
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        l7_client.do_ikev1_handshake.side_effect = IsakmpNotify(Ikev1NotifyType.INVALID_KEY_INFORMATION)
+        result = analyzer._check_ikev1_key_reuse(  # pylint: disable=protected-access
+            l7_client, unittest.mock.MagicMock()
+        )
+        self.assertIsNone(result)
 
     def test_check_ikev2_key_reuse_returns_true_for_repeated_key_exchange_data(self):
         analyzer = AnalyzerDHParams()

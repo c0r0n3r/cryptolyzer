@@ -32,6 +32,10 @@ class TestAnalyzerCurvesUnit(unittest.TestCase):
             result = analyzer.analyze(l7_client, IkeVersion.V2)
         self.assertIsInstance(result.target, AnalyzerTargetIke)
 
+    def test_dh_group_name_is_elliptic_curve(self):
+        # pylint: disable-next=protected-access
+        self.assertEqual(AnalyzerCurves._get_dh_group_name(), 'elliptic curve')
+
 
 class TestAnalyzerCurves(TestAnalyzerDHBase):
     @classmethod
