@@ -177,6 +177,7 @@ class TlsServerConfiguration(L7ServerConfigurationBase):  # pylint: disable=too-
         )
     )
     fallback_scsv_supported = attr.ib(default=False, validator=attr.validators.instance_of(bool))
+    supported_versions_ignored = attr.ib(default=False, validator=attr.validators.instance_of(bool))
 
     def __attrs_post_init__(self):
         if self.min_protocol_version > self.max_protocol_version:
@@ -329,6 +330,9 @@ class TlsServerHandshake(TlsServer):
         max_version = self.configuration.max_protocol_version
 
         try:
+            if self.configuration.supported_versions_ignored:
+                raise KeyError()
+
             supported_versions = message.extensions.get_item_by_type(
                 TlsExtensionType.SUPPORTED_VERSIONS
             ).supported_versions
