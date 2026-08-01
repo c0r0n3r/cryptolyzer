@@ -703,11 +703,10 @@ class L7ClientStartTlsBase(L7ClientTlsBase):
             self._init_l7()
         except NotEnoughData as e:
             raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
-        except BaseException as e:  # pylint: disable=broad-except
-            if e.__class__.__name__ == 'TimeoutError' or isinstance(e, socket.timeout):
-                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
-
-            raise e
+        except (TimeoutError, socket.timeout) as e:
+            raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
+        except ConnectionError as e:
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
         self._tls_inititalized = True
 
@@ -1616,11 +1615,10 @@ class TlsClientHandshake(TlsClient):
         tls_record_bytes = TlsRecord(hello_message.compose(), record_version, TlsContentType.HANDSHAKE).compose()
         try:
             transfer.send(tls_record_bytes)
-        except BaseException as e:  # pylint: disable=broad-except
-            if e.__class__.__name__ == 'TimeoutError' or isinstance(e, socket.timeout):
-                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
-
-            raise e
+        except (TimeoutError, socket.timeout) as e:
+            raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
+        except ConnectionError as e:
+            raise NetworkError(NetworkErrorType.NO_RESPONSE) from e
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-branches,too-many-locals
     def do_handshake(

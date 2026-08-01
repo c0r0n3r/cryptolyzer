@@ -71,9 +71,8 @@ class L4TransferBase:
     def _close_socket(sock):
         try:
             sock.close()
-        except BaseException as e:  # pylint: disable=broad-except
-            if e.__class__.__name__ != 'TimeoutError' and not isinstance(e, (socket.error, socket.timeout)):
-                raise e
+        except OSError:
+            pass
 
     def close(self):
         if self._socket is not None:
@@ -200,11 +199,8 @@ class L4ClientTCP(L4ClientBase):
     def _create_connection(func, *args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except BaseException as e:  # pylint: disable=broad-except
-            if e.__class__.__name__ == 'ConnectionRefusedError' or isinstance(e, (socket.error, socket.timeout)):
-                raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
-
-            raise e
+        except OSError as e:
+            raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
     def _init_connection(self):
         if self.socket_params.http_proxy:
@@ -327,7 +323,7 @@ class L4ServerTCP(L4ServerBase):
 
         try:
             self._client_socket, _ = self._socket.accept()
-        except BaseException as e:  # pylint: disable=broad-except
+        except OSError as e:
             raise NetworkError(NetworkErrorType.NO_CONNECTION) from e
 
         self._client_socket.settimeout(self.get_default_timeout())
