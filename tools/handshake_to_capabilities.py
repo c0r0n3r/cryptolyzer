@@ -95,8 +95,8 @@ class HandshakeToCapabilitiesBase():
 @attr.s
 class HandshakeToCapabilitiesTls(HandshakeToCapabilitiesBase):
     client_hello = attr.ib(init=False, default=None)
-    grease = attr.ib(init=False, default=collections.OrderedDict())
-    extensions = attr.ib(init=False, default=collections.OrderedDict())
+    grease = attr.ib(init=False, default=attr.Factory(collections.OrderedDict))
+    extensions = attr.ib(init=False, default=attr.Factory(collections.OrderedDict))
 
     _GREASE_EXTENSIONS = [
         TlsExtensionType.APPLICATION_LAYER_PROTOCOL_NEGOTIATION,
@@ -177,6 +177,7 @@ class HandshakeToCapabilitiesTls(HandshakeToCapabilitiesBase):
 
         self._update_extensions_iterable(TlsExtensionType.APPLICATION_LAYER_PROTOCOL_NEGOTIATION, "protocol_names")
         self._update_extensions_iterable(TlsExtensionType.APPLICATION_LAYER_PROTOCOL_SETTINGS, "protocol_names")
+        self._update_extensions_iterable(TlsExtensionType.OLD_APPLICATION_LAYER_PROTOCOL_SETTINGS, "protocol_names")
         self._update_extensions_iterable(TlsExtensionType.COMPRESS_CERTIFICATE, "compression_algorithms")
         self._update_extensions_iterable(TlsExtensionType.DELEGATED_CREDENTIALS, "hash_and_signature_algorithms")
         self._update_extensions_iterable(TlsExtensionType.EC_POINT_FORMATS, "point_formats")
@@ -190,6 +191,7 @@ class HandshakeToCapabilitiesTls(HandshakeToCapabilitiesBase):
         )
         self._update_extensions_iterable(TlsExtensionType.PSK_KEY_EXCHANGE_MODES, "key_exchange_modes")
         self._update_extensions_simple(TlsExtensionType.RECORD_SIZE_LIMIT, "record_size_limit")
+        self._update_extensions_simple(TlsExtensionType.SERVER_PADDING, "padding_size")
         self._update_extensions_iterable(TlsExtensionType.SIGNATURE_ALGORITHMS, "hash_and_signature_algorithms")
         self._update_extensions_iterable(TlsExtensionType.SUPPORTED_GROUPS, "elliptic_curves")
         self._update_extensions_iterable(
@@ -201,6 +203,7 @@ class HandshakeToCapabilitiesTls(HandshakeToCapabilitiesBase):
             lambda parameters: [parameter.name for parameter in parameters], True
         )
         self._update_extensions_simple(TlsExtensionType.TOKEN_BINDING, "protocol_version", str, True)
+        self._update_extensions_iterable(TlsExtensionType.TRUST_ANCHORS, "trust_anchor_identifiers", bytes)
 
         return ClientCapabilities(
             tls_versions=[],
