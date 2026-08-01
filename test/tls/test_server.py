@@ -14,6 +14,7 @@ from test.common.classes import OFFLINE_PARTIAL_RESPONSE_L4_SOCKET_PARAMS, OFFLI
 from cryptoparser.common.exception import NotEnoughData
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
 from cryptoparser.tls.extension import TlsExtensionType, TlsNamedCurve
+from cryptoparser.tls.grease import TlsInvalidTypeTwoByte
 from cryptoparser.tls.ldap import LDAPExtendedRequestStartTLS
 from cryptoparser.tls.openvpn import OpenVpnPacketControlV1, OpenVpnPacketHardResetServerV2
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
@@ -509,6 +510,26 @@ class TestL7ServerTls13(TestL7ServerBase):
 
     def test_handshake(self):
         self._test_tls_handshake(TlsProtocolVersion(TlsVersion.TLS1_3))
+
+    def test_handshake_supported_versions_grease(self):
+        client_hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1_3)], self.threaded_server.l7_server.address
+        )
+        supported_versions = client_hello.extensions.get_item_by_type(
+            TlsExtensionType.SUPPORTED_VERSIONS
+        ).supported_versions
+        # a GREASE value precedes the real version so the server has to skip it (RFC 8701)
+        supported_versions.insert(0, TlsInvalidTypeTwoByte.from_random())
+
+        l7_client = self.create_client(L7ClientTls, self.threaded_server.l7_server)
+        l7_client.init_connection()
+        server_messages = l7_client.do_tls_handshake(
+            hello_message=client_hello,
+            last_handshake_message_type=TlsHandshakeType.SERVER_HELLO,
+        )
+        self.assertEqual(list(server_messages.keys()), [TlsHandshakeType.SERVER_HELLO])
+
+        self.threaded_server.stop()
 
 
 class TestL7ServerTlsFallbackToSsl(TestL7ServerBase):

@@ -38,6 +38,7 @@ from cryptoparser.tls.extension import (
     TlsNextProtocolNameList,
     TlsProtocolNameList,
 )
+from cryptoparser.tls.grease import TlsInvalidTypeBase, TlsInvalidType
 from cryptoparser.tls.ldap import (
     LDAPResultCode,
     LDAPExtendedRequestStartTLS,
@@ -337,6 +338,9 @@ class TlsServerHandshake(TlsServer):
                 TlsExtensionType.SUPPORTED_VERSIONS
             ).supported_versions
             for version in supported_versions:
+                # GREASE values (RFC 8701) have no comparable version; skip them
+                if isinstance(version, TlsInvalidTypeBase) and version.value.value_type == TlsInvalidType.GREASE:
+                    continue
                 if min_version <= version <= max_version:
                     return version
         except KeyError:
