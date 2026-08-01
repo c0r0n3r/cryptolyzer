@@ -6,11 +6,12 @@ import attr
 
 
 from cryptodatahub.common.algorithm import KeyExchange, NamedGroupType
+from cryptodatahub.common.client import ClientVersionedParamsBase
 from cryptodatahub.common.entity import ClientType
 from cryptodatahub.common.key import PublicKeySize
 
 from cryptodatahub.tls.algorithm import TlsNamedCurve
-from cryptodatahub.tls.client import ClientVersionedParamsBase, TlsClient
+from cryptodatahub.tls.client import TlsClient
 
 from cryptoparser.tls.ciphersuite import SslCipherKind, TlsCipherSuite
 from cryptoparser.tls.extension import (
