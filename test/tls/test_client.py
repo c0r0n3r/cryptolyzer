@@ -480,6 +480,16 @@ class TestTlsClientHandshakeSendHello(unittest.TestCase):
             TlsClientHandshake._send_hello(transfer, hello, TlsProtocolVersion(TlsVersion.TLS1_2))
         self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
 
+    def test_send_connection_reset_raises_no_response(self):
+        hello = TlsHandshakeClientHelloAnyAlgorithm(
+            [TlsProtocolVersion(TlsVersion.TLS1_2)], 'localhost',
+        )
+        transfer = mock.Mock()
+        transfer.send.side_effect = ConnectionResetError('reset by peer')
+        with self.assertRaises(NetworkError) as context_manager:
+            TlsClientHandshake._send_hello(transfer, hello, TlsProtocolVersion(TlsVersion.TLS1_2))
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_RESPONSE)
+
     def test_send_other_exception_propagates(self):
         hello = TlsHandshakeClientHelloAnyAlgorithm(
             [TlsProtocolVersion(TlsVersion.TLS1_2)], 'localhost',
@@ -488,6 +498,24 @@ class TestTlsClientHandshakeSendHello(unittest.TestCase):
         transfer.send.side_effect = RuntimeError('boom')
         with self.assertRaises(RuntimeError):
             TlsClientHandshake._send_hello(transfer, hello, TlsProtocolVersion(TlsVersion.TLS1_2))
+
+
+class TestL7ClientStartTlsInitConnection(unittest.TestCase):
+    # pylint: disable=protected-access
+
+    def test_error_init_l7_timed_out(self):
+        l7_client = ClientPOP3('localhost', 0)
+        with mock.patch.object(ClientPOP3, '_init_l7', side_effect=TimeoutError), \
+                self.assertRaises(NetworkError) as context_manager:
+            l7_client._init_connection()
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_CONNECTION)
+
+    def test_error_init_l7_connection_reset(self):
+        l7_client = ClientPOP3('localhost', 0)
+        with mock.patch.object(ClientPOP3, '_init_l7', side_effect=ConnectionResetError), \
+                self.assertRaises(NetworkError) as context_manager:
+            l7_client._init_connection()
+        self.assertEqual(context_manager.exception.error, NetworkErrorType.NO_RESPONSE)
 
 
 class TestTlsClientHandshakeProcessHandshakeMessage(unittest.TestCase):
