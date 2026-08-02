@@ -1,3 +1,9 @@
+cryptolyzer (1.6.0) unstable; urgency=low
+
+  * offer the standalone post-quantum signature algorithms in the client hello (#190)
+
+ -- Szilárd Pfeiffer <coroner@pfeifferszilard.hu>  Wed, 05 Aug 2026 00:00:00 +0200
+
 cryptolyzer (1.5.0) unstable; urgency=low
 
   * add IKE public keys checker for IKEv1 aggressive-mode and IKEv2 EAP-mode servers (#183)
