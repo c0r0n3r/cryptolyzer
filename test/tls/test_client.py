@@ -27,6 +27,7 @@ from cryptoparser.tls.extension import (
     TlsExtensionKeyShareServer,
     TlsExtensionSignatureAlgorithms,
     TlsExtensionSignatureAlgorithmsCert,
+    TlsExtensionType,
     TlsKeyShareEntry,
     TlsNamedCurve,
 )
@@ -191,6 +192,32 @@ class TestTlsHandshakeClientHello(unittest.TestCase):
             key_share_curves=[TlsNamedCurve.ARBITRARY_EXPLICIT_PRIME_CURVES],
         )
         self.assertIsNotNone(client_hello)
+
+    @staticmethod
+    def _get_named_curves(protocol_version):
+        client_hello = TlsHandshakeClientHelloSpecalization(
+            hostname=None,
+            protocol_versions=[protocol_version],
+            cipher_suites=list(TlsCipherSuite),
+            named_curves=None,
+            signature_algorithms=None,
+            extensions=[],
+        )
+        return client_hello.extensions.get_item_by_type(TlsExtensionType.SUPPORTED_GROUPS).elliptic_curves
+
+    def test_named_curves_filtered_by_protocol_version(self):
+        named_curves = self._get_named_curves(self._PROTOCOL_VERSION)
+        self.assertIn(TlsNamedCurve.SECP256R1, named_curves)
+        self.assertIn(TlsNamedCurve.GC256A, named_curves)
+        self.assertNotIn(TlsNamedCurve.X25519_ML_KEM_768, named_curves)
+        self.assertNotIn(TlsNamedCurve.CURVESM2, named_curves)
+
+        named_curves = self._get_named_curves(TlsProtocolVersion(TlsVersion.TLS1))
+        self.assertIn(TlsNamedCurve.SECP256R1, named_curves)
+        self.assertNotIn(TlsNamedCurve.GC256A, named_curves)
+
+        named_curves = self._get_named_curves(TlsProtocolVersion(TlsVersion.TLS1_3))
+        self.assertIn(TlsNamedCurve.X25519_ML_KEM_768, named_curves)
 
 
 class TestTls13ClientHelloKeyShare(unittest.TestCase):
