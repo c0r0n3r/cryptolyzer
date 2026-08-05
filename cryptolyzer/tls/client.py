@@ -156,6 +156,18 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
         return signature_algorithms
 
     @classmethod
+    def _get_checkable_named_curves(cls, protocol_version_min, protocol_version_max):
+        if protocol_version_max > TlsProtocolVersion(TlsVersion.TLS1_2):
+            return list(TlsNamedCurve)
+
+        return [
+            named_curve
+            for named_curve in TlsNamedCurve
+            if (TlsProtocolVersion(named_curve.value.initial_version) <= protocol_version_max and
+                TlsProtocolVersion(named_curve.value.last_version) >= protocol_version_min)
+        ]
+
+    @classmethod
     def _get_tls1_3_extensions(cls, protocol_versions, signature_algorithms_cert, key_share_curves=None):
         key_share_entries = []
         if key_share_curves:
@@ -192,7 +204,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
         if hostname is not None:
             extensions.append(TlsExtensionServerNameClient(hostname))
         if named_curves is None:
-            named_curves = list(TlsNamedCurve)
+            named_curves = self._get_checkable_named_curves(protocol_version_min, protocol_version_max)
 
         if signature_algorithms is None:
             signature_algorithms = self._get_signature_algorithms(
