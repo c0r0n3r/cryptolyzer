@@ -7,7 +7,7 @@ Python Package
 
 .. code:: shell
 
-   pip install cryptolyzer
+   uv tool install cryptolyzer
 
 Docker
 ======

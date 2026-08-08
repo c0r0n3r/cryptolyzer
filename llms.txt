@@ -171,7 +171,7 @@
 ## Install
 
 ``` bash
-pip install cryptolyzer
+uv tool install cryptolyzer
 
 # or via Docker
 docker run --rm coroner/cryptolyzer tls all example.com

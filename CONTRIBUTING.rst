@@ -143,7 +143,7 @@ Preparing your Fork
 3. ``cd theproject``
 4. `Create and activate a virtual
    environment <https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments>`__.
-5. Install the development requirements: ``pip install .[tests]``.
+5. Install the development requirements: ``uv sync --extra tests``.
 6. Create a branch: ``git checkout -b foo-the-bars 1.3``.
 
 Making your Changes

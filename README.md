@@ -65,10 +65,10 @@ GnuTLS, LibreSSL, or wolfSSL. As a result, CryptoLyzer recognizes more TLS ciphe
 
 ## Usage
 
-### pip
+### uv
 
 ```shell
-pip install cryptolyzer
+uv tool install cryptolyzer
 ```
 
 ```shell
