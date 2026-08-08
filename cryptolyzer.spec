@@ -90,6 +90,9 @@ export SETUPTOOLS_SCM_PRETEND_VERSION=%{version}
 %{_bindir}/cryptolyze
 
 %changelog
+* Wed Aug 05 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.6.0-1
+- offer the standalone post-quantum signature algorithms in the client hello (#190)
+
 * Fri Jul 31 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.5.0-1
 - add IKE public keys checker for IKEv1 aggressive-mode and IKEv2 EAP-mode servers (#183)
 - add IKE public key request checker for enumerating accepted certification authority hashes (#183)

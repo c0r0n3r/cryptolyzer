@@ -3,6 +3,17 @@ Changelog
 =========
 
 ------------------
+1.6.0 - Unreleased
+------------------
+
+Notable fixes
+=============
+
+-  TLS (``tls``)
+
+   -  offer the standalone post-quantum signature algorithms in the client hello (#190)
+
+------------------
 1.5.0 - 2026-07-31
 ------------------
 

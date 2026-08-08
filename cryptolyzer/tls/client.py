@@ -129,6 +129,16 @@ def key_share_entry_from_named_curve(named_curve):
 
 
 class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
+    @staticmethod
+    def _is_tls1_3_signature_algorithm(signature_algorithm):
+        # A standalone signature algorithm, such as ML-DSA or Falcon, has no separate hash algorithm,
+        # so the absence of one does not exclude it. The entries without a hash algorithm that are
+        # not TLS 1.3 algorithms are the legacy combinations of TLS 1.2 signalling no hash at all.
+        return (
+            signature_algorithm.value.hash_algorithm is not None or
+            signature_algorithm.value.initial_version.value.code >= TlsVersion.TLS1_3.value.code
+        )
+
     @classmethod
     def _get_signature_algorithms(cls, protocol_version_min, protocol_version_max, cipher_suites):
         if protocol_version_max > TlsProtocolVersion(TlsVersion.TLS1_2):
@@ -137,7 +147,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
                 signature_algorithm
                 for signature_algorithm in TlsSignatureAndHashAlgorithm
                 if (signature_algorithm.value.signature_algorithm not in authentications_not_exist_in_tls1_3 and
-                    signature_algorithm.value.hash_algorithm is not None)
+                    cls._is_tls1_3_signature_algorithm(signature_algorithm))
             ]
         elif protocol_version_min >= TlsProtocolVersion(TlsVersion.TLS1_2):
             authentication_algorithms = set(
@@ -226,7 +236,7 @@ class TlsHandshakeClientHelloSpecalization(TlsHandshakeClientHello):
                 signature_algorithm
                 for signature_algorithm in TlsSignatureAndHashAlgorithm
                 if (signature_algorithm.value.signature_algorithm not in authentications_not_exist_in_tls1_3 and
-                    signature_algorithm.value.hash_algorithm is not None)
+                    self._is_tls1_3_signature_algorithm(signature_algorithm))
             ]
 
             present_extension_types = set(map(type, extensions))
