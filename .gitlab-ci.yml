@@ -8,12 +8,14 @@ stages:
 before_script:
 - apt-get update && apt-get install --no-install-recommends -y git-core
 - pip install uv
-- uv pip install --system .[tests]
+- uv sync --extra tests
 
 variables:
   GIT_SUBMODULE_DEPTH: 1
   GIT_SUBMODULE_STRATEGY: recursive
   PYTHONPATH: "submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub"
+  UV_PYTHON_DOWNLOADS: "never"
+  UV_PYTHON_PREFERENCE: "only-system"
 
 # Full-suite jobs run every live network test under coverage; raise above the 1h default.
 .long_running:
@@ -21,15 +23,14 @@ variables:
 
 .test:
   script:
-  - coverage run -m unittest discover -v
-  - coverage report
+  - uv run coverage run -m unittest discover -v
+  - uv run coverage report
 
 pylint:
   image: python:3.14-slim
   stage: earlytest
   script:
-  - uv pip install --system pylint
-  - pylint --rcfile .pylintrc cryptolyzer docs test
+  - uv run --with pylint pylint --rcfile .pylintrc cryptolyzer docs test
 
 ruff:
   image: python:3.14-slim
@@ -84,9 +85,8 @@ coveralls:
     PYTHONPATH: "submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub"
   stage: deploy
   script:
-    - uv pip install --system coveralls
-    - coverage run -m unittest -v -f
-    - coveralls
+    - uv run coverage run -m unittest -v -f
+    - uv run --with coveralls coveralls
   only:
     refs:
       - master
