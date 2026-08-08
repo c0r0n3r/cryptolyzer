@@ -19,11 +19,27 @@
 Summary
 =======
 
-.. include:: ../README.rst
+.. include:: ../README.md
+    :parser: myst_parser.sphinx_
+    :start-after: <!-- documentation-summary-start -->
+    :end-before: <!-- documentation-summary-end -->
 
 .. raw:: html
 
    <script async id="asciicast-618789" src="https://asciinema.org/a/618789.js"></script>
+
+.. include:: ../README.md
+    :parser: myst_parser.sphinx_
+    :start-after: <!-- documentation-strength-start -->
+    :end-before: <!-- documentation-strength-end -->
+
+Why CryptoLyzer?
+================
+
+.. include:: ../README.md
+    :parser: myst_parser.sphinx_
+    :start-after: <!-- documentation-comparison-start -->
+    :end-before: <!-- documentation-comparison-end -->
 
 =======
 Details

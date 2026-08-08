@@ -2,6 +2,7 @@
 [![Test Coverage](https://coveralls.io/repos/gitlab/coroner/cryptolyzer/badge.svg?branch=master)](https://coveralls.io/gitlab/coroner/cryptolyzer/)
 [![Documentation](https://readthedocs.org/projects/cryptolyzer/badge/?version=latest)](https://cryptolyzer.readthedocs.io)
 
+<!-- documentation-summary-start -->
 **CryptoLyzer** is a fast, flexible, and comprehensive server cryptographic protocol
 ([TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security),
 [SSL](https://en.wikipedia.org/wiki/Transport_Layer_Security#SSL_1.0,_2.0,_and_3.0),
@@ -33,18 +34,22 @@ strength using the [traffic light rating system](https://en.wikipedia.org/wiki/T
 [Markdown](https://cryptolyzer.readthedocs.io/en/latest/cli.html#markdown) output can be piped to Pandoc for DOCX/PDF
 reports. [JSON](https://cryptolyzer.readthedocs.io/en/latest/cli.html#json) output enables machine processing and
 pipeline automation.
+<!-- documentation-summary-end -->
 
 [![Demo](https://asciinema.org/a/618789.svg)](https://asciinema.org/a/618789)
 
+<!-- documentation-strength-start -->
 The strength of CryptoLyzer compared to its competitors is that it contains a custom implementation of cryptographic
 protocols ([CryptoParser](https://cryptoparser.readthedocs.io)), backed by the most comprehensive algorithm identifier
 database available ([CryptoDataHub](https://cryptodatahub.readthedocs.io)). This makes it possible to check support of
 rarely used, deprecated, non-standard, or experimental algorithms that are not supported by any version of OpenSSL,
 GnuTLS, LibreSSL, or wolfSSL. As a result, CryptoLyzer recognizes more TLS cipher suites than are listed in total on
 [Ciphersuite Info](https://ciphersuite.info/cs/).
+<!-- documentation-strength-end -->
 
 ## Why CryptoLyzer?
 
+<!-- documentation-comparison-start -->
 | Feature                                       | CryptoLyzer | testssl.sh | sslyze | ssh-audit |
 |-----------------------------------------------|:-----------:|:----------:|:------:|:---------:|
 | TLS/SSL analysis                              |      ✓      |      ✓     |    ✓   |     ✗     |
@@ -56,6 +61,7 @@ GnuTLS, LibreSSL, or wolfSSL. As a result, CryptoLyzer recognizes more TLS ciphe
 | JA3 / HASSH fingerprint generation            |      ✓      |      ✗     |    ✗   |     ✗     |
 | Python API                                    |      ✓      |      ✗     |    ✓   |     ✗     |
 | Windows support                               |      ✓      |      ✗     |    ✓   |     ✓     |
+<!-- documentation-comparison-end -->
 
 ## Usage
 

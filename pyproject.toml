@@ -98,6 +98,7 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = [
+    'myst-parser; python_version >= "3.10"',
     'sphinx>=8.0; python_version >= "3.10"',
     'sphinx-sitemap',
     'docutils',

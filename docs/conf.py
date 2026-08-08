@@ -19,6 +19,7 @@ from cryptolyzer.__setup__ import (  # noqa: E402, pylint: disable=wrong-import-
 
 
 extensions = [
+    'myst_parser',
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
