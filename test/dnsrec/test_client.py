@@ -2,6 +2,10 @@
 
 import unittest
 
+from test.dnsrec.classes import resolve_from_records
+
+from unittest.mock import patch
+
 import urllib3
 
 from cryptodatahub.dnsrec.algorithm import DnsRrType
@@ -21,7 +25,14 @@ class TestDnsClient(unittest.TestCase):
         self.assertEqual(L7ClientDns.get_supported_schemes(), {'dns': L7ClientDns})
 
     def test_client_dns(self):
-        dns_handshake = DnsHandshakeBase(L4TransferSocketParams(timeout=5))
-        l7_client = L7ClientDns.from_uri(urllib3.util.parse_url('dns://one.one.one.one'))
-        dns_handshake.get_records(l7_client, DnsRrType.A)
-        self.assertEqual(len(list(dns_handshake.raw_records)), 2)
+        with patch.object(
+            DnsHandshakeBase, '_resolve',
+            side_effect=resolve_from_records(
+                'one.one.one.one',
+                {(None, DnsRrType.A): [bytes([1, 0, 0, 1]), bytes([1, 1, 1, 1])]},
+            )
+        ):
+            dns_handshake = DnsHandshakeBase(L4TransferSocketParams(timeout=5))
+            l7_client = L7ClientDns.from_uri(urllib3.util.parse_url('dns://one.one.one.one'))
+            dns_handshake.get_records(l7_client, DnsRrType.A)
+            self.assertEqual(len(list(dns_handshake.raw_records)), 2)

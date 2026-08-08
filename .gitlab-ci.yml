@@ -1,8 +1,9 @@
 image: python
 
 stages:
-- earlytest
-- fulltest
+- lint
+- offlinetest
+- livetest
 - deploy
 
 before_script:
@@ -17,63 +18,70 @@ variables:
   UV_PYTHON_DOWNLOADS: "never"
   UV_PYTHON_PREFERENCE: "only-system"
 
-# Full-suite jobs run every live network test under coverage; raise above the 1h default.
-.long_running:
-  timeout: 2h
-
 .test:
+  variables:
+    CRYPTOLYZER_TEST_SKIP_LIVE_SERVER: "1"
+    CRYPTOLYZER_TEST_SKIP_LIVE_DNS: "1"
   script:
   - uv run coverage run -m unittest discover -v
   - uv run coverage report
 
+.live_test:
+  stage: livetest
+  script:
+  - uv run python -m unittest discover -v
+
 pylint:
   image: python:3.14-slim
-  stage: earlytest
+  stage: lint
   script:
   - uv run --with pylint pylint --rcfile .pylintrc cryptolyzer docs test
 
 ruff:
   image: python:3.14-slim
-  stage: earlytest
+  stage: lint
   script: uvx ruff check cryptolyzer docs test
 
 python314:
-  extends: [.long_running, .test]
+  extends: .test
   image: python:3.14-slim
-  stage: earlytest
+  stage: offlinetest
 
 python39:
-  extends: [.long_running, .test]
+  extends: .test
   image: python:3.9-slim
-  stage: fulltest
+  stage: offlinetest
 
 python310:
-  extends: [.long_running, .test]
+  extends: .test
   image: python:3.10-slim
-  stage: fulltest
+  stage: offlinetest
 
 python311:
-  extends: [.long_running, .test]
+  extends: .test
   image: python:3.11-slim
-  stage: fulltest
+  stage: offlinetest
 
 python312:
-  extends: [.long_running, .test]
+  extends: .test
   image: python:3.12-slim
-  stage: fulltest
+  stage: offlinetest
 
 python313:
-  extends: [.long_running, .test]
+  extends: .test
   image: python:3.13-slim
-  stage: fulltest
+  stage: offlinetest
 
 pythonrc:
-  extends: [.long_running, .test]
+  extends: .test
   image: python:3.15-rc-slim
-  stage: fulltest
+  stage: offlinetest
+
+live:
+  extends: .live_test
+  image: python:3.14-slim
 
 coveralls:
-  extends: .long_running
   image: python:3.12-slim
   variables:
     CI_NAME: gitlab

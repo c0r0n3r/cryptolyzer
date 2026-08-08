@@ -4,16 +4,12 @@ import base64
 import datetime
 
 from test.common.classes import TestLoggerBase
-from test.common.markers import live_server
+from test.common.markers import live_dns
+from test.dnsrec.classes import resolve_from_records
 
 from unittest.mock import patch
 
-import dns.message
-import dns.name
-import dns.rdata
-import dns.rdataclass
 import dns.resolver
-import dns.rrset
 
 import urllib3
 
@@ -66,36 +62,11 @@ class TestDnsRecordDnsSec(TestLoggerBase):
         signers_name='example.com',
         signature=bytes(range(64)),
     )
-    _RECORDS_BY_RR_TYPE = {
-        DnsRrType.DNSKEY: [_DNS_KEY_RECORD],
-        DnsRrType.DS: [_DELEGATION_SIGNER_RECORD],
-        DnsRrType.RRSIG: [_RESOURCE_RECORD_SIGNATURE],
+    _RECORDS_BY_QUERY = {
+        (None, DnsRrType.DNSKEY): [_DNS_KEY_RECORD],
+        (None, DnsRrType.DS): [_DELEGATION_SIGNER_RECORD],
+        (None, DnsRrType.RRSIG): [_RESOURCE_RECORD_SIGNATURE],
     }
-
-    @staticmethod
-    def _build_answer(domain, rr_type, dns_records):
-        name = dns.name.from_text(domain)
-        query = dns.message.make_query(name, rr_type.value.code)
-        response = dns.message.make_response(query)
-        rdata_list = [
-            dns.rdata.GenericRdata(dns.rdataclass.IN, rr_type.value.code, dns_record.compose())
-            for dns_record in dns_records
-        ]
-        response.answer.append(dns.rrset.from_rdata_list(name, 3600, rdata_list))
-
-        return dns.resolver.Answer(name, rr_type.value.code, dns.rdataclass.IN, response)
-
-    @classmethod
-    def _resolve_from_records(cls, domain, records_by_rr_type):
-        answers = {
-            rr_type.value.name: cls._build_answer(domain, rr_type, dns_records)
-            for rr_type, dns_records in records_by_rr_type.items()
-        }
-
-        def fake_resolve(_dns_resolver, **kwargs):
-            return answers[kwargs['rdtype']]
-
-        return fake_resolve
 
     @classmethod
     def get_result(cls, uri, timeout=None):
@@ -135,7 +106,7 @@ class TestDnsRecordDnsSec(TestLoggerBase):
     def test_records(self):
         with patch.object(
             DnsHandshakeBase, '_resolve',
-            side_effect=self._resolve_from_records('example.com', self._RECORDS_BY_RR_TYPE)
+            side_effect=resolve_from_records('example.com', self._RECORDS_BY_QUERY)
         ):
             analyzer_result = self.get_result('dns://example.com')
 
@@ -153,7 +124,7 @@ class TestDnsRecordDnsSec(TestLoggerBase):
         handler = ProtocolHandlerBase.from_protocol('dns')
         with patch.object(
             DnsHandshakeBase, '_resolve',
-            side_effect=self._resolve_from_records('example.com', self._RECORDS_BY_RR_TYPE)
+            side_effect=resolve_from_records('example.com', self._RECORDS_BY_QUERY)
         ):
             analyzer_result = handler.analyze(
                 AnalyzerDnsSec(),
@@ -163,7 +134,7 @@ class TestDnsRecordDnsSec(TestLoggerBase):
 
         self._assert_dnssec_result(analyzer_result)
 
-    @live_server
+    @live_dns
     def test_real(self):
         analyzer_result = self.get_result('dns://google.com#1.1.1.1')
         self.assertEqual(analyzer_result.dns_keys, [])
