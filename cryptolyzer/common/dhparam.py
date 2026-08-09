@@ -79,12 +79,12 @@ def get_ecdh_ephemeral_key_forged(named_group, add_point_format_octet=True):
         Weierstrass curve include the leading 0x04 point-format octet that
         marks an uncompressed point. A Montgomery curve is unaffected.
     """
-    key_size_in_bytes = int(math.ceil(named_group.value.size / 8))
-
     try:
         well_know_ec_param = ECParamWellKnown.from_named_group(named_group)
     except InvalidValue as e:
         raise NotImplementedError(named_group) from e
+
+    key_size_in_bytes = int(math.ceil(named_group.value.size / 8))
 
     if well_know_ec_param.value.parameter_form == ECParameterForm.MONTGOMERY:
         return key_size_in_bytes * b'\xff'

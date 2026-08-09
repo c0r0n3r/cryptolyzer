@@ -38,6 +38,11 @@ class TestForge(unittest.TestCase):
             get_ecdh_ephemeral_key_forged(NamedGroup.FFDHE2048)
         self.assertEqual(context_manager.exception.args, (NamedGroup.FFDHE2048,))
 
+    def test_error_not_implemented_size_unknown(self):
+        with self.assertRaises(NotImplementedError) as context_manager:
+            get_ecdh_ephemeral_key_forged(NamedGroup.X25519_ML_KEM_768)
+        self.assertEqual(context_manager.exception.args, (NamedGroup.X25519_ML_KEM_768,))
+
     def test_forge(self):
         self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.CURVE25519)), 32)
         self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.PRIME256V1)), 65)

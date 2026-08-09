@@ -6,11 +6,16 @@ from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCK
 
 from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptoparser.tls.ciphersuite import TlsCipherSuite
+from cryptoparser.tls.extension import TlsNamedCurve
 from cryptoparser.tls.version import TlsVersion, TlsProtocolVersion
 
 from cryptolyzer.tls.client import L7ClientTlsBase
 from cryptolyzer.tls.server import L7ServerTls, TlsServerConfiguration
-from cryptolyzer.tls.vulnerabilities import AnalyzerResultVulnerabilityCiphers, AnalyzerVulnerabilities
+from cryptolyzer.tls.vulnerabilities import (
+    AnalyzerResultVulnerabilityCiphers,
+    AnalyzerResultVulnerabilityDHParams,
+    AnalyzerVulnerabilities,
+)
 
 from .classes import TestTlsCases, L7ServerTlsTest
 
@@ -57,6 +62,16 @@ class TestTlsVulnerabilityCiphers(unittest.TestCase):
         ])
         self.assertFalse(result.logjam.value)
         self.assertTrue(result.freak.value)
+
+
+class TestTlsVulnerabilityDHParams(unittest.TestCase):
+    def test_dheat_finite_field_group(self):
+        result = AnalyzerResultVulnerabilityDHParams.from_dhparam(None, [TlsNamedCurve.FFDHE8192])
+        self.assertTrue(result.dheat.value)
+
+    def test_no_dheat_group_of_unknown_size(self):
+        result = AnalyzerResultVulnerabilityDHParams.from_dhparam(None, [TlsNamedCurve.X25519_ML_KEM_768])
+        self.assertFalse(result.dheat.value)
 
 
 class TestTlsVulnerabilities(TestTlsCases.TestTlsBase):

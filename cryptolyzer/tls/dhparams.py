@@ -220,12 +220,11 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
             named_groups.append(named_group)
             has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_group)
+            named_group_size = named_group.value.named_group.value.size
+            size_message = 'unknown size' if named_group_size is None else f'size {named_group_size}-bit'
             LogSingleton().log(
                 level=60,
-                msg=(
-                    'Server offers FFDHE public parameter with size '
-                    f'{named_group.value.named_group.value.size}-bit ({protocol_version})'
-                )
+                msg=f'Server offers FFDHE public parameter with {size_message} ({protocol_version})'
             )
 
         return named_groups

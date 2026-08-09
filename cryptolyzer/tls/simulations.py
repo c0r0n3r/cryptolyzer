@@ -101,7 +101,7 @@ class AnalyzerResultSimulationsTlsPfs(AnalyzerResultSimulationsTlsBase):
     :param key_size: Key size of used during the key exchange.
     """
 
-    key_size = attr.ib(validator=attr.validators.instance_of(PublicKeySize))
+    key_size = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(PublicKeySize)))
 
 
 @attr.s
@@ -292,11 +292,12 @@ class AnalyzerSimulations(AnalyzerTlsBase):
             if isinstance(key_share_extension, TlsExtensionKeyShareServer)
             else key_share_extension.selected_group
         )
-        result_params['key_size'] = PublicKeySize(
+        named_group_params = result_params['named_group'].value.named_group.value
+        result_params['key_size'] = None if named_group_params.size is None else PublicKeySize(
             KeyExchange.DHE
-            if result_params['named_group'].value.named_group.value.group_type == NamedGroupType.FINITE_FIELD
+            if named_group_params.group_type == NamedGroupType.FINITE_FIELD
             else KeyExchange.ECDHE,
-            result_params['named_group'].value.named_group.value.size
+            named_group_params.size
         )
 
         return AnalyzerResultSimulationsTlsPfsNamedGroup(**result_params)
