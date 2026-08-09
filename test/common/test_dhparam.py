@@ -43,6 +43,11 @@ class TestForge(unittest.TestCase):
         self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.PRIME256V1)), 65)
         self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.SECP521R1)), 133)
 
+    def test_forge_montgomery(self):
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.CURVE448)), 56)
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.M383)), 48)
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.M511)), 64)
+
 
 class TestParse(unittest.TestCase):
     def test_parse_dh_param(self):
