@@ -4,7 +4,8 @@ import unittest
 
 from Crypto.Cipher import AES
 
-from cryptodatahub.common.algorithm import Hash, MAC, NamedGroup
+from cryptodatahub.common.algorithm import Hash, MAC
+from cryptodatahub.common.parameter import ECParamWellKnown
 from cryptodatahub.tls.algorithm import TlsCipherSuite
 
 from cryptoparser.tls.record import TlsRecord
@@ -179,17 +180,17 @@ class TestTls13HandshakeDecryptorCryptodome(unittest.TestCase):
 class TestEphemeralKeyExchangeBackendCryptodome(unittest.TestCase):
     """Ephemeral key exchange backend wrapper tests."""
 
-    def test_supported_named_groups(self):
+    def test_supported_key_parameters(self):
         """Backend delegates to EphemeralKeyExchangeEllipticCurveCryptodome."""
         backend = _EphemeralKeyExchangeBackendCryptodome()
-        groups = backend.supported_named_groups()
+        groups = backend.supported_key_parameters()
         self.assertIsInstance(groups, tuple)
-        self.assertIn(NamedGroup.PRIME256V1, groups)
+        self.assertIn(ECParamWellKnown.PRIME256V1, groups)
 
     def test_create_ephemeral_material(self):
         """Backend creates ephemeral key exchange instances."""
         backend = _EphemeralKeyExchangeBackendCryptodome()
-        material = backend.create_ephemeral_material(NamedGroup.PRIME256V1)
+        material = backend.create_ephemeral_material(ECParamWellKnown.PRIME256V1)
         self.assertIsNotNone(material.public_key_bytes)
 
 

@@ -236,9 +236,11 @@ class AnalyzerResultVulnerabilityDHParams(AnalyzerResultVulnerabilityDHParamsBas
     @staticmethod
     def from_dhparam(dhparam, groups):
         group_sizes = [
-            group.value.named_group.value.size
-            for group in groups
-            if group.value.named_group.value.size is not None
+            group_size
+            for group_size in map(
+                lambda group: group.value.key_parameter.value.field_size, groups
+            )
+            if group_size is not None
         ]
         weak_dh = VulnerabilityResultWeakDh(dhparam is not None and dhparam.key_size.value <= 1024)
         dheat = VulnerabilityResultDheat(

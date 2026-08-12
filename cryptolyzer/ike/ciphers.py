@@ -9,10 +9,13 @@ from cryptodatahub.common.algorithm import (
     BlockCipherMode,
     Hash,
     MAC,
-    NamedGroup,
-    NamedGroupType,
 )
-from cryptodatahub.common.parameter import DHParamWellKnown
+from cryptodatahub.common.pqc import (
+    HybridNamedGroup,
+    KeyEncapsulationMechanism,
+    KeyParameter,
+    validate_key_parameter,
+)
 from cryptodatahub.ike.algorithm import (
     Ikev1AttributeType,
     Ikev1EncryptionAlgorithm,
@@ -64,8 +67,8 @@ class Ikev1CipherSuite:
     block_cipher_mode: typing.Optional[BlockCipherMode] = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(BlockCipherMode))
     )
-    diffie_hellman_group: typing.Union[NamedGroup, DHParamWellKnown, str] = attr.ib(
-        validator=attr.validators.instance_of((NamedGroup, DHParamWellKnown))
+    diffie_hellman_group: KeyParameter = attr.ib(
+        validator=validate_key_parameter()
     )
     hash_algorithm: Hash = attr.ib(
         validator=attr.validators.instance_of(Hash)
@@ -112,8 +115,8 @@ class Ikev2CipherSuite:
     pseudorandom_function: MAC = attr.ib(
         validator=attr.validators.instance_of(MAC)
     )
-    diffie_hellman_group: typing.Union[NamedGroup, DHParamWellKnown] = attr.ib(
-        validator=attr.validators.instance_of((NamedGroup, DHParamWellKnown))
+    diffie_hellman_group: KeyParameter = attr.ib(
+        validator=validate_key_parameter()
     )
     integrity_algorithm: typing.Optional[MAC] = attr.ib(
         default=None,
@@ -185,9 +188,9 @@ class AnalyzerResultIkev1Ciphers(AnalyzerResultIKE):
     hash_algorithms: list[Hash] = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of(Hash))
     )
-    diffie_hellman_groups: list[typing.Union[NamedGroup, DHParamWellKnown]] = attr.ib(
+    diffie_hellman_groups: list[KeyParameter] = attr.ib(
         validator=attr.validators.deep_iterable(
-            attr.validators.instance_of((NamedGroup, DHParamWellKnown))
+            validate_key_parameter()
         )
     )
 
@@ -207,9 +210,9 @@ class AnalyzerResultIkev2Ciphers(AnalyzerResultIKE):
     integrity_algorithms: list[MAC] = attr.ib(
         validator=attr.validators.deep_iterable(attr.validators.instance_of(MAC))
     )
-    diffie_hellman_groups: list[typing.Union[NamedGroup, DHParamWellKnown]] = attr.ib(
+    diffie_hellman_groups: list[KeyParameter] = attr.ib(
         validator=attr.validators.deep_iterable(
-            attr.validators.instance_of((NamedGroup, DHParamWellKnown))
+            validate_key_parameter()
         )
     )
 
@@ -600,14 +603,15 @@ class AnalyzerCiphers(AnalyzerIKEBase):
         cipher_suites: list[Ikev2CipherSuite] = []
         accepted_dh_groups: set[Ikev2DiffieHellmanGroup] = set()
 
-        # RFC 9370 hybrid post-quantum KEMs (ML-KEM) negotiate via
-        # IKE_INTERMEDIATE after IKE_SA_INIT, not as classical DH transforms
-        # in the initial exchange. Skip them here — the SA_INIT KE payload
-        # has no defined encoding for HYBRID_PQS public keys.
+        # RFC 9370 post-quantum KEMs (ML-KEM) negotiate via IKE_INTERMEDIATE
+        # after IKE_SA_INIT, not as classical DH transforms in the initial
+        # exchange. Skip them here — the SA_INIT KE payload has no defined
+        # encoding for the public key of a post-quantum or hybrid group.
         classical_dh_groups = [
             dh for dh in Ikev2DiffieHellmanGroup
-            if not (isinstance(dh.value.key_parameter, NamedGroup)
-                    and dh.value.key_parameter.value.group_type == NamedGroupType.HYBRID_PQS)
+            if not isinstance(
+                dh.value.key_parameter, (KeyEncapsulationMechanism, HybridNamedGroup)
+            )
         ]
 
         if non_aead_encr_tuples:

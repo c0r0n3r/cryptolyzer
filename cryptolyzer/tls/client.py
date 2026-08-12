@@ -14,8 +14,10 @@ import socket
 import attr
 
 
-from cryptodatahub.common.algorithm import Authentication, BlockCipher, BlockCipherMode, KeyExchange, NamedGroupType
+from cryptodatahub.common.algorithm import Authentication, BlockCipher, BlockCipherMode, KeyExchange
 from cryptodatahub.common.exception import InvalidValue
+from cryptodatahub.common.parameter import ECParamWellKnown
+from cryptodatahub.common.pqc import HybridNamedGroup, KeyEncapsulationMechanism
 
 from cryptodatahub.tls.algorithm import TlsSignatureAndHashAlgorithm, TlsECPointFormat
 
@@ -86,15 +88,6 @@ from cryptolyzer.tls.application import L7OpenVpnBase
 from cryptolyzer.tls.exception import TlsAlert
 
 
-NAMED_CURVE_TO_RFC7919_WELL_KNOWN = {
-    TlsNamedCurve.FFDHE2048: DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    TlsNamedCurve.FFDHE3072: DHParamWellKnown.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    TlsNamedCurve.FFDHE4096: DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    TlsNamedCurve.FFDHE6144: DHParamWellKnown.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    TlsNamedCurve.FFDHE8192: DHParamWellKnown.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-}
-
-
 RFC7919_WELL_KNOWN_TO_NAMED_CURVE = {
     DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE2048,
     DHParamWellKnown.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP: TlsNamedCurve.FFDHE3072,
@@ -106,22 +99,17 @@ RFC7919_WELL_KNOWN_TO_NAMED_CURVE = {
 
 def key_share_entry_from_named_curve(named_curve):
     """Build a ``TlsKeyShareEntry`` with deterministic forged material (legacy probes, simulations, DH params)."""
-    if named_curve.value.named_group is None:
-        raise NotImplementedError(named_curve)
+    key_parameter = named_curve.value.key_parameter
 
-    if named_curve.value.named_group.value.group_type == NamedGroupType.ELLIPTIC_CURVE:
-        return TlsKeyShareEntry(
-            named_curve,
-            get_ecdh_ephemeral_key_forged(named_curve.value.named_group)
-        )
+    if isinstance(key_parameter, ECParamWellKnown):
+        return TlsKeyShareEntry(named_curve, get_ecdh_ephemeral_key_forged(key_parameter))
 
-    if named_curve.value.named_group.value.group_type == NamedGroupType.FINITE_FIELD:
-        well_known_dh_param = NAMED_CURVE_TO_RFC7919_WELL_KNOWN[named_curve]
+    if isinstance(key_parameter, DHParamWellKnown):
         return TlsKeyShareEntry(
             named_curve,
             int_to_bytes(
-                get_dh_ephemeral_key_forged(well_known_dh_param.value.parameter_numbers.p),
-                well_known_dh_param.value.key_size // 8
+                get_dh_ephemeral_key_forged(key_parameter.value.parameter_numbers.p),
+                key_parameter.value.field_size // 8
             )
         )
 
@@ -430,8 +418,7 @@ class TlsHandshakeClientHelloKeyExchangeDHE(  # pylint: disable=too-many-ancesto
     NAMED_CURVES = [
         named_curve
         for named_curve in TlsNamedCurve
-        if (named_curve.value.named_group is not None
-            and named_curve.value.named_group.value.group_type == NamedGroupType.FINITE_FIELD)
+        if isinstance(named_curve.value.key_parameter, DHParamWellKnown)
     ]
 
     def __init__(
@@ -464,9 +451,12 @@ class TlsHandshakeClientHelloKeyExchangeECDHx(  # pylint: disable=too-many-ances
             TlsProtocolVersion(cipher_suite.value.initial_version) > TlsProtocolVersion(TlsVersion.TLS1_2))
     ]
     NAMED_CURVES = [
-        curve
-        for curve, group in map(lambda curve: (curve, curve.value.named_group), TlsNamedCurve)
-        if (group is not None and group.value.group_type in (NamedGroupType.ELLIPTIC_CURVE, NamedGroupType.HYBRID_PQS))
+        named_curve
+        for named_curve in TlsNamedCurve
+        if isinstance(
+            named_curve.value.key_parameter,
+            (ECParamWellKnown, KeyEncapsulationMechanism, HybridNamedGroup),
+        )
     ]
 
     def __init__(

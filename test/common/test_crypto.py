@@ -3,9 +3,9 @@ import unittest
 
 import Crypto.Cipher.AES
 
-from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, Hash, MAC, NamedGroup
+from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, Hash, MAC
+from cryptodatahub.common.parameter import DHParamWellKnown, ECParamWellKnown
 from cryptodatahub.common.exception import InvalidValue
-from cryptodatahub.common.parameter import DHParamWellKnown
 
 from cryptoparser.common.exception import NotEnoughData, TooMuchData
 
@@ -14,7 +14,6 @@ from cryptolyzer.common.crypto import (
     CypherBlockCryptodome,
     CypherStreamCryptodome,
     EphemeralKeyExchangeEllipticCurveCryptodome,
-    EphemeralKeyExchangeFiniteField,
     EphemeralKeyExchangeFiniteFieldCryptodome,
     GmacCryptodome,
     HashCryptodome,
@@ -24,9 +23,9 @@ from cryptolyzer.common.crypto import (
 
 
 class TestEphemeralKeyExchangeEllipticCurveCryptodome(unittest.TestCase):
-    def _assert_round_trip(self, named_group):
-        kex_a = EphemeralKeyExchangeEllipticCurveCryptodome(named_group=named_group)
-        kex_b = EphemeralKeyExchangeEllipticCurveCryptodome(named_group=named_group)
+    def _assert_round_trip(self, key_parameter):
+        kex_a = EphemeralKeyExchangeEllipticCurveCryptodome(key_parameter=key_parameter)
+        kex_b = EphemeralKeyExchangeEllipticCurveCryptodome(key_parameter=key_parameter)
         self.assertIsInstance(kex_a.public_key_bytes, bytes)
         self.assertGreater(len(kex_a.public_key_bytes), 0)
         self.assertNotEqual(kex_a.public_key_bytes, kex_b.public_key_bytes)
@@ -37,48 +36,31 @@ class TestEphemeralKeyExchangeEllipticCurveCryptodome(unittest.TestCase):
 
     def test_error_unsupported_group(self):
         with self.assertRaises(InvalidValue) as ctx:
-            EphemeralKeyExchangeEllipticCurveCryptodome(named_group=NamedGroup.BRAINPOOLP256R1)
-        self.assertEqual(ctx.exception.value, NamedGroup.BRAINPOOLP256R1)
+            EphemeralKeyExchangeEllipticCurveCryptodome(key_parameter=ECParamWellKnown.BRAINPOOLP256R1)
+        self.assertEqual(ctx.exception.value, ECParamWellKnown.BRAINPOOLP256R1)
 
     def test_p256(self):
-        self._assert_round_trip(NamedGroup.PRIME256V1)
+        self._assert_round_trip(ECParamWellKnown.PRIME256V1)
 
     def test_p384(self):
-        self._assert_round_trip(NamedGroup.SECP384R1)
+        self._assert_round_trip(ECParamWellKnown.SECP384R1)
 
     def test_p521(self):
-        self._assert_round_trip(NamedGroup.SECP521R1)
+        self._assert_round_trip(ECParamWellKnown.SECP521R1)
 
     def test_x25519(self):
-        self._assert_round_trip(NamedGroup.CURVE25519)
+        self._assert_round_trip(ECParamWellKnown.CURVE25519)
 
     def test_x448(self):
-        self._assert_round_trip(NamedGroup.CURVE448)
+        self._assert_round_trip(ECParamWellKnown.CURVE448)
 
-    def test_error_non_ec_named_group(self):
-        with self.assertRaises(InvalidValue) as ctx:
-            EphemeralKeyExchangeEllipticCurveCryptodome(named_group=NamedGroup.FFDHE2048)
-        self.assertEqual(ctx.exception.value, NamedGroup.FFDHE2048)
-
-
-class TestEphemeralKeyExchangeFiniteFieldBase(unittest.TestCase):
-    def test_from_named_group_error_non_ff(self):
-        with self.assertRaises(ValueError) as ctx:
-            EphemeralKeyExchangeFiniteField.from_named_group(NamedGroup.PRIME256V1)
-        expected = f"{NamedGroup.PRIME256V1.value.name} is not a finite-field NamedGroup"
-        self.assertEqual(str(ctx.exception), expected)
-
-    def test_from_named_group_ffdhe2048(self):
-        kex = EphemeralKeyExchangeFiniteFieldCryptodome.from_named_group(NamedGroup.FFDHE2048)
-        self.assertIsInstance(kex, EphemeralKeyExchangeFiniteFieldCryptodome)
-        self.assertIsInstance(kex.public_key_bytes, bytes)
-        self.assertGreater(len(kex.public_key_bytes), 0)
-
-    def test_from_named_group_ffdhe4096(self):
-        kex = EphemeralKeyExchangeFiniteFieldCryptodome.from_named_group(NamedGroup.FFDHE4096)
-        self.assertIsInstance(kex, EphemeralKeyExchangeFiniteFieldCryptodome)
-        self.assertIsInstance(kex.public_key_bytes, bytes)
-        self.assertGreater(len(kex.public_key_bytes), 0)
+    def test_error_non_ec_key_parameter(self):
+        # A group that is not an elliptic curve is rejected by the type of the
+        # attribute now, rather than by a check of its own.
+        with self.assertRaises(TypeError):
+            EphemeralKeyExchangeEllipticCurveCryptodome(
+                key_parameter=DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP
+            )
 
 
 class TestEphemeralKeyExchangeFiniteFieldCryptodome(unittest.TestCase):
@@ -110,7 +92,7 @@ class TestEphemeralKeyExchangeFiniteFieldCryptodome(unittest.TestCase):
         self.assertGreater(len(kex.public_key_bytes), 0)
         self.assertEqual(
             len(kex.public_key_bytes),
-            DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.key_size // 8,
+            DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP.value.field_size // 8,
         )
 
 
@@ -493,24 +475,24 @@ class TestCypherStreamCryptodome(unittest.TestCase):
 
 
 class TestEphemeralKeyExchangeEllipticCurveCryptodomeAdditional(unittest.TestCase):
-    def test_supported_named_groups(self):
-        supported = EphemeralKeyExchangeEllipticCurveCryptodome.supported_named_groups()
+    def test_supported_key_parameters(self):
+        supported = EphemeralKeyExchangeEllipticCurveCryptodome.supported_key_parameters()
         self.assertIsInstance(supported, tuple)
         self.assertGreater(len(supported), 0)
-        self.assertIn(NamedGroup.PRIME256V1, supported)
-        self.assertIn(NamedGroup.SECP384R1, supported)
-        self.assertIn(NamedGroup.SECP521R1, supported)
-        self.assertIn(NamedGroup.CURVE25519, supported)
-        self.assertIn(NamedGroup.CURVE448, supported)
+        self.assertIn(ECParamWellKnown.PRIME256V1, supported)
+        self.assertIn(ECParamWellKnown.SECP384R1, supported)
+        self.assertIn(ECParamWellKnown.SECP521R1, supported)
+        self.assertIn(ECParamWellKnown.CURVE25519, supported)
+        self.assertIn(ECParamWellKnown.CURVE448, supported)
 
     def test_montgomery_curve_public_key_bytes(self):
-        kex = EphemeralKeyExchangeEllipticCurveCryptodome(named_group=NamedGroup.CURVE25519)
+        kex = EphemeralKeyExchangeEllipticCurveCryptodome(key_parameter=ECParamWellKnown.CURVE25519)
         self.assertIsInstance(kex.public_key_bytes, bytes)
         self.assertGreater(len(kex.public_key_bytes), 0)
 
     def test_montgomery_curve_roundtrip(self):
-        kex_a = EphemeralKeyExchangeEllipticCurveCryptodome(named_group=NamedGroup.CURVE448)
-        kex_b = EphemeralKeyExchangeEllipticCurveCryptodome(named_group=NamedGroup.CURVE448)
+        kex_a = EphemeralKeyExchangeEllipticCurveCryptodome(key_parameter=ECParamWellKnown.CURVE448)
+        kex_b = EphemeralKeyExchangeEllipticCurveCryptodome(key_parameter=ECParamWellKnown.CURVE448)
         self.assertEqual(
             kex_a.compute_shared_secret(kex_b.public_key_bytes),
             kex_b.compute_shared_secret(kex_a.public_key_bytes),

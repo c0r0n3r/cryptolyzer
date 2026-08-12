@@ -282,7 +282,7 @@ class SshServerHandshakeKeyExchange(SshServerHandshake):
             self._disconnect_if_too_many_algorithms(message)
 
     def _sorted_groups(self):
-        return sorted(self.configuration.dh_group_exchange_groups, key=lambda well_known: well_known.value.key_size)
+        return sorted(self.configuration.dh_group_exchange_groups, key=lambda well_known: well_known.value.field_size)
 
     def _get_group_exchange_group(self, message):
         sorted_groups = self._sorted_groups()
@@ -290,7 +290,7 @@ class SshServerHandshakeKeyExchange(SshServerHandshake):
             return sorted_groups[0]
 
         for well_known in sorted_groups:
-            if message.gex_min <= well_known.value.key_size <= message.gex_max:
+            if message.gex_min <= well_known.value.field_size <= message.gex_max:
                 return well_known
 
         return None
@@ -303,13 +303,13 @@ class SshServerHandshakeKeyExchange(SshServerHandshake):
         self._group_exchange_group = well_known
         parameter_numbers = well_known.value.parameter_numbers
         self.l7_transfer.send(SshRecordKexDHGroup(SshDHGroupExchangeGroup(
-            int_to_bytes(parameter_numbers.p, well_known.value.key_size // 8),
+            int_to_bytes(parameter_numbers.p, well_known.value.field_size // 8),
             int_to_bytes(parameter_numbers.g, (parameter_numbers.g.bit_length() + 7) // 8),
         )).compose())
 
     def _send_key_exchange_reply(self, record_class, reply_class, well_known):
         ephemeral_public_key = int_to_bytes(
-            get_dh_ephemeral_key_forged(well_known.value.parameter_numbers.p), well_known.value.key_size // 8
+            get_dh_ephemeral_key_forged(well_known.value.parameter_numbers.p), well_known.value.field_size // 8
         ).lstrip(b'\x00')
         reply = reply_class(
             host_public_key=self.configuration.host_public_key,

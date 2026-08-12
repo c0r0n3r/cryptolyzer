@@ -5,7 +5,8 @@ import collections
 import attr
 
 
-from cryptodatahub.common.algorithm import KeyExchange, NamedGroupType
+from cryptodatahub.common.algorithm import KeyExchange
+from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptodatahub.common.client import ClientVersionedParamsBase
 from cryptodatahub.common.entity import ClientType
 from cryptodatahub.common.key import PublicKeySize
@@ -45,11 +46,7 @@ from cryptoparser.tls.subprotocol import (
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
 from cryptolyzer.common.analyzer import AnalyzerTlsBase
-from cryptolyzer.common.dhparam import (
-    DHParameter,
-    DHParamWellKnown,
-    parse_tls_dh_params,
-)
+from cryptolyzer.common.dhparam import DHParameter, parse_tls_dh_params
 from cryptolyzer.common.exception import ErrorParams, NetworkError, SecurityError, SecurityErrorType
 from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.common.utils import LogSingleton
@@ -292,12 +289,11 @@ class AnalyzerSimulations(AnalyzerTlsBase):
             if isinstance(key_share_extension, TlsExtensionKeyShareServer)
             else key_share_extension.selected_group
         )
-        named_group_params = result_params['named_group'].value.named_group.value
-        result_params['key_size'] = None if named_group_params.size is None else PublicKeySize(
-            KeyExchange.DHE
-            if named_group_params.group_type == NamedGroupType.FINITE_FIELD
-            else KeyExchange.ECDHE,
-            named_group_params.size
+        key_parameter = result_params['named_group'].value.key_parameter
+        field_size = key_parameter.value.field_size
+        result_params['key_size'] = None if field_size is None else PublicKeySize(
+            KeyExchange.DHE if isinstance(key_parameter, DHParamWellKnown) else KeyExchange.ECDHE,
+            field_size,
         )
 
         return AnalyzerResultSimulationsTlsPfsNamedGroup(**result_params)
@@ -326,7 +322,7 @@ class AnalyzerSimulations(AnalyzerTlsBase):
             result_params['named_group'] = tls_named_curve
             result_params['key_size'] = PublicKeySize(
                 cipher_suite.value.key_exchange,
-                tls_named_curve.value.named_group.value.size
+                tls_named_curve.value.key_parameter.value.field_size
             )
             result = AnalyzerResultSimulationsTlsPfsNamedGroup(**result_params)
         else:

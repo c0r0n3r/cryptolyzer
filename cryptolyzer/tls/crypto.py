@@ -6,7 +6,8 @@ import typing
 
 import attr
 
-from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, Hash, MAC, NamedGroup
+from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, Hash, MAC
+from cryptodatahub.common.parameter import ECParamWellKnown
 from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.tls.algorithm import TlsCipherSuite
 
@@ -232,12 +233,13 @@ class _EphemeralKeyExchangeBackendCryptodome:
     )
 
     @staticmethod
-    def supported_named_groups() -> tuple[NamedGroup, ...]:
-        return EphemeralKeyExchangeEllipticCurveCryptodome.supported_named_groups()
+    def supported_key_parameters() -> tuple[ECParamWellKnown, ...]:
+        return EphemeralKeyExchangeEllipticCurveCryptodome.supported_key_parameters()
 
     @staticmethod
-    def create_ephemeral_material(named_group: NamedGroup) -> EphemeralKeyExchangeEllipticCurveCryptodome:
-        return EphemeralKeyExchangeEllipticCurveCryptodome(named_group=named_group)
+    def create_ephemeral_material(key_parameter: ECParamWellKnown
+    ) -> EphemeralKeyExchangeEllipticCurveCryptodome:
+        return EphemeralKeyExchangeEllipticCurveCryptodome(key_parameter=key_parameter)
 
     @classmethod
     def _select_curves_for_tls13_key_share(cls, named_curves):
@@ -268,10 +270,11 @@ class _EphemeralKeyExchangeBackendCryptodome:
         key_share_entries = []
         client_key_exchange_by_named_curve = {}
         for tls_named_curve in cls._select_curves_for_tls13_key_share(named_curves):
-            if tls_named_curve.value.named_group is None:
+            # Only an elliptic curve has ephemeral material this backend makes.
+            if not isinstance(tls_named_curve.value.key_parameter, ECParamWellKnown):
                 continue
             try:
-                key_exchange = cls.create_ephemeral_material(tls_named_curve.value.named_group)
+                key_exchange = cls.create_ephemeral_material(tls_named_curve.value.key_parameter)
             except (NotImplementedError, ValueError, InvalidValue):
                 continue
 

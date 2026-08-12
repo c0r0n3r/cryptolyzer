@@ -474,7 +474,7 @@ class TlsServerHandshake(TlsServer):
 
     @staticmethod
     def _compose_ecdh_param_bytes(named_curve):
-        public_key = get_ecdh_ephemeral_key_forged(named_curve.value.named_group)
+        public_key = get_ecdh_ephemeral_key_forged(named_curve.value.key_parameter)
 
         composer = ComposerBinary()
         composer.compose_numeric(TlsECCurveType.NAMED_CURVE, 1)

@@ -2,7 +2,7 @@
 
 import attr
 
-from cryptodatahub.common.algorithm import Authentication, KeyExchange, NamedGroup
+from cryptodatahub.common.algorithm import Authentication, KeyExchange
 
 from cryptodatahub.ssh.algorithm import (
     SshCompressionAlgorithm,
@@ -43,33 +43,6 @@ from cryptolyzer.common.transfer import L4ClientTCP, L7TransferBase
 
 from cryptolyzer.ssh.exception import SshDisconnect
 from cryptolyzer.ssh.transfer import SshHandshakeBase
-
-
-SSH_KEX_ALGORITHMS_TO_NAMED_GROUP = {
-    SshKexAlgorithm.CURVE25519_SHA256: NamedGroup.CURVE25519,
-    SshKexAlgorithm.CURVE25519_SHA256_LIBSSH_ORG: NamedGroup.CURVE25519,
-    SshKexAlgorithm.CURVE448_SHA512_LIBSSH_ORG: NamedGroup.CURVE25519,
-    SshKexAlgorithm.ECDH_SHA2_SECP256K1_OID: NamedGroup.SECP256K1,
-    SshKexAlgorithm.ECDH_SHA2_BRAINPOOLP256R1_GENUA_DE: NamedGroup.BRAINPOOLP256R1,
-    SshKexAlgorithm.ECDH_SHA2_BRAINPOOLP384R1_GENUA_DE: NamedGroup.BRAINPOOLP384R1,
-    SshKexAlgorithm.ECDH_SHA2_BRAINPOOLP521R1_GENUA_DE: NamedGroup.BRAINPOOLP512R1,
-    SshKexAlgorithm.ECDH_SHA2_CURVE25519: NamedGroup.CURVE25519,
-    SshKexAlgorithm.ECDH_SHA2_NISTB233: NamedGroup.SECT233R1,
-    SshKexAlgorithm.ECDH_SHA2_NISTB409: NamedGroup.SECT409R1,
-    SshKexAlgorithm.ECDH_SHA2_NISTK163: NamedGroup.SECT163K1,
-    SshKexAlgorithm.ECDH_SHA2_NISTK233: NamedGroup.SECT233K1,
-    SshKexAlgorithm.ECDH_SHA2_NISTK283: NamedGroup.SECT283K1,
-    SshKexAlgorithm.ECDH_SHA2_NISTK409: NamedGroup.SECT409K1,
-    SshKexAlgorithm.ECDH_SHA2_NISTP192: NamedGroup.PRIME192V1,
-    SshKexAlgorithm.ECDH_SHA2_NISTP224: NamedGroup.SECP224R1,
-    SshKexAlgorithm.ECDH_SHA2_NISTP256: NamedGroup.PRIME256V1,
-    SshKexAlgorithm.ECDH_SHA2_NISTP256_WIN7_MICROSOFT_COM: NamedGroup.PRIME256V1,
-    SshKexAlgorithm.ECDH_SHA2_NISTP384: NamedGroup.SECP384R1,
-    SshKexAlgorithm.ECDH_SHA2_NISTP384_WIN7_MICROSOFT_COM: NamedGroup.SECP384R1,
-    SshKexAlgorithm.ECDH_SHA2_NISTP521: NamedGroup.SECP521R1,
-    SshKexAlgorithm.ECDH_SHA2_NISTP521_WIN7_MICROSOFT_COM: NamedGroup.SECP521R1,
-    SshKexAlgorithm.ECDH_SHA2_NISTT571: NamedGroup.SECT571R1,
-}
 
 
 class SshProtocolMessageDefault(SshProtocolMessage):
@@ -326,7 +299,7 @@ class SshClientHandshake(SshHandshakeBase):
         record_class = SshRecordKexDH
         key_size = agreed_kex_type.value.key_size
         for dh_param in DHParamWellKnown:
-            if dh_param.value.key_size == key_size:
+            if dh_param.value.field_size == key_size:
                 ephemeral_public_key = get_dh_ephemeral_key_forged(dh_param.value.parameter_numbers.p)
                 ephemeral_public_key_bytes = int_to_bytes(ephemeral_public_key, key_size).lstrip(b'\x00')
                 break
@@ -340,12 +313,7 @@ class SshClientHandshake(SshHandshakeBase):
     @classmethod
     def _process_kex_init_ecdhe(cls, transfer, agreed_kex_type):
         record_class = SshRecordKexDH
-        try:
-            named_group = SSH_KEX_ALGORITHMS_TO_NAMED_GROUP[agreed_kex_type]
-        except KeyError as e:
-            raise NotImplementedError() from e
-
-        ephemeral_public_key_bytes = get_ecdh_ephemeral_key_forged(named_group)
+        ephemeral_public_key_bytes = get_ecdh_ephemeral_key_forged(agreed_kex_type.value.key_parameter)
         transfer.send(record_class(SshDHKeyExchangeInit(ephemeral_public_key_bytes)).compose())
 
         return record_class

@@ -223,7 +223,7 @@ class TestEphemeralKeyExchangeBackendCryptodome(unittest.TestCase):
         self.assertEqual(len(ephemeral.public_key_bytes), 2048 // 8)
 
     def test_create_ephemeral_material_rejects_unrecognised_key_parameter(self):
-        """``key_parameter`` is constrained to ``(NamedGroup, DHParamWellKnown, str)``
+        """``key_parameter`` is constrained to the four parameter registries
         by the cryptodatahub enum; the ``str`` case is the "unsupported" fallthrough
         path, exercised here via a mocked dh_group."""
         bogus_dh_group = mock_module.Mock()

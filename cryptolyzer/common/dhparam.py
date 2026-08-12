@@ -7,8 +7,8 @@ import codecs
 import collections
 import attr
 
-from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.common.algorithm import KeyExchange
+from cryptodatahub.common.grade import AttackNamed
 from cryptodatahub.common.key import convert_public_key_size, PublicKeySize
 from cryptodatahub.common.parameter import (
     DHParameterNumbers,
@@ -68,8 +68,8 @@ def get_dh_ephemeral_key_forged(prime):
     return secrets.randbelow(prime - 3) + 2
 
 
-def get_ecdh_ephemeral_key_forged(named_group, add_point_format_octet=True):
-    """Return a forged ECDH ephemeral public key for ``named_group``.
+def get_ecdh_ephemeral_key_forged(key_parameter, add_point_format_octet=True):
+    """Return a forged ECDH ephemeral public key for ``key_parameter``.
 
     Only the uncompressed point format (SEC1 / X9.62) is supported for
     Weierstrass curves; a Montgomery curve always uses raw key bytes, as X25519
@@ -79,22 +79,20 @@ def get_ecdh_ephemeral_key_forged(named_group, add_point_format_octet=True):
         Weierstrass curve include the leading 0x04 point-format octet that
         marks an uncompressed point. A Montgomery curve is unaffected.
     """
-    try:
-        well_know_ec_param = ECParamWellKnown.from_named_group(named_group)
-    except InvalidValue as e:
-        raise NotImplementedError(named_group) from e
+    if not isinstance(key_parameter, ECParamWellKnown):
+        raise NotImplementedError(key_parameter)
 
-    key_size_in_bytes = int(math.ceil(named_group.value.size / 8))
+    key_size_in_bytes = int(math.ceil(key_parameter.value.field_size / 8))
 
-    if well_know_ec_param.value.parameter_form == ECParameterForm.MONTGOMERY:
+    if key_parameter.value.parameter_form == ECParameterForm.MONTGOMERY:
         return key_size_in_bytes * b'\xff'
 
     parts = []
     if add_point_format_octet:
         parts.append(b'\x04')
     parts.extend([
-        int_to_bytes(well_know_ec_param.value.parameter_numbers.x, key_size_in_bytes),
-        int_to_bytes(well_know_ec_param.value.parameter_numbers.y, key_size_in_bytes),
+        int_to_bytes(key_parameter.value.parameter_numbers.x, key_size_in_bytes),
+        int_to_bytes(key_parameter.value.parameter_numbers.y, key_size_in_bytes),
     ])
     return bytearray().join(parts)
 
@@ -162,7 +160,10 @@ class DHParameter(Serializable):
             if self.parameter_numbers == well_know_public_number.value.parameter_numbers:
                 self.well_known = well_know_public_number
                 self.prime = True
-                self.safe_prime = well_know_public_number.value.safe_prime
+                self.safe_prime = not any(
+                    vulnerability.named == AttackNamed.NON_SAFE_PRIME
+                    for vulnerability in well_know_public_number.value.vulnerabilities
+                )
                 break
         else:
             self.well_known = None

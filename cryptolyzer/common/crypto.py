@@ -25,9 +25,9 @@ import Crypto.Hash.SHA512
 import Crypto.Protocol.DH
 import Crypto.PublicKey.ECC
 
-from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, Hash, MAC, NamedGroup, NamedGroupType
+from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, Hash, MAC
 from cryptodatahub.common.exception import InvalidValue
-from cryptodatahub.common.parameter import DHParamWellKnown
+from cryptodatahub.common.parameter import DHParamWellKnown, ECParamWellKnown
 
 from cryptoparser.common.exception import NotEnoughData, TooMuchData
 from cryptoparser.common.parse import ComposerBinary
@@ -72,19 +72,19 @@ class EphemeralKeyExchangeBase(abc.ABC):
 class EphemeralKeyExchangeEllipticCurve(EphemeralKeyExchangeBase):
     """Abstract base class for elliptic-curve ephemeral key agreement."""
 
-    named_group: NamedGroup = attr.ib(validator=attr.validators.instance_of(NamedGroup))
+    key_parameter: ECParamWellKnown = attr.ib(validator=attr.validators.instance_of(ECParamWellKnown))
 
     @classmethod
     @abc.abstractmethod
-    def supported_named_groups(cls) -> tuple[NamedGroup, ...]:
+    def supported_key_parameters(cls) -> tuple[ECParamWellKnown, ...]:
         """Named groups supported by this implementation."""
         raise NotImplementedError()
 
     @staticmethod
-    def _montgomery_subject_public_key_info_der(named_group: NamedGroup, raw_bytes: bytes | bytearray) -> bytes:
+    def _montgomery_subject_public_key_info_der(key_parameter: ECParamWellKnown, raw_bytes: bytes | bytearray) -> bytes:
         """Wrap raw Montgomery-curve public key octets in a SubjectPublicKeyInfo DER structure."""
         algorithm = asn1crypto.keys.PublicKeyAlgorithm()
-        algorithm['algorithm'] = asn1crypto.keys.PublicKeyAlgorithmId(named_group.value.oid)
+        algorithm['algorithm'] = asn1crypto.keys.PublicKeyAlgorithmId(key_parameter.value.oid)
         public_key_info = asn1crypto.keys.PublicKeyInfo()
         public_key_info['algorithm'] = algorithm
         public_key_info['public_key'] = bytes(raw_bytes)
@@ -95,67 +95,51 @@ class EphemeralKeyExchangeEllipticCurve(EphemeralKeyExchangeBase):
 class EphemeralKeyExchangeFiniteField(EphemeralKeyExchangeBase):
     """Abstract base class for finite-field ephemeral key agreement."""
 
-    _NAMED_GROUP_TO_DH_PARAMETERS: typing.ClassVar[dict[NamedGroup, DHParamWellKnown]] = {
-        NamedGroup.FFDHE2048: DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-        NamedGroup.FFDHE3072: DHParamWellKnown.RFC7919_3072_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-        NamedGroup.FFDHE4096: DHParamWellKnown.RFC7919_4096_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-        NamedGroup.FFDHE6144: DHParamWellKnown.RFC7919_6144_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-        NamedGroup.FFDHE8192: DHParamWellKnown.RFC7919_8192_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP,
-    }
-
     dh_parameters: DHParamWellKnown = attr.ib(validator=attr.validators.instance_of(DHParamWellKnown))
-
-    @classmethod
-    def from_named_group(cls, named_group: NamedGroup) -> EphemeralKeyExchangeFiniteField:
-        if named_group.value.group_type != NamedGroupType.FINITE_FIELD:
-            raise ValueError(f'{named_group.value.name} is not a finite-field NamedGroup')
-
-        dh_parameters = cls._NAMED_GROUP_TO_DH_PARAMETERS.get(named_group)
-        if dh_parameters is None:
-            raise NotImplementedError(named_group)
-        return cls(dh_parameters=dh_parameters)
 
 
 @attr.s
 class EphemeralKeyExchangeEllipticCurveCryptodome(EphemeralKeyExchangeEllipticCurve):
     """Class for elliptic-curve ephemeral key agreement supported by PyCryptodome."""
 
-    _NAMED_GROUP_TO_CURVE_NAME: typing.ClassVar[dict[NamedGroup, str]] = {
-        NamedGroup.PRIME192V1: 'p192',
-        NamedGroup.SECP224R1: 'p224',
-        NamedGroup.PRIME256V1: 'p256',
-        NamedGroup.SECP384R1: 'p384',
-        NamedGroup.SECP521R1: 'p521',
-        NamedGroup.CURVE25519: 'curve25519',
-        NamedGroup.CURVE448: 'curve448',
+    _CURVE_NAME_BY_KEY_PARAMETER: typing.ClassVar[dict[ECParamWellKnown, str]] = {
+        ECParamWellKnown.PRIME192V1: 'p192',
+        ECParamWellKnown.SECP224R1: 'p224',
+        ECParamWellKnown.PRIME256V1: 'p256',
+        ECParamWellKnown.SECP384R1: 'p384',
+        ECParamWellKnown.SECP521R1: 'p521',
+        ECParamWellKnown.CURVE25519: 'curve25519',
+        ECParamWellKnown.CURVE448: 'curve448',
     }
 
     @classmethod
-    def supported_named_groups(cls) -> tuple[NamedGroup, ...]:
-        return tuple(cls._NAMED_GROUP_TO_CURVE_NAME)
+    def supported_key_parameters(cls) -> tuple[ECParamWellKnown, ...]:
+        return tuple(cls._CURVE_NAME_BY_KEY_PARAMETER)
 
     def _is_group_supported(self) -> None:
-        if self.named_group not in self._NAMED_GROUP_TO_CURVE_NAME:
-            raise InvalidValue(self.named_group, NamedGroup)
+        if self.key_parameter not in self._CURVE_NAME_BY_KEY_PARAMETER:
+            raise InvalidValue(self.key_parameter, ECParamWellKnown)
 
     def generate_key_pair(self) -> None:
-        curve_name = self._NAMED_GROUP_TO_CURVE_NAME[self.named_group]
+        curve_name = self._CURVE_NAME_BY_KEY_PARAMETER[self.key_parameter]
         self._private_key = Crypto.PublicKey.ECC.generate(curve=curve_name)
 
     def _import_peer_elliptic_curve_public_key(self, key_bytes: bytes | bytearray) -> Crypto.PublicKey.ECC.EccKey:
         key_bytes = bytes(key_bytes)
 
-        if self.named_group in (NamedGroup.CURVE25519, NamedGroup.CURVE448):
+        if self.key_parameter in (ECParamWellKnown.CURVE25519, ECParamWellKnown.CURVE448):
             return Crypto.PublicKey.ECC.import_key(
-                EphemeralKeyExchangeEllipticCurve._montgomery_subject_public_key_info_der(self.named_group, key_bytes)
+                EphemeralKeyExchangeEllipticCurve._montgomery_subject_public_key_info_der(self.key_parameter, key_bytes)
             )
 
-        return Crypto.PublicKey.ECC.import_key(key_bytes, curve_name=self._NAMED_GROUP_TO_CURVE_NAME[self.named_group])
+        return Crypto.PublicKey.ECC.import_key(
+            key_bytes, curve_name=self._CURVE_NAME_BY_KEY_PARAMETER[self.key_parameter]
+        )
 
     @property
     def public_key_bytes(self) -> bytes:
         public_key = self._private_key.public_key()
-        if self.named_group in (NamedGroup.CURVE25519, NamedGroup.CURVE448):
+        if self.key_parameter in (ECParamWellKnown.CURVE25519, ECParamWellKnown.CURVE448):
             return public_key.export_key(format='raw')
         return public_key.export_key(format='SEC1', compress=False)
 
@@ -177,20 +161,20 @@ class EphemeralKeyExchangeFiniteFieldCryptodome(EphemeralKeyExchangeFiniteField)
 
     def generate_key_pair(self) -> None:
         params = self.dh_parameters.value
-        random_bytes = os.urandom(params.key_size // 8)
+        random_bytes = os.urandom(params.field_size // 8)
         self._private_key = int.from_bytes(random_bytes, 'big') % (params.parameter_numbers.p - 2) + 2
         self._public_key = pow(params.parameter_numbers.g, self._private_key, params.parameter_numbers.p)
 
     @property
     def public_key_bytes(self) -> bytes:
         params = self.dh_parameters.value
-        return self._public_key.to_bytes(params.key_size // 8, 'big')
+        return self._public_key.to_bytes(params.field_size // 8, 'big')
 
     def compute_shared_secret(self, peer_public_bytes: bytes | bytearray) -> bytes:
         params = self.dh_parameters.value
         peer_public_key_integer = int.from_bytes(bytes(peer_public_bytes), 'big')
         shared_secret = pow(peer_public_key_integer, self._private_key, params.parameter_numbers.p)
-        return shared_secret.to_bytes(params.key_size // 8, 'big')
+        return shared_secret.to_bytes(params.field_size // 8, 'big')
 
 
 @attr.s

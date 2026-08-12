@@ -11,7 +11,7 @@ from test.common.markers import live_server
 
 import test.tls.test_curves
 
-from cryptodatahub.common.algorithm import NamedGroup, NamedGroupType
+from cryptodatahub.common.pqc import HybridNamedGroup, KeyEncapsulationMechanism, KeyParameter
 
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
@@ -46,11 +46,11 @@ class TestReal(unittest.TestCase):
         return names_by_port
 
     @classmethod
-    def _get_named_groups_by_port(cls) -> dict[int, tuple[str, NamedGroup]]:
-        named_groups_by_oqs_name = cls._get_named_groups_by_oqs_name()
+    def _get_key_parameters_by_port(cls) -> dict[int, tuple[str, KeyParameter]]:
+        key_parameters_by_oqs_name = cls._get_key_parameters_by_oqs_name()
 
         return collections.OrderedDict([
-            (port, (oqs_name, named_groups_by_oqs_name[key_encapsulation_mechanism_name]))
+            (port, (oqs_name, key_parameters_by_oqs_name[key_encapsulation_mechanism_name]))
             for port, (oqs_name, key_encapsulation_mechanism_name)
             in cls._get_oqs_names_by_port().items()
         ])
@@ -64,11 +64,12 @@ class TestReal(unittest.TestCase):
         ])
 
     @staticmethod
-    def _get_named_groups_by_oqs_name() -> dict[str, NamedGroup]:
+    def _get_key_parameters_by_oqs_name() -> dict[str, KeyParameter]:
         return collections.OrderedDict([
-            (named_group.value.oqs_name, named_group)
-            for named_group in NamedGroup
-            if named_group.value.oqs_name is not None
+            (key_parameter.value.oqs_name, key_parameter)
+            for registry in (KeyEncapsulationMechanism, HybridNamedGroup)
+            for key_parameter in registry
+            if key_parameter.value.oqs_name is not None
         ])
 
     @classmethod
@@ -90,32 +91,32 @@ class TestReal(unittest.TestCase):
         ) as executor:
             return collections.OrderedDict([(port, executor.submit(cls._get_result, port)) for port in ports])
 
-    def test_named_group_names_are_known(self) -> None:
-        named_groups_by_oqs_name = self._get_named_groups_by_oqs_name()
+    def test_key_parameter_names_are_known(self) -> None:
+        key_parameters_by_oqs_name = self._get_key_parameters_by_oqs_name()
         unknown_names = [
             key_encapsulation_mechanism_name
             for _, key_encapsulation_mechanism_name in self._get_oqs_names_by_port().values()
-            if key_encapsulation_mechanism_name not in named_groups_by_oqs_name
+            if key_encapsulation_mechanism_name not in key_parameters_by_oqs_name
         ]
         self.assertEqual(unknown_names, [])
 
     @live_server
     def test_key_encapsulation_mechanisms(self) -> None:
-        named_groups_by_port = self._get_named_groups_by_port()
-        analyses_by_port = self._get_analyses_by_port(named_groups_by_port)
+        key_parameters_by_port = self._get_key_parameters_by_port()
+        analyses_by_port = self._get_analyses_by_port(key_parameters_by_port)
 
-        for port, (oqs_name, named_group) in named_groups_by_port.items():
+        for port, (oqs_name, key_parameter) in key_parameters_by_port.items():
             with self.subTest(
                     oqs_name=oqs_name,
-                    key_encapsulation_mechanism=named_group,
+                    key_encapsulation_mechanism=key_parameter,
                     port=port,
             ):
                 self.assertEqual(
                     [
-                        named_curve.value.named_group
+                        named_curve.value.key_parameter
                         for named_curve in analyses_by_port[port].result().curves
                     ],
-                    [named_group],
+                    [key_parameter],
                 )
 
     @live_server
@@ -123,27 +124,27 @@ class TestReal(unittest.TestCase):
         ports_by_oqs_name = self._get_wildcard_ports_by_oqs_name()
         analyses_by_port = self._get_analyses_by_port(ports_by_oqs_name.values())
 
-        reported_named_groups_by_oqs_name = collections.OrderedDict([
+        reported_key_parameters_by_oqs_name = collections.OrderedDict([
             (
                 oqs_name,
                 tuple(
-                    named_curve.value.named_group
+                    named_curve.value.key_parameter
                     for named_curve in analyses_by_port[port].result().curves
                 ),
             )
             for oqs_name, port in ports_by_oqs_name.items()
         ])
 
-        reference_named_groups = next(iter(reported_named_groups_by_oqs_name.values()))
-        for oqs_name, named_groups in reported_named_groups_by_oqs_name.items():
+        reference_key_parameters = next(iter(reported_key_parameters_by_oqs_name.values()))
+        for oqs_name, key_parameters in reported_key_parameters_by_oqs_name.items():
             with self.subTest(
                     oqs_name=oqs_name,
                     port=ports_by_oqs_name[oqs_name],
             ):
-                self.assertEqual(named_groups, reference_named_groups)
+                self.assertEqual(key_parameters, reference_key_parameters)
 
         self.assertTrue([
-            named_group
-            for named_group in reference_named_groups
-            if named_group.value.group_type == NamedGroupType.HYBRID_PQS
+            key_parameter
+            for key_parameter in reference_key_parameters
+            if isinstance(key_parameter, HybridNamedGroup)
         ])
