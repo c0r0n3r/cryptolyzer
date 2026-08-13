@@ -135,6 +135,14 @@ class AnalyzerBase:
     def get_name(cls):
         raise NotImplementedError()
 
+    @classmethod
+    def add_arguments(cls, parser):  # pylint: disable=unused-argument
+        """Declare analyzer-specific command-line arguments on the analyzer subparser (no-op by default)."""
+
+    def parse_arguments(self, parser, arguments):  # pylint: disable=unused-argument
+        """Resolve the analyzer's own arguments from the parsed namespace and store them on the instance
+        (no-op by default)."""
+
     def analyze(self, analyzable):  # pylint: disable=unused-argument
         self._reset_probe_throttle()
 

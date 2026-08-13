@@ -114,17 +114,26 @@ class IkeSecurityAssociationBase(IsakmpMessage):
         return ffdh_groups, ecdh_groups
 
     @staticmethod
-    def get_encryption_algorithm_key_lengths(encryption_algorithm):
-        # RFC 7296 §3.3.5: fixed-key entries (single bulk_ciphers) MUST omit
-        # the Key Length attribute → use None as the wire-level marker.
-        # Variable-key entries enumerate one wire-level transform per
-        # bulk_ciphers entry, each carrying its per-cipher key_size.
-        bulk_ciphers = list(encryption_algorithm.value.bulk_ciphers)
-        if len(bulk_ciphers) == 1:
+    def is_fixed_key_encryption_algorithm(encryption_algorithm):
+        # RFC 7296 §3.3.5 and RFC 2409: an algorithm offering a single bulk cipher has an inherent key size, so its
+        # transform MUST omit the Key Length attribute; None is the wire-level marker for that omission
+        return len(list(encryption_algorithm.value.bulk_ciphers)) == 1
+
+    @classmethod
+    def get_wire_key_length(cls, encryption_algorithm, key_length):
+        # the chosen key length reaches the wire only for a variable-key algorithm, even though a fixed-key one also
+        # resolves to its inherent key size
+        return None if cls.is_fixed_key_encryption_algorithm(encryption_algorithm) else key_length
+
+    @classmethod
+    def get_encryption_algorithm_key_lengths(cls, encryption_algorithm):
+        # a variable-key algorithm enumerates one wire-level transform per bulk_ciphers entry, each carrying its
+        # per-cipher key_size
+        if cls.is_fixed_key_encryption_algorithm(encryption_algorithm):
             return [None]
         return [
             bulk_cipher.cipher.value.key_size
-            for bulk_cipher in bulk_ciphers
+            for bulk_cipher in encryption_algorithm.value.bulk_ciphers
             if bulk_cipher.cipher.value.key_size is not None
         ]
 
@@ -435,19 +444,6 @@ class Ikev1SecurityAssociationBase(IkeSecurityAssociationBase):
     }
 
     @classmethod
-    def get_key_lengths(cls, encryption_algorithm):
-        bulk_ciphers = list(encryption_algorithm.value.bulk_ciphers)
-        single_key_size = len(bulk_ciphers) == 1
-        if single_key_size:
-            return [None]
-
-        return [
-            bulk_cipher.cipher.value.key_size
-            for bulk_cipher in bulk_ciphers
-            if bulk_cipher.cipher.value.key_size is not None
-        ]
-
-    @classmethod
     def get_transform(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         cls,
         encryption_algorithm: Ikev1EncryptionAlgorithm,
@@ -484,7 +480,7 @@ class Ikev1SecurityAssociationBase(IkeSecurityAssociationBase):
     ) -> list[Ikev1PayloadProposal]:
         key_lengths: list[int] = []
         if key_length is None:
-            key_lengths.extend(cls.get_key_lengths(encryption_algorithm))
+            key_lengths.extend(cls.get_encryption_algorithm_key_lengths(encryption_algorithm))
         else:
             key_lengths.append(key_length)
 

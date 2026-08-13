@@ -657,7 +657,67 @@ class TestAnalyzerCiphers(unittest.TestCase):
         self.assertEqual(len(result.hash_algorithms), 1)
         self.assertEqual(len(result.diffie_hellman_groups), 1)
 
-    # ---------- IKEv2 ----------
+    def _patch_ikev1_enums_single_algorithm(self):
+        """Patch the axes so the enumeration space is exactly one transform: a fixed-key cipher contributes a single
+        key length, so the sweep confirms that transform, removes it and ends, leaving only the authentication-method
+        classification probes to answer."""
+        self._patch_ikev1_enums()
+        patcher = unittest.mock.patch(
+            'cryptolyzer.ike.ciphers.Ikev1EncryptionAlgorithm',
+            [Ikev1EncryptionAlgorithm.DES3_CBC],
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        return Ikev1SecurityAssociationProposalAlgorithms(
+            encryption_algorithm=Ikev1EncryptionAlgorithm.DES3_CBC,
+            diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_1024_BIT,
+            hash_algorithm=Ikev1HashAlgorithm.SHA,
+            authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+            key_length=None,
+        )
+
+    def test_ikev1_authentication_method_accepted(self):
+        matching_algorithm = self._patch_ikev1_enums_single_algorithm()
+        client = _make_mock_client()
+
+        with unittest.mock.patch.object(
+            client, 'do_ikev1_handshake',
+            return_value={Ikev1ExchangeType.IDENTITY_PROTECTION: [object()]},
+        ), unittest.mock.patch.object(
+            AnalyzerCiphers,
+            '_get_algorithm_from_server_messages_ikev1',
+            return_value=matching_algorithm,
+        ):
+            result = AnalyzerCiphers().analyze(client, IkeVersion.V1)
+
+        self.assertEqual(len(result.encryption_algorithms), 1)
+        self.assertEqual(result.authentication_methods, [Ikev1AuthenticationMethod.PRE_SHARED_KEY])
+
+    def test_ikev1_authentication_method_rejected(self):
+        matching_algorithm = self._patch_ikev1_enums_single_algorithm()
+        client = _make_mock_client()
+        call_count = [0]
+
+        def respond(*_args, **_kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return {Ikev1ExchangeType.IDENTITY_PROTECTION: [object()]}
+            exception = IsakmpNotify(Ikev1NotifyType.INVALID_KEY_INFORMATION)
+            exception.server_messages = {}
+            raise exception
+
+        with unittest.mock.patch.object(client, 'do_ikev1_handshake', side_effect=respond), \
+             unittest.mock.patch.object(
+                 AnalyzerCiphers,
+                 '_get_algorithm_from_server_messages_ikev1',
+                 return_value=matching_algorithm,
+             ):
+            result = AnalyzerCiphers().analyze(client, IkeVersion.V1)
+
+        self.assertEqual(len(result.encryption_algorithms), 1)
+        self.assertEqual(result.authentication_methods, [])
+
     def test_ikev2_no_proposal_chosen(self):
         client = _make_mock_client()
         with unittest.mock.patch.object(

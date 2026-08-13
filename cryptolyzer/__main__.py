@@ -32,6 +32,7 @@ def get_protocol_handler_analyzer_and_uris(parser, arguments):
 
     protocol_handler = ProtocolHandlerBase.from_protocol(arguments.protocol)
     analyzer = protocol_handler.analyzer_from_name(arguments.analyzer)
+    analyzer.parse_arguments(parser, arguments)
     protocol = analyzer.get_default_scheme()
     clients = analyzer.get_clients()
 
@@ -162,6 +163,7 @@ def get_argument_parser():
             parser_plugin.add_argument(
                 'targets', metavar='URI', nargs='+', help=f'[{{{scheme_list}}}://]f.q.d.n[:port][#ip]'
             )
+            analyzer_class.add_arguments(parser_plugin)
 
     return parser
 
