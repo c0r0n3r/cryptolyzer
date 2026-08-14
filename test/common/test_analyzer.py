@@ -6,7 +6,7 @@ from unittest import mock
 
 import urllib3
 
-from cryptolyzer.common.analyzer import ProtocolHandlerBase
+from cryptolyzer.common.analyzer import ProtocolHandlerBase, ProtocolHandlerTlsBase
 from cryptolyzer.common.transfer import L4TransferSocketParams
 
 from cryptolyzer.dnsrec.dnssec import AnalyzerDnsSec
@@ -18,6 +18,11 @@ class TestAnalyzer(unittest.TestCase):
     def test_error(self):
         with self.assertRaises(KeyError):
             ProtocolHandlerBase.from_protocol('unsupportedprotocol')
+
+    def test_error_unhandled_protocol_version(self):
+        protocol_version = mock.Mock(is_draft=False, is_google_experimental=False)
+        with self.assertRaises(KeyError):
+            ProtocolHandlerTlsBase.from_protocol_version(protocol_version)
 
     def test_protocol(self):
         self.assertEqual(ProtocolHandlerIKEVersionIndependent.get_protocol(), 'ike')

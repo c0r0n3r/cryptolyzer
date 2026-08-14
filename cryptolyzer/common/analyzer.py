@@ -193,6 +193,26 @@ class ProtocolHandlerTlsBase(ProtocolHandlerBase):
         return cls.get_protocol_version().identifier
 
     @classmethod
+    def handles_protocol_version(cls, protocol_version):
+        return cls.get_protocol_version() == protocol_version
+
+    @classmethod
+    def from_protocol_version(cls, protocol_version):
+        """Return the handler covering the given protocol version.
+
+        ``from_protocol`` answers the protocol name a user typed, of which there is one per handler.
+        A version a server was found to offer is not always such a name — a draft has none — so the
+        handlers are asked which versions they cover instead of being looked up by identifier.
+        """
+        cls.import_plugins()
+
+        for handler_class in get_leaf_classes(cls):
+            if handler_class.handles_protocol_version(protocol_version):
+                return handler_class()
+
+        raise KeyError(protocol_version)
+
+    @classmethod
     def _get_analyzer_args(cls):
         return ([], {'protocol_version': cls.get_protocol_version()})
 
