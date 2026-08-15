@@ -6,6 +6,15 @@ jobs=0
 
 load-plugins = pylint.extensions.no_self_use
 
+[BASIC]
+
+good-names=setUp,tearDown,setUpClass,tearDownClass
+
+[DESIGN]
+
+max-args=6
+max-positional-arguments=6
+
 [FORMAT]
 
 max-line-length=120
