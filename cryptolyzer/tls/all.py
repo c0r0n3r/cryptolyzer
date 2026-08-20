@@ -10,7 +10,7 @@ from cryptodatahub.common.algorithm import Authentication, KeyExchange
 
 from cryptoparser.tls.version import TlsProtocolVersion, TlsVersion
 
-from cryptolyzer.common.analyzer import AnalyzerTlsBase, ProtocolHandlerBase
+from cryptolyzer.common.analyzer import AnalyzerTlsBase, ProtocolHandlerTlsBase
 from cryptolyzer.common.result import AnalyzerResultAllBase, AnalyzerTargetTls
 
 from cryptolyzer.tls.ciphers import AnalyzerCipherSuites, AnalyzerResultCipherSuites
@@ -84,9 +84,8 @@ class AnalyzerAll(AnalyzerTlsBase):
     def _get_result(analyzer_class, analyzable, protocol_version):
         analyzer_name = analyzer_class.get_name()
         if protocol_version is not None:
-            protocol_handler = ProtocolHandlerBase.from_protocol(protocol_version.identifier)
-            if not (analyzer_class in protocol_handler.get_analyzers() and
-                    protocol_handler.get_protocol_version() == protocol_version):
+            protocol_handler = ProtocolHandlerTlsBase.from_protocol_version(protocol_version)
+            if analyzer_class not in protocol_handler.get_analyzers():
                 protocol_version = None
 
         if protocol_version is None:

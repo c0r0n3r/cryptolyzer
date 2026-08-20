@@ -91,6 +91,14 @@ class ProtocolHandlerTls13(ProtocolHandlerTlsExactVersion):
         ))
 
     @classmethod
+    def handles_protocol_version(cls, protocol_version):
+        return (
+            super().handles_protocol_version(protocol_version) or
+            protocol_version.is_draft or
+            protocol_version.is_google_experimental
+        )
+
+    @classmethod
     def get_protocol_version(cls):
         return TlsProtocolVersion(TlsVersion.TLS1_3)
 
