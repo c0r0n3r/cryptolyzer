@@ -238,7 +238,13 @@ class TestTlsPubKeys(TestTlsCases.TestTlsBase, TestMainBase):
     def test_error_unrecognized_name(self, mocked_do_tls_handshake):
         result = self.get_result('localhost', 0)
         self.assertEqual(len(result.pubkeys), 0)
-        self.assertEqual(mocked_do_tls_handshake.call_count, 5)
+        #  One handshake per authentication client hello without the server name, where the alert
+        #  says nothing about a name that was not sent, then a single one with it, which the alert
+        #  does answer and which therefore ends the analysis.
+        self.assertEqual(
+            mocked_do_tls_handshake.call_count,
+            len(AnalyzerPublicKeys.CLIENT_HELLO_CLASSES_BY_AUTHENTICATION) + 1,
+        )
 
     @mock.patch.object(AnalyzerPublicKeys, '_get_server_messages', return_value={TlsHandshakeType.SERVER_HELLO})
     def test_error_no_server_key_exchange(self, _):
