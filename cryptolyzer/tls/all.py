@@ -195,7 +195,9 @@ class AnalyzerAll(AnalyzerTlsBase):
     def is_public_key_supported(cipher_suite_results):
         for protocol_version, cipher_suite_result in cipher_suite_results.items():
             for cipher_suite in cipher_suite_result.cipher_suites:
-                if cipher_suite.value.authentication not in (None, Authentication.ANONYMOUS):
+                #  a TLS 1.3 cipher suite has no authentication algorithm, as it is negotiated by
+                #  the signature algorithms extension, so only an anonymous one has no public key
+                if cipher_suite.value.authentication != Authentication.ANONYMOUS:
                     return protocol_version
 
         return None
