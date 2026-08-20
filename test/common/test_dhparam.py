@@ -76,6 +76,29 @@ class TestParse(unittest.TestCase):
         self.assertTrue(dh_parameter.prime)
         self.assertTrue(dh_parameter.safe_prime)
 
+    def test_parse_dh_param_non_well_known_even(self):
+        dh_parameter = DHParameter(DHParameterNumbers(1 << 2048, 2), 2048)
+        self.assertIsNone(dh_parameter.well_known)
+        self.assertFalse(dh_parameter.prime)
+        self.assertFalse(dh_parameter.safe_prime)
+
+    def test_parse_dh_param_non_well_known_divisible_by_a_small_prime(self):
+        dh_parameter = DHParameter(DHParameterNumbers(3 * ((1 << 2046) + 1), 2), 2048)
+        self.assertIsNone(dh_parameter.well_known)
+        self.assertFalse(dh_parameter.prime)
+        self.assertFalse(dh_parameter.safe_prime)
+
+    def test_parse_dh_param_non_well_known_non_safe_prime(self):
+        # A well-known prime whose halved predecessor is composite, reused with a non-standard
+        # generator, so the prime/safe-prime check runs instead of the stored answer.
+        well_known_non_safe_prime = DHParamWellKnown.RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP
+        dh_parameter = DHParameter(
+            DHParameterNumbers(well_known_non_safe_prime.value.parameter_numbers.p, 3), 1024
+        )
+        self.assertIsNone(dh_parameter.well_known)
+        self.assertTrue(dh_parameter.prime)
+        self.assertFalse(dh_parameter.safe_prime)
+
     def test_parse_ecdh_param_secp256r1(self):
         point_data = bytes(
             b'\x04\x85\xa2\x90\xb7\x4f\x33\xe7\xae\xae\x7a\x34\xf7\xa0\x40\xf8' +
