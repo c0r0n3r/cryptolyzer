@@ -31,6 +31,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloAuthenticationRSA,
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationGOST,
+    TlsHandshakeClientHelloAuthenticationSM2,
 )
 from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
 
@@ -86,6 +87,17 @@ class AnalyzerResultPublicKeys(AnalyzerResultTls):  # pylint: disable=too-few-pu
 
 
 class AnalyzerPublicKeys(AnalyzerTlsBase):
+    #  A server is asked for its certificate with each of these in turn, so a server that
+    #  authenticates itself with an algorithm missing from all of them answers none of the probes
+    #  and its certificate is reported as absent rather than read.
+    CLIENT_HELLO_CLASSES_BY_AUTHENTICATION = (
+        TlsHandshakeClientHelloAuthenticationDSS,
+        TlsHandshakeClientHelloAuthenticationRSA,
+        TlsHandshakeClientHelloAuthenticationECDSA,
+        TlsHandshakeClientHelloAuthenticationGOST,
+        TlsHandshakeClientHelloAuthenticationSM2,
+    )
+
     @classmethod
     def get_name(cls):
         return 'pubkeys'
@@ -259,10 +271,8 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
                 client_hello_params['named_curves'] = supported_named_curves
 
             client_hello_messages = [
-                TlsHandshakeClientHelloAuthenticationDSS(**client_hello_params),
-                TlsHandshakeClientHelloAuthenticationRSA(**client_hello_params),
-                TlsHandshakeClientHelloAuthenticationECDSA(**client_hello_params),
-                TlsHandshakeClientHelloAuthenticationGOST(**client_hello_params),
+                client_hello_class(**client_hello_params)
+                for client_hello_class in self.CLIENT_HELLO_CLASSES_BY_AUTHENTICATION
             ]
             for client_hello in client_hello_messages:
                 sni_sent = hostname is not None

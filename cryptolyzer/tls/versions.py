@@ -24,6 +24,7 @@ from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloSpecalization,
     TlsHandshakeClientHelloAuthenticationECDSA,
     TlsHandshakeClientHelloAuthenticationRSA,
+    TlsHandshakeClientHelloAuthenticationSM2,
     TlsHandshakeClientHelloAuthenticationDeprecated,
 )
 from cryptolyzer.tls.exception import TlsAlert, UnexpectedAlertError
@@ -70,10 +71,14 @@ class AnalyzerResultVersions(AnalyzerResultTls):  # pylint: disable=too-few-publ
 
 
 class AnalyzerVersions(AnalyzerTlsBase):
+    #  A server is probed with each of these in turn until one of them completes a handshake, so a
+    #  server whose only cipher suites are missing from all of them is reported as supporting no
+    #  protocol version at all — and every other analyzer then has nothing to work from.
     _TLS_CLIENT_HELLO_CLASSES_IN_ORDER_OF_PROBABILITY = (
         TlsHandshakeClientHelloAuthenticationRSA,
         TlsHandshakeClientHelloAuthenticationECDSA,
         TlsHandshakeClientHelloAuthenticationDeprecated,
+        TlsHandshakeClientHelloAuthenticationSM2,
     )
     _DRAFT_VERSIONS_IN_REVERSE_ORDER = tuple(reversed([
         tls_protocol_version

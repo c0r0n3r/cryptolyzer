@@ -368,14 +368,21 @@ class TlsHandshakeClientHelloAuthenticationSM2(TlsHandshakeClientHelloAuthentica
     NAMED_CURVES = [TlsNamedCurve.CURVESM2]
     KEY_SHARE_CURVES = [TlsNamedCurve.CURVESM2]
 
-    def __init__(self, protocol_version, hostname):
+    def __init__(self, protocol_version, hostname, named_curves=None, extensions=None):
+        if named_curves is None:
+            named_curves = self.NAMED_CURVES
+            key_share_curves = self.KEY_SHARE_CURVES
+        else:
+            key_share_curves = named_curves
+
         super().__init__(
             protocol_version=protocol_version,
             hostname=hostname,
             authentications=[Authentication.SM2],
-            named_curves=self.NAMED_CURVES,
+            named_curves=named_curves,
             signature_algorithms=None,
-            key_share_curves=self.KEY_SHARE_CURVES,
+            key_share_curves=key_share_curves,
+            extensions=extensions,
         )
 
 

@@ -133,6 +133,13 @@ class CertificateChainX509:
 
 @attr.s
 class CertificateChainX509Validator:  # pylint: disable=too-few-public-methods
+    _CHAIN_NOT_VALIDATABLE_EXCEPTIONS = (
+        certvalidator.errors.PathBuildingError,
+        certvalidator.errors.PathValidationError,
+        OSError,
+        ValueError,
+    )
+
     _validated = attr.ib(
         init=False,
         default=None,
@@ -178,7 +185,7 @@ class CertificateChainX509Validator:  # pylint: disable=too-few-public-methods
         )
         try:
             build_path = cert_validator.validate_usage(set())
-        except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError, OSError):
+        except self._CHAIN_NOT_VALIDATABLE_EXCEPTIONS:
             self._validated.items = items
         else:
             self._validated.items = [PublicKeyX509(item) for item in reversed(build_path)]
@@ -209,7 +216,7 @@ class CertificateChainX509Validator:  # pylint: disable=too-few-public-methods
             )
             try:
                 cert_validator.validate_usage(set())
-            except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError, OSError):
+            except self._CHAIN_NOT_VALIDATABLE_EXCEPTIONS:
                 trust_roots.append((trust_store_owner, False))
             else:
                 trust_roots.append((trust_store_owner, True))
@@ -243,7 +250,7 @@ class CertificateChainX509Validator:  # pylint: disable=too-few-public-methods
             except certvalidator.errors.RevokedError:
                 self._validated.revoked = True
                 return
-            except (certvalidator.errors.PathBuildingError, certvalidator.errors.PathValidationError, OSError):
+            except self._CHAIN_NOT_VALIDATABLE_EXCEPTIONS:
                 pass
             else:
                 self._validated.revoked = False
@@ -270,12 +277,7 @@ class CertificateChainX509Validator:  # pylint: disable=too-few-public-methods
             cert_validator.validate_usage(set())
         except certvalidator.errors.RevokedError:
             self._validated.revoked = True
-        except (
-            certvalidator.errors.PathBuildingError,
-            certvalidator.errors.PathValidationError,
-            OSError,
-            http.client.InvalidURL,
-        ):
+        except self._CHAIN_NOT_VALIDATABLE_EXCEPTIONS + (http.client.InvalidURL,):
             pass
         else:
             self._validated.revoked = False
