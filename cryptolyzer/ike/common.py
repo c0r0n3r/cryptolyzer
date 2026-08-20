@@ -5,8 +5,8 @@ import typing
 
 import attr
 
-from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, NamedGroup, Hash
-from cryptodatahub.common.parameter import DHParamWellKnown
+from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, Hash
+from cryptodatahub.common.pqc import KeyParameter, validate_key_parameter
 from cryptodatahub.ike.algorithm import (
     Ikev1AuthenticationMethod,
     Ikev1DiffieHellmanGroup,
@@ -46,8 +46,8 @@ class Ikev1CipherSuite:
     block_cipher_mode: typing.Optional[BlockCipherMode] = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(BlockCipherMode))
     )
-    diffie_hellman_group: typing.Union[NamedGroup, DHParamWellKnown, str] = attr.ib(
-        validator=attr.validators.instance_of((NamedGroup, DHParamWellKnown))
+    diffie_hellman_group: KeyParameter = attr.ib(
+        validator=validate_key_parameter()
     )
     hash_algorithm: Hash = attr.ib(
         validator=attr.validators.instance_of(Hash)
@@ -94,8 +94,8 @@ class Ikev2CipherSuite:
     pseudorandom_function: MAC = attr.ib(
         validator=attr.validators.instance_of(MAC)
     )
-    diffie_hellman_group: typing.Union[NamedGroup, DHParamWellKnown] = attr.ib(
-        validator=attr.validators.instance_of((NamedGroup, DHParamWellKnown))
+    diffie_hellman_group: KeyParameter = attr.ib(
+        validator=validate_key_parameter()
     )
     integrity_algorithm: typing.Optional[MAC] = attr.ib(
         default=None,

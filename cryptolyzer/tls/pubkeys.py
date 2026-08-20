@@ -176,11 +176,11 @@ class AnalyzerPublicKeys(AnalyzerTlsBase):
 
     @staticmethod
     def _tls13_pubkeys_named_curves_supported_by_backend():
-        backend_groups = set(dhe_ephemeral_material_backend.supported_named_groups())
+        backend_groups = set(dhe_ephemeral_material_backend.supported_key_parameters())
         return [
             tls_named_curve
             for tls_named_curve in TlsNamedCurve
-            if tls_named_curve.value.named_group in backend_groups
+            if tls_named_curve.value.key_parameter in backend_groups
         ]
 
     @staticmethod

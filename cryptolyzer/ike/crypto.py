@@ -16,7 +16,8 @@ import typing
 
 import attr
 
-from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, MAC, NamedGroup
+from cryptodatahub.common.algorithm import BlockCipher, BlockCipherMode, MAC
+from cryptodatahub.common.parameter import ECParamWellKnown
 from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptodatahub.ike.algorithm import (
     Ikev1AuthenticationMethod,
@@ -252,7 +253,7 @@ class _EphemeralKeyExchangeBackendCryptodome:
     :class:`EphemeralKeyExchangeEllipticCurveCryptodome` /
     :class:`EphemeralKeyExchangeFiniteFieldCryptodome` primitives but
     translates IKEv2's :class:`Ikev2DiffieHellmanGroup` enum to the
-    protocol-neutral :class:`NamedGroup` / :class:`DHParamWellKnown`
+    protocol-neutral :class:`ECParamWellKnown` / :class:`DHParamWellKnown`
     that the common primitives consume.
     """
 
@@ -368,8 +369,8 @@ class _EphemeralKeyExchangeBackendCryptodome:
     ) -> EphemeralKeyExchangeBase:
         """Build a real-DH ephemeral instance for ``dh_group``."""
         key_parameter = dh_group.value.key_parameter
-        if isinstance(key_parameter, NamedGroup):
-            return EphemeralKeyExchangeEllipticCurveCryptodome(named_group=key_parameter)
+        if isinstance(key_parameter, ECParamWellKnown):
+            return EphemeralKeyExchangeEllipticCurveCryptodome(key_parameter=key_parameter)
         if isinstance(key_parameter, DHParamWellKnown):
             return EphemeralKeyExchangeFiniteFieldCryptodome(dh_parameters=key_parameter)
         raise NotImplementedError(dh_group)
@@ -407,8 +408,8 @@ class _EphemeralKeyExchangeBackendCryptodome:
         """
         public_key_bytes = ephemeral_key_exchange.public_key_bytes
         key_parameter = dh_group.value.key_parameter
-        if isinstance(key_parameter, NamedGroup) and key_parameter not in (
-            NamedGroup.CURVE25519, NamedGroup.CURVE448,
+        if isinstance(key_parameter, ECParamWellKnown) and key_parameter not in (
+            ECParamWellKnown.CURVE25519, ECParamWellKnown.CURVE448,
         ):
             return public_key_bytes[1:]
 
@@ -426,8 +427,8 @@ class _EphemeralKeyExchangeBackendCryptodome:
         Weierstrass curves.
         """
         key_parameter = dh_group.value.key_parameter
-        if isinstance(key_parameter, NamedGroup) and key_parameter not in (
-            NamedGroup.CURVE25519, NamedGroup.CURVE448,
+        if isinstance(key_parameter, ECParamWellKnown) and key_parameter not in (
+            ECParamWellKnown.CURVE25519, ECParamWellKnown.CURVE448,
         ):
             return b'\x04' + bytes(key_exchange_data)
         return bytes(key_exchange_data)

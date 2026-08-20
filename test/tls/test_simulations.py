@@ -291,7 +291,11 @@ class TestTlsSimulations(TestLoggerBase, TestMainBase):
             for analyzer_result in tls_1_3_results
         ))
         self.assertTrue(all(
-            analyzer_result.key_size in [PublicKeySize(KeyExchange.ECDHE, 256), PublicKeySize(KeyExchange.ECDHE, 1120)]
+            analyzer_result.key_size in [
+                PublicKeySize(KeyExchange.ECDHE, 255),
+                PublicKeySize(KeyExchange.ECDHE, 256),
+                PublicKeySize(KeyExchange.ECDHE, 1120),
+            ]
             for analyzer_result in tls_1_3_results
         ))
         self.assertTrue(result)

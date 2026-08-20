@@ -5,7 +5,8 @@ import abc
 import secrets
 import typing
 
-from cryptodatahub.common.algorithm import IpProtocolNumber, NamedGroup
+from cryptodatahub.common.algorithm import IpProtocolNumber
+from cryptodatahub.common.parameter import ECParamWellKnown
 from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptodatahub.ike.algorithm import (
     Ikev1AuthenticationMethod,
@@ -166,10 +167,10 @@ class _AnalyzerIkePubkeyBase(AnalyzerIKEBase):
                     get_dh_ephemeral_key_forged(
                         key_parameter.value.parameter_numbers.p,
                     ),
-                    key_parameter.value.key_size // 8,
+                    key_parameter.value.field_size // 8,
                 ),
             )
-        if isinstance(key_parameter, NamedGroup):
+        if isinstance(key_parameter, ECParamWellKnown):
             ephemeral = dhe_ephemeral_material_backend.create_ephemeral_material(dh_group)
             return Ikev1PayloadKeyExchange(
                 key_exchange_data=dhe_ephemeral_material_backend.key_exchange_wire_bytes(dh_group, ephemeral),

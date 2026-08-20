@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import unittest
-from unittest import mock
 from test.common.markers import live_server
 from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS, OFFLINE_L4_SOCKET_PARAMS
 
-from cryptodatahub.common.algorithm import NamedGroup
+from cryptodatahub.common.parameter import ECParamWellKnown
+from cryptodatahub.ssh.algorithm import SshKexAlgorithm
 
 from cryptoparser.ssh.subprotocol import (
     SshDHKeyExchangeReply,
@@ -19,7 +19,6 @@ from cryptolyzer.ssh.client import (
     L7ClientSsh,
     SshKeyExchangeInitKeyExchangeDHE,
     SshKeyExchangeInitKeyExchangeECDHE,
-    SSH_KEX_ALGORITHMS_TO_NAMED_GROUP,
 )
 from cryptolyzer.ssh.exception import SshDisconnect
 from cryptolyzer.ssh.server import L7ServerSsh, SshServerConfiguration
@@ -44,7 +43,6 @@ class TestL7ClientBase(unittest.TestCase):
 
 
 class TestSshClientHandshake(TestL7ClientBase):
-    @mock.patch('cryptolyzer.ssh.client.SSH_KEX_ALGORITHMS_TO_NAMED_GROUP', {})
     def test_error_kex_not_implemented(self):
         threaded_server = L7ServerSshTest(L7ServerSsh(
             'localhost', 0, OFFLINE_L4_SOCKET_PARAMS,
@@ -52,10 +50,13 @@ class TestSshClientHandshake(TestL7ClientBase):
         ))
         threaded_server.start()
 
+        key_exchange_init_message = SshKeyExchangeInitKeyExchangeECDHE()
+        key_exchange_init_message.kex_algorithms = SshKexAlgorithmVector([SshKexAlgorithm.ECMQV_SHA2])
+
         l7_client = L7ClientSsh('localhost', l4_socket_params=OFFLINE_CLIENT_L4_SOCKET_PARAMS)
         l7_client.port = threaded_server.l7_server.l4_transfer.bind_port
         with self.assertRaises(NotImplementedError):
-            l7_client.do_handshake(key_exchange_init_message=SshKeyExchangeInitKeyExchangeECDHE(), last_message_type=-1)
+            l7_client.do_handshake(key_exchange_init_message=key_exchange_init_message, last_message_type=-1)
 
     def test_error_disconnect(self):
         threaded_server = L7ServerSshTest(L7ServerSsh(
@@ -79,9 +80,9 @@ class TestSshClientHandshake(TestL7ClientBase):
         l7_client = L7ClientSsh('github.com')
         key_exchange_init_message = SshKeyExchangeInitKeyExchangeECDHE()
         key_exchange_init_message.kex_algorithms = SshKexAlgorithmVector(filter(
-            lambda kex_algorithm: SSH_KEX_ALGORITHMS_TO_NAMED_GROUP.get(kex_algorithm, None) in [
-                NamedGroup.CURVE25519,
-                NamedGroup.CURVE448,
+            lambda kex_algorithm: kex_algorithm.value.key_parameter in [
+                ECParamWellKnown.CURVE25519,
+                ECParamWellKnown.CURVE448,
             ],
             key_exchange_init_message.kex_algorithms
         ))
@@ -94,9 +95,9 @@ class TestSshClientHandshake(TestL7ClientBase):
         l7_client = L7ClientSsh('github.com')
         key_exchange_init_message = SshKeyExchangeInitKeyExchangeECDHE()
         key_exchange_init_message.kex_algorithms = SshKexAlgorithmVector(filter(
-            lambda kex_algorithm: SSH_KEX_ALGORITHMS_TO_NAMED_GROUP.get(kex_algorithm, None) not in [
-                NamedGroup.CURVE25519,
-                NamedGroup.CURVE448,
+            lambda kex_algorithm: kex_algorithm.value.key_parameter not in [
+                ECParamWellKnown.CURVE25519,
+                ECParamWellKnown.CURVE448,
             ],
             key_exchange_init_message.kex_algorithms
         ))

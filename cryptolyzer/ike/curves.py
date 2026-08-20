@@ -3,7 +3,7 @@ import typing
 
 import attr
 
-from cryptodatahub.common.algorithm import NamedGroup, NamedGroupType
+from cryptodatahub.common.parameter import ECParamWellKnown
 from cryptodatahub.ike.algorithm import (
     Ikev1DiffieHellmanGroup,
     Ikev2DiffieHellmanGroup,
@@ -47,10 +47,7 @@ class AnalyzerCurves(AnalyzerDHBase):
     @classmethod
     def _get_dh_groups(cls, dh_group_type):
         return list(filter(
-            lambda named_group: (
-                isinstance(named_group.value.key_parameter, NamedGroup)
-                and named_group.value.key_parameter.value.group_type != NamedGroupType.HYBRID_PQS
-            ),
+            lambda dh_group: isinstance(dh_group.value.key_parameter, ECParamWellKnown),
             dh_group_type
         ))
 

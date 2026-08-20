@@ -274,13 +274,13 @@ class TestTls13ClientHelloKeyShare(unittest.TestCase):
         self.assertEqual(entry.group, TlsNamedCurve.FFDHE2048)
         self.assertGreater(len(entry.key_exchange), 0)
 
-    def test_key_share_entry_named_group_none(self):
-        none_group = next(curve for curve in TlsNamedCurve if curve.value.named_group is None)
+    def test_key_share_entry_key_parameter_none(self):
+        none_group = next(curve for curve in TlsNamedCurve if curve.value.key_parameter is None)
         with self.assertRaises(NotImplementedError):
             key_share_entry_from_named_curve(none_group)
 
-    def test_tls13_pubkeys_key_share_extensions_skips_none_named_group(self):
-        none_group_curves = [curve for curve in TlsNamedCurve if curve.value.named_group is None]
+    def test_tls13_pubkeys_key_share_extensions_skips_none_key_parameter(self):
+        none_group_curves = [curve for curve in TlsNamedCurve if curve.value.key_parameter is None]
         self.assertGreater(len(none_group_curves), 0)
         extensions, key_exchange = dhe_ephemeral_material_backend.build_tls13_key_shares(none_group_curves)
         self.assertEqual(len(extensions[0].key_share_entries), 0)

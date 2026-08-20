@@ -3,9 +3,14 @@
 import unittest
 import attr
 
-from cryptodatahub.common.algorithm import NamedGroup
 from cryptodatahub.common.entity import Entity
-from cryptodatahub.common.parameter import DHParameterNumbers, DHParamWellKnown, Standard
+from cryptodatahub.common.parameter import (
+    DHParameterNumbers,
+    DHParamWellKnown,
+    ECParamWellKnown,
+    Standard,
+)
+from cryptodatahub.common.pqc import HybridNamedGroup
 
 from cryptoparser.tls.extension import TlsNamedCurve
 
@@ -34,14 +39,25 @@ class TestUtils(unittest.TestCase):
 
 class TestForge(unittest.TestCase):
     def test_error_not_implemented(self):
+        finite_field_group = DHParamWellKnown.RFC7919_2048_BIT_FINITE_FIELD_DIFFIE_HELLMAN_GROUP
         with self.assertRaises(NotImplementedError) as context_manager:
-            get_ecdh_ephemeral_key_forged(NamedGroup.C2ONB191V4)
-        self.assertEqual(context_manager.exception.args, (NamedGroup.C2ONB191V4,))
+            get_ecdh_ephemeral_key_forged(finite_field_group)
+        self.assertEqual(context_manager.exception.args, (finite_field_group,))
+
+    def test_error_not_implemented_size_unknown(self):
+        with self.assertRaises(NotImplementedError) as context_manager:
+            get_ecdh_ephemeral_key_forged(HybridNamedGroup.X25519_ML_KEM_768)
+        self.assertEqual(context_manager.exception.args, (HybridNamedGroup.X25519_ML_KEM_768,))
 
     def test_forge(self):
-        self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.CURVE25519)), 32)
-        self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.PRIME256V1)), 65)
-        self.assertEqual(len(get_ecdh_ephemeral_key_forged(NamedGroup.SECP521R1)), 133)
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(ECParamWellKnown.CURVE25519)), 32)
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(ECParamWellKnown.PRIME256V1)), 65)
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(ECParamWellKnown.SECP521R1)), 133)
+
+    def test_forge_montgomery(self):
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(ECParamWellKnown.CURVE448)), 56)
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(ECParamWellKnown.M383)), 48)
+        self.assertEqual(len(get_ecdh_ephemeral_key_forged(ECParamWellKnown.M511)), 64)
 
 
 class TestParse(unittest.TestCase):
@@ -57,11 +73,11 @@ class TestParse(unittest.TestCase):
             ),
             {
                 'vulnerabilities': [],
-                'key_size': 2048,
+                'field_size': 2048,
                 'name': '2048-bit MODP Group/Oakley Group 14',
-                'safe_prime': True,
-                'source': Entity.IETF,
-                'standards': [Standard.RFC_3526]
+                'long_name': None,
+                'aliases': [],
+                'sources': [Standard.RFC_3526, Entity.IETF],
             }
         )
 
@@ -124,7 +140,7 @@ class TestWellKnown(unittest.TestCase):
     def test_all_well_known_dhparam(self):
         dh_params = [
             DHParameter(
-                well_known_dh_param.value.parameter_numbers, well_known_dh_param.value.key_size
+                well_known_dh_param.value.parameter_numbers, well_known_dh_param.value.field_size
             )
             for well_known_dh_param in DHParamWellKnown
         ]
@@ -134,7 +150,7 @@ class TestWellKnown(unittest.TestCase):
         dh_well_known_rfc5114_1024 = DHParamWellKnown.RFC5114_1024_BIT_MODP_GROUP_WITH_160_BIT_PRIME_ORDER_SUBGROUP
         dh_param = DHParameter(
             dh_well_known_rfc5114_1024.value.parameter_numbers,
-            dh_well_known_rfc5114_1024.value.key_size
+            dh_well_known_rfc5114_1024.value.field_size
         )
         self.assertEqual(dh_param.as_markdown(), '\n'.join([
             '* Key Size: 1024',

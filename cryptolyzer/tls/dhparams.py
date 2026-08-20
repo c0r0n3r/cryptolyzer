@@ -26,7 +26,6 @@ from cryptolyzer.common.result import AnalyzerResultTls, AnalyzerTargetTls
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.tls.client import (
     TlsHandshakeClientHelloKeyExchangeDHE,
-    NAMED_CURVE_TO_RFC7919_WELL_KNOWN,
     RFC7919_WELL_KNOWN_TO_NAMED_CURVE,
     key_share_entry_from_named_curve,
 )
@@ -83,14 +82,14 @@ class AnalyzerDHParams(AnalyzerTlsBase):
     @staticmethod
     def _get_public_key_tls_1_3(server_messages):
         key_share_extension = AnalyzerDHParams._get_extension_key_share(server_messages)
-        well_known = NAMED_CURVE_TO_RFC7919_WELL_KNOWN[key_share_extension.key_share_entry.group]
+        well_known = key_share_extension.key_share_entry.group.value.key_parameter
         y = int(  # pylint: disable=invalid-name
             codecs.encode(bytes(list(key_share_extension.key_share_entry.key_exchange)), 'hex_codec'), 16
         )
 
         public_numbers = DHPublicNumbers(y, well_known.value.parameter_numbers)
 
-        return DHPublicKey(public_numbers, well_known.value.key_size)
+        return DHPublicKey(public_numbers, well_known.value.field_size)
 
     @staticmethod
     def _get_public_key_tls_1_x(server_messages):
@@ -157,7 +156,7 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
     def _analyze_tls_1_x(self, analyzable, client_hello):
         dhparam = None
-        named_groups = []
+        named_curves = []
         has_extenstion = True
         while True:
             try:
@@ -173,19 +172,19 @@ class AnalyzerDHParams(AnalyzerTlsBase):
             is_rfc7919_dhparam = (_dhparam.well_known and
                                   _dhparam.well_known in RFC7919_WELL_KNOWN_TO_NAMED_CURVE)
             if is_rfc7919_dhparam:
-                named_group = RFC7919_WELL_KNOWN_TO_NAMED_CURVE[_dhparam.well_known]
+                named_curve = RFC7919_WELL_KNOWN_TO_NAMED_CURVE[_dhparam.well_known]
 
                 # no supported group extension, but FFDHE parameter is used
-                if not has_extenstion or named_group in named_groups:
+                if not has_extenstion or named_curve in named_curves:
                     dhparam = _dhparam
-                    named_groups = []
+                    named_curves = []
                     LogSingleton().log(
                         level=60, msg=f'Server offers {dhparam.well_known.value} ({client_hello.protocol_version})'
                     )
                     break
 
-                has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_group)
-                named_groups.append(named_group)
+                has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_curve)
+                named_curves.append(named_curve)
                 LogSingleton().log(
                     level=60, msg=f'Server offers {_dhparam.well_known.value} ({client_hello.protocol_version})'
                 )
@@ -206,29 +205,28 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                     )
                 break
 
-        return dhparam, named_groups
+        return dhparam, named_curves
 
     def _analyze_tls_1_3(self, analyzable, client_hello, protocol_version):
-        named_groups = []
+        named_curves = []
         has_extenstion = True
         while has_extenstion:
             try:
                 server_messages = self._get_server_messages(analyzable, True, client_hello)
-                named_group = AnalyzerDHParams._get_selected_group_tls_1_3(server_messages)
+                named_curve = AnalyzerDHParams._get_selected_group_tls_1_3(server_messages)
             except StopIteration:
                 break
 
-            named_groups.append(named_group)
-            has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_group)
+            named_curves.append(named_curve)
+            has_extenstion = AnalyzerDHParams._remove_selected_group_among_supported_ones(client_hello, named_curve)
+            field_size = named_curve.value.key_parameter.value.field_size
+            size_message = 'unknown size' if field_size is None else f'size {field_size}-bit'
             LogSingleton().log(
                 level=60,
-                msg=(
-                    'Server offers FFDHE public parameter with size '
-                    f'{named_group.value.named_group.value.size}-bit ({protocol_version})'
-                )
+                msg=f'Server offers FFDHE public parameter with {size_message} ({protocol_version})'
             )
 
-        return named_groups
+        return named_curves
 
     def analyze(self, analyzable, protocol_version):
         super().analyze(analyzable, protocol_version)
@@ -236,18 +234,18 @@ class AnalyzerDHParams(AnalyzerTlsBase):
         is_tls_1_3 = protocol_version > TlsProtocolVersion(TlsVersion.TLS1_2)
 
         if is_tls_1_3:
-            named_groups = self._analyze_tls_1_3(analyzable, client_hello, protocol_version)
+            named_curves = self._analyze_tls_1_3(analyzable, client_hello, protocol_version)
             dhparam = None
         else:
-            dhparam, named_groups = self._analyze_tls_1_x(analyzable, client_hello)
+            dhparam, named_curves = self._analyze_tls_1_x(analyzable, client_hello)
 
         key_reuse = None
-        if named_groups or dhparam:
+        if named_curves or dhparam:
             try_count = 3
             ephemeral_keys = set()
             client_hello = TlsHandshakeClientHelloKeyExchangeDHE(protocol_version, analyzable.address)
 
-            if named_groups:
+            if named_curves:
                 extensions = [
                     extension
                     for extension in client_hello.extensions
@@ -255,8 +253,8 @@ class AnalyzerDHParams(AnalyzerTlsBase):
                 ]
                 client_hello.extensions = TlsExtensionsClient(
                     extensions + [
-                        TlsExtensionKeyShareClient([key_share_entry_from_named_curve(named_groups[0])]),
-                        TlsExtensionKeyShareReservedClient([key_share_entry_from_named_curve(named_groups[0])]),
+                        TlsExtensionKeyShareClient([key_share_entry_from_named_curve(named_curves[0])]),
+                        TlsExtensionKeyShareReservedClient([key_share_entry_from_named_curve(named_curves[0])]),
                     ]
                 )
 
@@ -273,5 +271,5 @@ class AnalyzerDHParams(AnalyzerTlsBase):
 
         return AnalyzerResultDHParams(
             AnalyzerTargetTls.from_l7_client(analyzable, protocol_version),
-            named_groups, dhparam, key_reuse
+            named_curves, dhparam, key_reuse
         )

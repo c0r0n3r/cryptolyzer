@@ -143,7 +143,7 @@ class AnalyzerCurves(AnalyzerTlsBase):
                 extension_supported = False
                 break
 
-            LogSingleton().log(level=60, msg=f'Server offers elliptic-curve {supported_curve.value.named_group.name}')
+            LogSingleton().log(level=60, msg=f'Server offers elliptic-curve {supported_curve.value.key_parameter.name}')
             supported_curves.update([(supported_curve.name, supported_curve), ])
 
         return AnalyzerResultCurves(

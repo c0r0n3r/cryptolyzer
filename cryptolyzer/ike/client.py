@@ -9,7 +9,7 @@ import typing
 
 import attr
 
-from cryptodatahub.common.algorithm import NamedGroup
+from cryptodatahub.common.parameter import ECParamWellKnown
 from cryptodatahub.common.parameter import DHParamWellKnown
 from cryptodatahub.common.exception import InvalidValue
 from cryptodatahub.ike.algorithm import (
@@ -108,7 +108,7 @@ class IkeSecurityAssociationBase(IsakmpMessage):
         ]
         ecdh_groups = [
             dh_group for dh_group in dh_groups
-            if isinstance(dh_group.value.key_parameter, NamedGroup)
+            if isinstance(dh_group.value.key_parameter, ECParamWellKnown)
             and (backend_supported is None or dh_group in backend_supported)
         ]
         return ffdh_groups, ecdh_groups
@@ -133,12 +133,12 @@ class IkeSecurityAssociationBase(IsakmpMessage):
         if ephemeral is not None:
             return dhe_ephemeral_material_backend.key_exchange_wire_bytes(dh_group, ephemeral)
         key_parameter = dh_group.value.key_parameter
-        if isinstance(key_parameter, NamedGroup):
+        if isinstance(key_parameter, ECParamWellKnown):
             return get_ecdh_ephemeral_key_forged(key_parameter, add_point_format_octet=False)
         if isinstance(key_parameter, DHParamWellKnown):
             return int_to_bytes(
                 get_dh_ephemeral_key_forged(key_parameter.value.parameter_numbers.p),
-                key_parameter.value.key_size // 8,
+                key_parameter.value.field_size // 8,
             )
         return None
 

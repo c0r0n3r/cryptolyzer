@@ -597,7 +597,7 @@ class TestBuildInitMessages(unittest.TestCase):
         self.assertEqual(len(bytes(key_exchange.key_exchange_data)), 132)
 
     def test_unsupported_key_parameter_raises(self):
-        # NamedGroup / DHParamWellKnown are the only two recognised
+        # an elliptic curve and a Diffie-Hellman group are the only two recognised
         # key-parameter shapes; a synthetic DH group whose key_parameter
         # is neither must raise so we do not silently emit a KE payload
         # the responder can never verify.
@@ -885,7 +885,7 @@ class TestIkev2AppendKeyExchangePayload(unittest.TestCase):
     def test_unsupported_group_appends_nothing(self):
         # 768-bit MODP has DHParamWellKnown.RFC2539_768_BIT_MODP_GROUP, so it
         # would yield a forged payload — exercise the no-append path by
-        # using a mocked dh_group with non-NamedGroup non-DHParamWellKnown
+        # using a mocked dh_group with neither an elliptic curve nor a Diffie-Hellman group
         # key_parameter.
         bogus = mock.Mock()
         bogus.value.key_parameter = 'UNRECOGNISED'
