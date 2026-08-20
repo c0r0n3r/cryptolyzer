@@ -400,7 +400,7 @@ class TlsHandshakeClientHelloAuthenticationDeprecated(  # pylint: disable=too-ma
             hostname=hostname,
             protocol_versions=[protocol_version, ],
             cipher_suites=_cipher_suites,
-            named_curves=[],
+            named_curves=None,
             signature_algorithms=[],
             extensions=[]
         )
