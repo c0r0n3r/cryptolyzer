@@ -17,7 +17,7 @@ from cryptoparser.common.parse import ParserBinary
 from cryptoparser.tls.extension import TlsNamedCurveFactory
 from cryptoparser.tls.subprotocol import TlsECCurveType
 
-from .prime import is_prime, prime_precheck
+from .prime import is_prime, SMALL_PRIMES
 
 
 @attr.s
@@ -133,17 +133,23 @@ class DHParameter(Serializable):
     prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
     safe_prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
 
+    def _is_prime(self):
+        prime = self.parameter_numbers.p
+
+        if prime % 2 == 0:
+            return False
+
+        if any(prime % small_prime == 0 for small_prime in SMALL_PRIMES if small_prime != prime):
+            return False
+
+        return is_prime(self.key_size.value, prime)
+
+    def _is_safe_prime(self):
+        return is_prime(self.key_size.value, self.parameter_numbers.p // 2)
+
     def _check_prime(self):
-        param_num_p = self.parameter_numbers.p
-        param_num_g = self.parameter_numbers.g
-
-        self.prime, self.safe_prime = prime_precheck(param_num_p, param_num_g)
-
-        # If the number is not divisible by any of the small primes, then
-        # move on to the full Miller-Rabin test.
-        self.prime = is_prime(self.key_size.value, param_num_p)
-        if self.prime:
-            self.safe_prime = is_prime(self.key_size.value, param_num_p // 2)
+        self.prime = self._is_prime()
+        self.safe_prime = self.prime and self._is_safe_prime()
 
     def __attrs_post_init__(self):
         for well_know_public_number in DHParamWellKnown:

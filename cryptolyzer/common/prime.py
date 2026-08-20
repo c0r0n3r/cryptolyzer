@@ -266,39 +266,6 @@ SMALL_PRIMES = [
 ]
 
 
-def prime_precheck(p, g):
-    prime = None
-    safe_prime = None
-
-    # If a number is even, it can't be prime
-    if p % 2 == 0:
-        prime = False
-        return prime, safe_prime
-
-    # Perform the generator checks outlined in OpenSSL's
-    # dh_builtin_genparams() located in dh_gen.c
-    if g == 2:
-        if p % 24 != 11:
-            safe_prime = False
-            return prime, safe_prime
-    elif g == 5:
-        rem = p % 10
-        if rem not in (3, 7):
-            safe_prime = False
-            return prime, safe_prime
-
-    divisible = False
-    for prime in SMALL_PRIMES:
-        if p % prime == 0:
-            divisible = True
-
-    if divisible:
-        safe_prime = False
-        return prime, safe_prime
-
-    return prime, safe_prime
-
-
 def is_prime(bit_size, n):
     """
     An implementation of Miller–Rabin for checking if a number is prime.
