@@ -88,6 +88,8 @@ coveralls:
     CI_BUILD_NUMBER: "${CI_JOB_ID}"
     CI_BUILD_URL: "${CI_JOB_URL}"
     CI_BRANCH: "${CI_COMMIT_REF_NAME}"
+    CRYPTOLYZER_TEST_SKIP_LIVE_SERVER: "1"
+    CRYPTOLYZER_TEST_SKIP_LIVE_DNS: "1"
     GIT_SUBMODULE_DEPTH: 1
     GIT_SUBMODULE_STRATEGY: recursive
     PYTHONPATH: "submodules/cryptoparser:submodules/cryptoparser/submodules/cryptodatahub"
