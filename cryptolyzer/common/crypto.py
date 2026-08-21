@@ -156,12 +156,14 @@ class EphemeralKeyExchangeEllipticCurveCryptodome(EphemeralKeyExchangeEllipticCu
 class EphemeralKeyExchangeFiniteFieldCryptodome(EphemeralKeyExchangeFiniteField):
     """Class for finite-finite ephemeral key agreement supported by PyCryptodome."""
 
+    _PRIVATE_KEY_LENGTH_BITS_FOR_FAST_MODULAR_EXPONENTIATION: typing.ClassVar[int] = 160
+
     def _is_group_supported(self) -> None:
         pass
 
     def generate_key_pair(self) -> None:
         params = self.dh_parameters.value
-        random_bytes = os.urandom(params.field_size // 8)
+        random_bytes = os.urandom(self._PRIVATE_KEY_LENGTH_BITS_FOR_FAST_MODULAR_EXPONENTIATION // 8)
         self._private_key = int.from_bytes(random_bytes, 'big') % (params.parameter_numbers.p - 2) + 2
         self._public_key = pow(params.parameter_numbers.g, self._private_key, params.parameter_numbers.p)
 
