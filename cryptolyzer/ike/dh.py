@@ -17,7 +17,7 @@ from cryptodatahub.ike.algorithm import (
 
 from cryptodatahub.ike.version import IkeVersion
 
-from cryptolyzer.common.analyzer import AnalyzerIKEBase
+from cryptolyzer.ike.common import AnalyzerIKEBase
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.utils import LogSingleton
 

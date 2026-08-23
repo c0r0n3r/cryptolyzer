@@ -56,7 +56,7 @@ from cryptoparser.ike.ikev1 import (
 )
 
 from cryptolyzer import __setup__
-from cryptolyzer.common.analyzer import AnalyzerIKEBase
+from cryptolyzer.ike.common import AnalyzerIKEBase
 from cryptolyzer.common.dhparam import get_dh_ephemeral_key_forged, int_to_bytes
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
 from cryptolyzer.common.result import AnalyzerResultIKE, AnalyzerTargetIke

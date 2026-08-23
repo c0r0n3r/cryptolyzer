@@ -8,21 +8,29 @@ from cryptolyzer.ike.ciphers import AnalyzerCiphers
 from cryptolyzer.ike.dhparams import AnalyzerDHParams
 from cryptolyzer.ike.curves import AnalyzerCurves
 from cryptolyzer.ike.extensions import AnalyzerExtensions
+from cryptolyzer.ike.simulations import AnalyzerIkev1Simulations, AnalyzerIkev2Simulations
 from cryptolyzer.ike.versions import AnalyzerVersions
 from cryptolyzer.ike.pubkeys import AnalyzerPublicKeys
 from cryptolyzer.ike.pubkeyreq import AnalyzerPublicKeyRequest
 
 
+# analyzers common to both IKE versions; each version adds its own simulations
+# analyzer, whose axes and result model differ by version
+_VERSION_SHARED_ANALYZERS = (
+    AnalyzerCiphers,
+    AnalyzerDHParams,
+    AnalyzerCurves,
+    AnalyzerExtensions,
+    AnalyzerPublicKeys,
+    AnalyzerPublicKeyRequest,
+)
+
+
 class ProtocolHandlerIKEv1(ProtocolHandlerIKEExactVersion):
     @classmethod
     def get_analyzers(cls):
-        return (
-            AnalyzerCiphers,
-            AnalyzerDHParams,
-            AnalyzerCurves,
-            AnalyzerExtensions,
-            AnalyzerPublicKeys,
-            AnalyzerPublicKeyRequest,
+        return _VERSION_SHARED_ANALYZERS + (
+            AnalyzerIkev1Simulations,
         )
 
     @classmethod
@@ -37,7 +45,9 @@ class ProtocolHandlerIKEv1(ProtocolHandlerIKEExactVersion):
 class ProtocolHandlerIKEv2(ProtocolHandlerIKEExactVersion):
     @classmethod
     def get_analyzers(cls):
-        return ProtocolHandlerIKEv1.get_analyzers()
+        return _VERSION_SHARED_ANALYZERS + (
+            AnalyzerIkev2Simulations,
+        )
 
     @classmethod
     def get_protocol(cls):

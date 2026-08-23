@@ -203,6 +203,31 @@ cipher suite negotiation, so there is a subcommand for that (and other) purpose.
    cryptolyze tls1_2 pubkeyreq example.com
    cryptolyze tls1_2 sigalgos example.com
 
+The analyzers above enumerate every algorithm a server supports. A different question is whether a server accepts a
+*specific* proposal set — the one an initiator is configured to offer — and which combination it negotiates. The
+``simulations`` analyzer answer that reporting the negotiated transform, or the rejection. The axis tokens can be given
+in one of four dialects, what ``strongswan``, ``libreswan`` and ``openswan`` use in their configuration, or using
+``iana`` registry names. The encryption token carries the key length (``aes128``, or ``encr_aes_cbc/128`` in
+the ``iana`` dialect).
+
+.. code:: shell
+
+   cryptolyze ikev1 simulations \
+       --encryption-algorithm aes128,aes256 \
+       --hash-algorithm sha256 \
+       --authentication-method psk \
+       --diffie-hellman-group modp1536 \
+       example.com
+
+.. code:: shell
+
+   cryptolyze ikev2 simulations \
+       --encryption-algorithm aes256 \
+       --pseudorandom-function sha256 \
+       --integrity-algorithm sha256 \
+       --diffie-hellman-group modp2048 \
+       example.com
+
 ---------------
 Other Protocols
 ---------------

@@ -90,6 +90,14 @@ cryptolyze ike pubkeys example.com
 # IKE accepted certification authority hashes
 cryptolyze ike pubkeyreq example.com
 
+# IKE: does the server accept a specific IKEv1 proposal set?
+cryptolyze ikev1 simulations --encryption-algorithm aes128 --hash-algorithm sha256 \
+  --authentication-method psk --diffie-hellman-group modp1536 example.com
+
+# IKE: the same for IKEv2, whose proposal has different axes
+cryptolyze ikev2 simulations --encryption-algorithm aes256 --pseudorandom-function sha256 \
+  --integrity-algorithm sha256 --diffie-hellman-group modp2048 example.com
+
 # HTTP security headers
 cryptolyze http headers example.com
 

@@ -4,7 +4,7 @@ import typing
 
 import attr
 
-from cryptolyzer.common.analyzer import AnalyzerIKEBase
+from cryptolyzer.ike.common import AnalyzerIKEBase
 from cryptolyzer.common.result import AnalyzerResultIKE, AnalyzerTargetIke
 from cryptolyzer.ike.ciphers import (
     AnalyzerCiphers,

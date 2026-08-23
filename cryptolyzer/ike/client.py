@@ -114,17 +114,26 @@ class IkeSecurityAssociationBase(IsakmpMessage):
         return ffdh_groups, ecdh_groups
 
     @staticmethod
-    def get_encryption_algorithm_key_lengths(encryption_algorithm):
-        # RFC 7296 §3.3.5: fixed-key entries (single bulk_ciphers) MUST omit
-        # the Key Length attribute → use None as the wire-level marker.
-        # Variable-key entries enumerate one wire-level transform per
-        # bulk_ciphers entry, each carrying its per-cipher key_size.
-        bulk_ciphers = list(encryption_algorithm.value.bulk_ciphers)
-        if len(bulk_ciphers) == 1:
+    def is_fixed_key_encryption_algorithm(encryption_algorithm):
+        # RFC 7296 §3.3.5 and RFC 2409: an algorithm offering a single bulk cipher has an inherent key size, so its
+        # transform MUST omit the Key Length attribute; None is the wire-level marker for that omission
+        return len(list(encryption_algorithm.value.bulk_ciphers)) == 1
+
+    @classmethod
+    def get_wire_key_length(cls, encryption_algorithm, key_length):
+        # the chosen key length reaches the wire only for a variable-key algorithm, even though a fixed-key one also
+        # resolves to its inherent key size
+        return None if cls.is_fixed_key_encryption_algorithm(encryption_algorithm) else key_length
+
+    @classmethod
+    def get_encryption_algorithm_key_lengths(cls, encryption_algorithm):
+        # a variable-key algorithm enumerates one wire-level transform per bulk_ciphers entry, each carrying its
+        # per-cipher key_size
+        if cls.is_fixed_key_encryption_algorithm(encryption_algorithm):
             return [None]
         return [
             bulk_cipher.cipher.value.key_size
-            for bulk_cipher in bulk_ciphers
+            for bulk_cipher in encryption_algorithm.value.bulk_ciphers
             if bulk_cipher.cipher.value.key_size is not None
         ]
 
@@ -435,6 +444,32 @@ class Ikev1SecurityAssociationBase(IkeSecurityAssociationBase):
     }
 
     @classmethod
+    def get_transform(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        cls,
+        encryption_algorithm: Ikev1EncryptionAlgorithm,
+        diffie_hellman_group: Ikev1DiffieHellmanGroup,
+        hash_algorithm: Ikev1HashAlgorithm,
+        authentication_method: Ikev1AuthenticationMethod,
+        key_length: typing.Optional[int] = None,
+    ) -> Ikev1PayloadTransform:
+        attributes = [
+            Ikev1AttributeEncryptionAlgorithm(encryption_algorithm),
+            Ikev1AttributeHashAlgorithm(hash_algorithm),
+            Ikev1AttributeDiffieHellmanGroup(diffie_hellman_group),
+            Ikev1AttributeAuthenticationMethod(authentication_method),
+            Ikev1AttributeLifeType(value=Ikev1LifeType.SECONDS),
+            Ikev1AttributeLifeDuration(value=86400),
+        ]
+
+        if key_length is not None:
+            attributes.append(Ikev1AttributeKeyLength(key_length))
+
+        return Ikev1PayloadTransform(
+            transform_id=Ikev1TransformId.KEY_IKE,
+            attributes=attributes,
+        )
+
+    @classmethod
     def get_proposals(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         cls,
         encryption_algorithm: Ikev1EncryptionAlgorithm,
@@ -449,31 +484,19 @@ class Ikev1SecurityAssociationBase(IkeSecurityAssociationBase):
         else:
             key_lengths.append(key_length)
 
-        proposals = []
-        for _key_length in key_lengths:
-            attributes = [
-                Ikev1AttributeEncryptionAlgorithm(encryption_algorithm),
-                Ikev1AttributeHashAlgorithm(hash_algorithm),
-                Ikev1AttributeDiffieHellmanGroup(diffie_hellman_group),
-                Ikev1AttributeAuthenticationMethod(authentication_method),
-                Ikev1AttributeLifeType(value=Ikev1LifeType.SECONDS),
-                Ikev1AttributeLifeDuration(value=86400),
-            ]
-
-            if _key_length is not None:
-                attributes.append(Ikev1AttributeKeyLength(_key_length))
-
-            proposal = Ikev1PayloadProposal(
+        return [
+            Ikev1PayloadProposal(
                 protocol_id=Ikev1ProtocolId.ISAKMP,
-                transforms=[Ikev1PayloadTransform(
-                    transform_id=Ikev1TransformId.KEY_IKE,
-                    attributes=attributes,
+                transforms=[cls.get_transform(
+                    encryption_algorithm,
+                    diffie_hellman_group,
+                    hash_algorithm,
+                    authentication_method,
+                    _key_length,
                 )],
             )
-
-            proposals.append(proposal)
-
-        return proposals
+            for _key_length in key_lengths
+        ]
 
     @classmethod
     def _get_proposals(
@@ -636,6 +659,43 @@ class Ikev1SecurityAssociationAlgorithms(Ikev1SecurityAssociationBase):
             )
             for algorithm in algorithms
         ]))
+
+        payloads = self._get_payloads(proposals=proposals)
+        if exchange_type == Ikev1ExchangeType.AGGRESSIVE:
+            payloads = self.get_key_exchange_payloads(proposals) + payloads
+
+        initiator_spi = secrets.randbits(64)
+        super().__init__(
+            version=IsakmpProtocolVersion(IkeVersion.V1, 0),
+            initiator_spi=initiator_spi,
+            responder_spi=0,
+            exchange_type=exchange_type,
+            flags=[IsakmpFlags.INITIATOR],
+            message_id=0,
+            payloads=payloads
+        )
+
+
+class Ikev1SecurityAssociationSingleProposal(Ikev1SecurityAssociationBase):
+    def __init__(
+        self,
+        exchange_type: Ikev1ExchangeType,
+        algorithms: list[Ikev1SecurityAssociationProposalAlgorithms]
+    ):
+        transforms = [
+            self.get_transform(
+                encryption_algorithm=algorithm.encryption_algorithm,
+                diffie_hellman_group=algorithm.diffie_hellman_group,
+                hash_algorithm=algorithm.hash_algorithm,
+                authentication_method=algorithm.authentication_method,
+                key_length=algorithm.key_length,
+            )
+            for algorithm in algorithms
+        ]
+        proposals = [Ikev1PayloadProposal(
+            protocol_id=Ikev1ProtocolId.ISAKMP,
+            transforms=transforms,
+        )]
 
         payloads = self._get_payloads(proposals=proposals)
         if exchange_type == Ikev1ExchangeType.AGGRESSIVE:

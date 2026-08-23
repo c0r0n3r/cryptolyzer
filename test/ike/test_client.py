@@ -42,6 +42,7 @@ from cryptolyzer.ike.client import (
     Ikev1SecurityAssociationAlgorithms,
     Ikev1SecurityAssociationBase,
     Ikev1SecurityAssociationProposalAlgorithms,
+    Ikev1SecurityAssociationSingleProposal,
     Ikev1SecurityAssociationSpecialization,
     IKEv2ClientHandshake,
     Ikev2SecurityAssociationAnyAlgorithm,
@@ -228,6 +229,68 @@ class TestIkev1SecurityAssociationAlgorithms(unittest.TestCase):
         sa_payload = message.get_payload_by_type(Ikev1PayloadType.SECURITY_ASSOCIATION)
         self.assertIsNotNone(sa_payload)
         self.assertGreater(len(sa_payload.proposals), 0)
+
+
+class TestIkev1SecurityAssociationSingleProposal(unittest.TestCase):
+    @staticmethod
+    def _algorithms():
+        return [
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.DES3_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_1536_BIT,
+                hash_algorithm=Ikev1HashAlgorithm.SHA2_256,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=None,
+            ),
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_1536_BIT,
+                hash_algorithm=Ikev1HashAlgorithm.SHA2_256,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=128,
+            ),
+            Ikev1SecurityAssociationProposalAlgorithms(
+                encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+                diffie_hellman_group=Ikev1DiffieHellmanGroup.MODP_1536_BIT,
+                hash_algorithm=Ikev1HashAlgorithm.SHA2_256,
+                authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+                key_length=256,
+            ),
+        ]
+
+    def test_single_proposal_with_all_transforms(self):
+        # the offered set becomes one Proposal carrying every transform, not one
+        # Proposal per combination as Ikev1SecurityAssociationAlgorithms builds
+        message = Ikev1SecurityAssociationSingleProposal(
+            exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+            algorithms=self._algorithms(),
+        )
+        sa_payload = message.get_payload_by_type(Ikev1PayloadType.SECURITY_ASSOCIATION)
+        self.assertEqual(len(sa_payload.proposals), 1)
+        self.assertEqual(len(sa_payload.proposals[0].transforms), 3)
+
+    def test_transform_number_mapping(self):
+        # the composed transforms are numbered in offer order, so the responder's
+        # echoed transform_number indexes straight back into the algorithms list
+        message = Ikev1SecurityAssociationSingleProposal(
+            exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+            algorithms=self._algorithms(),
+        )
+        parsed = IsakmpMessage.parse_exact_size(message.compose())
+        sa_payload = parsed.get_payload_by_type(Ikev1PayloadType.SECURITY_ASSOCIATION)
+        self.assertEqual(
+            [transform.transform_number for transform in sa_payload.proposals[0].transforms],
+            [1, 2, 3]
+        )
+
+    def test_aggressive_mode(self):
+        message = Ikev1SecurityAssociationSingleProposal(
+            exchange_type=Ikev1ExchangeType.AGGRESSIVE,
+            algorithms=self._algorithms(),
+        )
+        self.assertIsNotNone(message.get_payload_by_type(Ikev1PayloadType.KEY_EXCHANGE))
+        sa_payload = message.get_payload_by_type(Ikev1PayloadType.SECURITY_ASSOCIATION)
+        self.assertEqual(len(sa_payload.proposals), 1)
 
 
 class TestIkev1SecurityAssociationBaseDhGroups(unittest.TestCase):

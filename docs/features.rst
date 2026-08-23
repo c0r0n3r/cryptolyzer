@@ -314,6 +314,8 @@ Supported analyzers by cryptographic protocol versions
 +-------------------------------------------+-------+-------+
 | Public Key Requests (``pubkeyreq``)       |   ✓   |   ✓   |
 +-------------------------------------------+-------+-------+
+| Simulations (``simulations``)             |   ✓   |   ✓   |
++-------------------------------------------+-------+-------+
 
 Extensions
 """"""""""

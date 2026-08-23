@@ -13,11 +13,12 @@ from cryptodatahub.common.exception import InvalidValue
 from cryptoparser.common.base import Serializable
 from cryptoparser.common.exception import InvalidDataLength, InvalidType
 
-from cryptolyzer.common.analyzer import AnalyzerIKEBase, ProtocolHandlerBase
+from cryptolyzer.common.analyzer import ProtocolHandlerBase
 from cryptolyzer.common.exception import NetworkError, SecurityError, UnexpectedError
 from cryptolyzer.common.result import AnalyzerResultError
 from cryptolyzer.common.transfer import L4TransferSocketParams
 from cryptolyzer.common.utils import LogSingleton, SerializableTextEncoderHighlighted
+from cryptolyzer.ike.common import AnalyzerIKEBase
 
 from cryptolyzer import __setup__
 
@@ -31,6 +32,7 @@ def get_protocol_handler_analyzer_and_uris(parser, arguments):
 
     protocol_handler = ProtocolHandlerBase.from_protocol(arguments.protocol)
     analyzer = protocol_handler.analyzer_from_name(arguments.analyzer)
+    analyzer.parse_arguments(parser, arguments)
     protocol = analyzer.get_default_scheme()
     clients = analyzer.get_clients()
 
@@ -161,6 +163,7 @@ def get_argument_parser():
             parser_plugin.add_argument(
                 'targets', metavar='URI', nargs='+', help=f'[{{{scheme_list}}}://]f.q.d.n[:port][#ip]'
             )
+            analyzer_class.add_arguments(parser_plugin)
 
     return parser
 

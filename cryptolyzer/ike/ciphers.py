@@ -40,7 +40,7 @@ from cryptoparser.ike.isakmp import IsakmpMessage
 from cryptoparser.ike.ikev1 import Ikev1PayloadSecurityAssociation, Ikev1PayloadTransform
 from cryptoparser.ike.ikev2 import Ikev2PayloadSecurityAssociation, Ikev2NotifyPayloadInvalidKe
 
-from cryptolyzer.common.analyzer import AnalyzerIKEBase
+from cryptolyzer.ike.common import AnalyzerIKEBase
 from cryptolyzer.common.result import AnalyzerResultIKE
 from cryptolyzer.common.utils import LogSingleton
 from cryptolyzer.common.exception import NetworkError, NetworkErrorType
@@ -177,8 +177,10 @@ class IkeEncryptionAlgorithmEntry:
 
 
 @attr.s
-class AnalyzerResultIkev1Ciphers(AnalyzerResultIKE):
-    """Per-axis IKEv1 transform support reported by the responder."""
+class Ikev1TransformAxes:
+    """One list per attribute of the IKEv1 transform (RFC 2409: encryption algorithm, hash algorithm, Diffie-Hellman
+    group and authentication method), in the protocol-neutral cryptographic types the negotiated cipher suite uses as
+    well. The authentication method has no protocol-neutral type, so it stays the IKEv1 enum."""
 
     encryption_algorithms: list[IkeEncryptionAlgorithmEntry] = attr.ib(
         validator=attr.validators.deep_iterable(
@@ -193,11 +195,15 @@ class AnalyzerResultIkev1Ciphers(AnalyzerResultIKE):
             validate_key_parameter()
         )
     )
+    authentication_methods: list[Ikev1AuthenticationMethod] = attr.ib(
+        validator=attr.validators.deep_iterable(attr.validators.in_(Ikev1AuthenticationMethod))
+    )
 
 
 @attr.s
-class AnalyzerResultIkev2Ciphers(AnalyzerResultIKE):
-    """Per-axis IKEv2 transform support reported by the responder."""
+class Ikev2TransformAxes:
+    """One list per IKEv2 proposal axis, in the protocol-neutral cryptographic types the negotiated cipher suite uses
+    as well."""
 
     encryption_algorithms: list[IkeEncryptionAlgorithmEntry] = attr.ib(
         validator=attr.validators.deep_iterable(
@@ -215,6 +221,16 @@ class AnalyzerResultIkev2Ciphers(AnalyzerResultIKE):
             validate_key_parameter()
         )
     )
+
+
+@attr.s
+class AnalyzerResultIkev1Ciphers(AnalyzerResultIKE, Ikev1TransformAxes):
+    """Per-axis IKEv1 transform support reported by the responder."""
+
+
+@attr.s
+class AnalyzerResultIkev2Ciphers(AnalyzerResultIKE, Ikev2TransformAxes):
+    """Per-axis IKEv2 transform support reported by the responder."""
 
 
 class AnalyzerCiphers(AnalyzerIKEBase):
@@ -389,7 +405,41 @@ class AnalyzerCiphers(AnalyzerIKEBase):
                                 break
         return True, found_algorithms, working_auth_method
 
-    def _analyze_ikev1(self, l7_client) -> list[Ikev1CipherSuite]:
+    def _get_supported_authentication_methods_ikev1(
+        self,
+        l7_client,
+        algorithm: Ikev1SecurityAssociationProposalAlgorithms,
+    ) -> list[Ikev1AuthenticationMethod]:
+        """Classify every authentication method by re-offering one already confirmed transform with that method: a
+        returned SA means the responder accepts the method, an INVALID_KEY_INFORMATION without an SA means it rejects
+        the method before the cipher comparison. One confirmed transform decides each method, because the cipher axes
+        do not depend on the authentication method (RFC 2409 §5), so the sweep costs one exchange per method.
+        """
+        supported_authentication_methods = []
+        for authentication_method in Ikev1AuthenticationMethod:
+            candidate_algorithm = attr.evolve(algorithm, authentication_method=authentication_method)
+            self._before_probe(l7_client)
+            try:
+                self._send_ikev1_init_message(
+                    l7_client=l7_client,
+                    init_message=Ikev1SecurityAssociationAlgorithms(
+                        exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+                        algorithms=[candidate_algorithm],
+                    ),
+                    algorithms=[candidate_algorithm],
+                )
+            except IsakmpNotify:
+                continue
+            except StopIteration as e:
+                if e.value is not None:
+                    supported_authentication_methods.append(authentication_method)
+
+        return supported_authentication_methods
+
+    def _analyze_ikev1(
+        self,
+        l7_client,
+    ) -> tuple[list[Ikev1CipherSuite], list[Ikev1AuthenticationMethod]]:
         """Enumerate IKEv1 transform support by sweeping DH groups and auth methods.
 
         IKEv1 Phase 1 (Main Mode, RFC 2409 §5.1) bundles encryption algorithm,
@@ -434,10 +484,18 @@ class AnalyzerCiphers(AnalyzerIKEBase):
                 if auth_method_supported:
                     break
 
+        # the sweep above locks in the first authentication method that the responder reaches, so the remaining ones
+        # are classified separately, once, against a transform already known to be accepted
+        supported_authentication_methods = (
+            self._get_supported_authentication_methods_ikev1(l7_client, supported_algorithms[0])
+            if supported_algorithms
+            else []
+        )
+
         return list(map(
             Ikev1CipherSuite.from_ikev1_security_association_proposal_algorithms,
             supported_algorithms
-        ))
+        )), supported_authentication_methods
 
     @staticmethod
     def _send_ikev2_init_message(
@@ -749,7 +807,7 @@ class AnalyzerCiphers(AnalyzerIKEBase):
         """
         super().analyze(analyzable, protocol_version)
         if protocol_version == IkeVersion.V1:
-            cipher_suites = self._analyze_ikev1(analyzable)
+            cipher_suites, supported_authentication_methods = self._analyze_ikev1(analyzable)
             return AnalyzerResultIkev1Ciphers(
                 target=analyzable,
                 encryption_algorithms=self._dedup_preserve_order(
@@ -765,6 +823,7 @@ class AnalyzerCiphers(AnalyzerIKEBase):
                 diffie_hellman_groups=self._dedup_preserve_order(
                     cipher_suite.diffie_hellman_group for cipher_suite in cipher_suites
                 ),
+                authentication_methods=supported_authentication_methods,
             )
         if protocol_version == IkeVersion.V2:
             cipher_suites, accepted_dh_transforms = self._analyze_ikev2(analyzable)
