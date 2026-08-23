@@ -34,7 +34,12 @@ from cryptodatahub.ike.version import IkeVersion
 
 from cryptoparser.common.parse import ComposerBinary
 from cryptoparser.ike.isakmp import IsakmpFlags, IsakmpMessage
-from cryptoparser.ike.ikev1 import Ikev1PayloadNonce, Ikev1PayloadNotification
+from cryptoparser.ike.ikev1 import (
+    Ikev1PayloadNonce,
+    Ikev1PayloadNotification,
+    Ikev1PayloadSecurityAssociation,
+    Ikev1Situation,
+)
 from cryptoparser.ike.ikev2 import (
     Ikev2NotifyPayloadInvalidKe,
     Ikev2PayloadNonce,
@@ -42,7 +47,10 @@ from cryptoparser.ike.ikev2 import (
 )
 
 from cryptolyzer.common.transfer import L4TransferBase, L4TransferSocketParams
-from cryptolyzer.ike.client import Ikev1SecurityAssociationProposalAlgorithms
+from cryptolyzer.ike.client import (
+    Ikev1SecurityAssociationBase,
+    Ikev1SecurityAssociationProposalAlgorithms,
+)
 from cryptolyzer.ike.common import Ikev1CipherSuite, Ikev2CipherSuite
 from cryptolyzer.ike.server import (
     IkeServerConfiguration,
@@ -392,6 +400,52 @@ class L4TransferIkev1UnexpectedExchangeType(L4TransferBase):
             flags=[IsakmpFlags.RESPONSE],
             message_id=0,
             payloads=[Ikev1PayloadNonce(nonce_data=b'\x00' * 32)],
+        )
+        self._pending_recv = bytearray(response.compose())
+        return len(sendable_bytes)
+
+    def _receive_bytes(self, receivable_byte_num, flags):  # pylint: disable=unused-argument
+        if not self._pending_recv:
+            return b''
+        datagram = bytes(self._pending_recv)
+        self._pending_recv = bytearray()
+        return datagram
+
+    def _init_connection(self):
+        return
+
+    @classmethod
+    def get_default_timeout(cls):
+        return 1
+
+
+class L4TransferIkev1UnusableDhGroupResponse(L4TransferBase):
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def __init__(self, address, port, socket_params, init_message, ip=None):
+        super().__init__(address, port, socket_params, ip)
+        self._init_message = init_message
+        self._pending_recv = bytearray()
+
+    def _send(self, sendable_bytes):  # pylint: disable=unused-argument
+        proposals = Ikev1SecurityAssociationBase.get_proposals(
+            encryption_algorithm=Ikev1EncryptionAlgorithm.AES_CBC,
+            diffie_hellman_group=Ikev1DiffieHellmanGroup.BRAINPOOL_ECP_256_BIT,
+            hash_algorithm=Ikev1HashAlgorithm.SHA2_256,
+            authentication_method=Ikev1AuthenticationMethod.PRE_SHARED_KEY,
+            key_length=128,
+        )
+        response = IsakmpMessage(
+            version=self._init_message.version,
+            initiator_spi=self._init_message.initiator_spi,
+            responder_spi=2,
+            exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+            flags=[IsakmpFlags.RESPONSE],
+            message_id=0,
+            payloads=[Ikev1PayloadSecurityAssociation(
+                doi=Ikev1Doi.IPSEC,
+                situation=[Ikev1Situation.SIT_IDENTITY_ONLY],
+                proposals=proposals,
+            )],
         )
         self._pending_recv = bytearray(response.compose())
         return len(sendable_bytes)

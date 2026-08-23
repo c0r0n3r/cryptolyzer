@@ -6,6 +6,7 @@ from test.common.classes import OFFLINE_CLIENT_L4_SOCKET_PARAMS
 
 from cryptodatahub.ike.algorithm import (
     Ikev1DiffieHellmanGroup,
+    Ikev1ExchangeType,
     Ikev1NotifyType,
     Ikev2DiffieHellmanGroup,
     Ikev2ExchangeType,
@@ -71,6 +72,20 @@ class TestAnalyzerDHParamsUnit(unittest.TestCase):
         l7_client = unittest.mock.MagicMock()
         l7_client.l4_socket_params.throttle_delay = 0
         l7_client.do_ikev1_handshake.side_effect = IsakmpNotify(Ikev1NotifyType.INVALID_KEY_INFORMATION)
+        result = analyzer._check_ikev1_key_reuse(  # pylint: disable=protected-access
+            l7_client, unittest.mock.MagicMock()
+        )
+        self.assertIsNone(result)
+
+    def test_check_ikev1_key_reuse_returns_none_when_ke_payload_missing(self):
+        analyzer = AnalyzerDHParams()
+        l7_client = unittest.mock.MagicMock()
+        l7_client.l4_socket_params.throttle_delay = 0
+        message = unittest.mock.MagicMock()
+        message.get_payload_by_type.side_effect = KeyError()
+        l7_client.do_ikev1_handshake.return_value = {
+            Ikev1ExchangeType.IDENTITY_PROTECTION: [message],
+        }
         result = analyzer._check_ikev1_key_reuse(  # pylint: disable=protected-access
             l7_client, unittest.mock.MagicMock()
         )

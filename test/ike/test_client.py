@@ -57,6 +57,7 @@ from .classes import (
     L4TransferIkev1InvalidValueResponse,
     L4TransferIkev1NonceFirst,
     L4TransferIkev1UnexpectedExchangeType,
+    L4TransferIkev1UnusableDhGroupResponse,
     L4TransferUnexpectedExchangeType,
     L7ServerIkeIkev1HeaderOnlyPartialPayload,
     L7ServerIkeIkev2AlwaysInvalidKePayload,
@@ -483,6 +484,36 @@ class TestIkev1ClientHandshake(unittest.TestCase):
                 last_exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
             )
         self.assertEqual(ctx.exception.notify, Ikev1NotifyType.SITUATION_NOT_SUPPORTED)
+
+    def test_unusable_dh_group_selected_by_responder_ends_exchange(self):
+        init_message = Ikev1SecurityAssociationSpecialization(
+            exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+            diffie_hellman_groups=(),
+        )
+        transfer = L4TransferIkev1UnusableDhGroupResponse(
+            'localhost',
+            0,
+            OFFLINE_L4_SOCKET_PARAMS,
+            init_message=init_message,
+        )
+        client_handshake = IKEv1ClientHandshake()
+        client_handshake.do_handshake(
+            transfer,
+            init_message=init_message,
+            last_exchange_type=Ikev1ExchangeType.IDENTITY_PROTECTION,
+        )
+
+        identity_protection_messages = client_handshake.server_messages[
+            Ikev1ExchangeType.IDENTITY_PROTECTION
+        ]
+        self.assertEqual(len(identity_protection_messages), 1)
+        security_association = identity_protection_messages[0].get_payload_by_type(
+            Ikev1PayloadType.SECURITY_ASSOCIATION
+        )
+        self.assertEqual(
+            Ikev1SecurityAssociationBase.get_proposal_dh_groups(security_association.proposals),
+            [Ikev1DiffieHellmanGroup.BRAINPOOL_ECP_256_BIT],
+        )
 
     def test_error_invalid_message(self):
         init_message = Ikev1SecurityAssociationSpecialization(
