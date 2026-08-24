@@ -74,7 +74,11 @@ class AnalyzerDHBase(AnalyzerIKECommonBase):
                 raise
 
             key_exchange_message = server_messages[Ikev1ExchangeType.IDENTITY_PROTECTION][-1]
-            key_exchange_payload = key_exchange_message.get_payload_by_type(Ikev1PayloadType.KEY_EXCHANGE)
+            try:
+                key_exchange_payload = key_exchange_message.get_payload_by_type(Ikev1PayloadType.KEY_EXCHANGE)
+            except KeyError:
+                return None
+
             key_exchange_data.append(bytes(key_exchange_payload.key_exchange_data))
 
         return len(set(key_exchange_data)) < self._KEY_REUSE_TRY_COUNT

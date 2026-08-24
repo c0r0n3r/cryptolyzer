@@ -522,18 +522,23 @@ class Ikev1SecurityAssociationBase(IkeSecurityAssociationBase):
 
         return proposals
 
-    @classmethod
-    def _get_dh_groups(
-        cls,
-        proposals: list[Ikev1PayloadProposal]
-    ) -> tuple[typing.Optional[Ikev1DiffieHellmanGroup], typing.Optional[Ikev1DiffieHellmanGroup]]:
-        dh_groups = [
+    @staticmethod
+    def get_proposal_dh_groups(proposals: list[Ikev1PayloadProposal]) -> list[Ikev1DiffieHellmanGroup]:
+        """Every Diffie-Hellman group named by ``proposals``, unfiltered."""
+        return [
             attribute.value
             for proposal in proposals
             for transform in proposal.transforms
             for attribute in transform.attributes
             if isinstance(attribute, Ikev1AttributeDiffieHellmanGroup)
         ]
+
+    @classmethod
+    def _get_dh_groups(
+        cls,
+        proposals: list[Ikev1PayloadProposal]
+    ) -> tuple[typing.Optional[Ikev1DiffieHellmanGroup], typing.Optional[Ikev1DiffieHellmanGroup]]:
+        dh_groups = cls.get_proposal_dh_groups(proposals)
         backend_supported = frozenset(dhe_ephemeral_material_backend.supported_ikev1_dh_groups())
         ffdh_groups, ecdh_groups = cls._split_dh_groups(dh_groups, backend_supported=backend_supported)
         return (
@@ -941,9 +946,25 @@ class IKEv1ClientHandshake(IKEClient):
                     payload_security_association = responder_message.get_payload_by_type(
                         Ikev1PayloadType.SECURITY_ASSOCIATION
                     )
-                    key_exchange_payloads = Ikev1SecurityAssociationBase.get_key_exchange_payloads(
-                        payload_security_association.proposals
-                    )
+                    try:
+                        key_exchange_payloads = Ikev1SecurityAssociationBase.get_key_exchange_payloads(
+                            payload_security_association.proposals
+                        )
+                    except ValueError:
+                        dh_group_names = ', '.join(sorted(set(
+                            dh_group.name for dh_group in
+                            Ikev1SecurityAssociationBase.get_proposal_dh_groups(
+                                payload_security_association.proposals
+                            )
+                        )))
+                        LogSingleton().log(
+                            level=40,
+                            msg=(
+                                'Key exchange payload not available for the group the responder '
+                                f'selected; group={dh_group_names}'
+                            )
+                        )
+                        return
                     if key_exchange_payloads:
                         ke_data = key_exchange_payloads[0].key_exchange_data
                         LogSingleton().log(
