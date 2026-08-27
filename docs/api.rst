@@ -485,6 +485,45 @@ Result Classes
 .. automodule:: cryptolyzer.ike.pubkeyreq
     :members:
 
+Simulations
+-----------
+
+The proposal set to be offered is given by the axis arguments of the command-line interface, so the analyzer takes them
+from a parsed argument namespace instead of a constructor parameter. The axis tokens can be written in the dialect of
+``strongswan``, ``libreswan``, ``openswan``, or in ``iana`` registry names.
+
+Code Snippet
+````````````
+
+.. code:: python
+
+    >>> from cryptodatahub.ike.version import IkeVersion
+    >>>
+    >>> from cryptolyzer.__main__ import get_argument_parser
+    >>> from cryptolyzer.ike.client import L7ClientIPsecBase
+    >>> from cryptolyzer.ike.simulations import AnalyzerIkev1Simulations
+    >>>
+    >>> parser = get_argument_parser()
+    >>> arguments = parser.parse_args([
+    ...     'ikev1', 'simulations',
+    ...     '--encryption-algorithm', 'aes128',
+    ...     '--hash-algorithm', 'sha256',
+    ...     '--authentication-method', 'psk',
+    ...     '--diffie-hellman-group', 'modp1536',
+    ...     'ipsec://moon.strongswan.org',
+    ... ])
+    >>>
+    >>> analyzer = AnalyzerIkev1Simulations()
+    >>> analyzer.parse_arguments(parser, arguments)
+    >>> client = L7ClientIPsecBase('moon.strongswan.org', 500)
+    >>> result = analyzer.analyze(client, IkeVersion.V1)
+
+Result Classes
+``````````````
+
+.. automodule:: cryptolyzer.ike.simulations
+    :members:
+
 HTTP(S)
 =======
 

@@ -3,15 +3,55 @@ Changelog
 =========
 
 ------------------
-1.6.0 - Unreleased
+1.6.0 - 2026-08-25
 ------------------
+
+Features
+========
+
+-  TLS (``tls``)
+
+   -  add support for ignoring the supported versions extension to the TLS server (#186)
+   -  read the ALPN protocol names from both codepoints during capability generation (#189)
+
+-  IKE (``ike``)
+
+   -  Simulations (``simulations``)
+
+      -  add checker for the acceptance of the proposal set offered by a client (#185)
 
 Notable fixes
 =============
 
+-  Generic
+
+   -  forge the ephemeral key of a Montgomery curve during elliptic-curve Diffie-Hellman key exchange (#194)
+   -  handle primality and safe primality independently
+
 -  TLS (``tls``)
 
    -  offer the standalone post-quantum signature algorithms in the client hello (#190)
+   -  do not offer TLS 1.3 only named groups in earlier protocol versions (#191)
+   -  handle server hello without the supported versions extension (#186)
+   -  handle connection reset while sending the client hello (#187)
+   -  handle the missing authentication algorithm of TLS 1.3 cipher suites (#196)
+   -  handle a named group whose size is unknown (#194)
+   -  handle servers supporting only ShangMi (SM2) cipher suites (#198)
+   -  offer supported groups to anonymous elliptic-curve Diffie-Hellman servers (#197)
+   -  resolve the protocol handler by protocol version instead of by name (#195)
+   -  handle the GREASE extension in the TLS server (#189)
+   -  keep the state of the capability converter instances separated (#189)
+
+-  IKE (``ike``)
+
+   -  keep the IKEv1 result when the responder picks an unusable Diffie-Hellman group (#199)
+
+Performance
+===========
+
+-  Generic
+
+   -  use a fixed-size private exponent during finite-field Diffie-Hellman key exchange
 
 ------------------
 1.5.0 - 2026-07-31

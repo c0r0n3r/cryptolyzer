@@ -68,6 +68,8 @@
 -   Protocol extensions and vendor identifiers (IKEv1 and IKEv2)
 -   Server public keys and X.509 certificate chains (IKEv1 aggressive-mode, IKEv2 EAP-mode)
 -   Accepted certification authority hashes from Certificate Request payloads (IKEv1 and IKEv2)
+-   Client simulation: whether a server accepts the proposal set of an initiator, and which transform it negotiates
+    (IKEv1 and IKEv2)
 
 ### Vulnerability detection (TLS and SSH)
 
@@ -102,6 +104,8 @@
     EAP mode)
 -   User wants to enumerate the certification authority hashes an IKE server accepts in its Certificate Request
     payloads
+-   User wants to know whether an IKE server accepts the proposal set a given initiator is configured to offer, with
+    the axis tokens written in strongSwan, Libreswan, Openswan, or IANA registry names
 -   User wants to check DNS security: DNSSEC signing keys (DNSKEY, DS, RRSIG)
 -   User wants to check email authentication records: DMARC, SPF, MTA-STS, TLSRPT
 -   User wants to verify HTTP security headers (HSTS, CSP, HPKP, X-Frame-Options, etc.) or check for mixed content and
@@ -234,6 +238,14 @@ cryptolyze ike pubkeys example.com
 
 # IKE accepted certification authority hashes
 cryptolyze ike pubkeyreq example.com
+
+# IKE: does the server accept a specific IKEv1 proposal set?
+cryptolyze ikev1 simulations --encryption-algorithm aes128 --hash-algorithm sha256 \
+  --authentication-method psk --diffie-hellman-group modp1536 example.com
+
+# IKE: the same for IKEv2, whose proposal has different axes
+cryptolyze ikev2 simulations --encryption-algorithm aes256 --pseudorandom-function sha256 \
+  --integrity-algorithm sha256 --diffie-hellman-group modp2048 example.com
 
 # Client simulation (which browsers/clients can connect and with what parameters)
 cryptolyze tls simulations example.com

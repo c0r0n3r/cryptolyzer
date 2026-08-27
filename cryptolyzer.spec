@@ -1,5 +1,5 @@
 Name:           cryptolyzer
-Version:        1.5.0
+Version:        1.6.0
 Release:        1%{?dist}
 Summary:        Multi-protocol cryptographic configuration analyzer
 
@@ -17,7 +17,7 @@ BuildRequires:  python3-attrs
 BuildRequires:  python3-beautifulsoup4
 BuildRequires:  python3-certvalidator
 BuildRequires:  python3-colorama
-BuildRequires:  python3-cryptoparser >= 1.5.0
+BuildRequires:  python3-cryptoparser >= 1.6.0
 BuildRequires:  python3-dateutil
 %if 0%{?suse_version}
 BuildRequires:  python3-dnspython
@@ -45,7 +45,7 @@ Requires:       python3-attrs
 Requires:       python3-beautifulsoup4
 Requires:       python3-certvalidator
 Requires:       python3-colorama
-Requires:       python3-cryptoparser >= 1.5.0
+Requires:       python3-cryptoparser >= 1.6.0
 Requires:       python3-dateutil
 %if 0%{?suse_version}
 Requires:       python3-dnspython
@@ -90,8 +90,25 @@ export SETUPTOOLS_SCM_PRETEND_VERSION=%{version}
 %{_bindir}/cryptolyze
 
 %changelog
-* Wed Aug 05 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.6.0-1
+* Tue Aug 25 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.6.0-1
+- add IKE client simulation checker for the acceptance of a client proposal set (#185)
+- add support for ignoring the supported versions extension to the TLS server (#186)
+- read the ALPN protocol names from both codepoints during capability generation (#189)
+- forge the ephemeral key of a Montgomery curve during elliptic-curve Diffie-Hellman key exchange (#194)
+- handle primality and safe primality independently
 - offer the standalone post-quantum signature algorithms in the client hello (#190)
+- do not offer TLS 1.3 only named groups in earlier protocol versions (#191)
+- handle server hello without the supported versions extension (#186)
+- handle connection reset while sending the client hello (#187)
+- handle the missing authentication algorithm of TLS 1.3 cipher suites (#196)
+- handle a named group whose size is unknown (#194)
+- handle servers supporting only ShangMi (SM2) cipher suites (#198)
+- offer supported groups to anonymous elliptic-curve Diffie-Hellman servers (#197)
+- resolve the protocol handler by protocol version instead of by name (#195)
+- handle the GREASE extension in the TLS server (#189)
+- keep the state of the capability converter instances separated (#189)
+- keep the IKEv1 result when the responder picks an unusable Diffie-Hellman group (#199)
+- use a fixed-size private exponent during finite-field Diffie-Hellman key exchange
 
 * Fri Jul 31 2026 Szilárd Pfeiffer <coroner@pfeifferszilard.hu> - 1.5.0-1
 - add IKE public keys checker for IKEv1 aggressive-mode and IKEv2 EAP-mode servers (#183)
