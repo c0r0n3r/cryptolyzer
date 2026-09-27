@@ -1,6 +1,4 @@
 [run]
-omit = cryptolyzer/common/prime.py
-
 source =
     cryptolyzer
     tools

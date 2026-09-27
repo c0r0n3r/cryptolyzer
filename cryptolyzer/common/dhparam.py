@@ -7,6 +7,8 @@ import codecs
 import collections
 import attr
 
+from Crypto.Math.Primality import PROBABLY_PRIME, test_probable_prime
+
 from cryptodatahub.common.algorithm import KeyExchange
 from cryptodatahub.common.grade import AttackNamed
 from cryptodatahub.common.key import convert_public_key_size, PublicKeySize
@@ -21,8 +23,6 @@ from cryptoparser.common.base import Vector, VectorParamNumeric, Serializable
 from cryptoparser.common.parse import ParserBinary
 from cryptoparser.tls.extension import TlsNamedCurveFactory
 from cryptoparser.tls.subprotocol import TlsECCurveType
-
-from .prime import is_prime, SMALL_PRIMES
 
 
 @attr.s
@@ -137,19 +137,15 @@ class DHParameter(Serializable):
     prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
     safe_prime = attr.ib(init=False, validator=attr.validators.instance_of(bool))
 
+    @staticmethod
+    def _is_probable_prime(candidate):
+        return test_probable_prime(candidate) == PROBABLY_PRIME
+
     def _is_prime(self):
-        prime = self.parameter_numbers.p
-
-        if prime % 2 == 0:
-            return False
-
-        if any(prime % small_prime == 0 for small_prime in SMALL_PRIMES if small_prime != prime):
-            return False
-
-        return is_prime(self.key_size.value, prime)
+        return self._is_probable_prime(self.parameter_numbers.p)
 
     def _is_safe_prime(self):
-        return is_prime(self.key_size.value, self.parameter_numbers.p // 2)
+        return self._is_probable_prime((self.parameter_numbers.p - 1) // 2)
 
     def _check_prime(self):
         self.prime = self._is_prime()
